@@ -3,12 +3,7 @@ use pyo3::types::{PyDict, PyType};
 use pyo3::wrap_pymodule;
 
 #[pyclass]
-struct Model {
-    components: Vec<Py<PyType>>,
-}
-
-#[pyclass]
-struct Config {
+struct World {
 
 }
 
@@ -25,8 +20,7 @@ struct Shape {
 
 #[pymodule]
 fn simulabra(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<Model>()?;
-    m.add_class::<Config>()?;
+    m.add_class::<World>()?;
     m.add_class::<Position>()?;
     m.add_class::<Shape>()?;
     // m.add_wrapped(wrap_pymodule!(submodule))?;

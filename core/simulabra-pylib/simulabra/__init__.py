@@ -3,9 +3,13 @@
 from .simulabra import *
 from .simulabra import __all__, __doc__
 
-__all__ = __all__ + ["PythonClass"]
+from abc import ABC
 
 
-class PythonClass:
-    def __init__(self, value: int) -> None:
-        self.value = value
+class ModelConfig:
+    pass
+
+class Agent:
+    pass
+
+# __all__ = __all__ + ["PythonClass"]

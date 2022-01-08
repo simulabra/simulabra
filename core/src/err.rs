@@ -9,6 +9,12 @@ pub enum SlabErr {
     IO(std::io::Error),
 }
 
+impl SlabErr {
+    pub fn msg<T: Into<String>>(s: T) -> Self {
+        SlabErr::Msg(s.into())
+    }
+}
+
 impl From<std::io::Error> for SlabErr {
     fn from(e: std::io::Error) -> Self {
         SlabErr::IO(e)

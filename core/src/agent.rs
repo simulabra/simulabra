@@ -1,17 +1,14 @@
 use std::rc::{Weak, Rc};
 
-use pyo3::{prelude::*, PyClass};
+use pyo3::{prelude::*, PyClass, types::PyType};
 
+#[derive(Debug)]
 pub struct AgentDefinition {
-    code: Py<PyModule>,
+    pub name: String,
+    pub class: Py<PyType>,
 }
 
 impl AgentDefinition {
-    pub fn new(code: Py<PyModule>) -> Self {
-        Self {
-            code
-        }
-    }
 }
 
 pub struct Agent {

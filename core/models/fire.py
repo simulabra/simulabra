@@ -1,7 +1,7 @@
 # TODO: make base library
 import simulabra as sim
 
-class SampleConfig(sim.Config):
+class SampleConfig(sim.ModelConfig):
     # TODO: model topologies
     topology = 'grid' # default
     width = 100
@@ -12,9 +12,10 @@ class SampleConfig(sim.Config):
     # TODO: easy slider/other way to adjust this from 0.0 to 1.0
     density = 0.5
 
-class SampleWorld(sim.World):
+class SampleWorld:
     # TODO: easy way to expose this in UI
     burned_trees = 0
+
 
 def setup(config, world):
     for point in config.enumerate_points():
@@ -24,7 +25,7 @@ def setup(config, world):
         if point.x == 0:
             world.spawn(Fire, point)
 
-class Ember(sim.Model):
+class Ember(sim.Agent):
     strength = 5
 
     @property
@@ -37,7 +38,7 @@ class Ember(sim.Model):
             # TODO: dying
             self.die(world)
 
-class Fire(sim.Model):
+class Fire(sim.Agent):
     color = 'red'
 
     def step(self, world: SampleWorld):
@@ -47,7 +48,7 @@ class Fire(sim.Model):
         # TODO: morphin
         world.become(self, Ember)
 
-class Tree(sim.Model):
+class Tree(sim.Agent):
     color = 'green'
     burned = False
 

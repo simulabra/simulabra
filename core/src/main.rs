@@ -31,6 +31,9 @@ fn main() -> SlabResult<()> {
                 },
                 SlabErr::IO(io) => eprintln!("IO Error: {}", io),
             };
+        } else {
+            let model = load_res.unwrap();
+            println!("{:?}", model);
         }
     }
     Ok(())
