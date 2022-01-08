@@ -3,7 +3,7 @@ use std::rc::{Weak, Rc};
 use pyo3::{prelude::*, PyClass};
 
 pub struct AgentDefinition {
-    code: Py<PyClass>,
+    code: Py<PyModule>,
 }
 
 impl AgentDefinition {
@@ -20,7 +20,9 @@ pub struct Agent {
 }
 
 impl Agent {
-    pub fn go(&self, )
+    pub fn step(&self) {
+
+    }
 }
 
 pub struct Position {

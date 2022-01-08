@@ -16,29 +16,33 @@ pub struct Model {
     setup: SetupProcedure,
 }
 
-pub fn load_code(code: String) -> SlabResult<Py<PyClass>> {
+pub fn load_code(file: PathBuf) -> SlabResult<Py<PyModule>> {
     Python::with_gil(|py| {
-        let locals = locals(py);
-        let agent_class: Py<PyClass> = py.eval(code.as_str(), None, Some(locals))?.downcast::<PyClass>().unwrap().into();
-        Ok(agent_class)
+        let code = read_to_string(file)?;
+        let m = PyModule::from_code(py, code.as_str(), "", "")?;
+        println!("symbols: {}", m.dict());
+        Ok(m.into())
     })
 }
 
 impl Model {
-    pub fn load_local() -> Result<Model, SlabErr> {
+    pub fn load_from_dir(path: PathBuf) -> Result<Model, SlabErr> {
         let setup = SetupProcedure::load()?;
         let mut agent_dir = PathBuf::new();
         agent_dir.push("agents");
         let mut agents = Vec::new();
         for af in read_dir(agent_dir)? {
             let agent_file = af?;
-            let agent_code = fs::read_to_string(agent_file.path())?;
-            agents.push(AgentDefinition::new(load_code(agent_code)?));
+            agents.push(AgentDefinition::new(load_code(agent_file.path())?));
         }
         Ok(Model {
             agents,
             setup,
         })
+    }
+    pub fn load_local(path: PathBuf) -> Result<Model, SlabErr> {
+        let module = load_code(path)?;
+        Err(SlabErr::Msg("Not done yet".to_string()))
     }
 }
 
@@ -50,8 +54,7 @@ impl SetupProcedure {
     pub fn load() -> Result<SetupProcedure, SlabErr> {
         let mut path = PathBuf::new();
         path.push("setup.py");
-        let setup_code = read_to_string(path)?;
-        load_code(setup_code).map(|module| SetupProcedure { code: module })
+        load_code(path).map(|module| SetupProcedure { code: module })
     }
 }
 
