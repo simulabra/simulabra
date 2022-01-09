@@ -55,6 +55,7 @@ impl Model {
                     agents.push(AgentDefinition {
                         class: value.downcast::<PyType>().unwrap().into(),
                         name: format!("{}", symbol),
+                        components: Vec::new(),
                     });
                 }
             }
