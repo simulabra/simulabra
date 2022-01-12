@@ -1,24 +1,23 @@
+use std::collections::HashMap;
 use std::rc::{Weak, Rc};
 use std::fmt::Debug;
 
 use pyo3::{prelude::*, PyClass, types::{PyType, PyFunction}};
 
-pub trait Component: Debug {
-    fn step(&self);
-}
-
-#[derive(Debug)]
-pub enum ComponentDesc {
-    Python(Py<PyType>),
-    Native(Box<dyn Component>),
-}
-
 #[derive(Debug)]
 pub struct AgentDefinition {
     pub name: String,
-    pub class: Py<PyType>,
-    pub components: Vec<ComponentDesc>,
+    pub components: Vec<ComponentName>,
+    pub params: Params,
+    pub vars: Vars,
+    pub actions: Actions,
+    pub action_handlers: ActionHandlers,
 }
 
 impl AgentDefinition {
+    pub fn instantiate(&self) -> Agent {
+        Agent
+    }
 }
+
+pub struct Agent;

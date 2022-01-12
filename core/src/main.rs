@@ -10,6 +10,7 @@ pub mod model;
 pub mod agent;
 pub mod err;
 pub mod pylib;
+pub mod lang;
 
 #[derive(Parser, Debug)]
 struct SlabArgs {
