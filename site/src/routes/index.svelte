@@ -1,24 +1,22 @@
 <title>Simulabra</title>
 <style>
-  body {
-      margin: 0px;
-  }
   * {
-      background: #edca99;
+    font-family: Georgia, 'Times New Roman', Times, serif;
 
   }
   .landing-point {
-      margin-bottom: 2rem;
+    margin-bottom: 2rem;
   }
   .landing-container {
-      padding: 5rem;
+    width: 30rem;
+    padding: 5rem;
   }
 </style>
 
 <div class="landing-container">
-    <div class="landing-point">The world as we know it consists of complex systems, such as life, the brain, economy, and society.</div>
-    <div class="landing-point">These systems are all composed of a large number of independent agents which interact with each other as well as with external systems in a shared environment.</div>
-    <div class="landing-point">Various chaotic phenomena emerge out of the collective behavior of these agents despite each agent having relatively simple behavior.</div>
+    <div class="landing-point">The world as we know it consists of complex systems, such as in life, the brain, economics, and society.</div>
+    <div class="landing-point">These systems are more than the sum of their parts, being composed of a large number of independent agents which interact with each other in a shared environment.</div>
+    <div class="landing-point">Various chaotic phenomena emerge out of the collective behavior of these agents, despite each agent having relatively simple behavior.</div>
     <div class="landing-point">These phenomena are difficult to describe logically, so often our own intuitions are more helpful than computers.</div>
     <div class="landing-point">Simulabra is a tool to model and simulate complex systems of independent agents.</div>
     <div class="landing-point">It provides a toolbox of methods: agent-based modeling, system dynamics, and discrete event systems.</div>

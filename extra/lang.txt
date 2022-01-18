@@ -11,10 +11,11 @@ component Hunger
 
   var energy = 0
 
-  on move:
+  on move
     energy -= 1
     if energy <= 0:
       starve
+  end
 
   action add_energy(n):
     energy += n
@@ -38,7 +39,7 @@ agent Wolf:
     despawn()
 
   action eat_sheep:
-    sheep = one_here(Sheep)?
+    var sheep = one_here(Sheep)?
     sheep.die()
     add_energy(sheep_energy)
     # add metadata to log entries
