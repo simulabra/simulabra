@@ -1,3 +1,4 @@
+mod parser;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
