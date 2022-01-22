@@ -9,6 +9,7 @@ pub enum Val {
     Ident(Ident),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum ValType {
     Float,
     Int,
@@ -17,25 +18,30 @@ pub enum ValType {
     Component(ComponentName),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct VarDef {
     is_const: bool,
     typ: ValType,
     default: Option<Val>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ActionDef {
     name: Ident,
     code: Program,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct FactDef {
     name: Ident,
     code: Program,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ActionHandlerDef {
     name: Ident,
     code: Program,

@@ -41,32 +41,32 @@ impl Model {
     //         setup,
     //     })
     // }
-    pub fn load_local(path: PathBuf) -> Result<Model, SlabErr> {
-        Python::with_gil(|py| {
-            let mut agents = Vec::new();
-            let code = read_to_string(path)?;
-            let m = PyModule::from_code(py, code.as_str(), "", "")?;
-            let setup_fn = m.dict().get_item("setup").ok_or(SlabErr::msg("Couldn't find setup function!"))?;
-            // let sim_mod: &PyModule = m.dict().get_item("sim").ok_or(SlabErr::msg("Couldn't get simulabra library as sim"))?.downcast().unwrap();
-            // let agent_base: &PyType = sim_mod.dict().get_item("Agent").ok_or(SlabErr::msg("Couldn't get Agent class from sim mod"))?.downcast().unwrap();
-            for (symbol, value) in m.dict().iter() {
-                if sim_subclass(py, "Agent", symbol, m) {
-                    println!("symbol: {} {}", symbol, value);
-                    agents.push(AgentDefinition {
-                        class: value.downcast::<PyType>().unwrap().into(),
-                        name: format!("{}", symbol),
-                        components: Vec::new(),
-                    });
-                }
-            }
-            Ok(Model {
-                agents,
-                setup: SetupProcedure {
-                    code: setup_fn.into(),
-                },
-            })
-        })
-    }
+    // pub fn load_local(path: PathBuf) -> Result<Model, SlabErr> {
+    //     Python::with_gil(|py| {
+    //         let mut agents = Vec::new();
+    //         let code = read_to_string(path)?;
+    //         let m = PyModule::from_code(py, code.as_str(), "", "")?;
+    //         let setup_fn = m.dict().get_item("setup").ok_or(SlabErr::msg("Couldn't find setup function!"))?;
+    //         // let sim_mod: &PyModule = m.dict().get_item("sim").ok_or(SlabErr::msg("Couldn't get simulabra library as sim"))?.downcast().unwrap();
+    //         // let agent_base: &PyType = sim_mod.dict().get_item("Agent").ok_or(SlabErr::msg("Couldn't get Agent class from sim mod"))?.downcast().unwrap();
+    //         for (symbol, value) in m.dict().iter() {
+    //             if sim_subclass(py, "Agent", symbol, m) {
+    //                 println!("symbol: {} {}", symbol, value);
+    //                 agents.push(AgentDefinition {
+    //                     class: value.downcast::<PyType>().unwrap().into(),
+    //                     name: format!("{}", symbol),
+    //                     components: Vec::new(),
+    //                 });
+    //             }
+    //         }
+    //         Ok(Model {
+    //             agents,
+    //             setup: SetupProcedure {
+    //                 code: setup_fn.into(),
+    //             },
+    //         })
+    //     })
+    // }
 }
 
 #[derive(Debug)]
