@@ -3,62 +3,62 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Val {
-    Float(f32),
-    Int(isize),
+    Number(f32),
     String(String),
     Ident(Ident),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValType {
-    Float,
-    Int,
+    Number,
     String,
     Ident,
-    Component(ComponentName),
+    Class(ClassName),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct VarDef {
-    is_const: bool,
-    typ: ValType,
-    default: Option<Val>,
-}
+pub enum Expr {
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Program {
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ActionDef {
-    name: Ident,
-    code: Program,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct FactDef {
-    name: Ident,
-    code: Program,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ActionHandlerDef {
-    name: Ident,
-    code: Program,
 }
 
 #[derive(Debug, PartialEq, Hash, Clone)]
 pub struct Ident(String);
 
-#[derive(Debug, PartialEq, Hash, Clone)]
-pub struct ComponentName(String);
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClassName(String);
+
 
 #[derive(Debug)]
-pub struct ComponentDef {
-    pub name: ComponentName,
-    pub requirements: Vec<ComponentName>,
+pub struct ClassDefinition {
+    pub name: ClassName,
+    // whether this can be instantiated as an agent
+    pub agent: bool,
+    // composition over inheritance!
+    pub components: Vec<ClassName>,
     pub vars: Vec<VarDef>,
-    pub facts: Vec<FactDef>,
     pub actions: Vec<ActionDef>,
-    pub action_handlers: Vec<ActionHandlerDef>,
+    pub facts: Vec<FactDef>,
+    pub handlers: Vec<ActionHandlerDef>,
+}
+
+#[derive(Debug)]
+pub struct VarDef {
+    identifier: Ident,
+    ttype: ValType,
+    default: Option<Val>,
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActionDef {
+    name: Ident,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FactDef {
+    name: Ident,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActionHandlerDef {
+    name: Ident,
 }

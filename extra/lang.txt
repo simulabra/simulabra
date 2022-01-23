@@ -104,3 +104,9 @@ component Movement:
   action move:
     position.x += Math.cos(direction) * stride
     position.y += Math.sin(direction) * stride
+
+(defagent Sheep (Hunger Position Movement)
+  (action eat_grass ()))
+
+(defcomponent Hunger (Movement)
+  (vars))
