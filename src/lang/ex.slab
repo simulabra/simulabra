@@ -1,0 +1,141 @@
+parameter grass_energy = 2
+parameter sheep_energy = 4
+
+patch Grass
+  color green
+patch Dirt
+  color brown
+
+class Hunger {
+  has Movement
+  var energy type: Number default: 0
+
+  on Movement.move {
+    energy.dec()
+    if energy <= 0 {
+      starve()
+    }
+  }
+
+  action add_energy(n, basis)
+    energy += n
+  end
+  action starve
+    log
+    despawn()
+  end
+end
+
+superclass Agent {
+  keyword agent
+  var id type: Number
+}
+
+// also class Wolf of: Agent
+class Wolf {
+  of Agent
+  has
+    Hunger { energy: 100 },
+    Position,
+    Movement { speed: 2 }
+  on spawn {
+    randomize()
+    wiggle(180)
+  }
+
+  on step {
+    if sheep = within_range(Sheep, 2)
+      point_towards(sheep)
+    else
+      wiggle()
+    move()
+  }
+
+  action eat_sheep {
+    log()
+    one_here(Sheep)?.die()
+    add_energy(sheep_energy)
+  }
+}
+
+component Position
+  var x = 0.0;
+  var y = 0.0;
+end
+
+function random_point(x, y, w, h) {
+  return Position {
+    x: random_f() * (w - x) + x,
+    y: random_f() * (h - y) + y
+  }
+}
+
+// var sb = SheepBox { sheep = s }
+component SheepBox
+  var sheep type: Sheep
+end
+
+for i in 0..50 {
+  var pos = random_point(0, 0, 100, 100)
+  // components should be unique so ordering shouldn't matter! just assume the default for the rest
+  // real prototypical OO, and reveal non-default errors statically
+  var s = Sheep { pos }
+}
+
+class Sheep {
+  is Agent
+  has Hunger { energy: 50 }
+  has Position
+  has Movement { speed: 1 }
+  on spawn {
+    randomize
+    wiggle(180)
+  }
+
+  on step {
+    do-first-of:
+      patch_here() is Grass => eat_grass
+      otherwise => wiggle and move
+  }
+
+  action eat_grass:
+    set_patch(Dirt)
+    Hunger.add_energy(grass_energy)
+
+setup
+
+
+# predefined
+
+component Base:
+  var id
+
+  action spawn
+  action despawn
+
+component Position:
+  var x
+  var y
+
+  fact patch:
+    world.patch(x, y)
+  fact nearby(other: Position, r = 1) -> bool:
+  fact one_here(kind):
+    world.query([kind, Position], k => nearby(k.position))
+  fact within_range(kind, range)
+    abs_diff(x, other.x).squared() + abs_diff(y, other.y).squared() < r.squared()
+  action randomize:
+    x = SampleRange(World.min_x, World.max_x)
+    y = SampleRange(World.min_y, World.may_y)
+
+component Movement:
+  has Position
+  # degrees
+  var direction = 0
+  let stride = 1
+
+  action wiggle(deg = 50):
+    direction += SampleRange(-deg, deg)
+  action move:
+    position.x += Math.cos(direction) * stride
+    position.y += Math.sin(direction) * stride

@@ -1,4 +1,4 @@
-mod parser;
+pub mod parser;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,6 +38,10 @@ pub struct ClassDefinition {
     pub actions: Vec<ActionDef>,
     pub facts: Vec<FactDef>,
     pub handlers: Vec<ActionHandlerDef>,
+}
+
+impl ClassDefinition {
+
 }
 
 #[derive(Debug)]
