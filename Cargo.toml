@@ -10,10 +10,6 @@ clap = { version = "3.0.5", features = ["derive"] }
 nom = "7.1.0"
 chumsky = "0.7.0"
 
-[dependencies.pyo3]
-version = "0.15.1"
-features = ["auto-initialize"]
-
 [lib]
 name = "simulabra_core"
 crate-type = ["cdylib"]
