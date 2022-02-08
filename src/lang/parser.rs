@@ -1,6 +1,8 @@
 use std::{ops::Range, fs};
 use chumsky::{prelude::*};
 
+use crate::err::{SlabResult, SlabErr};
+
 
 pub type Span = Range<usize>;
 
@@ -43,7 +45,7 @@ fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
     .collect::<String>()
     .map(Token::Str);
 
-  let op = one_of("+-*/!=<>")
+  let op = one_of("+-*/!=<>?")
     .repeated()
     .at_least(1)
     .collect::<String>()
@@ -99,10 +101,14 @@ fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
     .repeated()
 }
 
-pub fn parse() {
-  let src = fs::read_to_string("./src/lang/ex.slab").expect("failed to read");
+pub fn parse() -> SlabResult<()> {
+  let src = fs::read_to_string("./src/lang/examples/ex.simulabra").expect("failed to read");
   println!("{}", src);
-  let (tokens, mut errs) = lexer().parse_recovery(src.as_str());
+  let (tokens, errs) = lexer().parse_recovery(src.as_str());
+  if errs.len() > 0 {
+    return Err(SlabErr::List(errs.iter().map(|e| Box::new(e.clone().into())).collect()))
+  }
 
   println!("{:?}", tokens);
+  Ok(())
 }

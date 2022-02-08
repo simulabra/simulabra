@@ -1,34 +1,65 @@
 parameter grass_energy = 2
 parameter sheep_energy = 4
+parameter predate_relative_strength = 0.8
 
-patch Grass
+patch Grass {
   color green
-patch Dirt
+}
+patch Dirt {
   color brown
+}
 
 class Hunger {
   has Movement
   var energy type: Number default: 0
 
-  on Movement.move {
+  on Movement.Move {
     energy.dec()
     if energy <= 0 {
-      starve()
+      do Starve
     }
   }
 
-  action add_energy(n, basis)
+
+  // action does this for us
+  // message add_energy(n type: Num)
+  // Hunger.AddEnergy(5) equivalent to Hunger.AddEnergy{ n: 5 }
+  action AddEnergy(n type: Num) {
     energy += n
-  end
-  action starve
+  }
+  action Starve {
     log
     despawn()
-  end
-end
+  }
+}
 
-superclass Agent {
+class Agent {
   keyword agent
   var id type: Number
+}
+
+message Attack {
+  var from type: Predator
+}
+
+class Animal {
+  var strength default: 10
+
+  query relative_strength(other_strength: Number): Number {
+    strength / other_strength
+  }
+  query dies_to(other: Predator): Bool {
+    other.kills(self)
+  }
+}
+
+class Predator {
+  query kills(other: Animal): Bool {
+    other.relative_strength(strength) < predate_relative_strength
+  }
+}
+
+class Prey {
 }
 
 // also class Wolf of: Agent
@@ -51,17 +82,21 @@ class Wolf {
     move()
   }
 
-  action eat_sheep {
+  on eat_sheep {
     log()
-    one_here(Sheep)?.die()
+    var sheep = one_here(Sheep)?
+    if kills
+    sheep.die
+    sheep.do_something {  }
     add_energy(sheep_energy)
+
   }
 }
 
-component Position
-  var x = 0.0;
-  var y = 0.0;
-end
+component Position {
+  var x default: 0.0
+  var y default: 0.0
+}
 
 function random_point(x, y, w, h) {
   return Position {
