@@ -63,6 +63,7 @@ fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
   let colon = char_rec!(':', Colon);
   let dot = char_rec!('.', Dot);
   let comma = char_rec!(',', Comma);
+  let quote = char_rec!('\'', Comma);
 
   let ident = text::ident::<char, Simple<char>>().map(|ident: String| match ident.as_str() {
     "class" => Token::Class,
@@ -90,6 +91,7 @@ fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
     .or(colon)
     .or(dot)
     .or(comma)
+    .or(quote)
     .or(ident);
 
   let comment = just("//").then(take_until(just('\n'))).padded();

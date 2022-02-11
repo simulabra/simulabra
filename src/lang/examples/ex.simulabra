@@ -1,6 +1,8 @@
 parameter grass_energy = 2
 parameter sheep_energy = 4
 parameter predate_relative_strength = 0.8
+parameter move_energy_use = 0.6
+parameter idle_energy_use = 0.2
 
 patch Grass {
   color green
@@ -9,31 +11,39 @@ patch Dirt {
   color brown
 }
 
-class Hunger {
-  has Movement
-  var energy type: Number default: 0
 
-  on Movement.Move {
-    energy.dec()
+
+
+class hunger {
+  has agent
+  has movement
+
+  var energy {
+    type number
+    default 100
+  }
+
+  on move(v: vec2) {
+    energy->dec(move_energy_use)
     if energy <= 0 {
-      do Starve
+      do starve
     }
   }
 
-
-  // action does this for us
-  // message add_energy(n type: Num)
-  // Hunger.AddEnergy(5) equivalent to Hunger.AddEnergy{ n: 5 }
-  action AddEnergy(n type: Num) {
-    energy += n
+  on step {
+    energy->dec(idle_energy_use)
   }
+
+  on add_energy(n) {
+    energy->inc(1.0)
+  }
+
   action Starve {
-    log
-    despawn()
+    do Despawn
   }
 }
 
-class Agent {
+class agent {
   keyword agent
   var id type: Number
 }
@@ -42,14 +52,23 @@ message Attack {
   var from type: Predator
 }
 
-class Animal {
-  var strength default: 10
+class animal {
+  has hunger
 
-  query relative_strength(other_strength: Number): Number {
-    strength / other_strength
+  var strength {
+    default 10
+    visible
   }
-  query dies_to(other: Predator): Bool {
+
+  query relative_strength(other: animal) -> Number {
+    strength / other.strength
+  }
+  query dies_to(other: predator) -> boolean {
     other.kills(self)
+  }
+
+  query energy_provides -> number {
+    hunger.energy
   }
 }
 
@@ -63,33 +82,33 @@ class Prey {
 }
 
 // also class Wolf of: Agent
-class Wolf {
-  of Agent
-  has
-    Hunger { energy: 100 },
-    Position,
-    Movement { speed: 2 }
-  on spawn {
-    randomize()
-    wiggle(180)
+agent Wolf {
+  has Hunger(energy = 100)
+  has Position
+  has Movement(speed = Ref(speed))
+
+  var speed = 100
+  on Base.Spawn {
+    Position.Randomize
+    Movement.Wiggle(180)
   }
 
-  on step {
-    if sheep = within_range(Sheep, 2)
-      point_towards(sheep)
-    else
-      wiggle()
-    move()
+  on Movement.Step {
+    if sheep = Position.WithinRange(target_type = Sheep, radius = 2) {
+      Movement.PointTowards(sheep)
+      TryEatSheep
+    } else {
+      Movement.Wiggle
+    }
   }
 
-  on eat_sheep {
-    log()
-    var sheep = one_here(Sheep)?
-    if kills
-    sheep.die
-    sheep.do_something {  }
-    add_energy(sheep_energy)
-
+  on TryEatSheep {
+    Base.Log
+    var sheep = Position.OneHere(target_type = Sheep)?
+    if Predator.Kills(sheep) {
+      delay sheep->Die
+    }
+    Hunger.AddEnergy(sheep->EnergyProvides)
   }
 }
 

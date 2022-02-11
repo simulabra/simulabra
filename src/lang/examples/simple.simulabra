@@ -1,0 +1,12 @@
+diffusion coherence {
+  rate 0.9
+}
+diffusion separation {
+  rate 0.5
+}
+diffusion alignment {
+
+}
+agent boid {
+
+}
