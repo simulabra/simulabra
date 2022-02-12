@@ -14,32 +14,36 @@ patch Dirt {
 
 
 
-class hunger {
-  has agent
-  has movement
+component hunger {
+  has agent, movement
 
   var energy {
     type number
     default 100
   }
 
-  on move(v: vec2) {
-    energy->dec(move_energy_use)
-    if energy <= 0 {
+  on move {
+    send dec(move_energy_use) to energy
+    if (lt energy 0) {
       do starve
     }
   }
 
   on step {
-    energy->dec(idle_energy_use)
+    send sub(idle_energy_use) to energy
   }
 
-  on add_energy(n) {
-    energy->inc(1.0)
+  message add_energy {
+    arg amount {
+      type number
+    }
+  }
+  on add_energy {
+    send inc amount to energy
   }
 
-  action Starve {
-    do Despawn
+  on starve {
+    do despawn
   }
 }
 
@@ -52,17 +56,24 @@ message Attack {
   var from type: Predator
 }
 
+class list {
+  typeparameter t
+}
+
 class animal {
   has hunger
 
   var strength {
+    type number
     default 10
     visible
   }
 
-  query relative_strength(other: animal) -> Number {
-    strength / other.strength
+  var genes {
+    type list of char
+    default [a, c, g, c]
   }
+
   query dies_to(other: predator) -> boolean {
     other.kills(self)
   }
@@ -72,9 +83,11 @@ class animal {
   }
 }
 
-class Predator {
-  query kills(other: Animal): Bool {
-    other.relative_strength(strength) < predate_relative_strength
+class predator {
+  query kills
+  {
+
+     < predate_relative_strength
   }
 }
 
