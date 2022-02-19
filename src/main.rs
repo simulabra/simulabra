@@ -1,3 +1,11 @@
+#![feature(exclusive_range_pattern)]
+
+use lexer::Lexer;
+
+pub mod lexer;
+
 fn main() {
-    println!("Hello, world!");
+    let mut lex = Lexer::new("(average 123 234.56)".to_string());
+    let tokens = lex.tokens().unwrap();
+    println!("{:?}", tokens);
 }
