@@ -32,12 +32,16 @@ impl Lexer {
         c
     }
 
+    fn ended(&self) -> bool {
+        self.cur_idx >= self.program.len()
+    }
+
     fn next(&mut self) -> Result<Token, LexerError> {
-        if self.cur_idx >= self.program.len() {
+        if self.ended() {
             return Ok(Token::EOF)
         }
         let mut c = self.chomp();
-        while self.cur_idx < self.program.len() && (c == ' ' || c == '\n') {
+        while !self.ended() && (c == ' ' || c == '\n') {
             c = self.chomp();
         }
         match c {
@@ -45,7 +49,7 @@ impl Lexer {
             ')' => Ok(Token::RParen),
             'a'..'z' => {
                 let mut symbol = String::from(c);
-                while is_symbol_char(self.cur()) {
+                while !self.ended() && is_symbol_char(self.cur()) {
                     symbol.push(self.chomp());
                 }
                 Ok(Token::Symbol(symbol))
@@ -53,7 +57,7 @@ impl Lexer {
             '0'..'9' => {
                 let mut number = String::from(c);
                 let mut float = false;
-                while is_number_char(self.cur()) {
+                while !self.ended() && is_number_char(self.cur()) {
                     if self.cur() == '.' {
                         float = true;
                     }
@@ -66,6 +70,13 @@ impl Lexer {
                 } else {
                     Ok(Token::Integer(number.parse().unwrap()))
                 }
+            },
+            ';' => {
+                let mut comment = String::new();
+                while !self.ended() && self.cur() != '\n' {
+                    comment.push(self.chomp());
+                }
+                Ok(Token::Comment(comment))
             },
             _ => Err(LexerError(format!("lexer error: {}", c)))
         }
@@ -94,6 +105,6 @@ pub enum Token {
     Integer(isize),
     Float(f32),
     Dot,
-    Comment,
+    Comment(String),
     EOF,
 }
