@@ -1,15 +1,8 @@
 [package]
-name = "simulabra-core"
+name = "simulabra"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "3.0.5", features = ["derive"] }
-nom = "7.1.0"
-chumsky = "0.7.0"
-
-[lib]
-name = "simulabra_core"
-crate-type = ["cdylib"]
