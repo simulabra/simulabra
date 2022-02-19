@@ -6,14 +6,6 @@ pub struct Lexer {
     cur_idx: usize,
 }
 
-fn is_symbol_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '-'
-}
-
-fn is_number_char(c: char) -> bool {
-    c.is_digit(10) || c == '.'
-}
-
 impl Lexer {
     pub fn new(program: String) -> Self {
         Self {
@@ -22,8 +14,16 @@ impl Lexer {
         }
     }
 
+    fn error(&self, msg: String) -> LexerError {
+        LexerError(format!("Lexer error at {}: {}", self.cur_idx, msg))
+    }
+
     fn cur(&self) -> char {
-        self.program.chars().nth(self.cur_idx).unwrap()
+        if self.ended() {
+            '\n'
+        } else {
+            self.program.chars().nth(self.cur_idx).unwrap()
+        }
     }
 
     fn chomp(&mut self) -> char {
@@ -36,20 +36,30 @@ impl Lexer {
         self.cur_idx >= self.program.len()
     }
 
+
+    fn terminal_char(&self) -> bool {
+        self.ended() || ") \n".contains(self.cur())
+    }
+
+    fn comment_terminal(&self) -> bool {
+        self.ended() || "\n;".contains(self.cur())
+    }
+
+
     fn next(&mut self) -> Result<Token, LexerError> {
-        if self.ended() {
-            return Ok(Token::EOF)
-        }
         let mut c = self.chomp();
-        while !self.ended() && (c == ' ' || c == '\n') {
+        while c == ' ' || c == '\n' {
             c = self.chomp();
+            if self.ended() {
+                return Ok(Token::EOF)
+            }
         }
         match c {
             '(' => Ok(Token::LParen),
             ')' => Ok(Token::RParen),
-            'a'..'z' => {
+            'a'..'z' | '*' | '+' | '-' | '/' => {
                 let mut symbol = String::from(c);
-                while !self.ended() && is_symbol_char(self.cur()) {
+                while !self.terminal_char() {
                     symbol.push(self.chomp());
                 }
                 Ok(Token::Symbol(symbol))
@@ -57,7 +67,7 @@ impl Lexer {
             '0'..'9' => {
                 let mut number = String::from(c);
                 let mut float = false;
-                while !self.ended() && is_number_char(self.cur()) {
+                while !self.terminal_char() {
                     if self.cur() == '.' {
                         float = true;
                     }
@@ -66,19 +76,21 @@ impl Lexer {
                 }
 
                 if float {
-                    Ok(Token::Float(number.parse().unwrap()))
+                    number.parse().map(|n| Token::Float(n)).map_err(|e| self.error(e.to_string()))
                 } else {
-                    Ok(Token::Integer(number.parse().unwrap()))
+                    number.parse().map(|n| Token::Integer(n)).map_err(|e| self.error(e.to_string()))
                 }
             },
             ';' => {
                 let mut comment = String::new();
-                while !self.ended() && self.cur() != '\n' {
+                while !self.comment_terminal() {
                     comment.push(self.chomp());
                 }
+                // eat terminal
+                self.chomp();
                 Ok(Token::Comment(comment))
             },
-            _ => Err(LexerError(format!("lexer error: {}", c)))
+            _ => Err(self.error(format!("invalid char {}", c)))
         }
     }
 
