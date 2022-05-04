@@ -38,7 +38,7 @@ impl Lexer {
 
 
     fn terminal_char(&self) -> bool {
-        self.ended() || ") \n".contains(self.cur())
+        self.ended() || ";) \n".contains(self.cur())
     }
 
     fn comment_terminal(&self) -> bool {
@@ -57,6 +57,7 @@ impl Lexer {
         match c {
             '(' => Ok(Token::LParen),
             ')' => Ok(Token::RParen),
+            '.' => Ok(Token::Dot),
             'a'..'z' | '*' | '+' | '-' | '/' => {
                 let mut symbol = String::from(c);
                 while !self.terminal_char() {
