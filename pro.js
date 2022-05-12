@@ -37,9 +37,14 @@ const env = {
     }
   },
 
+  send(recv, msg, arg) {
+
+  },
+
   ev(it) {
     if (classeq(it, 'Send')) {
       let recv = ev(it.recv);
+      send(it.recv, it.$msg, it.$arg);
       let slot = lookup(recv, it.$msg);
       if (!nil(slot)) {
         return slot
@@ -70,17 +75,33 @@ const env = {
       }
     },
 
+    Slot: {
+      class: 'Class',
+      name: 'Slot',
+      slots: {
+        type: 'Class',
+        handle: {
+          class: 'Method',
+          arg: 'Any?',
+          ret: 'type',
+        }
+      }
+    },
     Var: {
       extend: 'Slot',
       slots: {
-        type: 'Class',
-        val: 'Any',
-        handle(arg) {
-          if (nil(arg)) {
-            return this.val;
-          } else {
-            this.val = arg;
-            return this.val;
+        val: 'Object',
+        handle: {
+          class: 'Method',
+          arg: 'Any?',
+          ret: 'type',
+          do(arg) {
+            if (nil(arg)) {
+              return this.val;
+            } else {
+              this.val = arg;
+              return this.val;
+            }
           }
         }
       }
