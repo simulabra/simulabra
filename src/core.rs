@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, BTreeMap}, rc::Rc};
+use std::{collections::{HashMap, BTreeMap}, rc::Rc, sync::{RwLock, Arc}};
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct Symbol(String);
@@ -43,31 +43,16 @@ impl ORef {
     }
 }
 
-pub struct Map {
-    inner: HashMap<Symbol, ORef>,
-    /// structural type
-    stype: HashMap<Symbol, ORef>,
-    /// value type
-    vtype: ORef,
+pub struct Shape {
+    map: HashMap<Symbol, usize>,
 }
 
-impl Map {
-    pub fn new() -> Self {
-        Self {
-            inner: Default::default(),
-            stype: Default::default(),
-            vtype: ORef::new(1),
-        }
-    }
-
-    pub fn get(&self, sym: &Symbol) -> Option<&ORef> {
-        self.inner.get(sym)
-    }
-}
+pub type ShapePtr = Arc<RwLock<Shape>>;
 
 pub struct Object {
-    parents: Vec<ORef>,
-    slots: Map,
+    class: ORef,
+    shape: ShapePtr,
+    slots: Vec<ORef>,
 }
 
 impl Object {
