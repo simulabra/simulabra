@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, BTreeMap}, rc::Rc, sync::{RwLock, Arc}};
+use std::{collections::{HashMap, BTreeMap}, rc::Rc, sync::{RwLock, Arc}, fmt::Display};
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct Symbol(String);
@@ -45,9 +45,22 @@ impl ORef {
 
 pub struct Shape {
     map: HashMap<Symbol, usize>,
+    height: usize,
 }
 
-pub type ShapePtr = Arc<RwLock<Shape>>;
+impl Shape {
+    pub fn transition(&self, name: Symbol) -> Shape {
+        let new_map = self.map.clone();
+        let height = new_map.values().max().unwrap();
+        new_map.insert(name, height + 1);
+        Shape {
+            map: new_map,
+            height: self.height + 1,
+        }
+    }
+}
+
+pub type ShapePtr = Arc<Shape>;
 
 pub struct Object {
     class: ORef,
@@ -56,8 +69,29 @@ pub struct Object {
 }
 
 impl Object {
-    pub fn send(&mut self, message: Symbol, args: ORef) -> Option<ORef> {
-        if let Some(&slot) = self.slots.get(&message) {
+    fn slot_index(&self, name: Symbol)-> Option<usize> {
+        self.shape.map.get(&name).map(|i| *i)
+    }
+    pub fn get_slot(&self, name: Symbol) -> ORef {
+        if let Some(index) = self.slot_index(name) {
+            self.slots[index]
+        } else {
+            panic!("couldn't find slot and was too lazy to fix myself {}", name.0);
+        }
+    }
+    pub fn set_slot(&mut self, name: Symbol, value: ORef) -> &mut Self {
+        if let Some(index) = self.slot_index(name) {
+            self.slots[index] = value;
+        } else {
+            let new_shape = self.shape.transition(name);
+            self.shape = Arc::new(new_shape);
+            self.slots.push(value);
+        }
+        self
+    }
+    pub fn send(&mut self, ctx: &Context, name: Symbol, arg: ORef) -> Option<ORef> {
+        let method = ctx.find_method(name, arg);
+        if let Some(&slot) = self.slots.get() {
 
         } else {
             for parent in self.parents {
@@ -69,18 +103,14 @@ impl Object {
     }
 }
 
-pub struct ObjectDiff {
-    frame: Frame,
-    object: ORef,
-    changes: Map,
-}
-
 pub struct Context {
     cur_frame: Frame,
     objects: BTreeMap<u64, Object>,
-    classes: Map,
+    classes: Vec<ORef>,
 }
 
 impl Context {
+    pub fn find_method(&self, name: Symbol, arg: ORef) -> ORef {
 
+    }
 }
