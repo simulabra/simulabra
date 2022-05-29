@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use crate::lexer::Token;
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub enum SymbolKind {
     Type,
     Message,
     Vau,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Symbol {
     kind: SymbolKind,
     value: String,
@@ -40,22 +40,23 @@ pub type KeyValueMap<T> = HashMap<Symbol, T>;
 
 #[derive(Debug)]
 pub enum SourceExpression {
+    String(String),
+    Number(f32),
     Symbol(Symbol),
-
-    Object(String, KeyValueMap<SourceExpression>),
+    Object(Symbol, KeyValueMap<SourceExpression>),
     List(Vec<SourceExpression>),
     Send(Box<SourceExpression>, Symbol, Option<Box<SourceExpression>>, Option<KeyValueMap<SourceExpression>>)
 }
 
 peg::parser!{
     grammar simulabra_parser() for str {
-        rule whitespace()
-            = " " / "\n"
+        rule ws()
+            = (" " / "\n")+
         pub rule expression() -> SourceExpression
-            = list()
+            = list() / object() / send() / symexpr() / string()
 
         pub rule list() -> SourceExpression
-            = "[" l:(expression() ** whitespace()) "]" { SourceExpression::List(l) }
+            = "[" l:(expression() ** ws()) "]" { SourceExpression::List(l) }
 
         rule upper() -> char
             = ['A'..='Z']
@@ -64,7 +65,7 @@ peg::parser!{
         rule digit() -> char
             = ['0'..='9']
         rule symbody() -> &'input str
-            = $((upper() / lower() / digit())*)
+            = $((upper() / lower() / digit())* "!"?)
         rule typename() -> Symbol
             = n1:upper() n2:symbody() { Symbol::type_name(format!("{n1}{n2}")) }
         rule message() -> Symbol
@@ -75,12 +76,33 @@ peg::parser!{
             = typename() / message() / vau()
         rule mapkey() -> Symbol
             = message() / vau()
+        rule symexpr() -> SourceExpression
+            = s:symbol() { SourceExpression::Symbol(s) }
+        rule string() -> SourceExpression
+            = "'" val:$([^'\'']*) "'" { SourceExpression::String(val.to_string()) }
 
+        rule map() -> KeyValueMap<SourceExpression>
+            = keyvals:((key:mapkey() ws() val:expression() { (key, val) }) ** ws()) {
+                let mut map = HashMap::new();
+                for (key, val) in keyvals.into_iter() {
+                    map.insert(key, val);
+                }
+                map
+            }
         pub rule object() -> SourceExpression
-            = "{" name:typename() (mapkey() ) "}"
+            = "{" ws() name:typename() map:(ws() map:map() { map })? ws()? "}" {
+                SourceExpression::Object(name, map.unwrap_or_default())
+            }
+
+        rule send() -> SourceExpression
+            = "(" ws()? recv:expression() ws() meth:message()
+                it:(ws() it:expression() { it })?
+                args:(ws() args:map() { args })? ")" {
+                SourceExpression::Send(Box::new(recv), meth, it.map(|se| Box::new(se)), args)
+            }
 
         pub rule program() -> Vec<SourceExpression>
-            = l:(expression() ** whitespace()) { l }
+            = l:(expression() ** ws()) ws()? { l }
     }
 }
 

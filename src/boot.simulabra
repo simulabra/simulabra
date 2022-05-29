@@ -13,6 +13,7 @@
   Class
   $name Cat
   slots {
+    Slots
     name {
       Var
       type String
@@ -25,7 +26,7 @@
   Method
   $name greet
   self Cat
-  $do (say! ([name ':Meow'] concat))
+  $do (console say! ([name ':Meow'] concat))
 }
 
 {
@@ -37,11 +38,11 @@
   Method
   $name greet
   self Rat
-  $do (say! 'screet')
+  $do (console say! 'screet')
 }
 
 ({
   Cat
-  name "Dido"
+  name 'Dido'
 } greet)
 ({ Rat } greet)
