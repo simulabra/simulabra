@@ -1,0 +1,47 @@
+{
+  Interface
+  $name Animal
+}
+
+{
+  Generic
+  $name greet
+  self Animal
+}
+
+{
+  Class
+  $name Cat
+  slots {
+    name {
+      Var
+      type String
+
+    }
+  }
+}
+
+{
+  Method
+  $name greet
+  self Cat
+  $do (say! ([name ':Meow'] concat))
+}
+
+{
+  Class
+  $name Rat
+}
+
+{
+  Method
+  $name greet
+  self Rat
+  $do (say! 'screet')
+}
+
+({
+  Cat
+  name "Dido"
+} greet)
+({ Rat } greet)

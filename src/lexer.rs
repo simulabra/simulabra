@@ -1,3 +1,5 @@
+use crate::parser::SourceExpression;
+
 #[derive(Debug)]
 pub struct LexerError(pub String);
 
@@ -57,8 +59,19 @@ impl Lexer {
         match c {
             '(' => Ok(Token::LParen),
             ')' => Ok(Token::RParen),
+            '[' => Ok(Token::LBrace),
+            ']' => Ok(Token::RBrace),
+            '{' => Ok(Token::LBracket),
+            '}' => Ok(Token::RBracket),
             '.' => Ok(Token::Dot),
             'a'..'z' | '*' | '+' | '-' | '/' => {
+                let mut message = String::from(c);
+                while !self.terminal_char() {
+                    message.push(self.chomp());
+                }
+                Ok(Token::Message(message))
+            },
+            'A'..'Z' => {
                 let mut symbol = String::from(c);
                 while !self.terminal_char() {
                     symbol.push(self.chomp());
@@ -110,14 +123,20 @@ impl Lexer {
     }
 }
 
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum Token {
-    LParen,
-    RParen,
-    Symbol(String),
-    Integer(isize),
-    Float(f32),
-    Dot,
-    Comment(String),
+    LParen, // (
+    RParen, // )
+    LBrace, // [
+    RBrace, // ]
+    LBracket, // {
+    RBracket, // }
+    Symbol(String), // Symbol
+    Message(String), // message
+    Integer(isize), // 12
+    Float(f32), // 12.3
+    Dot, // .
+    Comment(String), // ; comment ;
     EOF,
 }

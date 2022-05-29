@@ -1,16 +1,17 @@
 #![feature(exclusive_range_pattern)]
 
+use std::{fs::read_to_string, io::Error};
+
 use lexer::Lexer;
 
-pub mod lexer;
-mod core;
+use crate::parser::{Parser, parse};
 
-fn main() {
-    let e: core::Env;
-    let mut lex = Lexer::new(r##"
-(average 123 234.56) ; an example
-(define twice (x ;arg?;) (* x 2))
-"##.to_string());
-    let tokens = lex.tokens().unwrap();
-    println!("{:?}", tokens);
+mod lexer;
+mod parser;
+// mod core;
+
+fn main() -> Result<(), Error> {
+    let boot = read_to_string("./src/boot.simulabra")?;
+    println!("{:?}", parse(boot));
+    Ok(())
 }

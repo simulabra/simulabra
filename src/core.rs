@@ -62,6 +62,14 @@ impl Shape {
 
 pub type ShapePtr = Arc<Shape>;
 
+pub struct Method {
+
+}
+
+pub trait Receiver {
+    fn handle(message: Symbol, it: ORef, args: HashMap<Symbol, ORef>);
+}
+
 pub struct Object {
     class: ORef,
     shape: ShapePtr,
