@@ -87,7 +87,7 @@ peg::parser!{
             = list() / object() / send() / typename() / call() / vau() / string() / numexp()
 
         pub rule list() -> SourceExpression
-            = "[" l:(expression() ** ws()) "]" { SourceExpression::List(l) }
+            = "[" ws()? l:(expression() ** ws()) ws()? "]" { SourceExpression::List(l) }
 
         rule upper() -> char
             = ['A'..='Z']

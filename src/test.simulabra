@@ -1,0 +1,59 @@
+{
+  Module
+  $name Testing
+  types [
+    {
+      Interface
+      $name Animal
+      methods [
+        {
+          Generic
+          $name greet
+        }
+      ]
+    }
+    {
+      Class
+      $name Cat
+      is [Animal]
+      slots {
+        Slots
+        name {
+          Var
+          type String
+
+        }
+      }
+    }
+    {
+      Class
+      $name Rat
+    }
+  ]
+  methods [
+    {
+      Method
+      $name greet
+      self Cat
+      $do (console say! ([name ':Meow'] concat))
+    }
+    {
+      Method
+      $name greet
+      self Rat
+      $do (console say! 'screet')
+    }
+  ]
+  start [
+    ({
+      Cat
+      name 'Dido'
+    } greet)
+    ({ Rat } greet)
+
+    (console say! (5.3 * (3 + 4)))
+  ]
+}
+
+
+
