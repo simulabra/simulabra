@@ -1,18 +1,17 @@
 {
   Module
-  $name Testing
+  $name test
   types [
     {
       Interface
       $name Animal
       methods [
         {
-          Generic
+          MethodDef
           $name greet
         }
       ]
-    }
-    {
+    } {
       Class
       $name Cat
       is [Animal]
@@ -24,8 +23,7 @@
 
         }
       }
-    }
-    {
+    } {
       Class
       $name Rat
     }
@@ -33,13 +31,12 @@
   methods [
     {
       Method
-      $name greet
+      impl Animal/greet
       self Cat
       $do (console say! ([name ':Meow'] concat))
-    }
-    {
+    } {
       Method
-      $name greet
+      impl Animal/greet
       self Rat
       $do (console say! 'screet')
     }

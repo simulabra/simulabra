@@ -11,7 +11,7 @@ mod parser;
 // mod core;
 
 fn main() -> Result<(), Error> {
-    let boot = read_to_string("./src/boot.simulabra")?;
+    let boot = read_to_string("./src/test.simulabra")?;
     println!("{:?}", parse(boot));
     Ok(())
 }
