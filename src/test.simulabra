@@ -94,14 +94,15 @@
   $name Stdout
   impls [IOStream]
   it [Format Serialize]
-  methods [
+  methods [.
     {
       MultiMethod
       $name print
-      impls [
-        ;; fever dream {
+      impls [.
+        ;; fever dream
+        {
           Impl
-          it [Format Serialize]
+          it [. Format Serialize]
           do ...
         };;
         {
