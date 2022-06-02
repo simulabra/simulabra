@@ -76,10 +76,10 @@ const env = {
     }
   },
 
-  classes: {
-    Null: {
-      class: 'Class',
-      name: 'Null',
+  classes: [
+    {
+      is: 'Class',
+      $name: 'Null',
       slots: {
         or(arg) {
           return this.ev(arg);
@@ -87,20 +87,20 @@ const env = {
       }
     },
 
-    Slot: {
-      class: 'Class',
-      name: 'Slot',
+    {
+      is: 'Class',
+      $name: 'Slot',
       slots: {
         type: 'Class',
         handle: {
-          class: 'Method',
+          is: 'Method',
           arg: 'Any?',
           ret: 'type',
         }
       }
     },
-    Var: {
-      class: 'Class',
+    {
+      is: 'Class',
       extend: 'Slot',
       slots: {
         val: 'type',
@@ -119,7 +119,7 @@ const env = {
         }
       }
     },
-    Method: {
+    {
       class: 'Class',
       extend: 'Slot',
       name: 'Method',
@@ -135,13 +135,13 @@ const env = {
       },
     },
 
-    Class: {
+    {
       name: 'Class',
       slots: {
         name: 'String',
         slots: s('Map', 'of', 'Slot')
       }
     },
-  }
+  ]
 };
 env.Class.class = Class;

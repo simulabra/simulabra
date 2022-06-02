@@ -52,5 +52,69 @@
   ]
 }
 
-
-
+{
+  Interface
+  $name IOStream
+  methods [ Methods
+    {
+      MethodDef
+      $name print
+      it Object
+    }
+  ]
+}
+{
+  VecClass
+  $name VanderWallsian
+  extends [. Format]
+  slots [. Number String]
+  methods [.
+    {
+      Method
+      $name format
+      do ((:0 $dotimes :1) join ", ")
+    }
+  ]
+}
+[VanderWallsian 2 "yessir"]
+{
+  Class
+  $name DevNull
+  extends [. IOStream]
+  methods [.
+    {
+      Method
+      $name print
+      do .
+    }
+  ]
+}
+{
+  Class
+  $name Stdout
+  impls [IOStream]
+  it [Format Serialize]
+  methods [
+    {
+      MultiMethod
+      $name print
+      impls [
+        ;; fever dream {
+          Impl
+          it [Format Serialize]
+          do ...
+        };;
+        {
+          Impl
+          it Format
+          do (self write (it format))
+        }
+        {
+          Impl
+          it Serialize
+          do (self write (it stringify))
+        }
+      ]
+    }
+  ]
+}
