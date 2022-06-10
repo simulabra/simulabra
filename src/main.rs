@@ -8,7 +8,7 @@ use crate::parser::{Parser, parse};
 
 mod lexer;
 mod parser;
-// mod core;
+mod core;
 
 fn main() -> Result<(), Error> {
     let boot = read_to_string("./src/test.simulabra")?;

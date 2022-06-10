@@ -1,4 +1,5 @@
 use std::{collections::{HashMap, BTreeMap}, rc::Rc, sync::{RwLock, Arc}, fmt::Display};
+use std::hash::Hash;
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct Symbol(String);
@@ -50,7 +51,7 @@ pub struct Shape {
 
 impl Shape {
     pub fn transition(&self, name: Symbol) -> Shape {
-        let new_map = self.map.clone();
+        let mut new_map = self.map.clone();
         let height = new_map.values().max().unwrap();
         new_map.insert(name, height + 1);
         Shape {
@@ -70,44 +71,63 @@ pub trait Receiver {
     fn handle(message: Symbol, it: ORef, args: HashMap<Symbol, ORef>);
 }
 
+pub struct VMap<K: Eq + Hash, V> {
+    map: HashMap<K, usize>,
+    store: Vec<V>
+}
+
+impl<K: Eq + Hash, V> VMap<K, V> {
+    pub fn get_index(&self, key: &K) -> Option<usize> {
+        self.map.get(key).map(|n| *n)
+    }
+}
+
+pub struct SlotDef {
+    slot_type: ClassPtr,
+}
+
+pub struct Class {
+    name: Symbol,
+    slot_defs: VMap<Symbol, SlotDef>,
+}
+
+impl PartialEq for Class {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+pub type ClassPtr = Arc<Class>;
+
+pub enum SimulabraErr {
+    MethodMissing(Symbol),
+}
+
 pub struct Object {
-    class: ORef,
-    shape: ShapePtr,
+    class: ClassPtr,
     slots: Vec<ORef>,
 }
 
 impl Object {
-    fn slot_index(&self, name: Symbol)-> Option<usize> {
-        self.shape.map.get(&name).map(|i| *i)
+    fn slot_index(&self, name: &Symbol)-> Option<usize> {
+        self.class.slot_defs.get_index(&name)
     }
-    pub fn get_slot(&self, name: Symbol) -> ORef {
-        if let Some(index) = self.slot_index(name) {
-            self.slots[index]
-        } else {
-            panic!("couldn't find slot and was too lazy to fix myself {}", name.0);
-        }
+    pub fn get_slot_index(&self, idx: usize) -> ORef {
+        self.slots[idx].clone()
     }
-    pub fn set_slot(&mut self, name: Symbol, value: ORef) -> &mut Self {
-        if let Some(index) = self.slot_index(name) {
-            self.slots[index] = value;
-        } else {
-            let new_shape = self.shape.transition(name);
-            self.shape = Arc::new(new_shape);
-            self.slots.push(value);
-        }
-        self
+    pub fn get_slot(&self, name: &Symbol) -> Result<ORef, SimulabraErr> {
+        self.slot_index(name).map(|idx| self.get_slot_index(idx)).ok_or_else(|| SimulabraErr::MethodMissing(name.clone()))
     }
-    pub fn send(&mut self, ctx: &Context, name: Symbol, arg: ORef) -> Option<ORef> {
+    pub fn set_slot_index(&mut self, idx: usize, value: ORef) {
+        self.slots[idx] = value;
+    }
+    pub fn set_slot(&mut self, name: &Symbol, value: ORef) -> Result<(), SimulabraErr> {
+        self.slot_index(name).map(|idx| self.set_slot_index(idx, value)).ok_or_else(|| SimulabraErr::MethodMissing(name.clone()));
+        Ok(())
+    }
+    pub fn send(&mut self, ctx: &Context, name: &Symbol, arg: ORef) -> Option<ORef> {
         let method = ctx.find_method(name, arg);
-        if let Some(&slot) = self.slots.get() {
-
-        } else {
-            for parent in self.parents {
-                if let Some(parent_result) = parent.send(message, args) {
-
-                }
-            }
-        }
+        None
     }
 }
 
@@ -118,7 +138,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn find_method(&self, name: Symbol, arg: ORef) -> ORef {
+    pub fn find_method(&self, name: &Symbol, arg: ORef) {
 
     }
 }
