@@ -1,5 +1,7 @@
-use std::{collections::{HashMap, BTreeMap}, rc::Rc, sync::{RwLock, Arc}, fmt::Display};
+use std::{collections::{HashMap, BTreeMap}, rc::{Rc, Weak}, sync::{RwLock, Arc}, fmt::Display};
 use std::hash::Hash;
+
+use crate::parser::SourceExpression;
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct Symbol(String);
@@ -35,13 +37,6 @@ impl ORef {
             context,
         }
     }
-    pub fn get(&self) -> &Object {
-        match self.frame {
-            RefFrame::Frame(_) => todo!(),
-            RefFrame::Present => self.context.objects.get(&self.id).unwrap(),
-        }
-
-    }
 }
 
 pub struct Shape {
@@ -64,7 +59,17 @@ impl Shape {
 pub type ShapePtr = Arc<Shape>;
 
 pub struct Method {
+    name: Symbol,
+    receiver: ClassPtr,
+    it: Option<ClassPtr>,
+    ret: Option<ClassPtr>,
+    code: SourceExpression,
+}
 
+impl Method {
+    pub fn run(&self, ctx: &Context, receiver: ORef, it: ORef) -> ORef {
+       receiver
+    }
 }
 
 pub trait Receiver {
@@ -104,6 +109,7 @@ pub enum SimulabraErr {
 }
 
 pub struct Object {
+    id: u64,
     class: ClassPtr,
     slots: Vec<ORef>,
 }
@@ -133,12 +139,16 @@ impl Object {
 
 pub struct Context {
     cur_frame: Frame,
-    objects: BTreeMap<u64, Object>,
+    objects: BTreeMap<u64, Rc<Object>>,
     classes: Vec<ORef>,
 }
 
 impl Context {
     pub fn find_method(&self, name: &Symbol, arg: ORef) {
 
+    }
+
+    pub fn get_oref(&self, oref: ORef) -> Option<Weak<Object>> {
+        self.objects.get(&oref.id).map(|obj| Rc::downgrade(obj))
     }
 }
