@@ -92,30 +92,39 @@
 {
   Class
   $name Stdout
-  impls [IOStream]
-  it [Format Serialize]
-  methods [.
-    {
+  it [Union Format Serialize]
+}
+
+{
+  Impl
+  of IOStream
+  for Stdout
+  methods {.
+    print {
       MultiMethod
-      $name print
       impls [.
         ;; fever dream
         {
           Impl
-          it [. Format Serialize]
-          do ...
-        };;
-        {
-          Impl
           it Format
-          do (self write (it format))
+          do (@ write (# format))
         }
         {
           Impl
           it Serialize
-          do (self write (it stringify))
+          do (@ write (# stringify))
         }
       ]
     }
-  ]
+  }
 }
+
+{
+  Interface
+  $name Type
+  methods {.
+
+  }
+}
+
+([{ List of Number } 1.2 3.5] average)
