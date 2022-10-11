@@ -1,0 +1,15 @@
+{
+  "name": "simulabra",
+  "module": "smoperat.js",
+  "scripts": {
+    "test": "uvu",
+    "watch": "watchexec -w . -e js uvu"
+  },
+  "type": "module",
+  "devDependencies": {
+    "bun-types": "^0.1.0"
+  },
+  "dependencies": {
+    "uvu": "^0.5.6"
+  }
+}
