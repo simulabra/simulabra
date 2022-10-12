@@ -2,42 +2,38 @@ import { test } from 'uvu';
 import * as assert from 'uvu/assert';
 import { oClass } from '../smoperat.js';
 
-test('classes', () => {
-  let Point = oClass.new({
-    name: 'Point',
-    vars: {
-      x: 0,
-      y: 0
+let Point = oClass.new({
+  _name: 'Point',
+  _slots: {
+    _x: 0,
+    _y: 0,
+    dist() {
+      return Math.sqrt(this._x ** 2 + this._y ** 2);
     },
-
-    methods: {
-      dist() {
-        return Math.sqrt(this._.x ** 2 + this._.y ** 2);
-      },
-      translate({ x = 0, y = 0 }) {
-        this._.x += x;
-        this._.y += y;
-      }
+    translate({ _x = 0, _y = 0 }) {
+      this._x += _x;
+      this._y += _y;
     }
-  })
+  }
+})
 
-  console.log(Point.new({ x: 2, y: 3 }).dist());
+test('point', () => {
+
+  assert.is(Point.new({ _x: 3, _y: 4 }).dist(), 5);
   let t = Point.new();
-  t.translate({ x: 3, y: 4 });
+  t.translate({ _x: 3, _y: 4 });
   assert.is(t.dist(), 5);
   assert.is(Point.new().dist(), 0);
 
   let LocTest = oClass.new({
     name: 'LocTest',
-    vars: {
-      p: () => Point.new(),
-    },
-    methods: {
+    _slots: {
+      _p: () => Point.new(),
       move() {
-        this._.p.translate({ x: 1 });
+        this._p.translate({ _x: 1 });
       },
       dist() {
-        return this._.p.dist();
+        return this._p.dist();
       }
     }
   });
@@ -49,5 +45,36 @@ test('classes', () => {
   assert.is(l1.dist(), 2);
   assert.is(l2.dist(), 0);
 });
+
+test('mixins', () => {
+  function ColorMixin(base) {
+    return {
+      _r: 0,
+      _g: 0,
+      _b: 0,
+      format() {
+        return `(${this._r}, ${this._g}, ${this._b})`;
+      },
+      ...base
+    }
+  }
+
+  let ColorPoint = oClass.new({
+    _name: 'ColorPoint',
+    _mixins: [ColorMixin],
+    _super: Point,
+  });
+
+  let p = ColorPoint.new({
+    _x: 3,
+    _y: 4,
+    _g: 12,
+    _b: 77
+  });
+
+  assert.is(p.dist(), 5);
+  assert.is(p.format(), '(0, 12, 77)');
+  console.log(p)
+})
 
 test.run();

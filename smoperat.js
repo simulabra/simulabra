@@ -15,50 +15,50 @@ Every object has an identity
 // hook up object to class
 
 let oObject = {
-    _: {
-        name: 'Object',
-        methods: {
-            clone() {
-                return { _: this._.clone() };
-            }
-        }
-
+    _name: 'Object',
+    _slots: {
+        init() {
+        },
     }
 }
 
 let oClass = {
-    _: {
-        name: 'Class', // will be a symbol later    
-        vars: {
-            name: '', // non-type, non-slot object => default
-            vars: {},
-            defaults: {},
-            methods: {},
-            super: oObject,
-            mixins: [],
-        },
-        methods: {
+        _name: 'Class', // will be a symbol later
+        _slots: {
+            _name: '', // non-type, non-slot object => default
+            _defaults: {},
+            _slots: {},
+            _super: oObject,
+            _mixins: [],
             new(props = {}) {
-                let obj = {};
+                let obj = props;
                 // should we clone the default props?
-                Object.setPrototypeOf(obj, this._.methods);
-                obj._ = props;
-                Object.entries(this._.vars).forEach(([varName, varVal]) => {
-                    if (varVal instanceof Function) {
-                        obj._[varName] = varVal();
-                   
- }
+                if (this._mixins.length > 0) {
+                    let parent = this._mixins.reduce((prev, cur) => {
+                        return cur(prev);
+                    }, {});
+                    Object.setPrototypeOf(parent, this._slots);
+                    Object.setPrototypeOf(obj, parent);
+                } else {
+                    Object.setPrototypeOf(obj, this._slots);
+                }
+                Object.entries(this._slots).forEach(([varName, varVal]) => {
+                    // need to explicitly copy default value
+                    if (varName[0] === '_' && varVal instanceof Function) {
+                        obj[varName] = varVal();
+                    }
                 });
-                Object.setPrototypeOf(obj._, this._.vars);
-                obj._.class = this;
+                obj._class = this;
+                obj.init();
                 return obj;
+            },
+            init() {
+                Object.setPrototypeOf(this._slots, this._super._slots);
             }
         }
-
-    }
 }
 
-Object.setPrototypeOf(oClass, oClass._.methods);
+Object.setPrototypeOf(oClass, oClass._slots);
 
 
 export { oObject, oClass };
