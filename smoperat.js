@@ -15,47 +15,54 @@ Every object has an identity
 // hook up object to class
 
 let oObject = {
-    _name: 'Object',
+    _name: 'object',
     _slots: {
         init() {
         },
+        super(name, args = []) {
+            let target = Object.setPrototypeOf({
+                super(sname, sargs) {
+                    return this._class._super._super._slots[sname].apply(this, sargs);
+                }
+            }, this);
+            return this._class._super._slots[name].apply(target, args);
+        }
     }
 }
 
 let oClass = {
-        _name: 'Class', // will be a symbol later
-        _slots: {
-            _name: '', // non-type, non-slot object => default
-            _defaults: {},
-            _slots: {},
-            _super: oObject,
-            _mixins: [],
-            new(props = {}) {
-                let obj = props;
-                // should we clone the default props?
-                if (this._mixins.length > 0) {
-                    let parent = this._mixins.reduce((prev, cur) => {
-                        return cur(prev);
-                    }, {});
-                    Object.setPrototypeOf(parent, this._slots);
-                    Object.setPrototypeOf(obj, parent);
-                } else {
-                    Object.setPrototypeOf(obj, this._slots);
-                }
-                Object.entries(this._slots).forEach(([varName, varVal]) => {
-                    // need to explicitly copy default value
-                    if (varName[0] === '_' && varVal instanceof Function) {
-                        obj[varName] = varVal();
-                    }
-                });
-                obj._class = this;
-                obj.init();
-                return obj;
-            },
-            init() {
-                Object.setPrototypeOf(this._slots, this._super._slots);
+    _name: 'class', // will be a symbol later
+    _slots: {
+        _name: '', // non-type, non-slot object => default
+        _slots: {},
+        _super: oObject,
+        _mixins: [],
+        new(props = {}) {
+            let obj = props;
+            // should we clone the default props?
+            if (this._mixins.length > 0) {
+                let parent = this._mixins.reduce((prev, cur) => {
+                    return cur(prev);
+                }, {});
+                Object.setPrototypeOf(parent, this._slots);
+                Object.setPrototypeOf(obj, parent);
+            } else {
+                Object.setPrototypeOf(obj, this._slots);
             }
+            Object.entries(this._slots).forEach(([varName, varVal]) => {
+                // need to explicitly copy default value
+                if (varName[0] === '_' && varVal instanceof Function) {
+                    obj[varName] = varVal();
+                }
+            });
+            obj._class = this;
+            obj.init();
+            return obj;
+        },
+        init() {
+            Object.setPrototypeOf(this._slots, this._super._slots);
         }
+    }
 }
 
 Object.setPrototypeOf(oClass, oClass._slots);

@@ -3,7 +3,7 @@ import * as assert from 'uvu/assert';
 import { oClass } from '../smoperat.js';
 
 let Point = oClass.new({
-  _name: 'Point',
+  _name: 'point',
   _slots: {
     _x: 0,
     _y: 0,
@@ -13,6 +13,7 @@ let Point = oClass.new({
     translate({ _x = 0, _y = 0 }) {
       this._x += _x;
       this._y += _y;
+      return this;
     }
   }
 })
@@ -56,11 +57,11 @@ test('mixins', () => {
         return `(${this._r}, ${this._g}, ${this._b})`;
       },
       ...base
-    }
+    };
   }
 
   let ColorPoint = oClass.new({
-    _name: 'ColorPoint',
+    _name: 'color-point',
     _mixins: [ColorMixin],
     _super: Point,
   });
@@ -74,7 +75,33 @@ test('mixins', () => {
 
   assert.is(p.dist(), 5);
   assert.is(p.format(), '(0, 12, 77)');
-  console.log(p)
-})
+});
+
+test('inheritance', () => {
+  let ChildPoint = oClass.new({
+    _name: 'child-point',
+    _super: Point,
+    _slots: {
+      dist() {
+        return this.super('dist') / 2;
+      }
+    }
+  });
+
+  assert.is(ChildPoint.new({ _x: 3, _y: 4 }).dist(), 2.5);
+
+  let SmallerPoint = oClass.new({
+    _name: 'smaller-point',
+    _super: ChildPoint,
+    _slots: {
+      dist() {
+        return this.super('dist') / 5;
+      }
+    }
+  });
+
+  assert.is(SmallerPoint.new({ _x: 3, _y: 4 }).dist(), 0.5);
+  assert.is(SmallerPoint.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
+});
 
 test.run();
