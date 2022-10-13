@@ -83,7 +83,7 @@ test('inheritance', () => {
     _super: Point,
     _slots: {
       dist() {
-        return this.super('dist') / 2;
+        return ChildPoint.super().dist.apply(this) / 2;
       }
     }
   });
@@ -95,13 +95,25 @@ test('inheritance', () => {
     _super: ChildPoint,
     _slots: {
       dist() {
-        return this.super('dist') / 5;
+        return SmallerPoint.super().dist.apply(this) / 5;
       }
     }
   });
 
   assert.is(SmallerPoint.new({ _x: 3, _y: 4 }).dist(), 0.5);
   assert.is(SmallerPoint.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
+
+  let TinyPoint = oClass.new({
+    _name: 'tiny-point',
+    _super: SmallerPoint,
+    _slots: {
+      dist() {
+        return TinyPoint.super().dist.apply(this) / 10;
+      }
+    }
+  });
+
+  assert.is(TinyPoint.new({ _x: 3, _y: 4 }).dist(), 0.05);
 });
 
 test.run();

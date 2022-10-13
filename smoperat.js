@@ -16,17 +16,10 @@ Every object has an identity
 
 let oObject = {
     _name: 'object',
+    _super_level: null,
     _slots: {
         init() {
         },
-        super(name, args = []) {
-            let target = Object.setPrototypeOf({
-                super(sname, sargs) {
-                    return this._class._super._super._slots[sname].apply(this, sargs);
-                }
-            }, this);
-            return this._class._super._slots[name].apply(target, args);
-        }
     }
 }
 
@@ -61,6 +54,9 @@ let oClass = {
         },
         init() {
             Object.setPrototypeOf(this._slots, this._super._slots);
+        },
+        super() {
+            return this._super._slots;
         }
     }
 }
