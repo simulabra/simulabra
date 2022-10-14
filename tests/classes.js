@@ -1,9 +1,9 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { oClass } from '../smoperat.js';
+import { $ } from '../smoperat.js';
 
-let Point = oClass.new({
-  _name: 'point',
+let Point = $.klass.new({
+  _name: $.symbol.sym('point'),
   _slots: {
     _x: 0,
     _y: 0,
@@ -26,8 +26,8 @@ test('point', () => {
   assert.is(t.dist(), 5);
   assert.is(Point.new().dist(), 0);
 
-  let LocTest = oClass.new({
-    name: 'LocTest',
+  let LocTest = $.klass.new({
+    _name: $.symbol.sym('LocTest'),
     _slots: {
       _p: () => Point.new(),
       move() {
@@ -60,8 +60,8 @@ test('mixins', () => {
     };
   }
 
-  let ColorPoint = oClass.new({
-    _name: 'color-point',
+  let ColorPoint = $.klass.new({
+    _name: $.symbol.sym('color-point'),
     _mixins: [ColorMixin],
     _super: Point,
   });
@@ -78,8 +78,8 @@ test('mixins', () => {
 });
 
 test('inheritance', () => {
-  let ChildPoint = oClass.new({
-    _name: 'child-point',
+  let ChildPoint = $.klass.new({
+    _name: $.symbol.sym('child-point'),
     _super: Point,
     _slots: {
       dist() {
@@ -90,8 +90,8 @@ test('inheritance', () => {
 
   assert.is(ChildPoint.new({ _x: 3, _y: 4 }).dist(), 2.5);
 
-  let SmallerPoint = oClass.new({
-    _name: 'smaller-point',
+  let SmallerPoint = $.klass.new({
+    _name: $.symbol.sym('smaller-point'),
     _super: ChildPoint,
     _slots: {
       dist() {
@@ -103,8 +103,8 @@ test('inheritance', () => {
   assert.is(SmallerPoint.new({ _x: 3, _y: 4 }).dist(), 0.5);
   assert.is(SmallerPoint.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
 
-  let TinyPoint = oClass.new({
-    _name: 'tiny-point',
+  let TinyPoint = $.klass.new({
+    _name: $.symbol.sym('tiny-point'),
     _super: SmallerPoint,
     _slots: {
       dist() {
@@ -115,5 +115,11 @@ test('inheritance', () => {
 
   assert.is(TinyPoint.new({ _x: 3, _y: 4 }).dist(), 0.05);
 });
+
+test('symbols', () => {
+  assert.is($.symbol.sym('test').eq($.symbol.sym('test')), true);
+  assert.is(`<${$.symbol.sym('test')}>`, '<test>');
+  assert.is(Point.name().eq($.symbol.sym('point')), true);
+})
 
 test.run();

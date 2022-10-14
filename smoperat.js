@@ -13,22 +13,24 @@ Every object has an identity
 
 
 // hook up object to class
+let $ = {
+    defclass(name, cls) {
+        cls._name = name;
+        this[name] = $.klass.new(cls);
+    }
+};
 
-let oObject = {
-    _name: 'object',
-    _super_level: null,
+$.object = {
     _slots: {
-        init() {
-        },
+        init() {},
     }
 }
 
-let oClass = {
-    _name: 'class', // will be a symbol later
+$.klass = {
     _slots: {
         _name: '', // non-type, non-slot object => default
         _slots: {},
-        _super: oObject,
+        _super: $.object,
         _mixins: [],
         new(props = {}) {
             let obj = props;
@@ -57,11 +59,68 @@ let oClass = {
         },
         super() {
             return this._super._slots;
-        }
+        },
+        name() {
+            return this._name;
+        },
     }
 }
 
-Object.setPrototypeOf(oClass, oClass._slots);
 
+Object.setPrototypeOf($.klass, $.klass._slots);
 
-export { oObject, oClass };
+$.symbol = $.klass.new({
+    _sympool: {},
+    _idc: 0,
+    get(name) {
+        return this._sympool[name];
+    },
+    save(id, name) {
+        this._sympool[id] = name;
+        this._sympool[name] = id;
+    },
+    sym(name) {
+        let gid = $.symbol.get(name);
+        if (!gid) {
+            gid = $.symbol.genid();
+            $.symbol.save(gid, name)
+        }
+        return this.new({
+            _gid: gid,
+        });
+    },
+    genid() {
+        return ++this._idc;
+    },
+    _slots: {
+        _gid: null,
+        toString() {
+            return this.name();
+        },
+        name() {
+            return $.symbol.get(this._gid);
+        },
+        gid() {
+            return this._gid
+        },
+        eq(other) {
+            return this.gid() === other.gid();
+        }
+    },
+});
+
+$.object._name = $.symbol.sym('object');
+$.klass._name = $.symbol.sym('class');
+$.symbol._name = $.symbol.sym('symbol');
+
+$.defclass('primitive', {
+
+});
+
+// wrap strings numbers booleans etc
+
+$.string = $.klass.new({
+
+})
+
+export { $ };
