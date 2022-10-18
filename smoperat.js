@@ -142,4 +142,15 @@ $.define($.klass.new({
     }
 }));
 
+$.define($.klass.new({
+    _name: $.sym('mixin'),
+    _slots: {
+        apply(base) {
+            return {
+
+            }
+        }
+    }
+}))
+
 export { $ };
