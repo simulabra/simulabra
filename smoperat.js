@@ -14,9 +14,8 @@ Every object has an identity
 
 // hook up object to class
 let $ = {
-    defclass(name, cls) {
-        cls._name = name;
-        this[name] = $.klass.new(cls);
+    define(cls) {
+        this[cls._name.name().replace(/-/g, '_')] = $.klass.new(cls);
     }
 };
 
@@ -109,18 +108,38 @@ $.symbol = $.klass.new({
     },
 });
 
-$.object._name = $.symbol.sym('object');
-$.klass._name = $.symbol.sym('class');
-$.symbol._name = $.symbol.sym('symbol');
+$.sym = $.symbol.sym.bind($.symbol);
+$.object._name = $.sym('object');
+$.klass._name = $.sym('class');
+$.symbol._name = $.sym('symbol');
 
-$.defclass('primitive', {
-
-});
+$.define($.klass.new({
+    _name: $.sym('primitive'),
+    _slots: {
+        _proto: null,
+        _methods: {},
+        init() {
+            for (let [name, fn] of Object.entries(this._methods)) {
+                _proto[name] = fn;
+            }
+        }
+    }
+}));
 
 // wrap strings numbers booleans etc
 
-$.string = $.klass.new({
+$.primitive.new({
+    _name: $.sym('string'),
+});
 
-})
+$.define($.klass.new({
+    _name: $.sym('env'),
+    _slots: {
+        init() {
+            // danger!
+            Object.setPrototypeOf(this, $);
+        }
+    }
+}));
 
 export { $ };

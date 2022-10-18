@@ -2,8 +2,24 @@ import { test } from 'uvu';
 import * as assert from 'uvu/assert';
 import { $ } from '../smoperat.js';
 
-let Point = $.klass.new({
-  _name: $.symbol.sym('point'),
+const e = $.env.new();
+test('env', () => {
+  e.define(e.klass.new({
+    _name: e.sym('frobber'),
+    _slots: {
+      frob() {
+        return 42;
+      }
+    }
+  }));
+
+  assert.is(e.frobber.new().frob(), 42);
+  assert.is($.frobber, undefined);
+})
+
+
+e.define(e.klass.new({
+  _name: e.sym('point'),
   _slots: {
     _x: 0,
     _y: 0,
@@ -16,20 +32,19 @@ let Point = $.klass.new({
       return this;
     }
   }
-})
+}));
 
 test('point', () => {
-
-  assert.is(Point.new({ _x: 3, _y: 4 }).dist(), 5);
-  let t = Point.new();
+  assert.is(e.point.new({ _x: 3, _y: 4 }).dist(), 5);
+  let t = e.point.new();
   t.translate({ _x: 3, _y: 4 });
   assert.is(t.dist(), 5);
-  assert.is(Point.new().dist(), 0);
+  assert.is(e.point.new().dist(), 0);
 
-  let LocTest = $.klass.new({
-    _name: $.symbol.sym('LocTest'),
+  let LocTest = e.klass.new({
+    _name: e.symbol.sym('LocTest'),
     _slots: {
-      _p: () => Point.new(),
+      _p: () => e.point.new(),
       move() {
         this._p.translate({ _x: 1 });
       },
@@ -60,13 +75,13 @@ test('mixins', () => {
     };
   }
 
-  let ColorPoint = $.klass.new({
-    _name: $.symbol.sym('color-point'),
+  e.define(e.klass.new({
+    _name: e.sym('color-point'),
     _mixins: [ColorMixin],
-    _super: Point,
-  });
+    _super: e.point,
+  }));
 
-  let p = ColorPoint.new({
+  let p = e.color_point.new({
     _x: 3,
     _y: 4,
     _g: 12,
@@ -78,48 +93,49 @@ test('mixins', () => {
 });
 
 test('inheritance', () => {
-  let ChildPoint = $.klass.new({
-    _name: $.symbol.sym('child-point'),
-    _super: Point,
+  e.define(e.klass.new({
+    _name: e.sym('child-point'),
+    _super: e.point,
     _slots: {
       dist() {
-        return ChildPoint.super().dist.apply(this) / 2;
+        // note baked in super class - can we fix this in a nice way?
+        return e.child_point.super().dist.apply(this) / 2;
       }
     }
-  });
+  }));
 
-  assert.is(ChildPoint.new({ _x: 3, _y: 4 }).dist(), 2.5);
+  assert.is(e.child_point.new({ _x: 3, _y: 4 }).dist(), 2.5);
 
-  let SmallerPoint = $.klass.new({
-    _name: $.symbol.sym('smaller-point'),
-    _super: ChildPoint,
+  e.define(e.klass.new({
+    _name: e.sym('smaller-point'),
+    _super: e.child_point,
     _slots: {
       dist() {
-        return SmallerPoint.super().dist.apply(this) / 5;
+        return e.smaller_point.super().dist.apply(this) / 5;
       }
     }
-  });
+  }));
 
-  assert.is(SmallerPoint.new({ _x: 3, _y: 4 }).dist(), 0.5);
-  assert.is(SmallerPoint.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
+  assert.is(e.smaller_point.new({ _x: 3, _y: 4 }).dist(), 0.5);
+  assert.is(e.smaller_point.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
 
-  let TinyPoint = $.klass.new({
-    _name: $.symbol.sym('tiny-point'),
-    _super: SmallerPoint,
+  e.define(e.klass.new({
+    _name: e.symbol.sym('tiny-point'),
+    _super: e.smaller_point,
     _slots: {
       dist() {
-        return TinyPoint.super().dist.apply(this) / 10;
+        return e.tiny_point.super().dist.apply(this) / 10;
       }
     }
-  });
+  }));
 
-  assert.is(TinyPoint.new({ _x: 3, _y: 4 }).dist(), 0.05);
+  assert.is(e.tiny_point.new({ _x: 3, _y: 4 }).dist(), 0.05);
 });
 
 test('symbols', () => {
-  assert.is($.symbol.sym('test').eq($.symbol.sym('test')), true);
-  assert.is(`<${$.symbol.sym('test')}>`, '<test>');
-  assert.is(Point.name().eq($.symbol.sym('point')), true);
+  assert.is(e.symbol.sym('test').eq(e.symbol.sym('test')), true);
+  assert.is(`<${e.symbol.sym('test')}>`, '<test>');
+  assert.is(e.point.name().eq(e.symbol.sym('point')), true);
 })
 
 test.run();
