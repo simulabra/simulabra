@@ -11,32 +11,25 @@ Single inheritance with mixins, merged into intermediate anonymous parent
 Every object has an identity
 */
 
-
 // hook up object to class
-let $ = {
-    define(cls) {
-        this[cls._name.name().replace(/-/g, '_')] = $.klass.new(cls);
-    }
-};
-
-$.object = {
+let object = {
     _slots: {
         init() {},
     }
 }
 
-$.klass = {
+let klass = {
     _slots: {
         _name: '', // non-type, non-slot object => default
         _slots: {},
-        _super: $.object,
+        _super: object,
         _mixins: [],
         new(props = {}) {
             let obj = props;
             // should we clone the default props?
             if (this._mixins.length > 0) {
                 let parent = this._mixins.reduce((prev, cur) => {
-                    return cur(prev);
+                    return cur.mix(prev);
                 }, {});
                 Object.setPrototypeOf(parent, this._slots);
                 Object.setPrototypeOf(obj, parent);
@@ -66,9 +59,9 @@ $.klass = {
 }
 
 
-Object.setPrototypeOf($.klass, $.klass._slots);
+Object.setPrototypeOf(klass, klass._slots);
 
-$.symbol = $.klass.new({
+let symbol = klass.new({
     _sympool: {},
     _idc: 0,
     get(name) {
@@ -79,10 +72,10 @@ $.symbol = $.klass.new({
         this._sympool[name] = id;
     },
     sym(name) {
-        let gid = $.symbol.get(name);
+        let gid = symbol.get(name);
         if (!gid) {
-            gid = $.symbol.genid();
-            $.symbol.save(gid, name)
+            gid = symbol.genid();
+            symbol.save(gid, name)
         }
         return this.new({
             _gid: gid,
@@ -97,7 +90,7 @@ $.symbol = $.klass.new({
             return this.name();
         },
         name() {
-            return $.symbol.get(this._gid);
+            return symbol.get(this._gid);
         },
         gid() {
             return this._gid
@@ -108,13 +101,33 @@ $.symbol = $.klass.new({
     },
 });
 
-$.sym = $.symbol.sym.bind($.symbol);
-$.object._name = $.sym('object');
-$.klass._name = $.sym('class');
-$.symbol._name = $.sym('symbol');
+let envKlass = klass.new({
+    _name: symbol.sym('env'),
+    _slots: {
+        _parent: null,
+        define(cls) {
+            this[cls._name.name().replace(/-/g, '_')] = cls;
+        },
+        child() {
+            let c = {};
+            Object.setPrototypeOf(c, this);
+            return c;
+        },
+    }
+});
 
-$.define($.klass.new({
-    _name: $.sym('primitive'),
+let env = envKlass.new();
+
+object._name = symbol.sym('object');
+klass._name = symbol.sym('klass');
+symbol._name = symbol.sym('symbol');
+
+env.define(object);
+env.define(klass);
+env.define(symbol);
+env.define(envKlass);
+env.define(env.klass.new({
+    _name: symbol.sym('primitive'),
     _slots: {
         _proto: null,
         _methods: {},
@@ -128,29 +141,21 @@ $.define($.klass.new({
 
 // wrap strings numbers booleans etc
 
-$.primitive.new({
-    _name: $.sym('string'),
+env.primitive.new({
+    _name: env.symbol.sym('string'),
 });
 
-$.define($.klass.new({
-    _name: $.sym('env'),
+env.define(env.klass.new({
+    _name: env.symbol.sym('mixin'),
     _slots: {
-        init() {
-            // danger!
-            Object.setPrototypeOf(this, $);
-        }
+        _slots: {},
+        mix(base) {
+            return {
+                ...this._slots,
+                ...base
+            }
+        },
     }
 }));
 
-$.define($.klass.new({
-    _name: $.sym('mixin'),
-    _slots: {
-        apply(base) {
-            return {
-
-            }
-        }
-    }
-}))
-
-export { $ };
+export { env };

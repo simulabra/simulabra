@@ -1,11 +1,12 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { $ } from '../smoperat.js';
+import { env } from '../smoperat.js';
 
-const e = $.env.new();
+const e = env.child();
+
 test('env', () => {
   e.define(e.klass.new({
-    _name: e.sym('frobber'),
+    _name: e.symbol.sym('frobber'),
     _slots: {
       frob() {
         return 42;
@@ -14,12 +15,12 @@ test('env', () => {
   }));
 
   assert.is(e.frobber.new().frob(), 42);
-  assert.is($.frobber, undefined);
+  assert.is(env.frobber, undefined);
 })
 
 
 e.define(e.klass.new({
-  _name: e.sym('point'),
+  _name: e.symbol.sym('point'),
   _slots: {
     _x: 0,
     _y: 0,
@@ -41,8 +42,8 @@ test('point', () => {
   assert.is(t.dist(), 5);
   assert.is(e.point.new().dist(), 0);
 
-  let LocTest = e.klass.new({
-    _name: e.symbol.sym('LocTest'),
+  e.define(e.klass.new({
+    _name: e.symbol.sym('loc-test'),
     _slots: {
       _p: () => e.point.new(),
       move() {
@@ -52,10 +53,10 @@ test('point', () => {
         return this._p.dist();
       }
     }
-  });
+  }));
 
-  let l1 = LocTest.new();
-  let l2 = LocTest.new();
+  let l1 = e.loc_test.new();
+  let l2 = e.loc_test.new();
   l1.move();
   l1.move();
   assert.is(l1.dist(), 2);
@@ -63,25 +64,27 @@ test('point', () => {
 });
 
 test('mixins', () => {
-  function ColorMixin(base) {
-    return {
+  let m = e.mixin.new({
+    _name: e.symbol.sym('color-mixin'),
+    _slots: {
       _r: 0,
       _g: 0,
       _b: 0,
       format() {
         return `(${this._r}, ${this._g}, ${this._b})`;
       },
-      ...base
-    };
-  }
+    }
+  })
+
+  assert.is(m.mix({})._r, 0);
 
   e.define(e.klass.new({
-    _name: e.sym('color-point'),
-    _mixins: [ColorMixin],
+    _name: e.symbol.sym('color-point'),
+    _mixins: [m],
     _super: e.point,
   }));
 
-  let p = e.color_point.new({
+  const p = e.color_point.new({
     _x: 3,
     _y: 4,
     _g: 12,
@@ -94,7 +97,7 @@ test('mixins', () => {
 
 test('inheritance', () => {
   e.define(e.klass.new({
-    _name: e.sym('child-point'),
+    _name: e.symbol.sym('child-point'),
     _super: e.point,
     _slots: {
       dist() {
@@ -107,7 +110,7 @@ test('inheritance', () => {
   assert.is(e.child_point.new({ _x: 3, _y: 4 }).dist(), 2.5);
 
   e.define(e.klass.new({
-    _name: e.sym('smaller-point'),
+    _name: e.symbol.sym('smaller-point'),
     _super: e.child_point,
     _slots: {
       dist() {
