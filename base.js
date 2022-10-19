@@ -11,6 +11,8 @@ Single inheritance with mixins, merged into intermediate anonymous parent
 Every object has an identity
 */
 
+import { parse } from "acorn";
+
 // hook up object to class
 let object = {
     _slots: {
@@ -155,6 +157,78 @@ env.define(env.klass.new({
                 ...base
             }
         },
+    }
+}));
+
+// TEMPLATE
+env.define(env.klass.new({
+    _name: env.symbol.sym(''),
+    _slots: {
+    },
+}));
+
+env.define(env.klass.new({
+    _name: env.symbol.sym('program'),
+    _slots: {
+        _expressions: [],
+        js() {
+            return this._expressions.map(e => e.js()).reduce((prev, cur, idx) => {
+                if (idx == this._expressions.length - 1) {
+                    return prev + 'return ' + cur + ';';
+                } else {
+                    return prev + cur + ';\n';
+                }
+            }, '');
+        },
+        expressions() {
+            return this._expressions;
+        },
+        run(e) {
+            return new Function('_', this.js()).apply(e);
+        }
+    },
+}));
+
+env.define(env.klass.new({
+    _name: env.symbol.sym('binop'),
+    _slots: {
+        _op: null,
+        _left: null,
+        _right: null,
+        js() {
+            return `${this._left} ${this._op} ${this._right}`;
+        }
+    },
+}));
+
+env.define(env.klass.new({
+    _name: env.symbol.sym('parser'),
+    _slots: {
+        _js: '',
+        _acorn_repr: {},
+        acorn() {
+            return parse(this._js, { ecmaVersion: 2021 });
+        },
+        init() {
+            this._acorn_repr = this.acorn();
+        },
+        node(n) {
+            switch (n.type) {
+                case 'ExpressionStatement':
+                    return this.node(n.expression);
+                case 'BinaryExpression':
+                    return env.binop.new({
+                        _op: n.operator,
+                        _left: n.left.value,
+                        _right: n.right.value,
+                    });
+            }
+        },
+        program() {
+            return env.program.new({
+                _expressions: this._acorn_repr.body.map(n => this.node(n)),
+            });
+        }
     }
 }));
 

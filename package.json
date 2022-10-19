@@ -10,6 +10,7 @@
     "bun-types": "^0.1.0"
   },
   "dependencies": {
+    "acorn": "^8.8.0",
     "uvu": "^0.5.6"
   }
 }

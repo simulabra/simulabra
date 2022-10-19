@@ -1,6 +1,6 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { env } from '../smoperat.js';
+import { env } from '../base.js';
 
 const e = env.child();
 
@@ -139,6 +139,22 @@ test('symbols', () => {
   assert.is(e.symbol.sym('test').eq(e.symbol.sym('test')), true);
   assert.is(`<${e.symbol.sym('test')}>`, '<test>');
   assert.is(e.point.name().eq(e.symbol.sym('point')), true);
+})
+
+test('parser', () => {
+  const parser = e.parser.new({
+    _js: '1 + 1'
+  });
+
+  const repr = parser._acorn_repr;
+
+  assert.is(repr.type, 'Program');
+  assert.is(repr.body[0].expression.type, 'BinaryExpression');
+  assert.is(repr.body[0].expression.left.value, 1);
+  assert.is(repr.body[0].expression.right.value, 1);
+  let program = parser.program();
+  assert.is(program.expressions()[0].js(), '1 + 1');
+  assert.is(program.run(e), 2);
 })
 
 test.run();
