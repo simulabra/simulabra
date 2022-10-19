@@ -128,6 +128,7 @@ env.define(object);
 env.define(klass);
 env.define(symbol);
 env.define(envKlass);
+
 env.define(env.klass.new({
     _name: symbol.sym('primitive'),
     _slots: {
@@ -135,7 +136,7 @@ env.define(env.klass.new({
         _methods: {},
         init() {
             for (let [name, fn] of Object.entries(this._methods)) {
-                _proto[name] = fn;
+                this._proto[name] = fn;
             }
         }
     }
@@ -146,6 +147,16 @@ env.define(env.klass.new({
 env.primitive.new({
     _name: env.symbol.sym('string'),
 });
+
+env.primitive.new({
+    _name: env.symbol.sym('number'),
+    _proto: Number.prototype,
+    _methods: {
+        js() {
+            return this;
+        }
+    }
+})
 
 env.define(env.klass.new({
     _name: env.symbol.sym('mixin'),
@@ -180,11 +191,14 @@ env.define(env.klass.new({
                 }
             }, '');
         },
+        init() {
+            this._fn = new Function('_', this.js());
+        },
         expressions() {
             return this._expressions;
         },
         run(e) {
-            return new Function('_', this.js()).apply(e);
+            return this._fn.apply(e);
         }
     },
 }));
@@ -196,7 +210,7 @@ env.define(env.klass.new({
         _left: null,
         _right: null,
         js() {
-            return `${this._left} ${this._op} ${this._right}`;
+            return `${this._left.js()} ${this._op} ${this._right.js()}`;
         }
     },
 }));
