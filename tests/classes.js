@@ -1,12 +1,12 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { env } from '../base.js';
+import { _ as env } from '../base.js';
 
-const e = env.child();
+const _ = env.child();
 
 test('env', () => {
-  e.define(e.klass.new({
-    _name: e.symbol.sym('frobber'),
+  _.define(_.klass.new({
+    _name: _.symbol.sym('frobber'),
     _slots: {
       frob() {
         return 42;
@@ -14,13 +14,13 @@ test('env', () => {
     }
   }));
 
-  assert.is(e.frobber.new().frob(), 42);
+  assert.is(_.frobber.new().frob(), 42);
   assert.is(env.frobber, undefined);
 })
 
 
-e.define(e.klass.new({
-  _name: e.symbol.sym('point'),
+_.define(_.klass.new({
+  _name: _.symbol.sym('point'),
   _slots: {
     _x: 0,
     _y: 0,
@@ -36,16 +36,16 @@ e.define(e.klass.new({
 }));
 
 test('point', () => {
-  assert.is(e.point.new({ _x: 3, _y: 4 }).dist(), 5);
-  let t = e.point.new();
+  assert.is(_.point.new({ _x: 3, _y: 4 }).dist(), 5);
+  let t = _.point.new();
   t.translate({ _x: 3, _y: 4 });
   assert.is(t.dist(), 5);
-  assert.is(e.point.new().dist(), 0);
+  assert.is(_.point.new().dist(), 0);
 
-  e.define(e.klass.new({
-    _name: e.symbol.sym('loc-test'),
+  _.define(_.klass.new({
+    _name: _.symbol.sym('loc-test'),
     _slots: {
-      _p: () => e.point.new(),
+      _p: () => _.point.new(),
       move() {
         this._p.translate({ _x: 1 });
       },
@@ -55,8 +55,8 @@ test('point', () => {
     }
   }));
 
-  let l1 = e.loc_test.new();
-  let l2 = e.loc_test.new();
+  let l1 = _.loc_test.new();
+  let l2 = _.loc_test.new();
   l1.move();
   l1.move();
   assert.is(l1.dist(), 2);
@@ -64,8 +64,8 @@ test('point', () => {
 });
 
 test('mixins', () => {
-  let m = e.mixin.new({
-    _name: e.symbol.sym('color-mixin'),
+  let m = _.mixin.new({
+    _name: _.symbol.sym('color-mixin'),
     _slots: {
       _r: 0,
       _g: 0,
@@ -78,13 +78,13 @@ test('mixins', () => {
 
   assert.is(m.mix({})._r, 0);
 
-  e.define(e.klass.new({
-    _name: e.symbol.sym('color-point'),
+  _.define(_.klass.new({
+    _name: _.symbol.sym('color-point'),
     _mixins: [m],
-    _super: e.point,
+    _super: _.point,
   }));
 
-  const p = e.color_point.new({
+  const p = _.color_point.new({
     _x: 3,
     _y: 4,
     _g: 12,
@@ -96,53 +96,53 @@ test('mixins', () => {
 });
 
 test('inheritance', () => {
-  e.define(e.klass.new({
-    _name: e.symbol.sym('child-point'),
-    _super: e.point,
+  _.define(_.klass.new({
+    _name: _.symbol.sym('child-point'),
+    _super: _.point,
     _slots: {
       dist() {
         // note baked in super class - can we fix this in a nice way?
-        return e.child_point.super().dist.apply(this) / 2;
+        return _.child_point.super().dist.apply(this) / 2;
       }
     }
   }));
 
-  assert.is(e.child_point.new({ _x: 3, _y: 4 }).dist(), 2.5);
+  assert.is(_.child_point.new({ _x: 3, _y: 4 }).dist(), 2.5);
 
-  e.define(e.klass.new({
-    _name: e.symbol.sym('smaller-point'),
-    _super: e.child_point,
+  _.define(_.klass.new({
+    _name: _.symbol.sym('smaller-point'),
+    _super: _.child_point,
     _slots: {
       dist() {
-        return e.smaller_point.super().dist.apply(this) / 5;
+        return _.smaller_point.super().dist.apply(this) / 5;
       }
     }
   }));
 
-  assert.is(e.smaller_point.new({ _x: 3, _y: 4 }).dist(), 0.5);
-  assert.is(e.smaller_point.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
+  assert.is(_.smaller_point.new({ _x: 3, _y: 4 }).dist(), 0.5);
+  assert.is(_.smaller_point.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
 
-  e.define(e.klass.new({
-    _name: e.symbol.sym('tiny-point'),
-    _super: e.smaller_point,
+  _.define(_.klass.new({
+    _name: _.symbol.sym('tiny-point'),
+    _super: _.smaller_point,
     _slots: {
       dist() {
-        return e.tiny_point.super().dist.apply(this) / 10;
+        return _.tiny_point.super().dist.apply(this) / 10;
       }
     }
   }));
 
-  assert.is(e.tiny_point.new({ _x: 3, _y: 4 }).dist(), 0.05);
+  assert.is(_.tiny_point.new({ _x: 3, _y: 4 }).dist(), 0.05);
 });
 
 test('symbols', () => {
-  assert.is(e.symbol.sym('test').eq(e.symbol.sym('test')), true);
-  assert.is(`<${e.symbol.sym('test')}>`, '<test>');
-  assert.is(e.point.name().eq(e.symbol.sym('point')), true);
+  assert.is(_.symbol.sym('test').eq(_.symbol.sym('test')), true);
+  assert.is(`<${_.symbol.sym('test')}>`, '<test>');
+  assert.is(_.point.name().eq(_.symbol.sym('point')), true);
 })
 
 test('parser', () => {
-  const parser = e.parser.new({
+  const parser = _.parser.new({
     _js: '1 + 1'
   });
 
@@ -154,7 +154,11 @@ test('parser', () => {
   assert.is(repr.body[0].expression.right.value, 1);
   let program = parser.program();
   assert.is(program.expressions()[0].js(), '1 + 1');
-  assert.is(program.run(e), 2);
+
+  const p2 = _.parser.new({
+    _js: 'let o = { _test: 42 }'
+  });
+  console.log(_.parser.id().toString());
 })
 
 test.run();

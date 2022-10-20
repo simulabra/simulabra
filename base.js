@@ -17,6 +17,9 @@ import { parse } from "acorn";
 let object = {
     _slots: {
         init() {},
+        id() {
+            return this._id;
+        }
     }
 }
 
@@ -26,6 +29,7 @@ let klass = {
         _slots: {},
         _super: object,
         _mixins: [],
+        _idctr: 0,
         new(props = {}) {
             let obj = props;
             // should we clone the default props?
@@ -46,9 +50,13 @@ let klass = {
             });
             obj._class = this;
             obj.init();
+            if (this._id) {
+                obj._id = this._id.child(obj._name || this.nextid());
+            }
             return obj;
         },
         init() {
+            object._slots.init.apply(this);
             Object.setPrototypeOf(this._slots, this._super._slots);
         },
         super() {
@@ -57,11 +65,15 @@ let klass = {
         name() {
             return this._name;
         },
+        nextid() {
+            return ++this._idctr;
+        }
     }
 }
 
 
 Object.setPrototypeOf(klass, klass._slots);
+Object.setPrototypeOf(klass._slots, object._slots);
 
 let symbol = klass.new({
     _sympool: {},
@@ -99,6 +111,9 @@ let symbol = klass.new({
         },
         eq(other) {
             return this.gid() === other.gid();
+        },
+        js() {
+            return this.name();
         }
     },
 });
@@ -118,18 +133,37 @@ let envKlass = klass.new({
     }
 });
 
-let env = envKlass.new();
+let _ = envKlass.new();
 
 object._name = symbol.sym('object');
 klass._name = symbol.sym('klass');
 symbol._name = symbol.sym('symbol');
 
-env.define(object);
-env.define(klass);
-env.define(symbol);
-env.define(envKlass);
+_.define(object);
+_.define(klass);
+_.define(symbol);
+_.define(envKlass);
 
-env.define(env.klass.new({
+_.define(_.klass.new({
+    _name: _.symbol.sym('id'),
+    _slots: {
+        _parent: null,
+        _name: null,
+        child(name) {
+            return _.id.new({
+                _parent: this,
+                _name: name,
+            });
+        },
+        toString() {
+            return `${this._parent ? this._parent.toString() : ':'}:${this._name.name()}`;
+        },
+    },
+}))
+
+_.klass._id = _.id.new({ _name: _.symbol.sym('klass') });
+
+_.define(_.klass.new({
     _name: symbol.sym('primitive'),
     _slots: {
         _proto: null,
@@ -144,12 +178,18 @@ env.define(env.klass.new({
 
 // wrap strings numbers booleans etc
 
-env.primitive.new({
-    _name: env.symbol.sym('string'),
+_.primitive.new({
+    _name: _.symbol.sym('string'),
+    _proto: String.prototype,
+    _methods: {
+        sym() {
+            return _.symbol.sym(this);
+        }
+    }
 });
 
-env.primitive.new({
-    _name: env.symbol.sym('number'),
+_.primitive.new({
+    _name: _.symbol.sym('number'),
     _proto: Number.prototype,
     _methods: {
         js() {
@@ -158,8 +198,8 @@ env.primitive.new({
     }
 })
 
-env.define(env.klass.new({
-    _name: env.symbol.sym('mixin'),
+_.define(_.klass.new({
+    _name: _.symbol.sym('mixin'),
     _slots: {
         _slots: {},
         mix(base) {
@@ -172,23 +212,19 @@ env.define(env.klass.new({
 }));
 
 // TEMPLATE
-env.define(env.klass.new({
-    _name: env.symbol.sym(''),
+_.define(_.klass.new({
+    _name: _.symbol.sym(''),
     _slots: {
     },
 }));
 
-env.define(env.klass.new({
-    _name: env.symbol.sym('program'),
+_.define(_.klass.new({
+    _name: _.symbol.sym('program'),
     _slots: {
         _expressions: [],
         js() {
             return this._expressions.map(e => e.js()).reduce((prev, cur, idx) => {
-                if (idx == this._expressions.length - 1) {
-                    return prev + 'return ' + cur + ';';
-                } else {
-                    return prev + cur + ';\n';
-                }
+                return prev + cur + ';\n';
             }, '');
         },
         init() {
@@ -203,8 +239,8 @@ env.define(env.klass.new({
     },
 }));
 
-env.define(env.klass.new({
-    _name: env.symbol.sym('binop'),
+_.define(_.klass.new({
+    _name: _.symbol.sym('binop'),
     _slots: {
         _op: null,
         _left: null,
@@ -215,8 +251,41 @@ env.define(env.klass.new({
     },
 }));
 
-env.define(env.klass.new({
-    _name: env.symbol.sym('parser'),
+_.define(_.klass.new({
+    _name: _.symbol.sym('variable'),
+    _slots: {
+        _name: null,
+        _val: null,
+        js() {
+            return `let ${this._name.name()} = ${this._val.js()}`;
+        }
+    },
+}));
+
+_.define(_.klass.new({
+    _name: _.symbol.sym('property'),
+    _slots: {
+        _name: null,
+        _val: null,
+        js() {
+            return `${this._name.js()}: ${this._val.js()},`;
+        }
+    },
+}));
+
+_.define(_.klass.new({
+    _name: _.symbol.sym('object_expression'),
+    _slots: {
+        _props: [],
+        js() {
+            return `{${this._props.map(p => p.js()).join('\n')}}`;
+        }
+    }
+
+}))
+
+_.define(_.klass.new({
+    _name: _.symbol.sym('parser'),
     _slots: {
         _js: '',
         _acorn_repr: {},
@@ -231,19 +300,45 @@ env.define(env.klass.new({
                 case 'ExpressionStatement':
                     return this.node(n.expression);
                 case 'BinaryExpression':
-                    return env.binop.new({
+                    return _.binop.new({
                         _op: n.operator,
                         _left: n.left.value,
                         _right: n.right.value,
                     });
+                case 'BlockStatement':
+                    return _.program.new({
+                        _expressions: n.body.map(e => this.node(e)),
+                    });
+                case 'VariableDeclaration':
+                    return this.node(n.declarations[0]);
+                case 'VariableDeclarator':
+                    return _.variable.new({
+                        _name: _.symbol.sym(n.id.name),
+                        _val: this.node(n.init),
+                    });
+                case 'ObjectExpression':
+                    return _.object_expression.new({
+                        _props: n.properties.map(p => _.property.new({
+                            _name: p.key.name.sym(),
+                            _val: this.node(p.value),
+                        }))
+                    });
+                case 'Literal':
+                    return n.value;
+
+
             }
         },
         program() {
-            return env.program.new({
+            return _.program.new({
                 _expressions: this._acorn_repr.body.map(n => this.node(n)),
             });
         }
     }
 }));
 
-export { env };
+_.define(_.klass.new({
+    _name: 'context'.sym(),
+}));
+
+export { _ };
