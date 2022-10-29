@@ -1,12 +1,12 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { _ as env } from '../base.js';
+import { _ as env, $$ } from '../base.js';
 
 const _ = env.child();
 
 test('env', () => {
   _.define(_.klass.new({
-    _name: _.symbol.sym('frobber'),
+    _name: $$`frobber`,
     _slots: {
       frob() {
         return 42;
@@ -20,7 +20,7 @@ test('env', () => {
 
 
 _.define(_.klass.new({
-  _name: _.symbol.sym('point'),
+  _name: $$`point`,
   _slots: {
     _x: 0,
     _y: 0,
@@ -136,9 +136,9 @@ test('inheritance', () => {
 });
 
 test('symbols', () => {
-  assert.is(_.symbol.sym('test').eq(_.symbol.sym('test')), true);
-  assert.is(`<${_.symbol.sym('test')}>`, '<test>');
-  assert.is(_.point.name().eq(_.symbol.sym('point')), true);
+  assert.is($$`test`.eq($$`test`), true);
+  assert.is(`<${$$`test`}>`, '<test>');
+  assert.is(_.point.name().eq($$`point`), true);
 })
 
 test('parser', () => {
@@ -156,9 +156,59 @@ test('parser', () => {
   assert.is(program.expressions()[0].js(), '1 + 1');
 
   const p2 = _.parser.new({
-    _js: 'let o = { _test: 42 }'
+    _js: '/*classic example*/let o = { _test: 42 }'
   });
-  console.log(_.parser.id().toString());
+  assert.is(p2._comments.length, 1);
+
+  const longTest = `
+_.define(_.klass.new({
+    _name: $$\`parser\`,
+    _desc: 'the parser manages the relationship between the source Javascript and Simulabra nodes',
+    _slots: {
+        _js: '',
+        _acorn_repr: {},
+        _comments: [],
+        esparse() {
+            let self = this;
+            return parseScript(this._js, {
+                onComment(type, value) {
+                    self._comments.push(value);
+                }
+            });
+        },
+        init() {
+            this._acorn_repr = this.esparse();
+        },
+        // recursive descent estree representation from meriyah into real objects
+        esnode(n) {
+            switch (n.type) {
+                case 'ExpressionStatement':
+                    return this.esnode(n.expression);
+                case 'BinaryExpression':
+                    return _.binop.new({
+                        _op: n.operator,
+                        _left: this.esnode(n.left),
+                        _right: this.esnode(n.right),
+                    });
+                default:
+                    console.log(JSON.parse(n, null, 2));
+                    throw new Error('Unhandled type: ' + n.type);
+
+
+            }
+        },
+        program() {
+            return _.program.new({
+                _expressions: this._acorn_repr.body.map(n => this.esnode(n)),
+            });
+        }
+    }
+}));
+`;
+  let p3 = _.parser.new({
+    _js: longTest,
+  });
+  console.log(p3.program());
 })
 
 test.run();
