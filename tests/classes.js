@@ -1,25 +1,22 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { _ as env, $$ } from '../base.js';
+import { $mixin, $class, $$ } from '../base.js';
 
-const _ = env.child();
-
-test('env', () => {
-  _.define(_.klass.new({
+test('basic', () => {
+  const $frobber = $class.new({
     _name: $$`frobber`,
     _slots: {
       frob() {
         return 42;
       }
     }
-  }));
+  });
 
-  assert.is(_.frobber.new().frob(), 42);
-  assert.is(env.frobber, undefined);
-})
+  assert.is($frobber.new().frob(), 42);
+});
 
 
-_.define(_.klass.new({
+const $point = $class.new({
   _name: $$`point`,
   _slots: {
     _x: 0,
@@ -33,19 +30,19 @@ _.define(_.klass.new({
       return this;
     }
   }
-}));
+});
 
 test('point', () => {
-  assert.is(_.point.new({ _x: 3, _y: 4 }).dist(), 5);
-  let t = _.point.new();
+  assert.is($point.new({ _x: 3, _y: 4 }).dist(), 5);
+  let t = $point.new();
   t.translate({ _x: 3, _y: 4 });
   assert.is(t.dist(), 5);
-  assert.is(_.point.new().dist(), 0);
+  assert.is($point.new().dist(), 0);
 
-  _.define(_.klass.new({
-    _name: _.symbol.sym('loc-test'),
+  const $loc_test = $class.new({
+    _name: $$`loc_test`,
     _slots: {
-      _p: () => _.point.new(),
+      _p: () => $point.new(),
       move() {
         this._p.translate({ _x: 1 });
       },
@@ -53,10 +50,10 @@ test('point', () => {
         return this._p.dist();
       }
     }
-  }));
+  });
 
-  let l1 = _.loc_test.new();
-  let l2 = _.loc_test.new();
+  let l1 = $loc_test.new();
+  let l2 = $loc_test.new();
   l1.move();
   l1.move();
   assert.is(l1.dist(), 2);
@@ -64,8 +61,8 @@ test('point', () => {
 });
 
 test('mixins', () => {
-  let m = _.mixin.new({
-    _name: _.symbol.sym('color-mixin'),
+  let $color_mixin = $mixin.new({
+    _name: $$`color-mixin`,
     _slots: {
       _r: 0,
       _g: 0,
@@ -74,17 +71,17 @@ test('mixins', () => {
         return `(${this._r}, ${this._g}, ${this._b})`;
       },
     }
-  })
+  });
 
-  assert.is(m.mix({})._r, 0);
+  assert.is($color_mixin.mix({})._r, 0);
 
-  _.define(_.klass.new({
-    _name: _.symbol.sym('color-point'),
-    _mixins: [m],
-    _super: _.point,
-  }));
+  const $color_point = $class.new({
+    _name: $$`color_point`,
+    _mixins: [$color_mixin],
+    _super: $point,
+  });
 
-  const p = _.color_point.new({
+  const p = $color_point.new({
     _x: 3,
     _y: 4,
     _g: 12,
@@ -96,119 +93,49 @@ test('mixins', () => {
 });
 
 test('inheritance', () => {
-  _.define(_.klass.new({
-    _name: _.symbol.sym('child-point'),
-    _super: _.point,
+  const $child_point = $class.new({
+    _name: $$`child_point`,
+    _super: $point,
     _slots: {
       dist() {
         // note baked in super class - can we fix this in a nice way?
-        return _.child_point.super().dist.apply(this) / 2;
+        return $child_point.super().dist.apply(this) / 2;
       }
     }
-  }));
+  });
 
-  assert.is(_.child_point.new({ _x: 3, _y: 4 }).dist(), 2.5);
+  assert.is($child_point.new({ _x: 3, _y: 4 }).dist(), 2.5);
 
-  _.define(_.klass.new({
-    _name: _.symbol.sym('smaller-point'),
-    _super: _.child_point,
+  const $smaller_point = $class.new({
+    _name: $$`smaller_point`,
+    _super: $child_point,
     _slots: {
       dist() {
-        return _.smaller_point.super().dist.apply(this) / 5;
+        return $smaller_point.super().dist.apply(this) / 5;
       }
     }
-  }));
+  });
 
-  assert.is(_.smaller_point.new({ _x: 3, _y: 4 }).dist(), 0.5);
-  assert.is(_.smaller_point.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
+  assert.is($smaller_point.new({ _x: 3, _y: 4 }).dist(), 0.5);
+  assert.is($smaller_point.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
 
-  _.define(_.klass.new({
-    _name: _.symbol.sym('tiny-point'),
-    _super: _.smaller_point,
+  const $tiny_point = $class.new({
+    _name: $$`tiny_point`,
+    _super: $smaller_point,
     _slots: {
       dist() {
-        return _.tiny_point.super().dist.apply(this) / 10;
+        return $tiny_point.super().dist.apply(this) / 10;
       }
     }
-  }));
+  });
 
-  assert.is(_.tiny_point.new({ _x: 3, _y: 4 }).dist(), 0.05);
+  assert.is($tiny_point.new({ _x: 3, _y: 4 }).dist(), 0.05);
 });
 
 test('symbols', () => {
   assert.is($$`test`.eq($$`test`), true);
   assert.is(`<${$$`test`}>`, '<test>');
-  assert.is(_.point.name().eq($$`point`), true);
-})
-
-test('parser', () => {
-  const parser = _.parser.new({
-    _js: '1 + 1'
-  });
-
-  const repr = parser._acorn_repr;
-
-  assert.is(repr.type, 'Program');
-  assert.is(repr.body[0].expression.type, 'BinaryExpression');
-  assert.is(repr.body[0].expression.left.value, 1);
-  assert.is(repr.body[0].expression.right.value, 1);
-  let program = parser.program();
-  assert.is(program.expressions()[0].js(), '1 + 1');
-
-  const p2 = _.parser.new({
-    _js: '/*classic example*/let o = { _test: 42 }'
-  });
-  assert.is(p2._comments.length, 1);
-
-  const longTest = `
-_.define(_.klass.new({
-    _name: $$\`parser\`,
-    _desc: 'the parser manages the relationship between the source Javascript and Simulabra nodes',
-    _slots: {
-        _js: '',
-        _acorn_repr: {},
-        _comments: [],
-        esparse() {
-            let self = this;
-            return parseScript(this._js, {
-                onComment(type, value) {
-                    self._comments.push(value);
-                }
-            });
-        },
-        init() {
-            this._acorn_repr = this.esparse();
-        },
-        // recursive descent estree representation from meriyah into real objects
-        esnode(n) {
-            switch (n.type) {
-                case 'ExpressionStatement':
-                    return this.esnode(n.expression);
-                case 'BinaryExpression':
-                    return _.binop.new({
-                        _op: n.operator,
-                        _left: this.esnode(n.left),
-                        _right: this.esnode(n.right),
-                    });
-                default:
-                    console.log(JSON.parse(n, null, 2));
-                    throw new Error('Unhandled type: ' + n.type);
-
-
-            }
-        },
-        program() {
-            return _.program.new({
-                _expressions: this._acorn_repr.body.map(n => this.esnode(n)),
-            });
-        }
-    }
-}));
-`;
-  let p3 = _.parser.new({
-    _js: longTest,
-  });
-  console.log(p3.program());
+  assert.is($point.name().eq($$`point`), true);
 })
 
 test.run();
