@@ -17,7 +17,7 @@ export const $object = {
         init() {},
         id() {
             return this._id;
-        }
+        },
     }
 }
 
@@ -46,8 +46,26 @@ export const $class = {
             return obj;
         },
         init() {
-            $object._slots.init.apply(this);
-            Object.setPrototypeOf(this._slots, this._super._slots);
+            // $object._slots.init.apply(this);
+            for (let key of Object.keys(this._slots)) {
+                if (key[0] === '_' && key[1] !== '_') {
+                    let name = key.slice(1);
+                    if (!(name in this._slots)) {
+                        // console.log(`load slot ${this._name} ${name}`);
+                        this._slots[name] = function(val) {
+                            // console.log('use slot', key, name, this);
+                            if (val !== undefined) {
+                                this[key] = val;
+                            }
+                            return this[key];
+                        }
+                    }
+                }
+            }
+
+            this._super = this._super._slots;
+            Object.setPrototypeOf(this._slots, this._super);
+
             if (this._mixins.length > 0) {
                 this._parent = this._mixins.reduce((prev, cur) => {
                     return cur.mix(prev);
@@ -58,7 +76,7 @@ export const $class = {
             }
         },
         super() {
-            return this._super._slots;
+            return this._super;
         },
         name() {
             return this._name;

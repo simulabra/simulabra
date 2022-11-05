@@ -136,6 +136,17 @@ test('symbols', () => {
   assert.is($$`test`.eq($$`test`), true);
   assert.is(`<${$$`test`}>`, '<test>');
   assert.is($point.name().eq($$`point`), true);
+});
+
+test('getters n setters', () => {
+  let p = $point.new({
+    _x: 6,
+    _y: 7.5,
+  });
+
+  assert.is(p.x() * p.y(), 45);
+  assert.is(p.y(10), 10);
+  assert.is(p.x() * p.y(), 60);
 })
 
 test.run();
