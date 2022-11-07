@@ -22,6 +22,36 @@ export const $object = {
 }
 
 export const $class = {
+    _: {
+        vars: {
+            vars: {},
+            methods: {},
+            name: null,
+            super: $object,
+            mixins: [],
+            proto: null,
+        },
+        methods: {
+            new(args = {}) {
+                let o = { _: args };
+                // merge args and vars
+                for (let [k, v] of this._.vars) {
+                    if (!(k in o._)) {
+                        o._[k] = v;
+                    }
+                }
+                o._.class = this;
+                // set prototype
+                Object.setPrototypeOf(o, this._.proto);
+                // call init
+                o.init();
+            },
+            init() {
+                // define getters and setters
+                // mix mixins + methods + super into proto
+            }
+        }
+    },
     _slots: {
         _name: '', // non-type, non-slot object => default
         _slots: {},
