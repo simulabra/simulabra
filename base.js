@@ -18,95 +18,66 @@ export const $object = {
         id() {
             return this._id;
         },
+        aname(name) {
+            if (!('_name' in this)) {
+                this._name = $symbol.sym(name);
+            }
+        }
     }
 }
 
 export const $class = {
-    _: {
-        vars: {
-            vars: {},
-            methods: {},
-            name: null,
-            super: $object,
-            mixins: [],
-            proto: null,
-        },
-        methods: {
-            new(args = {}) {
-                let o = { _: args };
-                // merge args and vars
-                for (let [k, v] of this._.vars) {
-                    if (!(k in o._)) {
-                        o._[k] = v;
-                    }
-                }
-                o._.class = this;
-                // set prototype
-                Object.setPrototypeOf(o, this._.proto);
-                // call init
-                o.init();
-            },
-            init() {
-                // define getters and setters
-                // mix mixins + methods + super into proto
-            }
-        }
-    },
     _slots: {
         _name: '', // non-type, non-slot object => default
         _slots: {},
         _super: $object,
         _mixins: [],
+        _vars: [],
         _idctr: 0,
         new(props = {}) {
             let obj = props;
             // should we clone the default props?
-            Object.setPrototypeOf(obj, this._parent);
-            Object.entries(this._slots).forEach(([varName, varVal]) => {
-                // need to explicitly copy default value
-                if (varName[0] === '_' && varVal instanceof Function) {
-                    obj[varName] = varVal();
-                }
-            });
+            Object.setPrototypeOf(obj, this._proto);
             obj._class = this;
-            obj.init();
+            obj.init(this);
             if (this._id) {
                 obj._id = this._id.child(obj._name || this.nextid());
             }
             return obj;
         },
-        init() {
+        init(parent) {
             // $object._slots.init.apply(this);
-            for (let key of Object.keys(this._slots)) {
-                if (key[0] === '_' && key[1] !== '_') {
-                    let name = key.slice(1);
-                    if (!(name in this._slots)) {
-                        // console.log(`load slot ${this._name} ${name}`);
-                        this._slots[name] = function(val) {
-                            // console.log('use slot', key, name, this);
-                            if (val !== undefined) {
-                                this[key] = val;
-                            }
-                            return this[key];
+            for (let [key, val] of Object.entries(this._slots)) {
+                if (val?.init) {
+                    val.init(this);
+                }
+                if (val?._class?._name.name() === 'var') {
+                    val.aname(key);
+                    this._vars.push(val);
+                    let pk = '_' + key;
+                    this._slots[key] = function (assign) {
+                        if (assign !== undefined) {
+                            this[pk] = assign;
+                        } else if (!(pk in this)) {
+                            this[pk] = val.default();
                         }
+                        return this[pk];
                     }
                 }
             }
 
-            this._super = this._super._slots;
-            Object.setPrototypeOf(this._slots, this._super);
+            Object.setPrototypeOf(this._slots, this._super._slots);
 
             if (this._mixins.length > 0) {
-                this._parent = this._mixins.reduce((prev, cur) => {
+                this._proto = this._mixins.reduce((prev, cur) => {
                     return cur.mix(prev);
-                }, {});
-                Object.setPrototypeOf(this._parent, this._slots);
+                }, $mixin.new()).proto(this._slots);
             } else {
-                this._parent = this._slots;
+                this._proto = this._slots;
             }
         },
-        super() {
-            return this._super;
+        superslots() {
+            return this._super._slots;
         },
         name() {
             return this._name;
@@ -116,7 +87,6 @@ export const $class = {
         }
     }
 }
-
 
 Object.setPrototypeOf($class, $class._slots);
 $class.init();
@@ -171,6 +141,21 @@ export function $$(templ) {
 $symbol._name = $$`symbol`;
 $object._name = $$`object`;
 $class._name = $$`class`;
+
+export const $var = $class.new({
+    _name: $$`var`,
+    _slots: {
+        _type: null, //!nulltype, wtf?
+        _default: null, //fn or object
+        default(ctx) {
+            if (this._default instanceof Function) {
+                this._default.apply(ctx);
+            } else {
+                return this._default;
+            }
+        },
+    }
+})
 
 export const $id = $class.new({
     _name: $$`id`,
@@ -229,10 +214,19 @@ export const $mixin = $class.new({
     _slots: {
         _slots: {},
         mix(base) {
-            return {
-                ...this._slots,
-                ...base
-            }
+            return $mixin.new({
+                _slots: {
+                    ...this._slots,
+                    ...base
+                },
+            });
         },
+        proto(parent) {
+            let o = {
+                ...this._slots
+            };
+            Object.setPrototypeOf(o, parent);
+            return o;
+        }
     }
 });

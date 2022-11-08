@@ -1,6 +1,6 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { $mixin, $class, $$ } from '../base.js';
+import { $mixin, $class, $var, $$ } from '../base.js';
 
 test('basic', () => {
   const $frobber = $class.new({
@@ -19,14 +19,14 @@ test('basic', () => {
 const $point = $class.new({
   _name: $$`point`,
   _slots: {
-    _x: 0,
-    _y: 0,
+    x: $var.new({ _default: 0 }),
+    y: $var.new({ _default: 0 }),
     dist() {
-      return Math.sqrt(this._x ** 2 + this._y ** 2);
+      return Math.sqrt(this.x() ** 2 + this.y() ** 2);
     },
     translate({ _x = 0, _y = 0 }) {
-      this._x += _x;
-      this._y += _y;
+      this.x(this.x() + _x);
+      this.y(this.y() + _y);
       return this;
     }
   }
@@ -42,12 +42,14 @@ test('point', () => {
   const $loc_test = $class.new({
     _name: $$`loc_test`,
     _slots: {
-      _p: () => $point.new(),
+      p: $var.new({
+        default: () => $point.new()
+      }),
       move() {
-        this._p.translate({ _x: 1 });
+        this.p().translate({ _x: 1 });
       },
       dist() {
-        return this._p.dist();
+        return this.p().dist();
       }
     }
   });
@@ -73,7 +75,7 @@ test('mixins', () => {
     }
   });
 
-  assert.is($color_mixin.mix({})._r, 0);
+  assert.is($color_mixin.mix($mixin.new()).proto({})._r, 0);
 
   const $color_point = $class.new({
     _name: $$`color_point`,
@@ -99,7 +101,7 @@ test('inheritance', () => {
     _slots: {
       dist() {
         // note baked in super class - can we fix this in a nice way?
-        return $child_point.super().dist.apply(this) / 2;
+        return $child_point.superslots().dist.apply(this) / 2;
       }
     }
   });
@@ -111,7 +113,7 @@ test('inheritance', () => {
     _super: $child_point,
     _slots: {
       dist() {
-        return $smaller_point.super().dist.apply(this) / 5;
+        return $smaller_point.superslots().dist.apply(this) / 5;
       }
     }
   });
@@ -124,7 +126,7 @@ test('inheritance', () => {
     _super: $smaller_point,
     _slots: {
       dist() {
-        return $tiny_point.super().dist.apply(this) / 10;
+        return $tiny_point.superslots().dist.apply(this) / 10;
       }
     }
   });
