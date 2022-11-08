@@ -19,8 +19,8 @@ test('basic', () => {
 const $point = $class.new({
   _name: $$`point`,
   _slots: {
-    x: $var.new({ _default: 0 }),
-    y: $var.new({ _default: 0 }),
+    x: $var.default(0),
+    y: $var.default(0),
     dist() {
       return Math.sqrt(this.x() ** 2 + this.y() ** 2);
     },

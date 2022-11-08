@@ -48,21 +48,8 @@ export const $class = {
         init(parent) {
             // $object._slots.init.apply(this);
             for (let [key, val] of Object.entries(this._slots)) {
-                if (val?.init) {
-                    val.init(this);
-                }
-                if (val?._class?._name.name() === 'var') {
-                    val.aname(key);
-                    this._vars.push(val);
-                    let pk = '_' + key;
-                    this._slots[key] = function (assign) {
-                        if (assign !== undefined) {
-                            this[pk] = assign;
-                        } else if (!(pk in this)) {
-                            this[pk] = val.default();
-                        }
-                        return this[pk];
-                    }
+                if (val?.load) {
+                    val.load(key, this);
                 }
             }
 
@@ -144,9 +131,17 @@ $class._name = $$`class`;
 
 export const $var = $class.new({
     _name: $$`var`,
+    default(val) {
+        return this.new({ _default: val });
+    },
     _slots: {
         _type: null, //!nulltype, wtf?
         _default: null, //fn or object
+        aname(name) {
+            if (!this._name) {
+                this._name = $symbol.sym(name);
+            }
+        },
         default(ctx) {
             if (this._default instanceof Function) {
                 this._default.apply(ctx);
@@ -154,6 +149,19 @@ export const $var = $class.new({
                 return this._default;
             }
         },
+        load(name, parent) {
+            let self = this;
+            this.aname(name);
+            let pk = '_' + name;
+            parent._slots[name] = function(assign) {
+                if (assign !== undefined) {
+                    this[pk] = assign;
+                } else if (!(pk in this)) {
+                    this[pk] = self.default();
+                }
+                return this[pk];
+            };
+        }
     }
 })
 
