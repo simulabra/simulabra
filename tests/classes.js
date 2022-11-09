@@ -1,6 +1,6 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import { $mixin, $class, $var, $$ } from '../base.js';
+import { $mixin, $class, $var, $$, $method } from '../base.js';
 
 test('basic', () => {
   const $frobber = $class.new({
@@ -21,9 +21,9 @@ const $point = $class.new({
   _slots: {
     x: $var.default(0),
     y: $var.default(0),
-    dist() {
+    dist: $method.new({ _do: function dist() {
       return (this.x().square() + this.y().square()).sqrt();
-    },
+    }}),
     translate({ _x = 0, _y = 0 }) {
       this.x(this.x() + _x);
       this.y(this.y() + _y);
@@ -99,7 +99,7 @@ test('inheritance', () => {
     _slots: {
       dist() {
         // note baked in super class - can we fix this in a nice way?
-        return $child_point.superslots().dist.apply(this) / 2;
+        return $child_point.super().proto().dist.apply(this) / 2;
       }
     }
   });
@@ -111,7 +111,7 @@ test('inheritance', () => {
     _super: $child_point,
     _slots: {
       dist() {
-        return $smaller_point.superslots().dist.apply(this) / 5;
+        return $smaller_point.super().proto().dist.apply(this) / 5;
       }
     }
   });
@@ -124,7 +124,7 @@ test('inheritance', () => {
     _super: $smaller_point,
     _slots: {
       dist() {
-        return $tiny_point.superslots().dist.apply(this) / 10;
+        return $tiny_point.super().proto().dist.apply(this) / 10;
       }
     }
   });

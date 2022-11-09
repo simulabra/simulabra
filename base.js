@@ -23,10 +23,18 @@ export const $object = {
             if (!('_name' in this)) {
                 this._name = $symbol.sym(name);
             }
+        },
+        loadslots() {
+            for (let [key, val] of Object.entries(this)) {
+                if (val?.load instanceof Function) {
+                    val.load(key, this);
+                }
+            }
         }
     }
 };
 $object._proto = $object._slots;
+Object.prototype.loadslots = $object._proto.loadslots;
 
 export const $class = {
     _slots: {
@@ -36,17 +44,6 @@ export const $class = {
         _mixins: [],
         _vars: [],
         _idctr: 0,
-        new(props = {}) {
-            let obj = props;
-            // should we clone the default props?
-            Object.setPrototypeOf(obj, this._proto);
-            obj._class = this;
-            obj.init(this);
-            if (this._id) {
-                obj._id = this._id.child(obj._name || this.nextid());
-            }
-            return obj;
-        },
         init(_parent) {
             let mixslots = this._mixins.length > 0 ? this._mixins.reduce((prev, cur) => {
                 return cur.mix(prev);
@@ -56,22 +53,30 @@ export const $class = {
                 ...this._slots,
             };
             // $object._slots.init.apply(this);
-            for (let [key, val] of Object.entries(this._proto)) {
-                if (val?.load) {
-                    val.load(key, this._proto);
-                }
-            }
-
+            this._proto.loadslots();
             Object.setPrototypeOf(this._proto, this._super._proto);
         },
-        superslots() {
-            return this._super._slots;
+        new(props = {}) {
+            let obj = props;
+            Object.setPrototypeOf(obj, this._proto);
+            obj._class = this;
+            obj.init(this);
+            if (this._id) {
+                obj._id = this._id.child(obj._name || this.nextid());
+            }
+            return obj;
         },
         name() {
             return this._name;
         },
         nextid() {
             return ++this._idctr;
+        },
+        super() {
+            return this._super;
+        },
+        proto() {
+            return this._proto;
         }
     }
 }
@@ -163,6 +168,19 @@ export const $var = $class.new({
                 return this[pk];
             };
         }
+    }
+});
+
+export const $method = $class.new({
+    _name: $$`method`,
+    _slots: {
+        _do: null, // fn, meat and taters
+        args: $var.default(null),
+        ret: $var.default(null),
+        load(name, parent) {
+            this._do._method = this;
+            parent[name] = this._do;
+        },
     }
 })
 
