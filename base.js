@@ -13,7 +13,7 @@ Every object has an identity
 
 // hook up object to class
 export const $object = {
-    _slots: {
+    _proto: {
         init() {},
         id() {
             return this._id;
@@ -46,22 +46,21 @@ export const $class = {
             return obj;
         },
         init(parent) {
+            let mixslots = this._mixins.length > 0 ? this._mixins.reduce((prev, cur) => {
+                return cur.mix(prev);
+            }, null).slots() : {};
+            this._proto = {
+                ...mixslots,
+                ...this._slots,
+            };
             // $object._slots.init.apply(this);
-            for (let [key, val] of Object.entries(this._slots)) {
+            for (let [key, val] of Object.entries(this._proto)) {
                 if (val?.load) {
-                    val.load(key, this);
+                    val.load(key, this._proto);
                 }
             }
 
-            Object.setPrototypeOf(this._slots, this._super._slots);
-
-            if (this._mixins.length > 0) {
-                this._proto = this._mixins.reduce((prev, cur) => {
-                    return cur.mix(prev);
-                }, $mixin.new()).proto(this._slots);
-            } else {
-                this._proto = this._slots;
-            }
+            Object.setPrototypeOf(this._proto, this._super._proto);
         },
         superslots() {
             return this._super._slots;
@@ -153,7 +152,7 @@ export const $var = $class.new({
             let self = this;
             this.aname(name);
             let pk = '_' + name;
-            parent._slots[name] = function(assign) {
+            parent[name] = function(assign) {
                 if (assign !== undefined) {
                     this[pk] = assign;
                 } else if (!(pk in this)) {
@@ -220,21 +219,17 @@ export const $number = $primitive.new({
 export const $mixin = $class.new({
     _name: $$`mixin`,
     _slots: {
-        _slots: {},
+        slots: $var.default({}),
         mix(base) {
+            if (base == null) {
+                return this;
+            }
             return $mixin.new({
                 _slots: {
-                    ...this._slots,
+                    ...this.slots(),
                     ...base
                 },
             });
         },
-        proto(parent) {
-            let o = {
-                ...this._slots
-            };
-            Object.setPrototypeOf(o, parent);
-            return o;
-        }
     }
 });

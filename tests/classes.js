@@ -66,16 +66,14 @@ test('mixins', () => {
   let $color_mixin = $mixin.new({
     _name: $$`color-mixin`,
     _slots: {
-      _r: 0,
-      _g: 0,
-      _b: 0,
+      r: $var.default(0),
+      g: $var.default(0),
+      b: $var.default(0),
       format() {
-        return `(${this._r}, ${this._g}, ${this._b})`;
+        return `(${this.r()}, ${this.g()}, ${this.b()})`;
       },
     }
   });
-
-  assert.is($color_mixin.mix($mixin.new()).proto({})._r, 0);
 
   const $color_point = $class.new({
     _name: $$`color_point`,
