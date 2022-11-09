@@ -22,7 +22,7 @@ const $point = $class.new({
     x: $var.default(0),
     y: $var.default(0),
     dist() {
-      return Math.sqrt(this.x() ** 2 + this.y() ** 2);
+      return (this.x().square() + this.y().square()).sqrt();
     },
     translate({ _x = 0, _y = 0 }) {
       this.x(this.x() + _x);
@@ -148,5 +148,17 @@ test('getters n setters', () => {
   assert.is(p.y(10), 10);
   assert.is(p.x() * p.y(), 60);
 })
+
+test('primitives', () => {
+  let obj = { a: true };
+  assert.is(typeof obj.init, 'function');
+
+  obj.aname('test');
+  assert.is(obj._name.toString(), 'test');
+
+  assert.is('test 2'.sym().toString(), 'test 2');
+
+  assert.is((4 + 5).sqrt(), 3);
+});
 
 test.run();

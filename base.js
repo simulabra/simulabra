@@ -13,7 +13,8 @@ Every object has an identity
 
 // hook up object to class
 export const $object = {
-    _proto: {
+    _js_prototype: Object.prototype,
+    _slots: {
         init() {},
         id() {
             return this._id;
@@ -24,7 +25,8 @@ export const $object = {
             }
         }
     }
-}
+};
+$object._proto = $object._slots;
 
 export const $class = {
     _slots: {
@@ -45,7 +47,7 @@ export const $class = {
             }
             return obj;
         },
-        init(parent) {
+        init(_parent) {
             let mixslots = this._mixins.length > 0 ? this._mixins.reduce((prev, cur) => {
                 return cur.mix(prev);
             }, null).slots() : {};
@@ -183,23 +185,28 @@ export const $id = $class.new({
 
 export const $primitive = $class.new({
     _name: $$`primitive`,
+    _super: $class,
     _slots: {
-        _proto: null,
+        _js_prototype: null,
         _methods: {},
         init() {
-            for (let [name, fn] of Object.entries(this._methods)) {
-                this._proto[name] = fn;
+            for (let [name, fn] of Object.entries(this._slots)) {
+                this._js_prototype[name] = fn;
             }
         }
     }
 });
 
+$object._class = $primitive;
+Object.setPrototypeOf($object, $primitive._proto);
+$primitive._slots.init.apply($object);
+
 // wrap strings numbers booleans etc
 
 export const $string = $primitive.new({
     _name: $$`string`,
-    _proto: String.prototype,
-    _methods: {
+    _js_prototype: String.prototype,
+    _slots: {
         sym() {
             return $symbol.sym(this);
         }
@@ -208,10 +215,16 @@ export const $string = $primitive.new({
 
 export const $number = $primitive.new({
     _name: $$`number`,
-    _proto: Number.prototype,
-    _methods: {
+    _js_prototype: Number.prototype,
+    _slots: {
         js() {
             return this;
+        },
+        sqrt() {
+            return Math.sqrt(this);
+        },
+        square() {
+            return this ** 2;
         }
     }
 })
