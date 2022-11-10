@@ -21,12 +21,14 @@ const $point = $class.new({
   _slots: {
     x: $var.default(0),
     y: $var.default(0),
-    dist: $method.new({ _do: function dist() {
-      return (this.x().square() + this.y().square()).sqrt();
-    }}),
-    translate({ _x = 0, _y = 0 }) {
-      this.x(this.x() + _x);
-      this.y(this.y() + _y);
+    dist: $method.new({
+      _do: function dist() {
+        return (this.x().square() + this.y().square()).sqrt();
+      },
+    }),
+    translate(x = 0, y = 0) {
+      this.x(this.x() + x);
+      this.y(this.y() + y);
       return this;
     }
   }
@@ -35,7 +37,7 @@ const $point = $class.new({
 test('point', () => {
   assert.is($point.new({ _x: 3, _y: 4 }).dist(), 5);
   let t = $point.new();
-  t.translate({ _x: 3, _y: 4 });
+  t.translate(3, 4);
   assert.is(t.dist(), 5);
   assert.is($point.new().dist(), 0);
 
@@ -46,7 +48,7 @@ test('point', () => {
         default: () => $point.new()
       }),
       move() {
-        this.p().translate({ _x: 1 });
+        this.p().translate(1);
       },
       dist() {
         return this.p().dist();
@@ -117,7 +119,7 @@ test('inheritance', () => {
   });
 
   assert.is($smaller_point.new({ _x: 3, _y: 4 }).dist(), 0.5);
-  assert.is($smaller_point.new().translate({ _x: 4, _y: 0 }).dist(), 0.4);
+  assert.is($smaller_point.new().translate(4, 0).dist(), 0.4);
 
   const $tiny_point = $class.new({
     _name: $$`tiny_point`,

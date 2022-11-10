@@ -19,6 +19,7 @@ export const $object = {
         id() {
             return this._id;
         },
+        // if this object doesn't have a _name, give it that of the symbol version of name
         aname(name) {
             if (!('_name' in this)) {
                 this._name = $symbol.sym(name);
@@ -26,9 +27,7 @@ export const $object = {
         },
         loadslots() {
             for (let [key, val] of Object.entries(this)) {
-                if (val?.load instanceof Function) {
-                    val.load(key, this);
-                }
+                val?.load && val.load(key, this);
             }
         }
     }
@@ -52,7 +51,6 @@ export const $class = {
                 ...mixslots,
                 ...this._slots,
             };
-            // $object._slots.init.apply(this);
             this._proto.loadslots();
             Object.setPrototypeOf(this._proto, this._super._proto);
         },
@@ -62,7 +60,7 @@ export const $class = {
             obj._class = this;
             obj.init(this);
             if (this._id) {
-                obj._id = this._id.child(obj._name || this.nextid());
+                obj._id = this._id.child(obj._name, this.nextid());
             }
             return obj;
         },
@@ -143,6 +141,7 @@ export const $var = $class.new({
     _slots: {
         _type: null, //!nulltype, wtf?
         _default: null, //fn or object
+        _mutable: true,
         aname(name) {
             if (!this._name) {
                 this._name = $symbol.sym(name);
@@ -159,14 +158,20 @@ export const $var = $class.new({
             let self = this;
             this.aname(name);
             let pk = '_' + name;
-            parent[name] = function(assign) {
-                if (assign !== undefined) {
-                    this[pk] = assign;
-                } else if (!(pk in this)) {
-                    this[pk] = self.default();
-                }
-                return this[pk];
-            };
+            if (this._mutable) {
+                parent[name] = function (assign) {
+                    if (assign !== undefined) {
+                        this[pk] = assign;
+                    } else if (!(pk in this)) {
+                        this[pk] = self.default();
+                    }
+                    return this[pk];
+                };
+            } else {
+                parent[name] = function() {
+                    return this[pk];
+                };
+            }
         }
     }
 });
@@ -189,10 +194,11 @@ export const $id = $class.new({
     _slots: {
         _parent: null,
         _name: null,
-        child(name) {
+        child(name, num) {
             return _.id.new({
                 _parent: this,
                 _name: name,
+                _num: num,
             });
         },
         toString() {
