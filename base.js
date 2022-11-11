@@ -29,6 +29,9 @@ export const $object = {
             for (let [key, val] of Object.entries(this)) {
                 val?.load && val.load(key, this);
             }
+        },
+        update(event) {
+
         }
     }
 };
@@ -162,6 +165,7 @@ export const $var = $class.new({
                 parent[name] = function (assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
+                        this.update({ name: 'changed' });
                     } else if (!(pk in this)) {
                         this[pk] = self.default();
                     }
