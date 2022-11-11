@@ -71,9 +71,9 @@ test('mixins', () => {
       r: $var.default(0),
       g: $var.default(0),
       b: $var.default(0),
-      format() {
+      format: $method.do(function() {
         return `(${this.r()}, ${this.g()}, ${this.b()})`;
-      },
+      }),
     }
   });
 

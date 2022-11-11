@@ -169,6 +169,9 @@ export const $var = $class.new({
                 };
             } else {
                 parent[name] = function() {
+                    if (!(pk in this)) {
+                        this[pk] = self.default();
+                    }
                     return this[pk];
                 };
             }
@@ -178,6 +181,11 @@ export const $var = $class.new({
 
 export const $method = $class.new({
     _name: $$`method`,
+    do(fn) {
+        return this.new({
+            _do: fn
+        });
+    },
     _slots: {
         _do: null, // fn, meat and taters
         args: $var.default(null),
