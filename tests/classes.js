@@ -40,6 +40,8 @@ test('point', () => {
   t.translate(3, 4);
   assert.is(t.dist(), 5);
   assert.is($point.new().dist(), 0);
+  assert.is($point.class().eq($class), true);
+  assert.is(t.class().eq($point), true);
 
   const $loc_test = $class.new({
     _name: $$`loc_test`,
@@ -149,6 +151,20 @@ test('getters n setters', () => {
   assert.is(p.x() * p.y(), 45);
   assert.is(p.y(10), 10);
   assert.is(p.x() * p.y(), 60);
+
+  const $watched_point = $class.new({
+    _name: $$`watched_point`,
+    _super: $point,
+    _slots: {
+      update(event) {
+        this._last = event;
+      },
+    }
+  });
+
+  const wp = $watched_point.new();
+  wp.x(4);
+  assert.is(wp._last.changed, 'x');
 });
 
 test('primitives', () => {

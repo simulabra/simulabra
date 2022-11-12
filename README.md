@@ -1,15 +1,25 @@
-# simulabra
+let's build an object system
 
-To install dependencies:
+compoents
 
-```bash
-bun install
-```
+### object
+everything is an object (kind of - null, undefined aren't really)
 
-To run:
-
-```bash
-bun run smoperat.js
-```
-
-This project was created using `bun init` in bun v0.1.13. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+### primitive
+the base JS objects we don't want to wrap, like Number or String
+mangle the prototypes and ask questions later
+### class
+specifies the implementation and behavior of instance objects
+needs to be bootstrapped
+### var
+smarter than a property
+### method
+smarter than a function
+### symbol
+interned string
+### id
+URI
+### command
+objectified callback that does something
+### module
+### interface

@@ -32,6 +32,14 @@ export const $object = {
         },
         update(event) {
 
+        },
+        eq(other) {
+            return this === other;
+        },
+        class() {
+            if (this._class) {
+                return this._class;
+            }
         }
     }
 };
@@ -69,6 +77,9 @@ export const $class = {
         },
         name() {
             return this._name;
+        },
+        eq(other) {
+            return this.name().eq(other.name());
         },
         nextid() {
             return ++this._idctr;
@@ -165,7 +176,7 @@ export const $var = $class.new({
                 parent[name] = function (assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
-                        this.update({ name: 'changed' });
+                        this.update({ changed: name });
                     } else if (!(pk in this)) {
                         this[pk] = self.default();
                     }
@@ -270,7 +281,7 @@ export const $mixin = $class.new({
     _slots: {
         slots: $var.default({}),
         mix(base) {
-            if (base == null) {
+            if (base === null) {
                 return this;
             }
             return $mixin.new({
