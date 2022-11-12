@@ -194,8 +194,17 @@ export const $var = $class.new({
     }
 });
 
+export const $virtual = $class.new({
+    _name: $$`virtual`,
+    _slots: {
+        args: $var.default(null),
+        ret: $var.default(null),
+    }
+})
+
 export const $method = $class.new({
     _name: $$`method`,
+    _super: $virtual,
     do(fn) {
         return this.new({
             _do: fn
@@ -203,8 +212,6 @@ export const $method = $class.new({
     },
     _slots: {
         _do: null, // fn, meat and taters
-        args: $var.default(null),
-        ret: $var.default(null),
         load(name, parent) {
             this._do._method = this;
             parent[name] = this._do;
@@ -274,7 +281,21 @@ export const $number = $primitive.new({
             return this ** 2;
         }
     }
-})
+});
+
+export const $array = $primitive.new({
+    _name: $$`array`,
+    _js_prototype: Array.prototype,
+    _slots: {
+        intoMap() {
+            const res = {};
+            for (const it of this) {
+                res[it.name()] = it;
+            }
+            return res;
+        }
+    }
+});
 
 export const $mixin = $class.new({
     _name: $$`mixin`,
@@ -293,3 +314,19 @@ export const $mixin = $class.new({
         },
     }
 });
+
+export const $interface = $class.new({
+    _name: $$`interface`,
+    _slots: {
+        _methods: {},
+    },
+    of() {
+
+    }
+});
+
+$interface.of([
+    $virtual.new({
+        _name: $$`init`,
+    })
+]);

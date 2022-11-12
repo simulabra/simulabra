@@ -177,6 +177,10 @@ test('primitives', () => {
   assert.is('test 2'.sym().toString(), 'test 2');
 
   assert.is((4 + 5).sqrt(), 3);
+
+  const arr = [$point, $class];
+  const arrMap = arr.intoMap();
+  console.log(arrMap);
 });
 
 test.run();
