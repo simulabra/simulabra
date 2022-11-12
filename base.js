@@ -85,7 +85,7 @@ export const $class = {
 Object.setPrototypeOf($class, $class._slots);
 $class.init();
 
-let $symbol = $class.new({
+const $symbol = $class.new({
     _sympool: {},
     _idc: 0,
     get(name) {
@@ -158,7 +158,7 @@ export const $var = $class.new({
             }
         },
         load(name, parent) {
-            let self = this;
+            const self = this;
             this.aname(name);
             let pk = '_' + name;
             if (this._mutable) {
@@ -226,7 +226,7 @@ export const $primitive = $class.new({
         _js_prototype: null,
         _methods: {},
         init() {
-            for (let [name, fn] of Object.entries(this._slots)) {
+            for (const [name, fn] of Object.entries(this._slots)) {
                 this._js_prototype[name] = fn;
             }
         }

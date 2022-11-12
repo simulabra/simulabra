@@ -149,10 +149,10 @@ test('getters n setters', () => {
   assert.is(p.x() * p.y(), 45);
   assert.is(p.y(10), 10);
   assert.is(p.x() * p.y(), 60);
-})
+});
 
 test('primitives', () => {
-  let obj = { a: true };
+  const obj = { a: true };
   assert.is(typeof obj.init, 'function');
 
   obj.aname('test');
