@@ -1,10 +1,10 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import Base, { $$ } from '../base.js';
+import Base from '../base.js';
 
 test('basic', () => {
   const Frobber = Base.Class.new({
-    _name: $$`Frobber`,
+    _name: Base.$$`Frobber`,
     _slots: {
       frob() {
         return 42;
@@ -17,7 +17,7 @@ test('basic', () => {
 
 
 const Point = Base.Class.new({
-  _name: $$`Point`,
+  _name: Base.$$`Point`,
   _slots: {
     x: Base.Var.default(0),
     y: Base.Var.default(0),
@@ -44,7 +44,7 @@ test('point', () => {
   assert.is(t.class().eq(Point), true);
 
   const LocTest = Base.Class.new({
-    _name: $$`LocTest`,
+    _name: Base.$$`LocTest`,
     _slots: {
       p: Base.Var.new({
         default: () => Point.new()
@@ -68,7 +68,7 @@ test('point', () => {
 
 test('mixins', () => {
   let ColorMixin = Base.Mixin.new({
-    _name: $$`ColorMixin`,
+    _name: Base.$$`ColorMixin`,
     _slots: {
       r: Base.Var.default(0),
       g: Base.Var.default(0),
@@ -80,7 +80,7 @@ test('mixins', () => {
   });
 
   const ColorPoint = Base.Class.new({
-    _name: $$`ColorPoint`,
+    _name: Base.$$`ColorPoint`,
     _mixins: [ColorMixin],
     _super: Point,
   });
@@ -98,7 +98,7 @@ test('mixins', () => {
 
 test('inheritance', () => {
   const ChildPoint = Base.Class.new({
-    _name: $$`ChildPoint`,
+    _name: Base.$$`ChildPoint`,
     _super: Point,
     _slots: {
       dist() {
@@ -111,7 +111,7 @@ test('inheritance', () => {
   assert.is(ChildPoint.new({ _x: 3, _y: 4 }).dist(), 2.5);
 
   const SmallerPoint = Base.Class.new({
-    _name: $$`SmallerPoint`,
+    _name: Base.$$`SmallerPoint`,
     _super: ChildPoint,
     _slots: {
       dist() {
@@ -124,7 +124,7 @@ test('inheritance', () => {
   assert.is(SmallerPoint.new().translate(4, 0).dist(), 0.4);
 
   const TinyPoint = Base.Class.new({
-    _name: $$`TinyPoint`,
+    _name: Base.$$`TinyPoint`,
     _super: SmallerPoint,
     _slots: {
       dist() {
@@ -137,9 +137,9 @@ test('inheritance', () => {
 });
 
 test('symbols', () => {
-  assert.is($$`test`.eq($$`test`), true);
-  assert.is(`<${$$`test`}>`, '<test>');
-  assert.is(Point.name().eq($$`Point`), true);
+  assert.is(Base.$$`test`.eq(Base.$$`test`), true);
+  assert.is(`<${Base.$$`test`}>`, '<test>');
+  assert.is(Point.name().eq(Base.$$`Point`), true);
 });
 
 test('getters n setters', () => {
@@ -153,7 +153,7 @@ test('getters n setters', () => {
   assert.is(p.x() * p.y(), 60);
 
   const WatchedPoint = Base.Class.new({
-    _name: $$`WatchedPoint`,
+    _name: Base.$$`WatchedPoint`,
     _super: Point,
     _slots: {
       update(event) {

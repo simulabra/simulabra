@@ -311,6 +311,15 @@ export default _Module.new({
                 }
             }
         }),
+        _Primitive.new({
+            _name: $$`Function`,
+            _js_prototype: Function.prototype,
+            _slots: {
+                nameString() {
+                    return this.name;
+                }
+            },
+        }),
         _Class.new({
             _name: $$`Mixin`,
             _slots: {
@@ -337,5 +346,6 @@ export default _Module.new({
 
             }
         }),
+        $$,
     ]
 })
