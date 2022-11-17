@@ -15,7 +15,7 @@ Every object has an identity
 export const _Object = {
     _js_prototype: Object.prototype,
     _slots: {
-        init() {},
+        init() { },
         id() {
             return this._id;
         },
@@ -186,7 +186,7 @@ export const _Var = _Class.new({
                     return this[pk];
                 };
             } else {
-                parent[name] = function() {
+                parent[name] = function () {
                     if (!(pk in this)) {
                         this[pk] = self.default();
                     }
@@ -263,8 +263,83 @@ const _Module = _Class.new({
         }
     },
 });
+const _String = _Primitive.new({
+    _name: $$`String`,
+    _js_prototype: String.prototype,
+    _slots: {
+        sym() {
+            return _Symbol.sym(this);
+        }
+    }
+});
+const _Number = _Primitive.new({
+    _name: $$`Number`,
+    _js_prototype: Number.prototype,
+    _slots: {
+        js() {
+            return this;
+        },
+        sqrt() {
+            return Math.sqrt(this);
+        },
+        square() {
+            return this ** 2;
+        }
+    }
+});
+const _Array = _Primitive.new({
+    _name: $$`Array`,
+    _js_prototype: Array.prototype,
+    _slots: {
+        intoMap() {
+            const res = {};
+            for (const it of this) {
+                res[it.name()] = it;
+            }
+            return res;
+        }
+    }
+});
+const _Function = _Primitive.new({
+    _name: $$`Function`,
+    _js_prototype: Function.prototype,
+    _slots: {
+        nameString() {
+            return this.name;
+        }
+    },
+});
+const _Mixin = _Class.new({
+    _name: $$`Mixin`,
+    _slots: {
+        slots: _Var.default({}),
+        mix(base) {
+            if (base === null) {
+                return this;
+            }
+            return $mixin.new({
+                _slots: {
+                    ...this.slots(),
+                    ...base
+                },
+            });
+        },
+        nameString() {
+            return this._name.name();
+        }
+    }
+});
+const _Interface = _Class.new({
+    _name: $$`Interface`,
+    _slots: {
+        _methods: {},
+    },
+    of() {
 
-export default _Module.new({
+    }
+});
+
+const _ = _Module.new({
     _exports: [
         _Class,
         _Object,
@@ -274,78 +349,15 @@ export default _Module.new({
         _Id,
         _Primitive,
         _Method,
-        _Primitive.new({
-            _name: $$`String`,
-            _js_prototype: String.prototype,
-            _slots: {
-                sym() {
-                    return _Symbol.sym(this);
-                }
-            }
-        }),
-        _Primitive.new({
-            _name: $$`Number`,
-            _js_prototype: Number.prototype,
-            _slots: {
-                js() {
-                    return this;
-                },
-                sqrt() {
-                    return Math.sqrt(this);
-                },
-                square() {
-                    return this ** 2;
-                }
-            }
-        }),
-        _Primitive.new({
-            _name: $$`Array`,
-            _js_prototype: Array.prototype,
-            _slots: {
-                intoMap() {
-                    const res = {};
-                    for (const it of this) {
-                        res[it.name()] = it;
-                    }
-                    return res;
-                }
-            }
-        }),
-        _Primitive.new({
-            _name: $$`Function`,
-            _js_prototype: Function.prototype,
-            _slots: {
-                nameString() {
-                    return this.name;
-                }
-            },
-        }),
-        _Class.new({
-            _name: $$`Mixin`,
-            _slots: {
-                slots: _Var.default({}),
-                mix(base) {
-                    if (base === null) {
-                        return this;
-                    }
-                    return $mixin.new({
-                        _slots: {
-                            ...this.slots(),
-                            ...base
-                        },
-                    });
-                },
-            }
-        }),
-        _Class.new({
-            _name: $$`Interface`,
-            _slots: {
-                _methods: {},
-            },
-            of() {
-
-            }
-        }),
+        _Module,
+        _String,
+        _Number,
+        _Array,
+        _Function,
+        _Mixin,
+        _Interface,
         $$,
-    ]
-})
+    ],
+});
+
+export default _;
