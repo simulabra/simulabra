@@ -12,7 +12,7 @@ Every object has an identity
 */
 
 // hook up object to class
-export const $object = {
+export const _Object = {
     _js_prototype: Object.prototype,
     _slots: {
         init() {},
@@ -22,7 +22,7 @@ export const $object = {
         // if this object doesn't have a _name, give it that of the symbol version of name
         aname(name) {
             if (!('_name' in this)) {
-                this._name = $symbol.sym(name);
+                this._name = _Symbol.sym(name);
             }
         },
         loadslots() {
@@ -43,14 +43,14 @@ export const $object = {
         }
     }
 };
-$object._proto = $object._slots;
-Object.prototype.loadslots = $object._proto.loadslots;
+_Object._proto = _Object._slots;
+Object.prototype.loadslots = _Object._proto.loadslots;
 
-export const $class = {
+export const _Class = {
     _slots: {
         _name: '', // non-type, non-slot object => default
         _slots: {},
-        _super: $object,
+        _super: _Object,
         _mixins: [],
         _vars: [],
         _idctr: 0,
@@ -78,6 +78,9 @@ export const $class = {
         name() {
             return this._name;
         },
+        nameString() {
+            return this.name().name();
+        },
         eq(other) {
             return this.name().eq(other.name());
         },
@@ -93,10 +96,10 @@ export const $class = {
     }
 }
 
-Object.setPrototypeOf($class, $class._slots);
-$class.init();
+Object.setPrototypeOf(_Class, _Class._slots);
+_Class.init();
 
-const $symbol = $class.new({
+const _Symbol = _Class.new({
     _sympool: {},
     _idc: 0,
     get(name) {
@@ -107,10 +110,10 @@ const $symbol = $class.new({
         this._sympool[name] = id;
     },
     sym(name) {
-        let gid = $symbol.get(name);
+        let gid = _Symbol.get(name);
         if (!gid) {
-            gid = $symbol.genid();
-            $symbol.save(gid, name)
+            gid = _Symbol.genid();
+            _Symbol.save(gid, name)
         }
         return this.new({
             _gid: gid,
@@ -125,7 +128,7 @@ const $symbol = $class.new({
             return this.name();
         },
         name() {
-            return $symbol.get(this._gid);
+            return _Symbol.get(this._gid);
         },
         gid() {
             return this._gid
@@ -140,15 +143,15 @@ const $symbol = $class.new({
 });
 
 export function $$(templ) {
-    return $symbol.sym(templ[0]);
+    return _Symbol.sym(templ[0]);
 }
 
-$symbol._name = $$`symbol`;
-$object._name = $$`object`;
-$class._name = $$`class`;
+_Symbol._name = $$`Symbol`;
+_Object._name = $$`Object`;
+_Class._name = $$`Class`;
 
-export const $var = $class.new({
-    _name: $$`var`,
+export const _Var = _Class.new({
+    _name: $$`Var`,
     default(val) {
         return this.new({ _default: val });
     },
@@ -158,7 +161,7 @@ export const $var = $class.new({
         _mutable: true,
         aname(name) {
             if (!this._name) {
-                this._name = $symbol.sym(name);
+                this._name = _Symbol.sym(name);
             }
         },
         default(ctx) {
@@ -194,17 +197,8 @@ export const $var = $class.new({
     }
 });
 
-export const $virtual = $class.new({
-    _name: $$`virtual`,
-    _slots: {
-        args: $var.default(null),
-        ret: $var.default(null),
-    }
-})
-
-export const $method = $class.new({
-    _name: $$`method`,
-    _super: $virtual,
+export const _Method = _Class.new({
+    _name: $$`Method`,
     do(fn) {
         return this.new({
             _do: fn
@@ -212,6 +206,8 @@ export const $method = $class.new({
     },
     _slots: {
         _do: null, // fn, meat and taters
+        args: _Var.default([]),
+        ret: _Var.default(null),
         load(name, parent) {
             this._do._method = this;
             parent[name] = this._do;
@@ -219,8 +215,8 @@ export const $method = $class.new({
     }
 })
 
-export const $id = $class.new({
-    _name: $$`id`,
+export const _Id = _Class.new({
+    _name: $$`Id`,
     _slots: {
         _parent: null,
         _name: null,
@@ -237,9 +233,9 @@ export const $id = $class.new({
     },
 });
 
-export const $primitive = $class.new({
-    _name: $$`primitive`,
-    _super: $class,
+export const _Primitive = _Class.new({
+    _name: $$`Primitive`,
+    _super: _Class,
     _slots: {
         _js_prototype: null,
         _methods: {},
@@ -251,82 +247,95 @@ export const $primitive = $class.new({
     }
 });
 
-$object._class = $primitive;
-Object.setPrototypeOf($object, $primitive._proto);
-$primitive._slots.init.apply($object);
+_Object._class = _Primitive;
+Object.setPrototypeOf(_Object, _Primitive._proto);
+_Primitive._slots.init.apply(_Object);
 
-// wrap strings numbers booleans etc
 
-export const $string = $primitive.new({
-    _name: $$`string`,
-    _js_prototype: String.prototype,
+const _Module = _Class.new({
+    _name: $$`Module`,
     _slots: {
-        sym() {
-            return $symbol.sym(this);
-        }
-    }
-});
-
-export const $number = $primitive.new({
-    _name: $$`number`,
-    _js_prototype: Number.prototype,
-    _slots: {
-        js() {
-            return this;
-        },
-        sqrt() {
-            return Math.sqrt(this);
-        },
-        square() {
-            return this ** 2;
-        }
-    }
-});
-
-export const $array = $primitive.new({
-    _name: $$`array`,
-    _js_prototype: Array.prototype,
-    _slots: {
-        intoMap() {
-            const res = {};
-            for (const it of this) {
-                res[it.name()] = it;
+        exports: _Var.default([]),
+        init() {
+            for (const item of this.exports()) {
+                this[item.nameString()] = item;
             }
-            return res;
         }
-    }
-});
-
-export const $mixin = $class.new({
-    _name: $$`mixin`,
-    _slots: {
-        slots: $var.default({}),
-        mix(base) {
-            if (base === null) {
-                return this;
-            }
-            return $mixin.new({
-                _slots: {
-                    ...this.slots(),
-                    ...base
-                },
-            });
-        },
-    }
-});
-
-export const $interface = $class.new({
-    _name: $$`interface`,
-    _slots: {
-        _methods: {},
     },
-    of() {
-
-    }
 });
 
-$interface.of([
-    $virtual.new({
-        _name: $$`init`,
-    })
-]);
+export default _Module.new({
+    _exports: [
+        _Class,
+        _Object,
+        _Var,
+        _Method,
+        _Symbol,
+        _Id,
+        _Primitive,
+        _Method,
+        _Primitive.new({
+            _name: $$`String`,
+            _js_prototype: String.prototype,
+            _slots: {
+                sym() {
+                    return _Symbol.sym(this);
+                }
+            }
+        }),
+        _Primitive.new({
+            _name: $$`Number`,
+            _js_prototype: Number.prototype,
+            _slots: {
+                js() {
+                    return this;
+                },
+                sqrt() {
+                    return Math.sqrt(this);
+                },
+                square() {
+                    return this ** 2;
+                }
+            }
+        }),
+        _Primitive.new({
+            _name: $$`Array`,
+            _js_prototype: Array.prototype,
+            _slots: {
+                intoMap() {
+                    const res = {};
+                    for (const it of this) {
+                        res[it.name()] = it;
+                    }
+                    return res;
+                }
+            }
+        }),
+        _Class.new({
+            _name: $$`Mixin`,
+            _slots: {
+                slots: _Var.default({}),
+                mix(base) {
+                    if (base === null) {
+                        return this;
+                    }
+                    return $mixin.new({
+                        _slots: {
+                            ...this.slots(),
+                            ...base
+                        },
+                    });
+                },
+            }
+        }),
+        _Class.new({
+            _name: $$`Interface`,
+            _slots: {
+                _methods: {},
+            },
+            of() {
+
+            }
+        }),
+    ]
+})
