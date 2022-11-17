@@ -12,13 +12,10 @@ Every object has an identity
 */
 
 // hook up object to class
-export const _Object = {
+const _Object = {
     _js_prototype: Object.prototype,
     _slots: {
         init() { },
-        id() {
-            return this._id;
-        },
         // if this object doesn't have a _name, give it that of the symbol version of name
         aname(name) {
             if (!('_name' in this)) {
@@ -46,7 +43,7 @@ export const _Object = {
 _Object._proto = _Object._slots;
 Object.prototype.loadslots = _Object._proto.loadslots;
 
-export const _Class = {
+const _Class = {
     _slots: {
         _name: '', // non-type, non-slot object => default
         _slots: {},
@@ -71,7 +68,7 @@ export const _Class = {
             obj._class = this;
             obj.init(this);
             if (this._id) {
-                obj._id = this._id.child(obj._name, this.nextid());
+                obj.id(this._id.child(obj.name(), this.nextid()));
             }
             return obj;
         },
@@ -92,6 +89,9 @@ export const _Class = {
         },
         proto() {
             return this._proto;
+        },
+        type() {
+
         }
     }
 }
@@ -142,7 +142,7 @@ const _Symbol = _Class.new({
     },
 });
 
-export function $$(templ) {
+function $$(templ) {
     return _Symbol.sym(templ[0]);
 }
 
@@ -150,7 +150,7 @@ _Symbol._name = $$`Symbol`;
 _Object._name = $$`Object`;
 _Class._name = $$`Class`;
 
-export const _Var = _Class.new({
+const _Var = _Class.new({
     _name: $$`Var`,
     default(val) {
         return this.new({ _default: val });
@@ -197,7 +197,7 @@ export const _Var = _Class.new({
     }
 });
 
-export const _Method = _Class.new({
+const _Method = _Class.new({
     _name: $$`Method`,
     do(fn) {
         return this.new({
@@ -215,7 +215,7 @@ export const _Method = _Class.new({
     }
 })
 
-export const _Id = _Class.new({
+const _Id = _Class.new({
     _name: $$`Id`,
     _slots: {
         _parent: null,
@@ -233,7 +233,7 @@ export const _Id = _Class.new({
     },
 });
 
-export const _Primitive = _Class.new({
+const _Primitive = _Class.new({
     _name: $$`Primitive`,
     _super: _Class,
     _slots: {
@@ -250,6 +250,7 @@ export const _Primitive = _Class.new({
 _Object._class = _Primitive;
 Object.setPrototypeOf(_Object, _Primitive._proto);
 _Primitive._slots.init.apply(_Object);
+
 
 
 const _Module = _Class.new({
@@ -317,7 +318,7 @@ const _Mixin = _Class.new({
             if (base === null) {
                 return this;
             }
-            return $mixin.new({
+            return _Mixin.new({
                 _slots: {
                     ...this.slots(),
                     ...base
@@ -329,12 +330,21 @@ const _Mixin = _Class.new({
         }
     }
 });
+
 const _Interface = _Class.new({
     _name: $$`Interface`,
     _slots: {
+        name: _Var.new({ _class: _Symbol }),
         _methods: {},
     },
     of() {
+
+    }
+});
+
+const _Command = _Interface.new({
+    _name: $$`Command`,
+    _slots: {
 
     }
 });

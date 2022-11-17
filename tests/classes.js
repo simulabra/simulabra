@@ -2,11 +2,6 @@ import { test } from 'uvu';
 import * as assert from 'uvu/assert';
 import Base from '../base.js';
 
-test('basic', () => {
-
-  assert.is(_Frobber.new().frob(), 42);
-});
-
 const _Frobber = Base.Class.new({
   _name: Base.$$`Frobber`,
   _slots: {
@@ -115,6 +110,10 @@ const _ = Base.Module.new({
   ]
 });
 
+test('basic', () => {
+  assert.is(_Frobber.new().frob(), 42);
+});
+
 test('point', () => {
   assert.is(_.Point.new({ _x: 3, _y: 4 }).dist(), 5);
   let t = _.Point.new();
@@ -123,7 +122,6 @@ test('point', () => {
   assert.is(_.Point.new().dist(), 0);
   assert.is(_.Point.class().eq(Base.Class), true);
   assert.is(t.class().eq(_.Point), true);
-
 
   let l1 = _.LocTest.new();
   let l2 = _.LocTest.new();
@@ -134,8 +132,6 @@ test('point', () => {
 });
 
 test('mixins', () => {
-
-
   const p = _.ColorPoint.new({
     _x: 3,
     _y: 4,
@@ -148,12 +144,10 @@ test('mixins', () => {
 });
 
 test('inheritance', () => {
-
   assert.is(_.ChildPoint.new({ _x: 3, _y: 4 }).dist(), 2.5);
 
   assert.is(_.SmallerPoint.new({ _x: 3, _y: 4 }).dist(), 0.5);
   assert.is(_.SmallerPoint.new().translate(4, 0).dist(), 0.4);
-
 
   assert.is(_.TinyPoint.new({ _x: 3, _y: 4 }).dist(), 0.05);
 });
