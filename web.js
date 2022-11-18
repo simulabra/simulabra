@@ -97,11 +97,10 @@ const _HTMLRequestHandler = Base.Class.new({
             ws.onconnect = () => {
               ws.send(JSON.stringify({ message: 'init' }));
             }
-            import('/module/base').then(mod => {
-                const Base = mod.default;
-                console.log(Base)
-                document.getElementById('app').innerHTML = Base.Class.nameString();
-            });
+            const mod = await import('/module/demo');
+            const Demo = mod.default;
+            console.log(Demo)
+            document.getElementById('app').innerHTML = Demo.Demo.new().render();
         </script>
         <div id="app">
         </div>
