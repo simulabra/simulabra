@@ -139,22 +139,21 @@ const _WebServer = Base.Class.new({
     sessions: Base.Var.default({}),
     handlers: Base.Var.default({}),
     serve() {
-      const self = this;
       Bun.serve({
         websocket: {
-          message(ws, msg) {
+          message: (ws, msg) => {
             // route message to
             ws.count ||= 0;
             ws.count++;
             // console.log(ws, msg);
           },
         },
-        fetch(req, server) {
+        fetch: (req, server) => {
           const _req = _Request.new({ _native: req });
           const basePath = _req.url().parts()[0];
-          if (basePath in self.handlers()) {
+          if (basePath in this.handlers()) {
             console.log('handle ' + basePath);
-            return self.handlers()[basePath].handle(_req, server);
+            return this.handlers()[basePath].handle(_req);
           } else {
             return new Response('404!', {
               status: 404,
