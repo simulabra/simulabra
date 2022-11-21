@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import Base from './base';
 
 const _$HTML = Base.Interface.new({
+  _name: Base.$$`$HTML`,
   _inherits: [
     Base.$ToString,
   ],
@@ -12,6 +13,7 @@ const _$HTML = Base.Interface.new({
   ]
 })
 const _$Page = Base.Interface.new({
+  _name: Base.$$`$Page`,
   _protocol: [
     Base.Method.new({
       _name: Base.$$`render`,
@@ -60,7 +62,9 @@ const _SocketRequestHandler = Base.Class.new({
           status: 101,
         });
       } else {
-        throw new Error('upgrade failed?');
+        return new Response('upgrade failed?', {
+          status: 400,
+        });
       }
     },
   },
@@ -75,38 +79,14 @@ const _Request = Base.Class.new({
       this.url(_URL.parse(this.native().url));
     },
   },
-})
+});
 
 const _HTMLRequestHandler = Base.Class.new({
   _name: Base.$$`HTMLRequestHandler`,
   _slots: {
+    html: Base.Var.default('<h1>hello world!</h1'),
     handle(req, server) {
-      return new Response(
-        `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>WebSockets</title>
-    </head>
-    <body>
-        <script type="module">
-            const ws = new WebSocket("ws://localhost:3000/socket");
-            ws.onmessage = (e) => {
-            };
-            ws.onconnect = () => {
-              ws.send(JSON.stringify({ message: 'init' }));
-            }
-            const mod = await import('/module/demo');
-            const Demo = mod.default;
-            console.log(Demo)
-            document.getElementById('app').innerHTML = Demo.Demo.new().render();
-        </script>
-        <div id="app">
-        </div>
-    </body>
-
-    `,
+      return new Response(this.html(),
         {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
@@ -132,6 +112,16 @@ const _ModuleRequestHandler = Base.Class.new({
 })
 const _WebServer = Base.Class.new({
   _name: Base.$$`WebServer`,
+  defaultRoute(route) {
+    const ws = _WebServer.new({
+      _handlers: {
+        '/': route,
+        '/socket': _SocketRequestHandler.new(),
+        '/module': _ModuleRequestHandler.new(),
+      }
+    });
+    ws.serve();
+  },
   _slots: {
     pages: Base.Var.new({
       // type: Base.$List.of(_$Page)
@@ -139,7 +129,8 @@ const _WebServer = Base.Class.new({
     sessions: Base.Var.default({}),
     handlers: Base.Var.default({}),
     serve() {
-      Bun.serve({
+      const self = this;
+      return Bun.serve({
         websocket: {
           message: (ws, msg) => {
             // route message to
@@ -148,12 +139,12 @@ const _WebServer = Base.Class.new({
             // console.log(ws, msg);
           },
         },
-        fetch: (req, server) => {
+        fetch(req, server) {
           const _req = _Request.new({ _native: req });
           const basePath = _req.url().parts()[0];
-          if (basePath in this.handlers()) {
+          if (basePath in self.handlers()) {
             console.log('handle ' + basePath);
-            return this.handlers()[basePath].handle(_req);
+            return self.handlers()[basePath].handle(_req, server);
           } else {
             return new Response('404!', {
               status: 404,
@@ -165,11 +156,15 @@ const _WebServer = Base.Class.new({
   },
 });
 
-const ws = _WebServer.new({
-  _handlers: {
-    '/': _HTMLRequestHandler.new(),
-    '/socket': _SocketRequestHandler.new(),
-    '/module': _ModuleRequestHandler.new(),
-  }
+const _ = Base.Module.new({
+  _exports: [
+    _WebServer,
+    _HTMLRequestHandler,
+    _Request,
+    _URL,
+    _$HTML,
+    _$Page,
+  ]
 });
-ws.serve();
+
+export default _;

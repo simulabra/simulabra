@@ -336,6 +336,9 @@ const _Interface = _Class.new({
     _slots: {
         name: _Var.new({ _class: _Symbol }),
         _methods: {},
+        nameString() {
+            return this.name().toString();
+        },
     },
     of() {
 
