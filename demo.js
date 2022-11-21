@@ -1,48 +1,41 @@
 import Base from './base';
-import Web from './web';
+import HTML from './html';
 
-const _Demo = Base.Class.new({
-  _name: Base.$$`Demo`,
+const _Counter = Base.Class.new({
+  _name: Base.$$`Counter`,
   _slots: {
+    count: Base.Var.default(0),
+    inc: Base.Method.do(function inc() {
+      this.count(this.count() + 1);
+      console.log(this._count);
+      return this;
+    }),
+    html() {
+      return HTML.Div.new({
+        _inner: `Count: ${this.count()}`,
+      }).html();
+    },
+  },
+});
+
+const _Button = Base.Class.new({
+  _name: Base.$$`Button`,
+  _slots: {
+    text: Base.Var.default('Submit'),
+    click: Base.Var.new({ _type: Base.$Command }), //???
     render() {
-      return '<h1>hello from simulabra !</h1>';
+      return HTML.Button.new({
+
+      })
     }
   }
 });
 
 const _ = Base.Module.new({
   _exports: [
-    _Demo,
-  ],
-});
-
-const _DemoHandler = Web.HTMLRequestHandler.new({
-  _html: `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>WebSockets</title>
-    </head>
-    <body>
-        <script type="module">
-            const ws = new WebSocket("ws://localhost:3000/socket");
-            ws.onmessage = (e) => {
-            };
-            ws.onconnect = () => {
-              ws.send(JSON.stringify({ message: 'init' }));
-            }
-            const mod = await import('/module/demo');
-            const Demo = mod.default;
-            console.log(Demo)
-            document.getElementById('app').innerHTML = Demo.Demo.new().render();
-        </script>
-        <div id="app">
-        </div>
-    </body>
-    `,
+    _Counter,
+    _Button,
+  ]
 });
 
 export default _;
-
-Web.WebServer.defaultRoute(Web.HTMLRequestHandler.new());

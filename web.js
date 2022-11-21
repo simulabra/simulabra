@@ -1,23 +1,13 @@
 import { readFileSync } from 'fs';
 import Base from './base';
+import HTML from './html';
 
-const _$HTML = Base.Interface.new({
-  _name: Base.$$`$HTML`,
-  _inherits: [
-    Base.$ToString,
-  ],
-  _protocol: [
-    Base.Method.new({
-      _name: Base.$$`tag`
-    })
-  ]
-})
 const _$Page = Base.Interface.new({
   _name: Base.$$`$Page`,
   _protocol: [
     Base.Method.new({
       _name: Base.$$`render`,
-      _ret: _$HTML,
+      _ret: HTML.$HTML,
     }),
     Base.Method.new({
       _name: Base.$$`route`,
@@ -162,7 +152,6 @@ const _ = Base.Module.new({
     _HTMLRequestHandler,
     _Request,
     _URL,
-    _$HTML,
     _$Page,
   ]
 });

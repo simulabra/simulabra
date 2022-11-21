@@ -270,6 +270,9 @@ const _String = _Primitive.new({
     _slots: {
         sym() {
             return _Symbol.sym(this);
+        },
+        html() {
+            return this;
         }
     }
 });
