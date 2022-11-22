@@ -3,21 +3,21 @@ import Base from './base';
 import HTML from './html';
 
 const _$Page = Base.Interface.new({
-  _name: Base.$$`$Page`,
+  _name: '$Page',
   _protocol: [
     Base.Method.new({
-      _name: Base.$$`render`,
+      _name: 'render',
       _ret: HTML.$HTML,
     }),
     Base.Method.new({
-      _name: Base.$$`route`,
+      _name: 'route',
       _ret: Base.String,
     })
   ],
 });
 
 const _URL = Base.Class.new({
-  _name: Base.$$`URL`,
+  _name: 'URL',
   parse(urlString) {
     let _url = new URL(urlString);
     let _parts = _url.pathname.match(/\/[^\/]*/g);
@@ -44,7 +44,7 @@ const _URL = Base.Class.new({
   },
 });
 const _SocketRequestHandler = Base.Class.new({
-  _name: Base.$$`RequestHandler`,
+  _name: 'RequestHandler',
   _slots: {
     handle(req, server) {
       if (server.upgrade(req.native())) {
@@ -61,7 +61,7 @@ const _SocketRequestHandler = Base.Class.new({
 });
 
 const _Request = Base.Class.new({
-  _name: Base.$$`Request`,
+  _name: 'Request',
   _slots: {
     url: Base.Var.new(),
     native: Base.Var.new(),
@@ -72,7 +72,7 @@ const _Request = Base.Class.new({
 });
 
 const _HTMLRequestHandler = Base.Class.new({
-  _name: Base.$$`HTMLRequestHandler`,
+  _name: 'HTMLRequestHandler',
   _slots: {
     html: Base.Var.default('<h1>hello world!</h1'),
     handle(req, server) {
@@ -88,7 +88,7 @@ const _HTMLRequestHandler = Base.Class.new({
 });
 
 const _ModuleRequestHandler = Base.Class.new({
-  _name: Base.$$`ModuleRequestHandler`,
+  _name: 'ModuleRequestHandler',
   _slots: {
     handle(req, server) {
       let _file = req.url().parts()[1].slice(1);
@@ -101,7 +101,7 @@ const _ModuleRequestHandler = Base.Class.new({
   }
 })
 const _WebServer = Base.Class.new({
-  _name: Base.$$`WebServer`,
+  _name: 'WebServer',
   defaultRoute(route) {
     const ws = _WebServer.new({
       _handlers: {

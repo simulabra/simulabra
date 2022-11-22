@@ -3,7 +3,7 @@ import * as assert from 'uvu/assert';
 import Base from '../base.js';
 
 const _Frobber = Base.Class.new({
-  _name: Base.$$`Frobber`,
+  _name: 'Frobber',
   _slots: {
     frob() {
       return 42;
@@ -11,7 +11,7 @@ const _Frobber = Base.Class.new({
   }
 });
 const _Point = Base.Class.new({
-  _name: Base.$$`Point`,
+  _name: 'Point',
   _slots: {
     x: Base.Var.default(0),
     y: Base.Var.default(0),
@@ -28,7 +28,7 @@ const _Point = Base.Class.new({
   }
 });
 const _LocTest = Base.Class.new({
-  _name: Base.$$`LocTest`,
+  _name: 'LocTest',
   _slots: {
     p: Base.Var.new({
       default: () => _Point.new()
@@ -42,7 +42,7 @@ const _LocTest = Base.Class.new({
   }
 });
 let _ColorMixin = Base.Mixin.new({
-  _name: Base.$$`ColorMixin`,
+  _name: 'ColorMixin',
   _slots: {
     r: Base.Var.default(0),
     g: Base.Var.default(0),
@@ -53,12 +53,12 @@ let _ColorMixin = Base.Mixin.new({
   }
 });
 const _ColorPoint = Base.Class.new({
-  _name: Base.$$`ColorPoint`,
+  _name: 'ColorPoint',
   _mixins: [_ColorMixin],
   _super: _Point,
 });
 const _ChildPoint = Base.Class.new({
-  _name: Base.$$`ChildPoint`,
+  _name: 'ChildPoint',
   _super: _Point,
   _slots: {
     dist() {
@@ -68,7 +68,7 @@ const _ChildPoint = Base.Class.new({
   }
 });
 const _SmallerPoint = Base.Class.new({
-  _name: Base.$$`SmallerPoint`,
+  _name: 'SmallerPoint',
   _super: _ChildPoint,
   _slots: {
     dist() {
@@ -77,7 +77,7 @@ const _SmallerPoint = Base.Class.new({
   }
 });
 const _TinyPoint = Base.Class.new({
-  _name: Base.$$`TinyPoint`,
+  _name: 'TinyPoint',
   _super: _SmallerPoint,
   _slots: {
     dist() {
@@ -86,7 +86,7 @@ const _TinyPoint = Base.Class.new({
   }
 });
 const _WatchedPoint = Base.Class.new({
-  _name: Base.$$`WatchedPoint`,
+  _name: 'WatchedPoint',
   _super: _Point,
   _slots: {
     update(event) {
@@ -153,9 +153,9 @@ test('inheritance', () => {
 });
 
 test('symbols', () => {
-  assert.is(Base.$$`test`.eq(Base.$$`test`), true);
-  assert.is(`<${Base.$$`test`}>`, '<test>');
-  assert.is(_.Point.name().eq(Base.$$`Point`), true);
+  assert.is('test'.eq('test'), true);
+  assert.is(`<${'test'}>`, '<test>');
+  assert.is(_.Point.name().eq('Point'), true);
 });
 
 test('getters n setters', () => {
@@ -176,11 +176,6 @@ test('getters n setters', () => {
 test('primitives', () => {
   const obj = { a: true };
   assert.is(typeof obj.init, 'function');
-
-  obj.aname('test');
-  assert.is(obj._name.toString(), 'test');
-
-  assert.is('test 2'.sym().toString(), 'test 2');
 
   assert.is((4 + 5).sqrt(), 3);
 

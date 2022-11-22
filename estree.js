@@ -5,7 +5,7 @@ import { parseScript } from "meriyah";
 export default _.module.new({
   _classes: [
     _.klass.new({
-      _name: $$`node`,
+      _name: 'node',
       _slots: {
         parent() {
           /*!virtual*/
@@ -17,7 +17,7 @@ export default _.module.new({
     }),
 
     _.klass.new({
-      _name: $$`program`,
+      _name: 'program',
       _slots: {
         _expressions: [],
         js() {
@@ -38,7 +38,7 @@ export default _.module.new({
     }),
 
     _.klass.new({
-      _name: $$`this`,
+      _name: 'this',
       _slots: {
         js() {
           return 'this';
@@ -47,7 +47,7 @@ export default _.module.new({
     }),
 
     _.klass.new({
-      _name: $$`identifier`,
+      _name: 'identifier',
       _slots: {
         _sym: null, //!symbol
         js() {
@@ -67,7 +67,7 @@ export default _.module.new({
     }),
 
     _.klass.new({
-      _name: $$`binop`,
+      _name: 'binop',
       _slots: {
         _op: null, //!string
         _left: null, //!node
@@ -79,7 +79,7 @@ export default _.module.new({
     }),
 
     _.klass.new({
-      _name: $$`variable`,
+      _name: 'variable',
       _slots: {
         _name: null,
         _val: null,
@@ -90,7 +90,7 @@ export default _.module.new({
     }),
 
     _.klass.new({
-      _name: $$`property`,
+      _name: 'property',
       _slots: {
         _name: null,
         _val: null,
@@ -188,7 +188,7 @@ export default _.module.new({
 
 
     _.klass.new({
-      _name: $$`parser`,
+      _name: 'parser',
       _desc: 'the parser manages the relationship between the source javascript and simulabra nodes',
       _slots: {
         _js: '',

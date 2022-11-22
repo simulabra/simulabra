@@ -2,7 +2,7 @@ import Base from './base';
 import HTML from './html';
 
 const _Counter = Base.Class.new({
-  _name: Base.$$`Counter`,
+  _name: 'Counter',
   _super: HTML.Element,
   _slots: {
     count: Base.Var.default(0),
@@ -19,7 +19,7 @@ const _Counter = Base.Class.new({
 });
 
 const _CallbackCommand = Base.Class.new({
-  _name: Base.$$`CallbackCommand`,
+  _name: 'CallbackCommand',
   _slots: {
     fn: Base.Var.new(),
     do(...args) {
@@ -29,7 +29,7 @@ const _CallbackCommand = Base.Class.new({
 });
 
 const _Demo = Base.Class.new({
-  _name: Base.$$`Demo`,
+  _name: 'Demo',
   _slots: {
     counter: Base.Var.default(() => _Counter.new()),
     button: Base.Var.default(() => HTML.Button.new({

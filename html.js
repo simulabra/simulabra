@@ -1,7 +1,7 @@
 import Base from './base';
 
 const _Element = Base.Class.new({
-  _name: Base.$$`Element`,
+  _name: 'Element',
   _slots: {
     name: Base.Var.new({ _class: Base.Symbol }),
     inner: Base.Var.new(),
@@ -13,19 +13,19 @@ const _Element = Base.Class.new({
   }
 })
 const _$HTML = Base.Interface.new({
-  _name: Base.$$`$HTML`,
+  _name: '$HTML',
   _inherits: [
     Base.$ToString,
   ],
   _protocol: [
     Base.Method.new({
-      _name: Base.$$`tag`
+      _name: 'tag'
     })
   ]
 })
 
 const _Div = Base.Class.new({
-  _name: Base.$$`Div`,
+  _name: 'Div',
   _implements: [_$HTML],
   _super: _Element,
   _slots: {
@@ -36,7 +36,7 @@ const _Div = Base.Class.new({
 });
 
 const _Button = Base.Class.new({
-  _name: Base.$$`Button`,
+  _name: 'Button',
   _implements: [_$HTML],
   _super: _Element,
   _slots: {

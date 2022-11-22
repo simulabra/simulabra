@@ -13,15 +13,11 @@ Every object has an identity
 
 // hook up object to class
 const _Object = {
+    _name: 'Object',
     _js_prototype: Object.prototype,
     _slots: {
         init() { },
         // if this object doesn't have a _name, give it that of the symbol version of name
-        aname(name) {
-            if (!('_name' in this)) {
-                this._name = _Symbol.sym(name);
-            }
-        },
         loadslots() {
             for (let [key, val] of Object.entries(this)) {
                 val?.load && val.load(key, this);
@@ -37,6 +33,9 @@ const _Object = {
             if (this._class) {
                 return this._class;
             }
+        },
+        name() {
+            return this._name;
         }
     }
 };
@@ -45,7 +44,7 @@ Object.prototype.loadslots = _Object._proto.loadslots;
 
 const _Class = {
     _slots: {
-        _name: '', // non-type, non-slot object => default
+        _name: 'Class', // non-type, non-slot object => default
         _slots: {},
         _super: _Object,
         _mixins: [],
@@ -75,9 +74,6 @@ const _Class = {
         name() {
             return this._name;
         },
-        nameString() {
-            return this.name().name();
-        },
         eq(other) {
             return this.name().eq(other.name());
         },
@@ -99,59 +95,8 @@ const _Class = {
 Object.setPrototypeOf(_Class, _Class._slots);
 _Class.init();
 
-const _Symbol = _Class.new({
-    _sympool: {},
-    _idc: 0,
-    get(name) {
-        return this._sympool[name];
-    },
-    save(id, name) {
-        this._sympool[id] = name;
-        this._sympool[name] = id;
-    },
-    sym(name) {
-        let gid = _Symbol.get(name);
-        if (!gid) {
-            gid = _Symbol.genid();
-            _Symbol.save(gid, name)
-        }
-        return this.new({
-            _gid: gid,
-        });
-    },
-    genid() {
-        return ++this._idc;
-    },
-    _slots: {
-        _gid: null,
-        toString() {
-            return this.name();
-        },
-        name() {
-            return _Symbol.get(this._gid);
-        },
-        gid() {
-            return this._gid
-        },
-        eq(other) {
-            return this.gid() === other.gid();
-        },
-        js() {
-            return this.name();
-        }
-    },
-});
-
-function $$(templ) {
-    return _Symbol.sym(templ[0]);
-}
-
-_Symbol._name = $$`Symbol`;
-_Object._name = $$`Object`;
-_Class._name = $$`Class`;
-
 const _Var = _Class.new({
-    _name: $$`Var`,
+    _name: 'Var',
     default(val) {
         return this.new({ _default: val });
     },
@@ -159,11 +104,6 @@ const _Var = _Class.new({
         _type: null, //!nulltype, wtf?
         _default: null, //fn or object
         _mutable: true,
-        aname(name) {
-            if (!this._name) {
-                this._name = _Symbol.sym(name);
-            }
-        },
         default(ctx) {
             if (this._default instanceof Function) {
                 return this._default.apply(ctx);
@@ -173,7 +113,6 @@ const _Var = _Class.new({
         },
         load(name, parent) {
             const self = this;
-            this.aname(name);
             let pk = '_' + name;
             if (this._mutable) {
                 parent[name] = function (assign) {
@@ -198,7 +137,7 @@ const _Var = _Class.new({
 });
 
 const _Method = _Class.new({
-    _name: $$`Method`,
+    _name: 'Method',
     do(fn) {
         return this.new({
             _do: fn
@@ -216,7 +155,7 @@ const _Method = _Class.new({
 })
 
 const _Id = _Class.new({
-    _name: $$`Id`,
+    _name: 'Id',
     _slots: {
         _parent: null,
         _name: null,
@@ -234,7 +173,7 @@ const _Id = _Class.new({
 });
 
 const _Primitive = _Class.new({
-    _name: $$`Primitive`,
+    _name: 'Primitive',
     _super: _Class,
     _slots: {
         _js_prototype: null,
@@ -254,30 +193,27 @@ _Primitive._slots.init.apply(_Object);
 
 
 const _Module = _Class.new({
-    _name: $$`Module`,
+    _name: 'Module',
     _slots: {
         exports: _Var.default([]),
         init() {
             for (const item of this.exports()) {
-                this[item.nameString()] = item;
+                this[item.name()] = item;
             }
         }
     },
 });
 const _String = _Primitive.new({
-    _name: $$`String`,
+    _name: 'String',
     _js_prototype: String.prototype,
     _slots: {
-        sym() {
-            return _Symbol.sym(this);
-        },
         html() {
             return this;
         }
     }
 });
 const _Number = _Primitive.new({
-    _name: $$`Number`,
+    _name: 'Number',
     _js_prototype: Number.prototype,
     _slots: {
         js() {
@@ -292,7 +228,7 @@ const _Number = _Primitive.new({
     }
 });
 const _Array = _Primitive.new({
-    _name: $$`Array`,
+    _name: 'Array',
     _js_prototype: Array.prototype,
     _slots: {
         intoMap() {
@@ -305,16 +241,13 @@ const _Array = _Primitive.new({
     }
 });
 const _Function = _Primitive.new({
-    _name: $$`Function`,
+    _name: 'Function',
     _js_prototype: Function.prototype,
     _slots: {
-        nameString() {
-            return this.name;
-        }
     },
 });
 const _Mixin = _Class.new({
-    _name: $$`Mixin`,
+    _name: 'Mixin',
     _slots: {
         slots: _Var.default({}),
         mix(base) {
@@ -328,20 +261,14 @@ const _Mixin = _Class.new({
                 },
             });
         },
-        nameString() {
-            return this._name.name();
-        }
     }
 });
 
 const _Interface = _Class.new({
-    _name: $$`Interface`,
+    _name: 'Interface',
     _slots: {
-        name: _Var.new({ _class: _Symbol }),
+        name: _Var.new(),
         _methods: {},
-        nameString() {
-            return this.name().toString();
-        },
     },
     of() {
 
@@ -349,7 +276,7 @@ const _Interface = _Class.new({
 });
 
 const _Command = _Interface.new({
-    _name: $$`Command`,
+    _name: 'Command',
     _slots: {
 
     }
@@ -361,7 +288,6 @@ const _ = _Module.new({
         _Object,
         _Var,
         _Method,
-        _Symbol,
         _Id,
         _Primitive,
         _Method,
@@ -372,7 +298,6 @@ const _ = _Module.new({
         _Function,
         _Mixin,
         _Interface,
-        $$,
     ],
 });
 

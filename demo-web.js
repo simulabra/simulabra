@@ -2,7 +2,7 @@ import Base from './base';
 import Web from './web';
 
 const _Demo = Base.Class.new({
-  _name: Base.$$`Demo`,
+  _name: 'Demo',
   _slots: {
     render() {
       return '<h1>hello from simulabra !</h1>';
