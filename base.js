@@ -166,7 +166,7 @@ const _Var = _Class.new({
         },
         default(ctx) {
             if (this._default instanceof Function) {
-                this._default.apply(ctx);
+                return this._default.apply(ctx);
             } else {
                 return this._default;
             }

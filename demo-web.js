@@ -32,23 +32,23 @@ const _DemoHandler = Web.HTMLRequestHandler.new({
             ws.onconnect = () => {
               ws.send(JSON.stringify({ message: 'init' }));
             }
-            const Demo = (await import('/module/demo')).default;
+            const Base = (await import('/module/base')).default;
             const HTML = (await import('/module/html')).default;
-const counter = Demo.Counter.new();
+            const Demo = (await import('/module/demo')).default;
+            const App = Base.Class.new({
+                _super: Demo.Demo,
+                _slots: {
+                    render() {
+                        document.getElementById('app').innerHTML = this.html();
+                        this.load();
+                    },
+                    init() {
+                        this.render();
+                    },
+                },
+            });
 
-const button = HTML.Button.new({
-    _inner: 'Add',
-    _id: 'add-button',
-});
-            function draw() {
-                document.getElementById('app').innerHTML = counter.html() + button.html();
-            }
-draw();
-document.getElementById('add-button').addEventListener('click', () => {
-console.log('click');
-        counter.inc();
-        draw();
-});
+            App.new();
         </script>
         <div id="app">
         </div>
