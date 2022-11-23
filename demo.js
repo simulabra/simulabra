@@ -1,5 +1,5 @@
-import Base from './base';
-import HTML from './html';
+import Base from './base.js';
+import HTML from './html.js';
 
 const _Counter = Base.Class.new({
   _name: 'Counter',
@@ -50,6 +50,13 @@ const _Demo = Base.Class.new({
     },
     html() {
       return `<div>${this.counter().html() + this.button().html()}</div>`;
+    },
+    render() {
+      document.getElementById('app').innerHTML = this.html();
+      this.load();
+    },
+    init() {
+      this.render();
     },
   }
 });

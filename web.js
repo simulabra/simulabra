@@ -92,7 +92,8 @@ const _ModuleRequestHandler = Base.Class.new({
   _slots: {
     handle(req, server) {
       let _file = req.url().parts()[1].slice(1);
-      return new Response(readFileSync(_file + '.js'), {
+      // yikes, scoob!
+      return new Response(readFileSync(_file), {
         headers: {
           'Content-Type': 'text/javascript',
         },
