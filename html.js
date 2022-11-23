@@ -1,9 +1,8 @@
-import Base from './base';
+import Base from './base.js';
 
 const _Element = Base.Class.new({
   _name: 'Element',
   _slots: {
-    name: Base.Var.new({ _class: Base.Symbol }),
     inner: Base.Var.new(),
     id: Base.Var.new(),
     load() {  },
@@ -17,12 +16,12 @@ const _$HTML = Base.Interface.new({
   _inherits: [
     Base.$ToString,
   ],
-  _protocol: [
+  _slots: [
     Base.Method.new({
-      _name: 'tag'
-    })
-  ]
-})
+      _name: 'html'
+    }),
+  ],
+});
 
 const _Div = Base.Class.new({
   _name: 'Div',

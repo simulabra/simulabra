@@ -27,13 +27,13 @@ const _URL = Base.Class.new({
     });
   },
   _slots: {
-    _url: null,
+    url: Base.Var.new(),
     parts: Base.Var.new(),
     host() {
       return this._url.host;
     },
     path() {
-      return this._url.pathname;
+      return this.url().pathname;
     },
     pathEq(path) {
       return this.path() === path;

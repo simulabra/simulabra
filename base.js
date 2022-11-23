@@ -36,9 +36,10 @@ const _Object = {
         },
         name() {
             return this._name;
-        }
+        },
     }
 };
+
 _Object._proto = _Object._slots;
 Object.prototype.loadslots = _Object._proto.loadslots;
 
@@ -47,19 +48,17 @@ const _Class = {
         _name: 'Class', // non-type, non-slot object => default
         _slots: {},
         _super: _Object,
-        _mixins: [],
         _vars: [],
+        _implements: [],
         _idctr: 0,
         init(_parent) {
-            let mixslots = this._mixins.length > 0 ? this._mixins.reduce((prev, cur) => {
-                return cur.mix(prev);
-            }, null).slots() : {};
             this._proto = {
-                ...mixslots,
+                ...this.mixed(),
                 ...this._slots,
             };
-            this._proto.loadslots();
+            this.proto().loadslots();
             Object.setPrototypeOf(this._proto, this._super._proto);
+            this.implements().map(iface => iface.satisfies(this));
         },
         new(props = {}) {
             let obj = props;
@@ -83,16 +82,34 @@ const _Class = {
         super() {
             return this._super;
         },
+        implements() {
+            return this._implements;
+        },
         proto() {
             return this._proto;
         },
+        mixins() {
+            return this._mixins;
+        },
+        mixed() {
+            if (this.mixins()?.length > 0) {
+                return this.mixins().reduce((prev, cur) => {
+                    return cur.mix(prev);
+                }, null).slots();
+            } else {
+                return {};
+            }
+        },
+        slots() {
+            return this._slots;
+        },
         type() {
 
-        }
+        },
     }
 }
 
-Object.setPrototypeOf(_Class, _Class._slots);
+Object.setPrototypeOf(_Class, _Class._slots); // prototypical roots mean we can avoid Metaclasses
 _Class.init();
 
 const _Var = _Class.new({
@@ -153,6 +170,25 @@ const _Method = _Class.new({
         },
     }
 })
+
+const _ComputedVar = _Class.new({
+    _name: 'ComputedVar',
+    _slots: {
+        deps: _Var.new(),
+        formula: _Var.new(),
+        dirty: _Var.default(true),
+        cached: _Var.new(),
+        get: _Method.do(function get() {
+            if (this.dirty()) {
+                this.cached(this.formula());
+            }
+            return this.cached();
+        }),
+        load(name, parent) {
+
+        }
+    }
+});
 
 const _Id = _Class.new({
     _name: 'Id',
@@ -268,7 +304,20 @@ const _Interface = _Class.new({
     _name: 'Interface',
     _slots: {
         name: _Var.new(),
-        _methods: {},
+        slots: _Var.default({}),
+        slotList: _Method.do(function() {
+            return Object.values(this.slots());
+        }),
+        satisfies(klass) {
+            // console.log(`check satisfies ${this.name()} for class ${klass.name()}`);
+            const missing = this.slotList().filter(slot => {
+                return !(slot.name() in klass.proto());
+            });
+            if (missing.length > 0) {
+                throw new Error(`Class ${klass.name()} doesn't satisfy interface ${this.name()}: ${missing.map(mi => mi.name()).join(', ')}`);
+            }
+            return true;
+        },
     },
     of() {
 

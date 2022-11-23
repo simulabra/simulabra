@@ -1,6 +1,7 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
 import Base from '../base.js';
+import HTML from '../html.js';
 
 const _Frobber = Base.Class.new({
   _name: 'Frobber',
@@ -152,12 +153,6 @@ test('inheritance', () => {
   assert.is(_.TinyPoint.new({ _x: 3, _y: 4 }).dist(), 0.05);
 });
 
-test('symbols', () => {
-  assert.is('test'.eq('test'), true);
-  assert.is(`<${'test'}>`, '<test>');
-  assert.is(_.Point.name().eq('Point'), true);
-});
-
 test('getters n setters', () => {
   let p = _.Point.new({
     _x: 6,
@@ -184,5 +179,11 @@ test('primitives', () => {
   assert.is(arrMap.Point, _.Point);
   assert.is(arrMap.Class, Base.Class);
 });
+
+test('html', () => {
+  const div = HTML.Div.new({
+    _inner: 'hello there!',
+  });
+})
 
 test.run();
