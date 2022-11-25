@@ -170,8 +170,6 @@ test('getters n setters', () => {
 
 test('primitives', () => {
   const obj = { a: true };
-  assert.is(typeof obj.init, 'function');
-
   assert.is((4 + 5).sqrt(), 3);
 
   const arr = [_.Point, Base.Class];

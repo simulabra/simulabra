@@ -1,6 +1,7 @@
 import Base from './base.js';
 import { parseScript } from "meriyah";
 
+// https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API#traversing-the-ast-with-a-little-linter
 const _ESTreeTransformer = Base.Class.new({
   _name: 'ESTreeTransformer',
   _doc: 'transforms estree objects to nodes',
@@ -22,9 +23,23 @@ const _ESTreeTransformer = Base.Class.new({
             _params: this.transform(estree.params),
             _body: this.transform(estree.body),
           });
+        case 'FunctionDeclaration':
+          return _Function.new(this.body(estree, ['id', 'params', 'body']));
         default:
+          console.log('Unhandled ESTree type');
+          console.log(estree);
           return null;
       }
+    }),
+    body: Base.Method.do(function body(estree, params) {
+      const o = {
+        _start: estree.start,
+        _end: estree.end,
+      };
+      for (const p of params) {
+        o['_' + p] = this.transform(estree[p]);
+      }
+      return o;
     }),
     parse: Base.Method.do(function parse(source) {
       return parseScript(source, {

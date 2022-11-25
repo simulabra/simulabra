@@ -44,6 +44,9 @@ const _Object = {
 
 _Object._proto = _Object._slots;
 Object.prototype.loadslots = _Object._proto.loadslots;
+Object.prototype.eq = function(other) {
+    return this === other;
+}
 
 const _Class = {
     _slots: {
@@ -246,7 +249,7 @@ const _Primitive = _Class.new({
 _Object._class = _Primitive;
 Object.setPrototypeOf(_Object, _Primitive._proto);
 // maybe don't?
-_Primitive._slots.init.apply(_Object);
+// _Primitive._slots.init.apply(_Object);
 
 
 
