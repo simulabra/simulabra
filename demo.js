@@ -37,7 +37,6 @@ const _Demo = Base.Class.new({
       _inner: 'Add',
       _id: 'add-button',
     })),
-    render: Base.Var.default(() => {}),
     load() {
       this.counter().load();
       this.button().click(_CallbackCommand.new({

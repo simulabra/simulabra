@@ -129,25 +129,31 @@ const _Var = _Class.new({
             }
         },
         load(name, parent) {
-            const self = this;
-            let pk = '_' + name;
-            if (this._mutable) {
-                parent[name] = function (assign) {
+            const pk = '_' + name;
+            function mutableAccess(self) {
+                return function(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
                         this.update({ changed: name });
                     } else if (!(pk in this)) {
-                        this[pk] = self.default();
+                        this[pk] = self.default(this);
                     }
                     return this[pk];
-                };
+                }
+            };
+            function immutableAccess(self) {
+                if (assign !== undefined) {
+                    throw new Error(`Attempt to set immutable variable ${name}`);
+                }
+                if (!(pk in this)) {
+                    this[pk] = self.default(this);
+                }
+                return this[pk];
+            }
+            if (this._mutable) {
+                parent[name] = mutableAccess(this);
             } else {
-                parent[name] = function () {
-                    if (!(pk in this)) {
-                        this[pk] = self.default();
-                    }
-                    return this[pk];
-                };
+                parent[name] = immutableAccess(this);
             }
         }
     }
