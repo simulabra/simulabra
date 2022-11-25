@@ -32,6 +32,8 @@ const _Object = {
         class() {
             if (this._class) {
                 return this._class;
+            } else {
+                return null;
             }
         },
         name() {
@@ -47,6 +49,7 @@ const _Class = {
     _slots: {
         _name: 'Class', // non-type, non-slot object => default
         _slots: {},
+        _static: {},
         _super: _Object,
         _vars: [],
         _implements: [],
@@ -59,6 +62,10 @@ const _Class = {
             this.proto().loadslots();
             Object.setPrototypeOf(this._proto, this._super._proto);
             this.implements().map(iface => iface.satisfies(this));
+            for (const [k, v] of Object.entries(this._static)) {
+                console.log('static? ' + k, v, this)
+                v.load(k, this);
+            }
         },
         new(props = {}) {
             let obj = props;
@@ -109,13 +116,19 @@ const _Class = {
     }
 }
 
+Function.prototype.load = function(name, parent) {
+    parent[name] = this;
+}
+
 Object.setPrototypeOf(_Class, _Class._slots); // prototypical roots mean we can avoid Metaclasses
 _Class.init();
 
 const _Var = _Class.new({
     _name: 'Var',
-    default(val) {
-        return this.new({ _default: val });
+    _static: {
+        default(val) {
+            return this.new({ _default: val });
+        },
     },
     _slots: {
         _type: null, //!nulltype, wtf?
@@ -161,10 +174,12 @@ const _Var = _Class.new({
 
 const _Method = _Class.new({
     _name: 'Method',
-    do(fn) {
-        return this.new({
-            _do: fn
-        });
+    _static: {
+        do(fn) {
+            return this.new({
+                _do: fn
+            });
+        },
     },
     _slots: {
         _do: null, // fn, meat and taters
@@ -230,6 +245,7 @@ const _Primitive = _Class.new({
 
 _Object._class = _Primitive;
 Object.setPrototypeOf(_Object, _Primitive._proto);
+// maybe don't?
 _Primitive._slots.init.apply(_Object);
 
 
@@ -325,9 +341,6 @@ const _Interface = _Class.new({
             return true;
         },
     },
-    of() {
-
-    }
 });
 
 const _Command = _Interface.new({
