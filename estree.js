@@ -9,35 +9,21 @@ const _ESTreeTransformer = Base.Class.new({
     transform: Base.Method.do(function transform(estree) {
       if (Array.isArray(estree)) {
         return estree.map(e => this.transform(e));
+      } else if (typeof estree !== 'object') {
+        return estree;
       }
-      switch (estree.type) {
-        case 'Program':
-          return _Program.new({
-            _body: this.transform(estree.body),
-            _start: estree.start,
-            _end: estree.end,
-          });
-        case 'Function':
-          return _Function.new({
-            _fnId: this.transform(estree.id),
-            _params: this.transform(estree.params),
-            _body: this.transform(estree.body),
-          });
-        case 'FunctionDeclaration':
-          return _Function.new(this.body(estree, ['id', 'params', 'body']));
-        default:
-          console.log('Unhandled ESTree type');
-          console.log(estree);
-          return null;
-      }
+      console.log(estree)
+      return _Node.nodeClass(estree.type)?.new(this.body(estree));
     }),
-    body: Base.Method.do(function body(estree, params) {
-      const o = {
-        _start: estree.start,
-        _end: estree.end,
-      };
-      for (const p of params) {
-        o['_' + p] = this.transform(estree[p]);
+    body: Base.Method.do(function body(estree) {
+      const o = {};
+      for (const [k, v] of Object.entries(estree)) {
+        const pk = '_' + k;
+        if (k === 'start' || k === 'end') {
+          o[pk] = v;
+        } else if (k !== 'ranges') {
+          o[pk] = this.transform(v);
+        }
       }
       return o;
     }),
@@ -63,6 +49,19 @@ const _Node = Base.Class.new({
         _slots: slots,
       });
     }),
+    nodeClass: Base.Method.do(function nodeClass(type) {
+      switch (type) {
+        case 'Program':
+          return _Program;
+        case 'Function':
+          return _Function;
+        case 'FunctionDeclaration':
+          return _Function;
+        default:
+          console.log('Unhandled type ' + type);
+          return null;
+      }
+    })
   },
   _slots: {
     start: Base.Var.new(),

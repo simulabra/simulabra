@@ -158,7 +158,7 @@ const _Var = _Class.new({
                 }
             };
             function immutableAccess(self) {
-                return function (assign) {
+                return function(assign) {
                     if (assign !== undefined) {
                         throw new Error(`Attempt to set immutable variable ${name}`);
                     }
