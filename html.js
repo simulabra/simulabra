@@ -41,7 +41,7 @@ const _Button = Base.Class.new({
   _slots: {
     click: Base.Var.new({ _type: Base.$Command }),
     html() {
-      return `<button id="${this._id}" type="button">${this.inner().html()}</div>`;
+      return `<button id="${this.id()}" type="button">${this.inner().html()}</div>`;
     },
     load() {
       document.getElementById(this.id()).addEventListener('click', (ev) => {

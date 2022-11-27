@@ -66,7 +66,7 @@ const _Class = {
             Object.setPrototypeOf(this._proto, this._super._proto);
             this.implements().map(iface => iface.satisfies(this));
             for (const [k, v] of Object.entries(this._static)) {
-                console.log('static? ' + k, v, this)
+                // console.log('static? ' + k, v, this)
                 v.load(k, this);
             }
         },
@@ -158,13 +158,15 @@ const _Var = _Class.new({
                 }
             };
             function immutableAccess(self) {
-                if (assign !== undefined) {
-                    throw new Error(`Attempt to set immutable variable ${name}`);
+                return function (assign) {
+                    if (assign !== undefined) {
+                        throw new Error(`Attempt to set immutable variable ${name}`);
+                    }
+                    if (!(pk in this)) {
+                        this[pk] = self.default(this);
+                    }
+                    return this[pk];
                 }
-                if (!(pk in this)) {
-                    this[pk] = self.default(this);
-                }
-                return this[pk];
             }
             if (this._mutable) {
                 parent[name] = mutableAccess(this);
@@ -174,6 +176,14 @@ const _Var = _Class.new({
         }
     }
 });
+
+const _Message = _Class.new({
+    _name: 'Message',
+    _slots: {
+        args: _Var.default([]),
+        ret: _Var.default(null),
+    },
+})
 
 const _Method = _Class.new({
     _name: 'Method',
@@ -185,9 +195,16 @@ const _Method = _Class.new({
         },
     },
     _slots: {
-        _do: null, // fn, meat and taters
-        args: _Var.default([]),
-        ret: _Var.default(null),
+        do: _Var.new({ _mutable: false }), // fn, meat and taters
+        message: _Var.new(),
+        init() {
+            if (!this.message()) {
+                this.message(_Message.new({
+                    _args: this._args,
+                    _ret: this._ret,
+                }));
+            }
+        },
         load(name, parent) {
             this._do._method = this;
             parent[name] = this._do;
