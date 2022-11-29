@@ -87,6 +87,20 @@ const _HTMLRequestHandler = Base.Class.new({
   },
 });
 
+const _PageHandler = Base.Class.new({
+  _name: 'HTMLRequestHandler',
+  _slots: {
+    page: Base.Var.new({
+      _type: _$Page,
+    }),
+    html: Base.Method.new({
+      _do: function html() {
+        return this.page().render();
+      },
+    }),
+  },
+});
+
 const _ModuleRequestHandler = Base.Class.new({
   _name: 'ModuleRequestHandler',
   _slots: {

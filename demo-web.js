@@ -1,4 +1,18 @@
+//~
+//~
+import Base from './base.js';
 import Web from './web.js';
+
+const DemoPage = Base.Class.new({
+    _name: 'DemoPage',
+    _implements: [Web.$Page],
+    _slots: {
+        render() {
+            return
+        }
+    }
+})
+
 
 const _DemoHandler = Web.HTMLRequestHandler.new({
   _html: `
@@ -9,11 +23,13 @@ const _DemoHandler = Web.HTMLRequestHandler.new({
         <title>WebSockets</title>
     </head>
     <body>
+        <script type="module" src="module/boot.js"></script>
         <script type="module">
-            const Demo = (await import('/module/demo.js')).default;
+console.log('hello????')
+demo.counter().inc();
+demo.render();
+</script>
 
-            Demo.Demo.new();
-        </script>
         <div id="app">
         </div>
     </body>

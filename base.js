@@ -39,11 +39,15 @@ const _Object = {
         name() {
             return this._name;
         },
+        proto() {
+            return null;
+        }
     }
 };
 
 _Object._proto = _Object._slots;
 Object.prototype.loadslots = _Object._proto.loadslots;
+Object.prototype.proto = _Object._proto.proto;
 Object.prototype.eq = function(other) {
     return this === other;
 }
@@ -53,7 +57,11 @@ const _Class = {
         _name: 'Class', // non-type, non-slot object => default
         _slots: {},
         _static: {},
-        _super: _Object,
+        _super: {
+            proto() {
+                return {};
+            }
+        },
         _vars: [],
         _implements: [],
         _idctr: 0,
@@ -63,7 +71,7 @@ const _Class = {
                 ...this._slots,
             };
             this.proto().loadslots();
-            Object.setPrototypeOf(this._proto, this._super._proto);
+            this.super(this.super());
             this.implements().map(iface => iface.satisfies(this));
             for (const [k, v] of Object.entries(this._static)) {
                 // console.log('static? ' + k, v, this)
@@ -72,11 +80,13 @@ const _Class = {
         },
         new(props = {}) {
             let obj = props;
-            Object.setPrototypeOf(obj, this._proto);
+            Object.setPrototypeOf(obj, this.proto());
             obj._class = this;
-            obj.init(this);
+            if ('init' in obj) {
+                obj.init(this);
+            }
             if (this._id) {
-                obj.id(this._id.child(obj.name(), this.nextid()));
+                obj._id = this._id.child(obj.name(), this.nextid());
             }
             return obj;
         },
@@ -89,7 +99,11 @@ const _Class = {
         nextid() {
             return ++this._idctr;
         },
-        super() {
+        super(superclass) {
+            if (superclass !== undefined) {
+                this._super = superclass;
+                Object.setPrototypeOf(this.proto(), this.super().proto());
+            }
             return this._super;
         },
         implements() {
@@ -113,6 +127,13 @@ const _Class = {
         slots() {
             return this._slots;
         },
+        addslot(slot) {
+            if (slot.name() in this._slots) {
+                throw new Error('already in slots: ' + slot.name());
+            }
+            this._slots[slot.name()] = slot;
+            slot.load(slot.name(), this._proto);
+        },
         type() {
 
         },
@@ -124,6 +145,7 @@ Function.prototype.load = function(name, parent) {
 }
 
 Object.setPrototypeOf(_Class, _Class._slots); // prototypical roots mean we can avoid Metaclasses
+
 _Class.init();
 
 const _Var = _Class.new({
@@ -134,8 +156,6 @@ const _Var = _Class.new({
         },
     },
     _slots: {
-        _type: null, //!nulltype, wtf?
-        _default: null, //fn or object
         _mutable: true,
         default(ctx) {
             if (this._default instanceof Function) {
@@ -144,13 +164,16 @@ const _Var = _Class.new({
                 return this._default;
             }
         },
+        name() {
+            return this._name;
+        },
         load(name, parent) {
             const pk = '_' + name;
             function mutableAccess(self) {
                 return function(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
-                        this.update({ changed: name });
+                        ('update' in this) && this.update({ changed: name });
                     } else if (!(pk in this)) {
                         this[pk] = self.default(this);
                     }
@@ -197,6 +220,7 @@ const _Method = _Class.new({
     _slots: {
         do: _Var.new({ _mutable: false }), // fn, meat and taters
         message: _Var.new(),
+        name: _Var.new(),
         init() {
             if (!this.message()) {
                 this.message(_Message.new({
@@ -230,6 +254,20 @@ const _ComputedVar = _Class.new({
         }
     }
 });
+
+const _BaseObject = _Class.new({
+    _name: 'BaseObject',
+    _super: {},
+    _slots: {
+        init() {},
+        class() {
+            return this._class;
+        },
+    }
+});
+
+_Class.super(_BaseObject);
+_Class._proto._super = _BaseObject;
 
 const _Id = _Class.new({
     _name: 'Id',
@@ -339,6 +377,9 @@ const _Mixin = _Class.new({
                 },
             });
         },
+        name() {
+            return this._name;
+        }
     }
 });
 
@@ -353,6 +394,7 @@ const _Interface = _Class.new({
         satisfies(klass) {
             // console.log(`check satisfies ${this.name()} for class ${klass.name()}`);
             const missing = this.slotList().filter(slot => {
+                console.log(slot);
                 return !(slot.name() in klass.proto());
             });
             if (missing.length > 0) {

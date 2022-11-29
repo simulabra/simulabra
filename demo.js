@@ -29,8 +29,8 @@ const _CallbackCommand = Base.Class.new({
   }
 });
 
-const _Demo = Base.Class.new({
-  _name: 'Demo',
+const _Application = Base.Class.new({
+  _name: 'Application',
   _slots: {
     counter: Base.Var.default(() => _Counter.new()),
     button: Base.Var.default(() => HTML.Button.new({
@@ -62,9 +62,10 @@ const _Demo = Base.Class.new({
 });
 
 const _ = Base.Module.new({
+  _name: 'Demo',
   _exports: [
     _Counter,
-    _Demo,
+    _Application,
   ]
 });
 

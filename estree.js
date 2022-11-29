@@ -70,6 +70,10 @@ const _Node = Base.Class.new({
 });
 
 const _Program = _Node.subNode('Program', 'body');
+Base.Class.new({
+  _name: 'ProgramNode',
+  _super: _Node,
+});
 
 const _Function = _Node.subNode('Function', 'id', 'params', 'body');
 
