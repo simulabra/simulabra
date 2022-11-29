@@ -394,7 +394,6 @@ const _Interface = _Class.new({
         satisfies(klass) {
             // console.log(`check satisfies ${this.name()} for class ${klass.name()}`);
             const missing = this.slotList().filter(slot => {
-                console.log(slot);
                 return !(slot.name() in klass.proto());
             });
             if (missing.length > 0) {
