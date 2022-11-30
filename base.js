@@ -59,6 +59,19 @@ Object.prototype.className = function() {
     }
 }
 
+function parametize(obj) {
+    const ret = {};
+    for (const [k, v] of Object.entries(obj)) {
+        if (k[0] !== '_') {
+            ret['_' + k] = v;
+        } else {
+            throw new Error('unneeded _');
+            ret[k] = v;
+        }
+    }
+    return ret;
+}
+
 const _Class = {
     simple(name, easyslots, sup=_Object) {
         const slots = {};
@@ -73,9 +86,9 @@ const _Class = {
             }
         }
         return _Class.new({
-            _name: name,
-            _super: sup,
-            _slots: slots,
+            name: name,
+            super: sup,
+            slots: slots,
         });
     },
     _slots: {
@@ -121,7 +134,7 @@ const _Class = {
             }
         },
         new(props = {}) {
-            let obj = props;
+            let obj = parametize(props);
             Object.setPrototypeOf(obj, this.proto());
             obj._class = this;
             if ('init' in obj) {
@@ -206,13 +219,13 @@ Object.setPrototypeOf(_Class, _Class._slots); // prototypical roots mean we can 
 _Class.init();
 
 const _Var = _Class.new({
-    _name: 'Var',
-    _static: {
+    name: 'Var',
+    static: {
         default(val) {
-            return this.new({ _default: val });
+            return this.new({ default: val });
         },
     },
-    _slots: {
+    slots: {
         _mutable: true,
         default(ctx) {
             if (this._default instanceof Function) {
@@ -261,31 +274,31 @@ const _Var = _Class.new({
 });
 
 const _Message = _Class.new({
-    _name: 'Message',
-    _slots: {
+    name: 'Message',
+    slots: {
         args: _Var.default([]),
         ret: _Var.default(null),
     },
 })
 
 const _Method = _Class.new({
-    _name: 'Method',
-    _static: {
+    name: 'Method',
+    static: {
         do(fn) {
             return this.new({
-                _do: fn
+                do: fn
             });
         },
     },
-    _slots: {
-        do: _Var.new({ _mutable: false }), // fn, meat and taters
+    slots: {
+        do: _Var.new({ mutable: false }), // fn, meat and taters
         message: _Var.new(),
         name: _Var.new(),
         init() {
             if (!this.message()) {
                 this.message(_Message.new({
-                    _args: this._args,
-                    _ret: this._ret,
+                    args: this._args,
+                    ret: this._ret,
                 }));
             }
         },
@@ -300,8 +313,8 @@ const _Method = _Class.new({
 })
 
 const _ComputedVar = _Class.new({
-    _name: 'ComputedVar',
-    _slots: {
+    name: 'ComputedVar',
+    slots: {
         deps: _Var.new(),
         formula: _Var.new(),
         dirty: _Var.default(true),
@@ -319,9 +332,9 @@ const _ComputedVar = _Class.new({
 });
 
 const _BaseObject = _Class.new({
-    _name: 'BaseObject',
-    _super: {},
-    _slots: {
+    name: 'BaseObject',
+    super: {},
+    slots: {
         init() {},
         class() {
             return this._class;
@@ -333,15 +346,15 @@ _Class.super(_BaseObject);
 _Class._proto._super = _BaseObject;
 
 const _Id = _Class.new({
-    _name: 'Id',
-    _slots: {
+    name: 'Id',
+    slots: {
         _parent: null,
         _name: null,
         child(name, num) {
             return _.id.new({
-                _parent: this,
-                _name: name,
-                _num: num,
+                parent: this,
+                name: name,
+                num: num,
             });
         },
         toString() {
@@ -351,9 +364,9 @@ const _Id = _Class.new({
 });
 
 const _Primitive = _Class.new({
-    _name: 'Primitive',
-    _super: _Class,
-    _slots: {
+    name: 'Primitive',
+    super: _Class,
+    slots: {
         _js_prototype: null,
         _methods: {},
         init() {
@@ -372,8 +385,8 @@ Object.setPrototypeOf(_Object, _Primitive._proto);
 
 
 const _Module = _Class.new({
-    _name: 'Module',
-    _slots: {
+    name: 'Module',
+    slots: {
         exports: _Var.default([]),
         init() {
             for (const item of this.exports()) {
@@ -383,18 +396,18 @@ const _Module = _Class.new({
     },
 });
 const _String = _Primitive.new({
-    _name: 'String',
-    _js_prototype: String.prototype,
-    _slots: {
+    name: 'String',
+    js_prototype: String.prototype,
+    slots: {
         html() {
             return this;
         }
     }
 });
 const _Number = _Primitive.new({
-    _name: 'Number',
-    _js_prototype: Number.prototype,
-    _slots: {
+    name: 'Number',
+    js_prototype: Number.prototype,
+    slots: {
         js() {
             return this;
         },
@@ -407,9 +420,9 @@ const _Number = _Primitive.new({
     }
 });
 const _Array = _Primitive.new({
-    _name: 'Array',
-    _js_prototype: Array.prototype,
-    _slots: {
+    name: 'Array',
+    js_prototype: Array.prototype,
+    slots: {
         intoMap() {
             const res = {};
             for (const it of this) {
@@ -420,21 +433,21 @@ const _Array = _Primitive.new({
     }
 });
 const _Function = _Primitive.new({
-    _name: 'Function',
-    _js_prototype: Function.prototype,
-    _slots: {
+    name: 'Function',
+    js_prototype: Function.prototype,
+    slots: {
     },
 });
 const _Mixin = _Class.new({
-    _name: 'Mixin',
-    _slots: {
+    name: 'Mixin',
+    slots: {
         slots: _Var.default({}),
         mix(base) {
             if (base === null) {
                 return this;
             }
             return _Mixin.new({
-                _slots: {
+                slots: {
                     ...this.slots(),
                     ...base
                 },
@@ -447,8 +460,8 @@ const _Mixin = _Class.new({
 });
 
 const _Interface = _Class.new({
-    _name: 'Interface',
-    _slots: {
+    name: 'Interface',
+    slots: {
         name: _Var.new(),
         slots: _Var.default({}),
         slotList: _Method.do(function() {
@@ -468,14 +481,14 @@ const _Interface = _Class.new({
 });
 
 const _Command = _Interface.new({
-    _name: 'Command',
-    _slots: {
+    name: 'Command',
+    slots: {
 
     }
 });
 
 const _ = _Module.new({
-    _exports: [
+    exports: [
         _Class,
         _Object,
         _Var,
