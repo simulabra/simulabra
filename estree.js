@@ -73,16 +73,24 @@ const _Node = Base.Class.new({
   _slots: {
     start: Base.Var.new(),
     end: Base.Var.new(),
+    fields: Base.Method.do(function fields() {
+
+    }),
+    format: Base.Method.do(function format() {
+      return `(${this.name()} ${this.fields()})`
+    }),
   }
 });
 
-const _Program = Base.Class.new({
-  _name: 'Program',
-  _super: _Node,
-  _slots: {
-    body: Base.Var.new(),
-  }
-});
+// const _Program = Base.Class.new({
+//   _name: 'Program',
+//   _super: _Node,
+//   _slots: {
+//     body: Base.Var.new(),
+//   }
+// });
+
+const _Program = Base.Class.simple('Program', ['body'], _Node);
 
 const _Function = Base.Class.new({
   _name: 'Function',

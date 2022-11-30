@@ -51,8 +51,33 @@ Object.prototype.proto = _Object._proto.proto;
 Object.prototype.eq = function(other) {
     return this === other;
 }
+Object.prototype.className = function() {
+    if (this.hasOwnProperty('_class')) {
+        return this._class.name();
+    } else {
+        return typeof this;
+    }
+}
 
 const _Class = {
+    simple(name, easyslots, sup=_Object) {
+        const slots = {};
+        for (const v of easyslots) {
+            switch (v.className()) {
+                case 'string':
+                    slots[v] = _Var.new();
+                    break;
+                case 'Var':
+                    slots[v.name()] = v;
+                    break;
+            }
+        }
+        return _Class.new({
+            _name: name,
+            _super: sup,
+            _slots: slots,
+        });
+    },
     _slots: {
         _name: 'Class', // non-type, non-slot object => default
         _slots: {},
