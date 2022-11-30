@@ -49,19 +49,21 @@ const _Node = Base.Class.new({
         _slots: slots,
       });
     }),
+    nodeClasses: Base.Var.default({}),
     nodeClass: Base.Method.do(function nodeClass(type) {
-      switch (type) {
-        case 'Program':
-          return _Program;
-        case 'Function':
-          return _Function;
-        case 'FunctionDeclaration':
-          return _Function;
-        default:
-          console.log('Unhandled type ' + type);
-          return null;
+      if (type in this.nodeClasses()) {
+        return this.nodeClasses()[type];
+      } else {
+        console.log('Unhandled type ' + type);
+        return null;
       }
-    })
+    }),
+    register: Base.Method.do(function register(nodeClass) {
+      this.nodeClasses()[nodeClass.name()] = nodeClass;
+    }),
+    registerAlias: Base.Method.do(function register(name, nodeClass) {
+      this.nodeClasses()[name] = nodeClass;
+    }),
   },
   _slots: {
     start: Base.Var.new(),
@@ -69,13 +71,44 @@ const _Node = Base.Class.new({
   }
 });
 
-const _Program = _Node.subNode('Program', 'body');
-Base.Class.new({
-  _name: 'ProgramNode',
+const _Program = Base.Class.new({
+  _name: 'Program',
   _super: _Node,
+  _slots: {
+    body: Base.Var.new(),
+  }
 });
+_Node.register(_Program);
 
-const _Function = _Node.subNode('Function', 'id', 'params', 'body');
+const _Function = Base.Class.new({
+  _name: 'Function',
+  _super: _Node,
+  _slots: {
+    id: Base.Var.new(),
+    params: Base.Var.new(),
+    body: Base.Var.new(),
+  }
+});
+_Node.register(_Function);
+_Node.registerAlias('FunctionDeclaration', _Function); // probably not a good idea ya think?
+
+const _Identifier = Base.Class.new({
+  _name: 'Identifier',
+  _super: _Node,
+  _slots: {
+    name: Base.Var.new(),
+  }
+});
+_Node.register(_Identifier);
+
+const _BlockStatement = Base.Class.new({
+  _name: 'BlockStatement',
+  _super: _Node,
+  _slots: {
+    body: Base.Var.new(),
+  }
+});
+_Node.register(_BlockStatement);
 
 const _ = Base.Module.new({
   _exports: [
