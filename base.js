@@ -62,10 +62,15 @@ const _Class = {
                 return {};
             }
         },
-        _vars: [],
+        _subclasses: null,
+        _vars: null,
+        _methods: null,
         _implements: [],
         _idctr: 0,
         init(_parent) {
+            this._vars = [];
+            this._methods = [];
+            this._subclasses = [];
             this._proto = {
                 ...this.mixed(),
                 ...this._slots,
@@ -77,6 +82,18 @@ const _Class = {
                 // console.log('static? ' + k, v, this)
                 v.load(k, this);
             }
+            for (const [k, v] of Object.entries(this._slots)) {
+                if (v && v.name instanceof Function && !v.name()) {
+                    v.name(k);
+                }
+                if (v && v.class instanceof Function) {
+                    if (v.class() === _Var) {
+                        this._vars.push(v);
+                    } else if (v.class === _Method) {
+                        this._methods.push(v);
+                    }
+                }
+            }
         },
         new(props = {}) {
             let obj = props;
@@ -87,6 +104,9 @@ const _Class = {
             }
             if (this._id) {
                 obj._id = this._id.child(obj.name(), this.nextid());
+            }
+            if (obj._super && obj._super.addSubclass) {
+                obj._super.addSubclass(obj);
             }
             return obj;
         },
@@ -106,11 +126,23 @@ const _Class = {
             }
             return this._super;
         },
+        addSubclass(subclass) {
+            this._subclasses.push(subclass);
+        },
+        subclasses() {
+            return this._subclasses;
+        },
         implements() {
             return this._implements;
         },
         proto() {
             return this._proto;
+        },
+        vars() {
+            return this._vars;
+        },
+        methods() {
+            return this._methods;
         },
         mixins() {
             return this._mixins;
@@ -196,6 +228,9 @@ const _Var = _Class.new({
             } else {
                 parent[name] = immutableAccess(this);
             }
+            if (parent.vars instanceof Function) {
+                parent.vars().push(this);
+            }
         }
     }
 });
@@ -232,6 +267,9 @@ const _Method = _Class.new({
         load(name, parent) {
             this._do._method = this;
             parent[name] = this._do;
+            if (parent.methods instanceof Function) {
+                parent.methods().push(this);
+            }
         },
     }
 })

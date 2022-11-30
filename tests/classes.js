@@ -151,6 +151,8 @@ test('inheritance', () => {
   assert.is(_.SmallerPoint.new().translate(4, 0).dist(), 0.4);
 
   assert.is(_.TinyPoint.new({ _x: 3, _y: 4 }).dist(), 0.05);
+
+  assert.equal(_.Point.subclasses().map(sub => sub.name()), ['ColorPoint', 'ChildPoint', 'WatchedPoint']);
 });
 
 test('getters n setters', () => {

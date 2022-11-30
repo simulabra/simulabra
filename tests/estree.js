@@ -11,7 +11,7 @@ test('basic', () => {
   const prog = transformer.transform(transformer.parse(add.toString()));
 
   assert.is(prog.class().name(), 'Program');
-  assert.is(prog.body()[0].class().name(), 'Function')
+  assert.is(prog.body()[0].class().name(), 'FunctionDeclaration');
 });
 
 test.run();
