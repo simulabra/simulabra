@@ -4,9 +4,9 @@ import Base from './base.js';
 import Web from './web.js';
 
 const DemoPage = Base.Class.new({
-    _name: 'DemoPage',
-    _implements: [Web.$Page],
-    _slots: {
+    name: 'DemoPage',
+    implements: [Web.$Page],
+    slots: {
         render() {
             return
         }
@@ -15,7 +15,7 @@ const DemoPage = Base.Class.new({
 
 
 const _DemoHandler = Web.HTMLRequestHandler.new({
-  _html: `
+  html: `
     <!DOCTYPE html>
     <html>
     <head>

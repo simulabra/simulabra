@@ -2,9 +2,9 @@ import Base from './base.js';
 import HTML from './html.js';
 
 const _Counter = Base.Class.new({
-  _name: 'Counter',
-  _super: HTML.Element,
-  _slots: {
+  name: 'Counter',
+  super: HTML.Element,
+  slots: {
     count: Base.Var.default(0),
     inc: Base.Method.do(function inc() {
       this.count(this.count() + 1);
@@ -12,15 +12,15 @@ const _Counter = Base.Class.new({
     }),
     html() {
       return HTML.Div.new({
-        _inner: `Count: ${this.count()}`,
+        inner: `Count: ${this.count()}`,
       }).html();
     },
   },
 });
 
 const _CallbackCommand = Base.Class.new({
-  _name: 'CallbackCommand',
-  _slots: {
+  name: 'CallbackCommand',
+  slots: {
     self: Base.Var.new(),
     fn: Base.Var.new(),
     do(...args) {
@@ -30,18 +30,18 @@ const _CallbackCommand = Base.Class.new({
 });
 
 const _Application = Base.Class.new({
-  _name: 'Application',
-  _slots: {
+  name: 'Application',
+  slots: {
     counter: Base.Var.default(() => _Counter.new()),
     button: Base.Var.default(() => HTML.Button.new({
-      _inner: 'Add',
-      _id: 'add-button',
+      inner: 'Add',
+      id: 'add-button',
     })),
     load() {
       this.counter().load();
       this.button().click(_CallbackCommand.new({
-        _self: this,
-        _fn() {
+        self: this,
+        fn() {
           this.counter().inc();
           this.render();
         },
@@ -62,8 +62,8 @@ const _Application = Base.Class.new({
 });
 
 const _ = Base.Module.new({
-  _name: 'Demo',
-  _exports: [
+  name: 'Demo',
+  exports: [
     _Counter,
     _Application,
   ]

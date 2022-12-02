@@ -47,7 +47,7 @@ const _Object = {
 
 _Object._proto = _Object._slots;
 Object.prototype.loadslots = _Object._proto.loadslots;
-Object.prototype.proto = _Object._proto.proto;
+Object.prototype.proto = function() { return {} };
 Object.prototype.eq = function(other) {
     return this === other;
 }
@@ -72,6 +72,16 @@ function parametize(obj) {
     return ret;
 }
 
+function nameSlots(obj) {
+    for (const [k, v] of Object.entries(obj)) {
+            // console.log('?nameslot', k, v);
+        if (v && typeof v.name === 'function' && !v.name()) {
+            // console.log('nameslot', k);
+            v.name(k);
+        }
+    }
+}
+
 const _Class = {
     simple(name, easyslots, sup=_Object) {
         const slots = {};
@@ -93,61 +103,57 @@ const _Class = {
     },
     _slots: {
         _name: 'Class', // non-type, non-slot object => default
-        _slots: {},
-        _static: {},
         _super: {
-            proto() {
+            slots() {
                 return {};
-            }
+            },
         },
-        _subclasses: null,
-        _vars: null,
-        _methods: null,
-        _implements: [],
         _idctr: 0,
         init(_parent) {
             this._vars = [];
             this._methods = [];
             this._subclasses = [];
-            this._proto = {
-                ...this.mixed(),
-                ...this._slots,
-            };
-            this.nameSlots();
-            this.proto().loadslots();
+            this._proto = {};
+            this.defaultInitSlot('slots', {});
+            this.defaultInitSlot('static', {});
+            this.defaultInitSlot('implements', []);
+            nameSlots(this.slots());
+            nameSlots(this.static());
             this.super(this.super());
-            this.implements().map(iface => iface.satisfies(this));
-            for (const [k, v] of Object.entries(this._static)) {
+            // this.implements().map(iface => iface.satisfies(this));
+            for (const [k, v] of Object.entries(this.static())) {
                 // console.log('static? ' + k, v, this)
                 v.load(this);
             }
-            for (const [k, v] of Object.entries(this._slots)) {
-                if (v && v.name instanceof Function && !v.name()) {
-                    v.name(k);
-                }
-                if (v && v.class instanceof Function) {
-                    if (v.class() === _Var) {
-                        this._vars.push(v);
-                    } else if (v.class === _Method) {
-                        this._methods.push(v);
-                    }
-                }
+            for (const [k, v] of Object.entries(this.slots())) {
+                // console.log('slots? ' + k, v, this)
+                v?.load && v.load(this.proto());
+            }
+            for (const [k, v] of Object.entries(this.mixed())) {
+                // console.log('mix? ' + k, v, this)
+                v?.load && v.load(this.proto());
             }
         },
         new(props = {}) {
             let obj = parametize(props);
             Object.setPrototypeOf(obj, this.proto());
             obj._class = this;
-            if ('init' in obj) {
-                obj.init(this);
-            }
             if (this._id) {
                 obj._id = this._id.child(obj.name(), this.nextid());
             }
             if (obj._super && obj._super.addSubclass) {
                 obj._super.addSubclass(obj);
             }
+            if ('init' in obj) {
+                obj.init(this);
+            }
             return obj;
+        },
+        defaultInitSlot(slot, dval) {
+            const pk = '_' + slot;
+            if (!(pk in this)) {
+                this[pk] = dval;
+            }
         },
         name() {
             return this._name;
@@ -170,13 +176,6 @@ const _Class = {
         },
         subclasses() {
             return this._subclasses;
-        },
-        nameSlots() {
-            for (const [k, v] of Object.entries(this.slots())) {
-                if (v && typeof v.name === 'function' && !v.name()) {
-                    v.name(k);
-                }
-            }
         },
         implements() {
             return this._implements;
@@ -204,6 +203,9 @@ const _Class = {
         },
         slots() {
             return this._slots;
+        },
+        static() {
+            return this._static;
         },
         addslot(slot) {
             if (slot.name() in this._slots) {
@@ -234,7 +236,6 @@ const _Var = _Class.new({
         },
     },
     slots: {
-        _mutable: true,
         default(ctx) {
             if (this._default instanceof Function) {
                 return this._default.apply(ctx);
@@ -247,6 +248,13 @@ const _Var = _Class.new({
                 this._name = assign;
             }
             return this._name;
+        },
+        mutable() {
+            if ('_mutable' in this) {
+                return this._mutable;
+            } else {
+                return true;
+            }
         },
         load(parent) {
             // console.log('var load', this.name());
@@ -265,7 +273,7 @@ const _Var = _Class.new({
             function immutableAccess(self) {
                 return function(assign) {
                     if (assign !== undefined) {
-                        throw new Error(`Attempt to set immutable variable ${this.name()}`);
+                        throw new Error(`Attempt to set immutable variable ${self.name()} ${pk}`);
                     }
                     if (!(pk in this)) {
                         this[pk] = self.default(this);
@@ -273,12 +281,12 @@ const _Var = _Class.new({
                     return this[pk];
                 }
             }
-            if (this._mutable) {
+            if (this.mutable()) {
                 parent[this.name()] = mutableAccess(this);
             } else {
                 parent[this.name()] = immutableAccess(this);
             }
-            if (parent.vars instanceof Function) {
+            if (typeof parent.vars === 'function') {
                 parent.vars().push(this);
             }
         }
@@ -290,20 +298,14 @@ const _Message = _Class.new({
     slots: {
         args: _Var.default([]),
         ret: _Var.default(null),
+        name: _Var.new(),
     },
 })
 
 const _Method = _Class.new({
     name: 'Method',
-    static: {
-        do(fn) {
-            return this.new({
-                do: fn
-            });
-        },
-    },
     slots: {
-        do: _Var.new({ mutable: false }), // fn, meat and taters
+        do: _Var.new(), // fn, meat and taters
         message: _Var.new(),
         name: _Var.new(),
         init() {
@@ -315,14 +317,18 @@ const _Method = _Class.new({
             }
         },
         load(parent) {
-            this._do._method = this;
-            parent[this.name()] = this._do;
+            this.do()._method = this;
+            parent[this.name()] = this.do();
             if (parent.methods instanceof Function) {
                 parent.methods().push(this);
             }
         },
     }
 });
+
+_Method.do = function(fn) {
+    return _Method.new({ do: fn });
+}
 
 const _Arg = _Class.new({
     name: 'Arg',
@@ -457,9 +463,9 @@ const _Function = _Primitive.new({
     slots: {
     },
 });
+
 const _Mixin = _Class.new({
     name: 'Mixin',
-    super: _Class, // tests pass I guess?
     slots: {
         slots: _Var.default({}),
         mix(base) {
@@ -472,6 +478,9 @@ const _Mixin = _Class.new({
                     ...base
                 },
             });
+        },
+        init() {
+            nameSlots(this.slots());
         },
         name() {
             return this._name;
@@ -487,6 +496,9 @@ const _Interface = _Class.new({
         slotList: _Method.do(function() {
             return Object.values(this.slots());
         }),
+        init() {
+            nameSlots(this.slots());
+        },
         satisfies(klass) {
             // console.log(`check satisfies ${this.name()} for class ${klass.name()}`);
             const missing = this.slotList().filter(slot => {
@@ -529,6 +541,7 @@ const _ = _Module.new({
         _Id,
         _Primitive,
         _Method,
+        _Message,
         _Module,
         _String,
         _Number,

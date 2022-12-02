@@ -13,14 +13,9 @@ const _Element = Base.Class.new({
 })
 const _$HTML = Base.Interface.new({
   name: '$HTML',
-  inherits: [
-    Base.$ToString,
-  ],
-  slots: [
-    Base.Method.new({
-      name: 'html'
-    }),
-  ],
+  slots: {
+    html: Base.Message.new(),
+  }
 });
 
 const _Div = Base.Class.new({
