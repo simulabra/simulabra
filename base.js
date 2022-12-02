@@ -19,8 +19,8 @@ const _Object = {
         init() { },
         // if this object doesn't have a _name, give it that of the symbol version of name
         loadslots() {
-            for (let [key, val] of Object.entries(this)) {
-                val?.load && val.load(key, this);
+            for (const val of Object.values(this)) {
+                val?.load && val.load(this);
             }
         },
         update(event) {
@@ -113,12 +113,13 @@ const _Class = {
                 ...this.mixed(),
                 ...this._slots,
             };
+            this.nameSlots();
             this.proto().loadslots();
             this.super(this.super());
             this.implements().map(iface => iface.satisfies(this));
             for (const [k, v] of Object.entries(this._static)) {
                 // console.log('static? ' + k, v, this)
-                v.load(k, this);
+                v.load(this);
             }
             for (const [k, v] of Object.entries(this._slots)) {
                 if (v && v.name instanceof Function && !v.name()) {
@@ -170,6 +171,13 @@ const _Class = {
         subclasses() {
             return this._subclasses;
         },
+        nameSlots() {
+            for (const [k, v] of Object.entries(this.slots())) {
+                if (v && typeof v.name === 'function' && !v.name()) {
+                    v.name(k);
+                }
+            }
+        },
         implements() {
             return this._implements;
         },
@@ -202,7 +210,7 @@ const _Class = {
                 throw new Error('already in slots: ' + slot.name());
             }
             this._slots[slot.name()] = slot;
-            slot.load(slot.name(), this._proto);
+            slot.load(this._proto);
         },
         type() {
 
@@ -210,8 +218,8 @@ const _Class = {
     }
 }
 
-Function.prototype.load = function(name, parent) {
-    parent[name] = this;
+Function.prototype.load = function(parent) {
+    parent[this.name] = this;
 }
 
 Object.setPrototypeOf(_Class, _Class._slots); // prototypical roots mean we can avoid Metaclasses
@@ -234,16 +242,20 @@ const _Var = _Class.new({
                 return this._default;
             }
         },
-        name() {
+        name(assign) {
+            if (assign) {
+                this._name = assign;
+            }
             return this._name;
         },
-        load(name, parent) {
-            const pk = '_' + name;
+        load(parent) {
+            // console.log('var load', this.name());
+            const pk = '_' + this.name();
             function mutableAccess(self) {
                 return function(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
-                        ('update' in this) && this.update({ changed: name });
+                        ('update' in this) && this.update({ changed: self.name() });
                     } else if (!(pk in this)) {
                         this[pk] = self.default(this);
                     }
@@ -253,7 +265,7 @@ const _Var = _Class.new({
             function immutableAccess(self) {
                 return function(assign) {
                     if (assign !== undefined) {
-                        throw new Error(`Attempt to set immutable variable ${name}`);
+                        throw new Error(`Attempt to set immutable variable ${this.name()}`);
                     }
                     if (!(pk in this)) {
                         this[pk] = self.default(this);
@@ -262,9 +274,9 @@ const _Var = _Class.new({
                 }
             }
             if (this._mutable) {
-                parent[name] = mutableAccess(this);
+                parent[this.name()] = mutableAccess(this);
             } else {
-                parent[name] = immutableAccess(this);
+                parent[this.name()] = immutableAccess(this);
             }
             if (parent.vars instanceof Function) {
                 parent.vars().push(this);
@@ -302,15 +314,22 @@ const _Method = _Class.new({
                 }));
             }
         },
-        load(name, parent) {
+        load(parent) {
             this._do._method = this;
-            parent[name] = this._do;
+            parent[this.name()] = this._do;
             if (parent.methods instanceof Function) {
                 parent.methods().push(this);
             }
         },
     }
-})
+});
+
+const _Arg = _Class.new({
+    name: 'Arg',
+    slots: {
+        type: _Var.new(),
+    },
+});
 
 const _ComputedVar = _Class.new({
     name: 'ComputedVar',
@@ -325,7 +344,7 @@ const _ComputedVar = _Class.new({
             }
             return this.cached();
         }),
-        load(name, parent) {
+        load(parent) {
 
         }
     }
@@ -440,6 +459,7 @@ const _Function = _Primitive.new({
 });
 const _Mixin = _Class.new({
     name: 'Mixin',
+    super: _Class, // tests pass I guess?
     slots: {
         slots: _Var.default({}),
         mix(base) {
@@ -479,6 +499,19 @@ const _Interface = _Class.new({
         },
     },
 });
+
+const _$Slot = _Interface.new({
+    name: 'Slot',
+    slots: {
+        load: _Message.new({
+            args: [
+                _Arg.new({
+                    name: 'parent',
+                })
+            ],
+        })
+    }
+})
 
 const _Command = _Interface.new({
     name: 'Command',
