@@ -45,6 +45,10 @@ Object.prototype.className = function() {
     return this.class()?.name() || typeof this;
 }
 
+Object.prototype.entries = function() {
+    return Object.entries(this);
+}
+
 function parametize(obj) {
     const ret = {};
     for (const [k, v] of Object.entries(obj)) {
@@ -59,7 +63,7 @@ function parametize(obj) {
 }
 
 function nameSlots(obj) {
-    for (const [k, v] of Object.entries(obj)) {
+    for (const [k, v] of obj.entries()) {
             // console.log('?nameslot', k, v);
         if (v && typeof v.name === 'function' && !v.name()) {
             // console.log('nameslot', k);
@@ -87,15 +91,15 @@ export const Class = {
 
             Object.setPrototypeOf(this.proto(), this.super().proto());
             // this.implements().map(iface => iface.satisfies(this));
-            for (const [k, v] of Object.entries(this.static())) {
+            for (const [k, v] of this.static().entries()) {
                 // console.log('static? ' + k, v, this)
                 v.load(this);
             }
-            for (const [k, v] of Object.entries(this.slots())) {
+            for (const [k, v] of this.slots().entries()) {
                 // console.log('slots? ' + k, v, this)
                 v?.load && v.load(this.proto());
             }
-            for (const [k, v] of Object.entries(this.mixed())) {
+            for (const [k, v] of this.mixed().entries()) {
                 // console.log('mix? ' + k, v, this)
                 v?.load && v.load(this.proto());
             }

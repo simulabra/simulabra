@@ -3,7 +3,7 @@ import * as assert from 'uvu/assert';
 import * as Base from '../base.js';
 import * as HTML from '../html.js';
 
-const _Frobber = Base.Class.new({
+const Frobber = Base.Class.new({
   name: 'Frobber',
   slots: {
     frob() {
@@ -11,7 +11,8 @@ const _Frobber = Base.Class.new({
     }
   }
 });
-const _Point = Base.Class.new({
+
+const Point = Base.Class.new({
   name: 'Point',
   slots: {
     x: Base.Var.default(0),
@@ -28,11 +29,12 @@ const _Point = Base.Class.new({
     }
   }
 });
-const _LocTest = Base.Class.new({
+
+const LocTest = Base.Class.new({
   name: 'LocTest',
   slots: {
     p: Base.Var.new({
-      default: () => _Point.new()
+      default: () => Point.new()
     }),
     move() {
       this.p().translate(1);
@@ -42,7 +44,8 @@ const _LocTest = Base.Class.new({
     }
   }
 });
-let _ColorMixin = Base.Mixin.new({
+
+const ColorMixin = Base.Mixin.new({
   name: 'ColorMixin',
   slots: {
     r: Base.Var.default(0),
@@ -53,42 +56,47 @@ let _ColorMixin = Base.Mixin.new({
     }),
   }
 });
-const _ColorPoint = Base.Class.new({
+
+const ColorPoint = Base.Class.new({
   name: 'ColorPoint',
-  mixins: [_ColorMixin],
-  super: _Point,
+  mixins: [ColorMixin],
+  super: Point,
 });
-const _ChildPoint = Base.Class.new({
+
+const ChildPoint = Base.Class.new({
   name: 'ChildPoint',
-  super: _Point,
+  super: Point,
   slots: {
     dist() {
       // note baked in super class - can we fix this in a nice way?
-      return _ChildPoint.super().proto().dist.apply(this) / 2;
+      return ChildPoint.super().proto().dist.apply(this) / 2;
     }
   }
 });
-const _SmallerPoint = Base.Class.new({
+
+const SmallerPoint = Base.Class.new({
   name: 'SmallerPoint',
-  super: _ChildPoint,
+  super: ChildPoint,
   slots: {
     dist() {
-      return _SmallerPoint.super().proto().dist.apply(this) / 5;
+      return SmallerPoint.super().proto().dist.apply(this) / 5;
     }
   }
 });
-const _TinyPoint = Base.Class.new({
+
+const TinyPoint = Base.Class.new({
   name: 'TinyPoint',
-  super: _SmallerPoint,
+  super: SmallerPoint,
   slots: {
     dist() {
-      return _TinyPoint.super().proto().dist.apply(this) / 10;
+      return TinyPoint.super().proto().dist.apply(this) / 10;
     }
   }
 });
-const _WatchedPoint = Base.Class.new({
+
+const WatchedPoint = Base.Class.new({
   name: 'WatchedPoint',
-  super: _Point,
+  super: Point,
   slots: {
     update(event) {
       this._last = event;
@@ -96,36 +104,21 @@ const _WatchedPoint = Base.Class.new({
   }
 });
 
-
-const _ = Base.Module.new({
-  exports: [
-    _Frobber,
-    _Point,
-    _LocTest,
-    _ColorMixin,
-    _ColorPoint,
-    _ChildPoint,
-    _SmallerPoint,
-    _TinyPoint,
-    _WatchedPoint,
-  ]
-});
-
 test('basic', () => {
-  assert.is(_Frobber.new().frob(), 42);
+  assert.is(Frobber.new().frob(), 42);
 });
 
 test('point', () => {
-  assert.is(_.Point.new({ x: 3, y: 4 }).dist(), 5);
-  let t = _.Point.new();
+  assert.is(Point.new({ x: 3, y: 4 }).dist(), 5);
+  let t = Point.new();
   t.translate(3, 4);
   assert.is(t.dist(), 5);
-  assert.is(_.Point.new().dist(), 0);
-  assert.is(_.Point.class().eq(Base.Class), true);
-  assert.is(t.class().eq(_.Point), true);
+  assert.is(Point.new().dist(), 0);
+  assert.is(Point.class().eq(Base.Class), true);
+  assert.is(t.class().eq(Point), true);
 
-  let l1 = _.LocTest.new();
-  let l2 = _.LocTest.new();
+  let l1 = LocTest.new();
+  let l2 = LocTest.new();
   l1.move();
   l1.move();
   assert.is(l1.dist(), 2);
@@ -133,7 +126,7 @@ test('point', () => {
 });
 
 test('mixins', () => {
-  const p = _.ColorPoint.new({
+  const p = ColorPoint.new({
     x: 3,
     y: 4,
     g: 12,
@@ -145,18 +138,18 @@ test('mixins', () => {
 });
 
 test('inheritance', () => {
-  assert.is(_.ChildPoint.new({ x: 3, y: 4 }).dist(), 2.5);
+  assert.is(ChildPoint.new({ x: 3, y: 4 }).dist(), 2.5);
 
-  assert.is(_.SmallerPoint.new({ x: 3, y: 4 }).dist(), 0.5);
-  assert.is(_.SmallerPoint.new().translate(4, 0).dist(), 0.4);
+  assert.is(SmallerPoint.new({ x: 3, y: 4 }).dist(), 0.5);
+  assert.is(SmallerPoint.new().translate(4, 0).dist(), 0.4);
 
-  assert.is(_.TinyPoint.new({ x: 3, y: 4 }).dist(), 0.05);
+  assert.is(TinyPoint.new({ x: 3, y: 4 }).dist(), 0.05);
 
-  assert.equal(_.Point.subclasses().map(sub => sub.name()), ['ColorPoint', 'ChildPoint', 'WatchedPoint']);
+  assert.equal(Point.subclasses().map(sub => sub.name()), ['ColorPoint', 'ChildPoint', 'WatchedPoint']);
 });
 
 test('getters n setters', () => {
-  let p = _.Point.new({
+  let p = Point.new({
     x: 6,
     y: 7.5,
   });
@@ -165,18 +158,17 @@ test('getters n setters', () => {
   assert.is(p.y(10), 10);
   assert.is(p.x() * p.y(), 60);
 
-  const wp = _.WatchedPoint.new();
+  const wp = WatchedPoint.new();
   wp.x(4);
   assert.is(wp._last.changed, 'x');
 });
 
 test('primitives', () => {
-  const obj = { a: true };
   assert.is((4 + 5).sqrt(), 3);
 
-  const arr = [_.Point, Base.Class];
+  const arr = [Point, Base.Class];
   const arrMap = arr.intoMap();
-  assert.is(arrMap.Point, _.Point);
+  assert.is(arrMap.Point, Point);
   assert.is(arrMap.Class, Base.Class);
 });
 
