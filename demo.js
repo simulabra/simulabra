@@ -1,7 +1,7 @@
-import Base from './base.js';
-import HTML from './html.js';
+import * as Base from './base.js';
+import * as HTML from './html.js';
 
-const _Counter = Base.Class.new({
+export const Counter = Base.Class.new({
   name: 'Counter',
   super: HTML.Element,
   slots: {
@@ -18,7 +18,7 @@ const _Counter = Base.Class.new({
   },
 });
 
-const _CallbackCommand = Base.Class.new({
+export const CallbackCommand = Base.Class.new({
   name: 'CallbackCommand',
   slots: {
     self: Base.Var.new(),
@@ -29,17 +29,17 @@ const _CallbackCommand = Base.Class.new({
   }
 });
 
-const _Application = Base.Class.new({
+export const Application = Base.Class.new({
   name: 'Application',
   slots: {
-    counter: Base.Var.default(() => _Counter.new()),
+    counter: Base.Var.default(() => Counter.new()),
     button: Base.Var.default(() => HTML.Button.new({
       inner: 'Add',
       id: 'add-button',
     })),
     load() {
       this.counter().load();
-      this.button().click(_CallbackCommand.new({
+      this.button().click(CallbackCommand.new({
         self: this,
         fn() {
           this.counter().inc();
@@ -60,13 +60,3 @@ const _Application = Base.Class.new({
     },
   }
 });
-
-const _ = Base.Module.new({
-  name: 'Demo',
-  exports: [
-    _Counter,
-    _Application,
-  ]
-});
-
-export default _;

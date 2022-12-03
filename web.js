@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
-import Base from './base';
-import HTML from './html';
+import * as Base from './base';
+import * as HTML from './html';
 
-const _$Page = Base.Interface.new({
+export const $Page = Base.Interface.new({
   name: '$Page',
   protocol: [
     Base.Method.new({
@@ -16,15 +16,17 @@ const _$Page = Base.Interface.new({
   ],
 });
 
-const _URL = Base.Class.new({
+export const SURL = Base.Class.new({
   name: 'URL',
-  parse(urlString) {
-    let url = new URL(urlString);
-    let parts = _url.pathname.match(/\/[^\/]*/g);
-    return _URL.new({
-      url,
-      parts,
-    });
+  static: {
+    parse(urlString) {
+      let url = new URL(urlString);
+      let parts = url.pathname.match(/\/[^\/]*/g);
+      return SURL.new({
+        url,
+        parts,
+      });
+    },
   },
   slots: {
     url: Base.Var.new(),
@@ -43,7 +45,7 @@ const _URL = Base.Class.new({
     },
   },
 });
-const _SocketRequestHandler = Base.Class.new({
+export const SocketRequestHandler = Base.Class.new({
   name: 'RequestHandler',
   slots: {
     handle(req, server) {
@@ -60,18 +62,18 @@ const _SocketRequestHandler = Base.Class.new({
   },
 });
 
-const _Request = Base.Class.new({
+export const Request = Base.Class.new({
   name: 'Request',
   slots: {
     url: Base.Var.new(),
     native: Base.Var.new(),
     init() {
-      this.url(_URL.parse(this.native().url));
+      this.url(SURL.parse(this.native().url));
     },
   },
 });
 
-const _HTMLRequestHandler = Base.Class.new({
+export const HTMLRequestHandler = Base.Class.new({
   name: 'HTMLRequestHandler',
   slots: {
     html: Base.Var.default('<h1>hello world!</h1'),
@@ -87,11 +89,11 @@ const _HTMLRequestHandler = Base.Class.new({
   },
 });
 
-const _PageHandler = Base.Class.new({
+export const PageHandler = Base.Class.new({
   name: 'HTMLRequestHandler',
   slots: {
     page: Base.Var.new({
-      type: _$Page,
+      type: $Page,
     }),
     html: Base.Method.new({
       do: function html() {
@@ -101,7 +103,7 @@ const _PageHandler = Base.Class.new({
   },
 });
 
-const _ModuleRequestHandler = Base.Class.new({
+export const ModuleRequestHandler = Base.Class.new({
   name: 'ModuleRequestHandler',
   slots: {
     handle(req, server) {
@@ -115,15 +117,15 @@ const _ModuleRequestHandler = Base.Class.new({
     }
   }
 })
-const _WebServer = Base.Class.new({
+export const WebServer = Base.Class.new({
   name: 'WebServer',
   static: {
     defaultRoute: Base.Method.do(function defaultRoute(route) {
-      const ws = _WebServer.new({
+      const ws = WebServer.new({
         handlers: {
           '/': route,
-          '/socket': _SocketRequestHandler.new(),
-          '/module': _ModuleRequestHandler.new(),
+          '/socket': SocketRequestHandler.new(),
+          '/module': ModuleRequestHandler.new(),
         }
       });
       ws.serve();
@@ -147,7 +149,7 @@ const _WebServer = Base.Class.new({
           },
         },
         fetch(req, server) {
-          const _req = _Request.new({ _native: req });
+          const _req = Request.new({ native: req });
           const basePath = _req.url().parts()[0];
           if (basePath in self.handlers()) {
             console.log('handle ' + basePath);
@@ -162,15 +164,3 @@ const _WebServer = Base.Class.new({
     },
   },
 });
-
-const _ = Base.Module.new({
-  exports: [
-    _WebServer,
-    _HTMLRequestHandler,
-    _Request,
-    _URL,
-    _$Page,
-  ]
-});
-
-export default _;

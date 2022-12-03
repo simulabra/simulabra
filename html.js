@@ -1,6 +1,6 @@
-import Base from './base.js';
+import * as Base from './base.js';
 
-const _Element = Base.Class.new({
+export const Element = Base.Class.new({
   name: 'Element',
   slots: {
     inner: Base.Var.new(),
@@ -11,17 +11,17 @@ const _Element = Base.Class.new({
     },
   }
 })
-const _$HTML = Base.Interface.new({
+export const $HTML = Base.Interface.new({
   name: '$HTML',
   slots: {
     html: Base.Message.new(),
   }
 });
 
-const _Div = Base.Class.new({
+export const Div = Base.Class.new({
   name: 'Div',
-  implements: [_$HTML],
-  super: _Element,
+  implements: [$HTML],
+  super: Element,
   slots: {
     html() {
       return `<div>${this.inner().html()}</div>`;
@@ -29,10 +29,10 @@ const _Div = Base.Class.new({
   }
 });
 
-const _Button = Base.Class.new({
+export const Button = Base.Class.new({
   name: 'Button',
-  implements: [_$HTML],
-  super: _Element,
+  implements: [$HTML],
+  super: Element,
   slots: {
     click: Base.Var.new({ type: Base.$Command }),
     html() {
@@ -45,14 +45,3 @@ const _Button = Base.Class.new({
     }
   }
 });
-
-const _ = Base.Module.new({
-  exports: [
-    _$HTML,
-    _Element,
-    _Div,
-    _Button,
-  ]
-});
-
-export default _;

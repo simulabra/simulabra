@@ -1,8 +1,8 @@
-import Base from './base.js';
+import * as Base from './base.js';
 import { parseScript } from "meriyah";
 
 // https://github.com/estree/estree/blob/master/es5.md
-const _ESTreeTransformer = Base.Class.new({
+export const ESTreeTransformer = Base.Class.new({
   name: 'ESTreeTransformer',
   doc: 'transforms estree objects to nodes',
   slots: {
@@ -22,7 +22,7 @@ const _ESTreeTransformer = Base.Class.new({
       this.nodeClasses()[name] = nodeClass;
     }),
     init() {
-      for (let nsub of _Node.subclasses()) {
+      for (let nsub of Node.subclasses()) {
         this.register(nsub);
       }
     },
@@ -54,7 +54,7 @@ const _ESTreeTransformer = Base.Class.new({
   }
 });
 
-const _Node = Base.Class.new({
+export const Node = Base.Class.new({
   name: 'Node',
   static: {
     subNode: Base.Method.do(function subNode(name, ...slotNames) {
@@ -64,7 +64,7 @@ const _Node = Base.Class.new({
       }
       return Base.Class.new({
         name: name,
-        super: _Node,
+        super: Node,
         slots: slots,
       });
     }),
@@ -81,25 +81,17 @@ const _Node = Base.Class.new({
   }
 });
 
-// const _Program = Base.Class.new({
-//   _name: 'Program',
-//   _super: _Node,
-//   _slots: {
-//     body: Base.Var.new(),
-//   }
-// });
-
-const _Program = Base.Class.new({
+export const Program = Base.Class.new({
   name: 'Program',
-  super: _Node,
+  super: Node,
   slots: {
     body: Base.Var.new(),
   },
 });
 
-const _Function = Base.Class.new({
+export const Function = Base.Class.new({
   name: 'Function',
-  super: _Node,
+  super: Node,
   slots: {
     id: Base.Var.new(),
     params: Base.Var.new(),
@@ -107,9 +99,9 @@ const _Function = Base.Class.new({
   }
 });
 
-const _FunctionDeclaration = Base.Class.new({
+export const FunctionDeclaration = Base.Class.new({
   name: 'FunctionDeclaration',
-  super: _Node,
+  super: Node,
   slots: {
     id: Base.Var.new(),
     params: Base.Var.new(),
@@ -117,33 +109,33 @@ const _FunctionDeclaration = Base.Class.new({
   }
 });
 
-const _Identifier = Base.Class.new({
+export const Identifier = Base.Class.new({
   name: 'Identifier',
-  super: _Node,
+  super: Node,
   slots: {
     name: Base.Var.new(),
   }
 });
 
-const _BlockStatement = Base.Class.new({
+export const BlockStatement = Base.Class.new({
   name: 'BlockStatement',
-  super: _Node,
+  super: Node,
   slots: {
     body: Base.Var.new(),
   }
 });
 
-const _ReturnStatement = Base.Class.new({
+export const ReturnStatement = Base.Class.new({
   name: 'ReturnStatement',
-  super: _Node,
+  super: Node,
   slots: {
     argument: Base.Var.new(),
   }
 });
 
-const _BinaryExpression = Base.Class.new({
+export const BinaryExpression = Base.Class.new({
   name: 'BinaryExpression',
-  super: _Node,
+  super: Node,
   slots: {
     left: Base.Var.new(),
     right: Base.Var.new(),
@@ -151,28 +143,10 @@ const _BinaryExpression = Base.Class.new({
   }
 });
 
-const _Literal = Base.Class.new({
+export const Literal = Base.Class.new({
   name: 'Literal',
-  super: _Node,
+  super: Node,
   slots: {
     value: Base.Var.new(),
   }
 });
-
-
-const _ = Base.Module.new({
-  exports: [
-    _ESTreeTransformer,
-    _Node,
-    _Program,
-    _Function,
-    _FunctionDeclaration,
-    _Identifier,
-    _BlockStatement,
-    _ReturnStatement,
-    _BinaryExpression,
-    _Literal,
-  ]
-});
-
-export default _;

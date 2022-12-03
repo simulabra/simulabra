@@ -1,7 +1,7 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import Base from '../base.js';
-import HTML from '../html.js';
+import * as Base from '../base.js';
+import * as HTML from '../html.js';
 
 const _Frobber = Base.Class.new({
   name: 'Frobber',

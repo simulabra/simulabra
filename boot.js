@@ -1,4 +1,4 @@
-import Base from './base.js';
-import Demo from './demo.js';
+import * as Base from './base.js';
+import * as Demo from './demo.js';
 
-globalThis.demo = Demo.Application.new();
+export const Application = Demo.Application;

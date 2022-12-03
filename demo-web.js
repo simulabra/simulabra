@@ -1,7 +1,7 @@
 //~
 //~
-import Base from './base.js';
-import Web from './web.js';
+import * as Base from './base.js';
+import * as Web from './web.js';
 
 const DemoPage = Base.Class.new({
     name: 'DemoPage',
@@ -14,7 +14,7 @@ const DemoPage = Base.Class.new({
 })
 
 
-const _DemoHandler = Web.HTMLRequestHandler.new({
+export const DemoHandler = Web.HTMLRequestHandler.new({
   html: `
     <!DOCTYPE html>
     <html>
@@ -23,9 +23,10 @@ const _DemoHandler = Web.HTMLRequestHandler.new({
         <title>WebSockets</title>
     </head>
     <body>
-        <script type="module" src="module/boot.js"></script>
         <script type="module">
+import { Application } from './module/boot.js';
 console.log('hello????')
+const demo = Application.new();
 demo.counter().inc();
 demo.render();
 </script>
@@ -36,4 +37,4 @@ demo.render();
     `,
 });
 
-Web.WebServer.defaultRoute(_DemoHandler);
+Web.WebServer.defaultRoute(DemoHandler);

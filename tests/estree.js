@@ -1,7 +1,7 @@
 import { test } from 'uvu';
 import * as assert from 'uvu/assert';
-import Base from '../base.js';
-import ESTree from '../estree.js';
+import * as Base from '../base.js';
+import * as ESTree from '../estree.js';
 
 test('basic', () => {
   function add(a, b) {

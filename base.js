@@ -12,13 +12,10 @@ Every object has an identity
 */
 
 // hook up object to class
-const _BaseObject = {
+export const BaseObject = {
     _name: 'BaseObject',
     _slots: {
         init() { },
-        eq(other) {
-            return this === other;
-        },
         class() {
             if (this._class) {
                 return this._class;
@@ -38,7 +35,7 @@ const _BaseObject = {
     }
 };
 
-_BaseObject._proto = _BaseObject._slots;
+BaseObject._proto = BaseObject._slots;
 
 Object.prototype.eq = function(other) {
     return this === other;
@@ -71,11 +68,11 @@ function nameSlots(obj) {
     }
 }
 
-const _Class = {
+export const Class = {
     _slots: {
         _name: 'Class', // non-type, non-slot object => default
         _idctr: 0,
-        _super: _BaseObject,
+        _super: BaseObject,
         init(_parent) {
             this._vars = [];
             this._methods = [];
@@ -113,7 +110,7 @@ const _Class = {
             if (obj._super && obj._super.addSubclass) {
                 obj._super.addSubclass(obj);
             } else if (obj._super == undefined) {
-                obj._super = _BaseObject;
+                obj._super = BaseObject;
             }
             if ('init' in obj) {
                 obj.init(this);
@@ -139,7 +136,7 @@ const _Class = {
             return this._super;
         },
         class() {
-            return _Class;
+            return Class;
         },
         addSubclass(subclass) {
             this._subclasses.push(subclass);
@@ -194,11 +191,11 @@ Function.prototype.load = function(parent) {
     parent[this.name] = this;
 }
 
-Object.setPrototypeOf(_Class, _Class._slots); // prototypical roots mean we can avoid Metaclasses
+Object.setPrototypeOf(Class, Class._slots); // prototypical roots mean we can avoid Metaclasses
 
-_Class.init();
+Class.init();
 
-const _Var = _Class.new({
+export const Var = Class.new({
     name: 'Var',
     static: {
         default(val) {
@@ -263,24 +260,24 @@ const _Var = _Class.new({
     }
 });
 
-const _Message = _Class.new({
+export const Message = Class.new({
     name: 'Message',
     slots: {
-        args: _Var.default([]),
-        ret: _Var.default(null),
-        name: _Var.new(),
+        args: Var.default([]),
+        ret: Var.default(null),
+        name: Var.new(),
     },
 })
 
-const _Method = _Class.new({
+export const Method = Class.new({
     name: 'Method',
     slots: {
-        do: _Var.new(), // fn, meat and taters
-        message: _Var.new(),
-        name: _Var.new(),
+        do: Var.new(), // fn, meat and taters
+        message: Var.new(),
+        name: Var.new(),
         init() {
             if (!this.message()) {
-                this.message(_Message.new({
+                this.message(Message.new({
                     args: this._args,
                     ret: this._ret,
                 }));
@@ -296,21 +293,21 @@ const _Method = _Class.new({
     }
 });
 
-_Method.do = function(fn) {
-    return _Method.new({ do: fn });
+Method.do = function(fn) {
+    return Method.new({ do: fn });
 }
 
-const _Arg = _Class.new({
+export const Arg = Class.new({
     name: 'Arg',
     slots: {
-        type: _Var.new(),
+        type: Var.new(),
     },
 });
 
-_Class.super(_BaseObject);
-_Class._proto._super = _BaseObject;
+Class.super(BaseObject);
+Class._proto._super = BaseObject;
 
-const _Id = _Class.new({
+export const Id = Class.new({
     name: 'Id',
     slots: {
         _parent: null,
@@ -328,9 +325,9 @@ const _Id = _Class.new({
     },
 });
 
-const _Primitive = _Class.new({
+export const Primitive = Class.new({
     name: 'Primitive',
-    super: _Class,
+    super: Class,
     slots: {
         _js_prototype: null,
         _methods: {},
@@ -342,10 +339,10 @@ const _Primitive = _Class.new({
     }
 });
 
-const _Module = _Class.new({
+export const Module = Class.new({
     name: 'Module',
     slots: {
-        exports: _Var.default([]),
+        exports: Var.default([]),
         init() {
             for (const item of this.exports()) {
                 this[item.name()] = item;
@@ -353,20 +350,20 @@ const _Module = _Class.new({
         }
     },
 });
-const _String = _Primitive.new({
-    name: 'String',
+export const StringPrimitive = Primitive.new({
+    name: 'StringPrimitive',
     js_prototype: String.prototype,
     slots: {
         html() {
             return this;
         },
         class() {
-            return _String;
+            return String;
         }
     }
 });
-const _Number = _Primitive.new({
-    name: 'Number',
+export const NumberPrimitive = Primitive.new({
+    name: 'NumberPrimitive',
     js_prototype: Number.prototype,
     slots: {
         js() {
@@ -379,12 +376,12 @@ const _Number = _Primitive.new({
             return this ** 2;
         },
         class() {
-            return _Number;
+            return Number;
         }
     }
 });
-const _Array = _Primitive.new({
-    name: 'Array',
+export const ArrayPrimitive = Primitive.new({
+    name: 'ArrayPrimitive',
     js_prototype: Array.prototype,
     slots: {
         intoMap() {
@@ -395,26 +392,26 @@ const _Array = _Primitive.new({
             return res;
         },
         class() {
-            return _Array;
+            return Array;
         }
     }
 });
-const _Function = _Primitive.new({
-    name: 'Function',
+export const FunctionPrimitive = Primitive.new({
+    name: 'FunctionPrimitive',
     js_prototype: Function.prototype,
     slots: {
     },
 });
 
-const _Mixin = _Class.new({
+export const Mixin = Class.new({
     name: 'Mixin',
     slots: {
-        slots: _Var.default({}),
+        slots: Var.default({}),
         mix(base) {
             if (base === null) {
                 return this;
             }
-            return _Mixin.new({
+            return Mixin.new({
                 slots: {
                     ...this.slots(),
                     ...base
@@ -430,12 +427,12 @@ const _Mixin = _Class.new({
     }
 });
 
-const _Interface = _Class.new({
+export const Interface = Class.new({
     name: 'Interface',
     slots: {
-        name: _Var.new(),
-        slots: _Var.default({}),
-        slotList: _Method.do(function() {
+        name: Var.new(),
+        slots: Var.default({}),
+        slotList: Method.do(function() {
             return Object.values(this.slots());
         }),
         init() {
@@ -454,37 +451,15 @@ const _Interface = _Class.new({
     },
 });
 
-const _$Slot = _Interface.new({
+export const $Slot = Interface.new({
     name: 'Slot',
     slots: {
-        load: _Message.new({
+        load: Message.new({
             args: [
-                _Arg.new({
+                Arg.new({
                     name: 'parent',
                 })
             ],
         })
     }
 })
-
-const _ = _Module.new({
-    exports: [
-        _Class,
-        _BaseObject,
-        _Var,
-        _Method,
-        _Id,
-        _Primitive,
-        _Method,
-        _Message,
-        _Module,
-        _String,
-        _Number,
-        _Array,
-        _Function,
-        _Mixin,
-        _Interface,
-    ],
-});
-
-export default _;
