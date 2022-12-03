@@ -350,6 +350,7 @@ export const Module = Class.new({
         }
     },
 });
+
 export const StringPrimitive = Primitive.new({
     name: 'StringPrimitive',
     js_prototype: String.prototype,
@@ -362,6 +363,7 @@ export const StringPrimitive = Primitive.new({
         }
     }
 });
+
 export const NumberPrimitive = Primitive.new({
     name: 'NumberPrimitive',
     js_prototype: Number.prototype,
@@ -380,6 +382,7 @@ export const NumberPrimitive = Primitive.new({
         }
     }
 });
+
 export const ArrayPrimitive = Primitive.new({
     name: 'ArrayPrimitive',
     js_prototype: Array.prototype,
@@ -396,6 +399,7 @@ export const ArrayPrimitive = Primitive.new({
         }
     }
 });
+
 export const FunctionPrimitive = Primitive.new({
     name: 'FunctionPrimitive',
     js_prototype: Function.prototype,

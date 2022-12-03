@@ -1,5 +1,3 @@
-//~
-//~
 import * as Base from './base.js';
 import * as Web from './web.js';
 
@@ -13,7 +11,6 @@ const DemoPage = Base.Class.new({
     }
 })
 
-
 export const DemoHandler = Web.HTMLRequestHandler.new({
   html: `
     <!DOCTYPE html>
@@ -24,7 +21,7 @@ export const DemoHandler = Web.HTMLRequestHandler.new({
     </head>
     <body>
         <script type="module">
-import { Application } from './module/boot.js';
+import { Application } from './module/demo.js';
 console.log('hello????')
 const demo = Application.new();
 demo.counter().inc();
