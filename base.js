@@ -12,20 +12,10 @@ Every object has an identity
 */
 
 // hook up object to class
-const _Object = {
-    _name: 'Object',
-    _js_prototype: Object.prototype,
+const _BaseObject = {
+    _name: 'BaseObject',
     _slots: {
         init() { },
-        // if this object doesn't have a _name, give it that of the symbol version of name
-        loadslots() {
-            for (const val of Object.values(this)) {
-                val?.load && val.load(this);
-            }
-        },
-        update(event) {
-
-        },
         eq(other) {
             return this === other;
         },
@@ -39,24 +29,23 @@ const _Object = {
         name() {
             return this._name;
         },
-        proto() {
-            return null;
-        }
+    },
+    name() {
+        return this._name;
+    },
+    proto() {
+        return this._proto;
     }
 };
 
-_Object._proto = _Object._slots;
-Object.prototype.loadslots = _Object._proto.loadslots;
-Object.prototype.proto = function() { return {} };
+_BaseObject._proto = _BaseObject._slots;
+
 Object.prototype.eq = function(other) {
     return this === other;
 }
+
 Object.prototype.className = function() {
-    if (this.hasOwnProperty('_class')) {
-        return this._class.name();
-    } else {
-        return typeof this;
-    }
+    return this.class()?.name() || typeof this;
 }
 
 function parametize(obj) {
@@ -83,32 +72,10 @@ function nameSlots(obj) {
 }
 
 const _Class = {
-    simple(name, easyslots, sup=_Object) {
-        const slots = {};
-        for (const v of easyslots) {
-            switch (v.className()) {
-                case 'string':
-                    slots[v] = _Var.new();
-                    break;
-                case 'Var':
-                    slots[v.name()] = v;
-                    break;
-            }
-        }
-        return _Class.new({
-            name: name,
-            super: sup,
-            slots: slots,
-        });
-    },
     _slots: {
         _name: 'Class', // non-type, non-slot object => default
-        _super: {
-            slots() {
-                return {};
-            },
-        },
         _idctr: 0,
+        _super: _BaseObject,
         init(_parent) {
             this._vars = [];
             this._methods = [];
@@ -119,7 +86,9 @@ const _Class = {
             this.defaultInitSlot('implements', []);
             nameSlots(this.slots());
             nameSlots(this.static());
-            this.super(this.super());
+            // console.log(this.name(), this.super().name());
+
+            Object.setPrototypeOf(this.proto(), this.super().proto());
             // this.implements().map(iface => iface.satisfies(this));
             for (const [k, v] of Object.entries(this.static())) {
                 // console.log('static? ' + k, v, this)
@@ -143,6 +112,8 @@ const _Class = {
             }
             if (obj._super && obj._super.addSubclass) {
                 obj._super.addSubclass(obj);
+            } else if (obj._super == undefined) {
+                obj._super = _BaseObject;
             }
             if ('init' in obj) {
                 obj.init(this);
@@ -164,12 +135,11 @@ const _Class = {
         nextid() {
             return ++this._idctr;
         },
-        super(superclass) {
-            if (superclass !== undefined) {
-                this._super = superclass;
-                Object.setPrototypeOf(this.proto(), this.super().proto());
-            }
+        super() {
             return this._super;
+        },
+        class() {
+            return _Class;
         },
         addSubclass(subclass) {
             this._subclasses.push(subclass);
@@ -337,36 +307,6 @@ const _Arg = _Class.new({
     },
 });
 
-const _ComputedVar = _Class.new({
-    name: 'ComputedVar',
-    slots: {
-        deps: _Var.new(),
-        formula: _Var.new(),
-        dirty: _Var.default(true),
-        cached: _Var.new(),
-        get: _Method.do(function get() {
-            if (this.dirty()) {
-                this.cached(this.formula());
-            }
-            return this.cached();
-        }),
-        load(parent) {
-
-        }
-    }
-});
-
-const _BaseObject = _Class.new({
-    name: 'BaseObject',
-    super: {},
-    slots: {
-        init() {},
-        class() {
-            return this._class;
-        },
-    }
-});
-
 _Class.super(_BaseObject);
 _Class._proto._super = _BaseObject;
 
@@ -398,16 +338,9 @@ const _Primitive = _Class.new({
             for (const [name, fn] of Object.entries(this._slots)) {
                 this._js_prototype[name] = fn;
             }
-        }
+        },
     }
 });
-
-_Object._class = _Primitive;
-Object.setPrototypeOf(_Object, _Primitive._proto);
-// maybe don't?
-// _Primitive._slots.init.apply(_Object);
-
-
 
 const _Module = _Class.new({
     name: 'Module',
@@ -426,6 +359,9 @@ const _String = _Primitive.new({
     slots: {
         html() {
             return this;
+        },
+        class() {
+            return _String;
         }
     }
 });
@@ -441,6 +377,9 @@ const _Number = _Primitive.new({
         },
         square() {
             return this ** 2;
+        },
+        class() {
+            return _Number;
         }
     }
 });
@@ -454,6 +393,9 @@ const _Array = _Primitive.new({
                 res[it.name()] = it;
             }
             return res;
+        },
+        class() {
+            return _Array;
         }
     }
 });
@@ -525,17 +467,10 @@ const _$Slot = _Interface.new({
     }
 })
 
-const _Command = _Interface.new({
-    name: 'Command',
-    slots: {
-
-    }
-});
-
 const _ = _Module.new({
     exports: [
         _Class,
-        _Object,
+        _BaseObject,
         _Var,
         _Method,
         _Id,

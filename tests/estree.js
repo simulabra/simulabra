@@ -10,6 +10,9 @@ test('basic', () => {
   const transformer = ESTree.ESTreeTransformer.new();
   const prog = transformer.transform(transformer.parse(add.toString()));
 
+  // console.log(prog._class._super._super);
+  // console.log(Object.getPrototypeOf(prog));
+  // console.log(ESTree.Program.slots())
   assert.is(prog.class().name(), 'Program');
   assert.is(prog.body()[0].class().name(), 'FunctionDeclaration');
 });

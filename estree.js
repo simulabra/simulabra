@@ -89,7 +89,13 @@ const _Node = Base.Class.new({
 //   }
 // });
 
-const _Program = Base.Class.simple('Program', ['body'], _Node);
+const _Program = Base.Class.new({
+  name: 'Program',
+  super: _Node,
+  slots: {
+    body: Base.Var.new(),
+  },
+});
 
 const _Function = Base.Class.new({
   name: 'Function',
