@@ -31,11 +31,9 @@ export const BaseObject = {
         return this._name;
     },
     proto() {
-        return this._proto;
+        return this._slots;
     }
 };
-
-BaseObject._proto = BaseObject._slots;
 
 Object.prototype.eq = function(other) {
     return this === other;

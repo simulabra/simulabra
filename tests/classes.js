@@ -22,11 +22,11 @@ const Point = Base.Class.new({
         return (this.x().square() + this.y().square()).sqrt();
       },
     }),
-    translate(x = 0, y = 0) {
+    translate: Base.Method.do(function translate(x, y) {
       this.x(this.x() + x);
       this.y(this.y() + y);
       return this;
-    }
+    }),
   }
 });
 
@@ -37,7 +37,7 @@ const LocTest = Base.Class.new({
       default: () => Point.new()
     }),
     move() {
-      this.p().translate(1);
+      this.p().translate(1, 0);
     },
     dist() {
       return this.p().dist();

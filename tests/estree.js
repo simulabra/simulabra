@@ -1,4 +1,5 @@
 import { test } from 'uvu';
+import * as fs from 'fs';
 import * as assert from 'uvu/assert';
 import * as Base from '../base.js';
 import * as ESTree from '../estree.js';
@@ -16,5 +17,11 @@ test('basic', () => {
   assert.is(prog.class().name(), 'Program');
   assert.is(prog.body()[0].class().name(), 'FunctionDeclaration');
 });
+
+test('demo', () => {
+  const demoString = fs.readFileSync('./demo.js').toString();
+  const transformer = ESTree.ESTreeTransformer.new();
+  const prog = transformer.transform(transformer.parse(demoString));
+})
 
 test.run();

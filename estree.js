@@ -22,7 +22,7 @@ export const ESTreeTransformer = Base.Class.new({
       this.nodeClasses()[name] = nodeClass;
     }),
     init() {
-      for (let nsub of Node.subclasses()) {
+      for (const nsub of Node.subclasses()) {
         this.register(nsub);
       }
     },
@@ -49,6 +49,7 @@ export const ESTreeTransformer = Base.Class.new({
     parse: Base.Method.do(function parse(source) {
       return parseScript(source, {
         ranges: true,
+        module: true,
       });
     }),
   }
@@ -150,3 +151,11 @@ export const Literal = Base.Class.new({
     value: Base.Var.new(),
   }
 });
+
+// export const ImportDeclaration = Base.Class.new({
+//   name: 'ImportDeclaration',
+//   super: Node,
+//   slots: {
+
+//   }
+// })
