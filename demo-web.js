@@ -23,7 +23,7 @@ export const DemoHandler = Web.HTMLRequestHandler.new({
         <script type="module">
 import { Application } from './module/demo.js';
 console.log('hello????')
-const demo = Application.new();
+const demo = Application.create();
 demo.counter().inc();
 demo.render();
 </script>

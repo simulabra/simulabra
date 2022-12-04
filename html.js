@@ -5,12 +5,27 @@ export const Element = Base.Class.new({
   slots: {
     inner: Base.Var.new(),
     id: Base.Var.new(),
-    load() {  },
+    load() {
+      for (const child of this.children()) {
+        child.load(this);
+      }
+    },
     nameString() {
       return this.name().toString();
     },
+    render() {
+      document.getElementById(this.id()).innerHTML = this.html();
+      this.load();
+    },
+    html() {
+      return `<div>${this.children().map(c => c.html()).join('')}</div>`;
+    },
+    children() {
+      return [];
+    }
   }
-})
+});
+
 export const $HTML = Base.Interface.new({
   name: '$HTML',
   slots: {
@@ -38,7 +53,8 @@ export const Button = Base.Class.new({
     html() {
       return `<button id="${this.id()}" type="button">${this.inner().html()}</div>`;
     },
-    load() {
+    load(parent) {
+      this.click().self(parent);
       document.getElementById(this.id()).addEventListener('click', (ev) => {
         this.click().do(this, ev);
       });

@@ -41,12 +41,21 @@ Object.prototype.eq = function(other) {
     return this === other;
 }
 
+Object.prototype.class = function() {
+    return null;
+}
+
 Object.prototype.className = function() {
+    console.log(this)
     return this.class()?.name() || typeof this;
 }
 
 Object.prototype.entries = function() {
     return Object.entries(this);
+}
+
+Object.prototype.values = function() {
+    return Object.values(this);
 }
 
 function parametize(obj) {
@@ -81,7 +90,7 @@ export const Class = {
             this._vars = [];
             this._methods = [];
             this._subclasses = [];
-            this._proto = {};
+            this._proto = { _class: this };
             this.defaultInitSlot('slots', {});
             this.defaultInitSlot('static', {});
             this.defaultInitSlot('implements', []);
@@ -107,7 +116,6 @@ export const Class = {
         new(props = {}) {
             let obj = parametize(props);
             Object.setPrototypeOf(obj, this.proto());
-            obj._class = this;
             if (this._id) {
                 obj._id = this._id.child(obj.name(), this.nextid());
             }
@@ -154,8 +162,14 @@ export const Class = {
         proto() {
             return this._proto;
         },
+        addVar(v) {
+            this._vars.push(v);
+        },
         vars() {
-            return this._vars;
+            return this.slots().values().filter(v => v.className() === 'Var');
+        },
+        addMethod(m) {
+            this._methods.push(m);
         },
         methods() {
             return this._methods;
@@ -256,9 +270,6 @@ export const Var = Class.new({
                 parent[this.name()] = mutableAccess(this);
             } else {
                 parent[this.name()] = immutableAccess(this);
-            }
-            if (typeof parent.vars === 'function') {
-                parent.vars().push(this);
             }
         }
     }

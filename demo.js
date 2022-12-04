@@ -31,32 +31,30 @@ export const CallbackCommand = Base.Class.new({
 
 export const Application = Base.Class.new({
   name: 'Application',
+  super: HTML.Element,
+  static: {
+    create() {
+      return this.new({
+        counter: Counter.new(),
+        button: HTML.Button.new({
+          inner: 'Add',
+          id: 'add-button',
+          click: CallbackCommand.new({
+            fn() {
+              this.counter().inc();
+              this.render();
+            },
+          }),
+        })
+      });
+    }
+  },
   slots: {
-    counter: Base.Var.default(() => Counter.new()),
-    button: Base.Var.default(() => HTML.Button.new({
-      inner: 'Add',
-      id: 'add-button',
-    })),
-    load() {
-      this.counter().load();
-      this.button().click(CallbackCommand.new({
-        self: this,
-        fn() {
-          this.counter().inc();
-          this.render();
-        },
-      }));
-      this.button().load();
-    },
-    html() {
-      return `<div>${this.counter().html() + this.button().html()}</div>`;
-    },
-    render() {
-      document.getElementById('app').innerHTML = this.html();
-      this.load();
-    },
-    init() {
-      this.render();
+    counter: Base.Var.new(),
+    button: Base.Var.new(),
+    id: Base.Var.default('app'),
+    children() {
+      return [this.counter(), this.button()];
     },
   }
 });
