@@ -1,5 +1,6 @@
 import * as Base from './base.js';
 import * as HTML from './html.js';
+import * as Commands from './commands.js';
 
 export const Counter = Base.Class.new({
   name: 'Counter',
@@ -18,17 +19,6 @@ export const Counter = Base.Class.new({
   },
 });
 
-export const CallbackCommand = Base.Class.new({
-  name: 'CallbackCommand',
-  slots: {
-    self: Base.Var.new(),
-    fn: Base.Var.new(),
-    do(...args) {
-      return this.fn().apply(this.self(), args);
-    },
-  }
-});
-
 export const Application = Base.Class.new({
   name: 'Application',
   super: HTML.Element,
@@ -39,7 +29,7 @@ export const Application = Base.Class.new({
         button: HTML.Button.new({
           inner: 'Add',
           id: 'add-button',
-          click: CallbackCommand.new({
+          click: Commands.CallbackCommand.new({
             fn() {
               this.counter().inc();
               this.render();

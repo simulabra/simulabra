@@ -18,14 +18,25 @@ const Point = Base.Class.new({
     x: Base.Var.default(0),
     y: Base.Var.default(0),
     dist: Base.Method.new({
-      do: function dist() {
+      ret: 'number',
+      do() {
         return (this.x().square() + this.y().square()).sqrt();
       },
     }),
-    translate: Base.Method.do(function translate(x, y) {
-      this.x(this.x() + x);
-      this.y(this.y() + y);
-      return this;
+    translate: Base.Method.new({
+      args: {
+        x: Base.Arg.new({
+          type: 'number',
+        }),
+        y: Base.Arg.new({
+          type: 'number',
+        }),
+      },
+      do(x, y) {
+        this.x(this.x() + x);
+        this.y(this.y() + y);
+        return this;
+      }
     }),
   }
 });

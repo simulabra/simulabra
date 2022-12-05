@@ -21,10 +21,9 @@ export const DemoHandler = Web.HTMLRequestHandler.new({
     </head>
     <body>
         <script type="module">
-import { Application } from './module/demo.js';
+import { TodoApplication } from './module/todos.js';
 console.log('hello????')
-const demo = Application.create();
-demo.counter().inc();
+const demo = TodoApplication.create();
 demo.render();
 </script>
 

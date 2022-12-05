@@ -14,11 +14,12 @@ export const Element = Base.Class.new({
       return this.name().toString();
     },
     render() {
+      console.log(this)
       document.getElementById(this.id()).innerHTML = this.html();
       this.load();
     },
     html() {
-      return `<div>${this.children().map(c => c.html()).join('')}</div>`;
+      return `<div id="${this.id()}">${this.children().map(c => c.html()).join('')}</div>`;
     },
     children() {
       return [];
@@ -39,7 +40,7 @@ export const Div = Base.Class.new({
   super: Element,
   slots: {
     html() {
-      return `<div>${this.inner().html()}</div>`;
+      return `<div id="${this.id()}">${this.inner().html()}</div>`;
     },
   }
 });
@@ -54,9 +55,29 @@ export const Button = Base.Class.new({
       return `<button id="${this.id()}" type="button">${this.inner().html()}</div>`;
     },
     load(parent) {
+      console.log('Button load ', this.id())
       this.click().self(parent);
       document.getElementById(this.id()).addEventListener('click', (ev) => {
-        this.click().do(this, ev);
+        console.log('click?')
+        this.click().run(ev);
+      });
+    }
+  }
+});
+
+export const Input = Base.Class.new({
+  name: 'Input',
+  implements: [$HTML],
+  super: Element,
+  slots: {
+    keyup: Base.Var.new({ type: Base.$Command }),
+    html() {
+      return `<input id="${this.id()}" type="text">`;
+    },
+    load(parent) {
+      this.keyup().self(parent);
+      document.getElementById(this.id()).addEventListener('keyup', (ev) => {
+        this.keyup().run(ev);
       });
     }
   }

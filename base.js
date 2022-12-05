@@ -12,6 +12,7 @@ Every object has an identity
 */
 
 // hook up object to class
+console.log('bootstrap');
 export const BaseObject = {
     _name: 'BaseObject',
     _slots: {
