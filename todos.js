@@ -60,6 +60,9 @@ export const TodoList = Base.Class.new({
         inner: this.items().map(item => item.html()).join(''),
       }).html();
     },
+    children() {
+      return this.items();
+    },
   },
 });
 
