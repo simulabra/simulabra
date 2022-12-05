@@ -16,8 +16,8 @@ export const TodoItem = Base.Class.new({
           inner: 'Toggle',
           id: `toggle-button-${this.idCounter()}`,
           click: Commands.CallbackCommand.new({
-            fn() {
-              console.log('click', this.name());
+            fn(ev) {
+              console.log('click', this.name(), this.id());
               this.isDone(!this.isDone());
               this.render();
             },
@@ -31,6 +31,7 @@ export const TodoItem = Base.Class.new({
     isDone: Base.Var.default(false),
     toggleButton: Base.Var.new({ type: HTML.Button }),
     html() {
+      console.log('TodoItem html')
       return HTML.Div.new({
         inner: `${this.isDone() ? '[x]' : '[ ]'} ${this.text()} ${this.toggleButton().html()}`,
       }).html();

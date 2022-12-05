@@ -9,6 +9,7 @@ export const Element = Base.Class.new({
       for (const child of this.children()) {
         child.load(this);
       }
+      console.log('load', this.id());
     },
     nameString() {
       return this.name().toString();
@@ -58,9 +59,9 @@ export const Button = Base.Class.new({
       console.log('Button load ', this.id())
       this.click().self(parent);
       document.getElementById(this.id()).addEventListener('click', (ev) => {
-        console.log('click?')
         this.click().run(ev);
       });
+      return this.super('load', parent);
     }
   }
 });

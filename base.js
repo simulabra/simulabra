@@ -27,6 +27,9 @@ export const BaseObject = {
         name() {
             return this._name;
         },
+        super(message, ...args) {
+            return this.class().super().proto()[message].apply(this, args);
+        },
     },
     name() {
         return this._name;
