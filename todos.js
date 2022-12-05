@@ -17,7 +17,6 @@ export const TodoItem = Base.Class.new({
           id: `toggle-button-${this.idCounter()}`,
           click: Commands.CallbackCommand.new({
             fn(ev) {
-              console.log('click', this.name(), this.id());
               this.isDone(!this.isDone());
               this.render();
             },
@@ -31,8 +30,8 @@ export const TodoItem = Base.Class.new({
     isDone: Base.Var.default(false),
     toggleButton: Base.Var.new({ type: HTML.Button }),
     html() {
-      console.log('TodoItem html')
       return HTML.Div.new({
+        id: this.id(),
         inner: `${this.isDone() ? '[x]' : '[ ]'} ${this.text()} ${this.toggleButton().html()}`,
       }).html();
     },
@@ -83,11 +82,11 @@ export const TodoApplication = Base.Class.new({
           id: 'todo-input',
           keyup: Commands.CallbackCommand.new({
             fn(event) {
-              console.log('keyup', event)
               if (event.key === 'Enter') {
                 this.todoList().add(event.target.value);
                 event.target.value = '';
                 this.render();
+                document.getElementById(this.input().id()).focus();
               }
             },
           }),

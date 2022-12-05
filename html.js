@@ -9,13 +9,12 @@ export const Element = Base.Class.new({
       for (const child of this.children()) {
         child.load(this);
       }
-      console.log('load', this.id());
+      // console.log('load', this.id());
     },
     nameString() {
       return this.name().toString();
     },
     render() {
-      console.log(this)
       document.getElementById(this.id()).innerHTML = this.html();
       this.load();
     },
@@ -56,7 +55,7 @@ export const Button = Base.Class.new({
       return `<button id="${this.id()}" type="button">${this.inner().html()}</div>`;
     },
     load(parent) {
-      console.log('Button load ', this.id())
+      // console.log('Button load ', this.id())
       this.click().self(parent);
       document.getElementById(this.id()).addEventListener('click', (ev) => {
         this.click().run(ev);
