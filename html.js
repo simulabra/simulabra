@@ -2,6 +2,15 @@ import * as Base from './base.js';
 
 export const Element = Base.Class.new({
   name: 'Element',
+  static: {
+    text: Base.Method.new({
+      do(t) {
+        return this.new({
+          inner: t,
+        });
+      }
+    }),
+  },
   slots: {
     inner: Base.Var.new(),
     id: Base.Var.new(),
@@ -18,9 +27,6 @@ export const Element = Base.Class.new({
       document.getElementById(this.id()).innerHTML = this.html();
       this.load();
     },
-    html() {
-      return `<div id="${this.id()}">${this.children().map(c => c.html()).join('')}</div>`;
-    },
     children() {
       return [];
     }
@@ -34,6 +40,17 @@ export const $HTML = Base.Interface.new({
   }
 });
 
+export const ListElement = Base.Class.new({
+  name: 'ListElement',
+  implements: [$HTML],
+  super: Element,
+  slots: {
+    html() {
+      return `<div id="${this.id()}">${this.children().map(c => c.html()).join('')}</div>`;
+    }
+  }
+});
+
 export const Div = Base.Class.new({
   name: 'Div',
   implements: [$HTML],
@@ -41,6 +58,17 @@ export const Div = Base.Class.new({
   slots: {
     html() {
       return `<div id="${this.id()}">${this.inner().html()}</div>`;
+    },
+  }
+});
+
+export const Span = Base.Class.new({
+  name: 'Span',
+  implements: [$HTML],
+  super: Element,
+  slots: {
+    html() {
+      return `<span id="${this.id()}">${this.inner().html()}</span>`;
     },
   }
 });
