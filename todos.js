@@ -6,12 +6,15 @@ export const TodoItem = Base.Class.new({
   name: 'TodoItem',
   super: HTML.Element,
   static: {
+    idCounter: Base.Var.default(0),
     create({ text }) {
+      this.idCounter(this.idCounter() + 1);
       return this.new({
+        id: `todo-item-${this.idCounter()}`,
         text,
         toggleButton: HTML.Button.new({
           inner: 'Toggle',
-          id: 'toggle-button',
+          id: `toggle-button-${this.idCounter()}`,
           click: Commands.CallbackCommand.new({
             fn() {
               console.log('click', this.name());
