@@ -13,6 +13,13 @@ Every object has an identity
 
 // hook up object to class
 console.log('bootstrap');
+export const DEBUG = true;
+export function debug(...args) {
+    if (DEBUG) {
+        console.log(...args);
+    }
+}
+
 export const BaseObject = {
     _name: 'BaseObject',
     _slots: {
@@ -25,14 +32,19 @@ export const BaseObject = {
             }
         },
         name() {
-            return this._name;
+            if ('_name' in this) {
+                return this._name;
+            }
+        },
+        displayName() {
+            return this.name() || '?';
+        },
+        shortDescription() {
+            return `[${this.displayName()} class:${this.class().name()} id:${this._intid}]`;
         },
         super(message, ...args) {
             return this.class().super().proto()[message].apply(this, args);
         },
-    },
-    name() {
-        return this._name;
     },
     proto() {
         return this._slots;
@@ -58,6 +70,10 @@ Object.prototype.entries = function() {
 
 Object.prototype.values = function() {
     return Object.values(this);
+}
+
+Object.prototype.displayName = function() {
+    return typeof this;
 }
 
 function parametize(obj) {
@@ -92,6 +108,7 @@ export const Class = {
             this._vars = [];
             this._methods = [];
             this._subclasses = [];
+            this._idctr = 0;
             this._proto = { _class: this };
             this.defaultInitSlot('slots', {});
             this.defaultInitSlot('static', {});
@@ -118,8 +135,8 @@ export const Class = {
         new(props = {}) {
             let obj = parametize(props);
             Object.setPrototypeOf(obj, this.proto());
-            if (this._id) {
-                obj._id = this._id.child(obj.name(), this.nextid());
+            if (!obj._intid) {
+                obj._intid = this.nextid();
             }
             if (obj._super && obj._super.addSubclass) {
                 obj._super.addSubclass(obj);
@@ -129,6 +146,7 @@ export const Class = {
             if ('init' in obj) {
                 obj.init(this);
             }
+            DEBUG && debug(`new ${obj.shortDescription()}`);
             return obj;
         },
         defaultInitSlot(slot, dval) {
@@ -215,6 +233,31 @@ Object.setPrototypeOf(Class, Class._slots); // prototypical roots mean we can av
 
 Class.init();
 
+// export const Id = Class.new({
+//     name: 'Id',
+//     slots: {
+//         child(name, num) {
+//             return _.id.new({
+//                 parent: this,
+//                 name: name,
+//                 num: num,
+//             });
+//         },
+//         toString() {
+//             return `${this._parent ? this._parent.toString() : ':'}:${this._name.name()}`;
+//         },
+//     },
+// });
+
+// export const BaseId = Id.new({
+//     name: 'Base',
+// })
+
+// Class._id = Id.new({
+//     name: 'Class',
+//     parent: BaseId,
+// });
+
 export const Var = Class.new({
     name: 'Var',
     static: {
@@ -273,6 +316,9 @@ export const Var = Class.new({
             } else {
                 parent[this.name()] = immutableAccess(this);
             }
+            if (DEBUG) {
+                // ??
+            }
         }
     }
 });
@@ -293,6 +339,14 @@ export const Method = Class.new({
         message: Var.new(),
         name: Var.new(),
         init() {
+            const self = this;
+            if (DEBUG) {
+                const fn = this.do();
+                this.do(function(...args) {
+                    console.log(`${this.displayName()}.${self.name()}(${args.map(a => a.displayName())})`);
+                    return fn.apply(this, args);
+                });
+            }
             if (!this.message()) {
                 this.message(Message.new({
                     args: this._args,
@@ -324,24 +378,6 @@ export const Arg = Class.new({
 Class.super(BaseObject);
 Class._proto._super = BaseObject;
 
-export const Id = Class.new({
-    name: 'Id',
-    slots: {
-        _parent: null,
-        _name: null,
-        child(name, num) {
-            return _.id.new({
-                parent: this,
-                name: name,
-                num: num,
-            });
-        },
-        toString() {
-            return `${this._parent ? this._parent.toString() : ':'}:${this._name.name()}`;
-        },
-    },
-});
-
 export const Primitive = Class.new({
     name: 'Primitive',
     super: Class,
@@ -353,6 +389,9 @@ export const Primitive = Class.new({
                 this._js_prototype[name] = fn;
             }
         },
+        extend(iface, slots) {
+
+        }
     }
 });
 
