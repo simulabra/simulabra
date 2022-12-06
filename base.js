@@ -13,11 +13,9 @@ Every object has an identity
 
 // hook up object to class
 console.log('bootstrap');
-export const DEBUG = true;
+export const DEBUG = false;
 export function debug(...args) {
-    if (DEBUG) {
-        console.log(...args);
-    }
+    console.log(...args);
 }
 
 export const BaseObject = {
@@ -60,7 +58,6 @@ Object.prototype.class = function() {
 }
 
 Object.prototype.className = function() {
-    console.log(this)
     return this.class()?.name() || typeof this;
 }
 
@@ -227,6 +224,10 @@ export const Class = {
 
 Function.prototype.load = function(parent) {
     parent[this.name] = this;
+};
+
+Function.prototype.shortDescription = function() {
+    return `Native Function ${this.name}`;
 }
 
 Object.setPrototypeOf(Class, Class._slots); // prototypical roots mean we can avoid Metaclasses
@@ -286,6 +287,9 @@ export const Var = Class.new({
                 return true;
             }
         },
+        debug() {
+            return this._debug || DEBUG;
+        },
         load(parent) {
             // console.log('var load', this.name());
             const pk = '_' + this.name();
@@ -293,6 +297,9 @@ export const Var = Class.new({
                 return function(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
+                        if (self.debug()) {
+                            debug(`set ${this.shortDescription()}/${self.shortDescription()} = ${assign.shortDescription()}`);
+                        }
                         ('update' in this) && this.update({ changed: self.name() });
                     } else if (!(pk in this)) {
                         this[pk] = self.default(this);
@@ -416,6 +423,9 @@ export const StringPrimitive = Primitive.new({
         },
         class() {
             return String;
+        },
+        shortDescription() {
+            return `'${this}'`;
         }
     }
 });
@@ -435,6 +445,9 @@ export const NumberPrimitive = Primitive.new({
         },
         class() {
             return Number;
+        },
+        shortDescription() {
+            return this.toString();
         }
     }
 });

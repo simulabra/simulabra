@@ -15,7 +15,10 @@ const Frobber = Base.Class.new({
 const Point = Base.Class.new({
   name: 'Point',
   slots: {
-    x: Base.Var.default(0),
+    x: Base.Var.new({
+      default: 0,
+      debug: true,
+    }),
     y: Base.Var.default(0),
     dist: Base.Method.new({
       ret: 'number',
