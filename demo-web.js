@@ -21,8 +21,10 @@ export const DemoHandler = Web.HTMLRequestHandler.new({
     </head>
     <body>
         <script type="module">
+import { WebSocketClient } from './module/boot.js';
 import { TodoApplication } from './module/todos.js';
 console.log('hello????')
+const wsClient = WebSocketClient.new();
 const demo = TodoApplication.create();
 demo.render();
 </script>
@@ -33,4 +35,10 @@ demo.render();
     `,
 });
 
-Web.WebServer.defaultRoute(DemoHandler);
+
+
+export const Server = Web.WebServer.defaultRoute(DemoHandler);
+
+process.on('SIGINT', () => {
+
+})

@@ -4,7 +4,7 @@
   "scripts": {
     "test": "uvu",
     "watch": "watchexec -w . -e js uvu",
-    "demo": "watchexec -w . -e js bun run demo-web.js"
+    "demo": "watchexec -w . -e js -r bun run demo-web.js"
   },
   "type": "module",
   "devDependencies": {

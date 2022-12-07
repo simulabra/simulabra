@@ -13,7 +13,7 @@ Every object has an identity
 
 // hook up object to class
 console.log('bootstrap');
-export const DEBUG = false;
+export const DEBUG = true;
 export function debug(...args) {
     console.log(...args);
 }
@@ -71,6 +71,10 @@ Object.prototype.values = function() {
 
 Object.prototype.displayName = function() {
     return typeof this;
+}
+
+Object.prototype.shortDescription = function() {
+    return `Native Object (${typeof this})`;
 }
 
 function parametize(obj) {
@@ -298,7 +302,7 @@ export const Var = Class.new({
                     if (assign !== undefined) {
                         this[pk] = assign;
                         if (self.debug()) {
-                            debug(`set ${this.shortDescription()}/${self.shortDescription()} = ${assign.shortDescription()}`);
+                            debug(`set ${this.shortDescription()}.${self.name()} = ${assign.shortDescription()}`);
                         }
                         ('update' in this) && this.update({ changed: self.name() });
                     } else if (!(pk in this)) {
@@ -322,9 +326,6 @@ export const Var = Class.new({
                 parent[this.name()] = mutableAccess(this);
             } else {
                 parent[this.name()] = immutableAccess(this);
-            }
-            if (DEBUG) {
-                // ??
             }
         }
     }
@@ -426,6 +427,22 @@ export const StringPrimitive = Primitive.new({
         },
         shortDescription() {
             return `'${this}'`;
+        }
+    }
+});
+
+export const BooleanPrimitive = Primitive.new({
+    name: 'BooleanPrimitive',
+    js_prototype: Boolean.prototype,
+    slots: {
+        html() {
+            return this;
+        },
+        class() {
+            return Boolean;
+        },
+        shortDescription() {
+            return this.toString();
         }
     }
 });

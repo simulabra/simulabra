@@ -1,6 +1,31 @@
 import { readFileSync } from 'fs';
-import * as Base from './base';
-import * as HTML from './html';
+import * as Base from './base.js';
+import * as HTML from './html.js';
+
+globalThis.simulabra = {
+  Module: Base.Class.new({
+    name: 'Module',
+    slots: {
+      define(obj) {
+
+      }
+    }
+  }),
+  Web: {},
+};
+const $ = globalThis.simulabra;
+const _ = $.Module.new({
+  name: 'Web'
+});
+
+function defer(fn) {
+  return fn();
+}
+
+_.define(Base.Class.new({
+  name: 'WebSocketRequest',
+  super: defer(() => _.Request)
+}));
 
 export const $Page = Base.Interface.new({
   name: '$Page',
@@ -116,7 +141,30 @@ export const ModuleRequestHandler = Base.Class.new({
       });
     }
   }
+});
+
+export const WebSocketServer = Base.Class.new({
+  name: 'WebSocketServer',
+  slots: {
+    connections: Base.Var.new(),
+    bunConfig: Base.Method.new({
+      do: function bunConfig() {
+        return {
+          message: (ws, msg) => {
+            console.log('ws message')
+            this.handle(ws, msg);
+          }
+        }
+      }
+    }),
+    handle: Base.Method.new({
+      do: function handle(ws, msg) {
+        console.log(msg);
+      }
+    }),
+  }
 })
+
 export const WebServer = Base.Class.new({
   name: 'WebServer',
   static: {
@@ -137,17 +185,11 @@ export const WebServer = Base.Class.new({
     }),
     sessions: Base.Var.default({}),
     handlers: Base.Var.default({}),
+    sockets: Base.Var.default(() => WebSocketServer.new()),
     serve() {
       const self = this;
       return Bun.serve({
-        websocket: {
-          message: (ws, msg) => {
-            // route message to
-            ws.count ||= 0;
-            ws.count++;
-            // console.log(ws, msg);
-          },
-        },
+        websocket: this.sockets().bunConfig(),
         fetch(req, server) {
           const _req = Request.new({ native: req });
           const basePath = _req.url().parts()[0];
