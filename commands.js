@@ -1,11 +1,18 @@
-import * as Base from './base.js';
+import { Class, Var, Method, Interface } from './base.js';
 
-export const CallbackCommand = Base.Class.new({
+export const $Command = Interface.new({
+  name: '$Command',
+  slots: {
+    do: Var.new(),
+  }
+});
+
+export const CallbackCommand = Class.new({
   name: 'CallbackCommand',
   slots: {
-    self: Base.Var.new(),
-    fn: Base.Var.new(),
-    run: Base.Method.new({
+    self: Var.new(),
+    fn: Var.new(),
+    run: Method.new({
       do(...args) {
         return this.fn().apply(this.self(), args);
       }

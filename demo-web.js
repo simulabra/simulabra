@@ -1,9 +1,9 @@
-import * as Base from './base.js';
-import * as Web from './web.js';
+import { Class } from './base.js';
+import { $Page, HTMLRequestHandler, WebServer } from './web.js';
 
-const DemoPage = Base.Class.new({
+const DemoPage = Class.new({
     name: 'DemoPage',
-    implements: [Web.$Page],
+    implements: [$Page],
     slots: {
         render() {
             return
@@ -11,7 +11,7 @@ const DemoPage = Base.Class.new({
     }
 })
 
-export const DemoHandler = Web.HTMLRequestHandler.new({
+export const DemoHandler = HTMLRequestHandler.new({
   html: `
     <!DOCTYPE html>
     <html>
@@ -37,7 +37,7 @@ demo.render();
 
 
 
-export const Server = Web.WebServer.defaultRoute(DemoHandler);
+export const Server = WebServer.defaultRoute(DemoHandler);
 
 process.on('SIGINT', () => {
 

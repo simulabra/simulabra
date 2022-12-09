@@ -1,9 +1,10 @@
-import * as Base from './base.js';
+import { Class, Var, Method, Interface, Message } from './base.js';
+import { $Command } from './commands.js';
 
-export const Element = Base.Class.new({
+export const Element = Class.new({
   name: 'Element',
   static: {
-    text: Base.Method.new({
+    text: Method.new({
       do(t) {
         return this.new({
           inner: t,
@@ -12,8 +13,8 @@ export const Element = Base.Class.new({
     }),
   },
   slots: {
-    inner: Base.Var.new(),
-    id: Base.Var.new(),
+    inner: Var.new(),
+    id: Var.new(),
     load() {
       for (const child of this.children()) {
         child.load(this);
@@ -33,14 +34,14 @@ export const Element = Base.Class.new({
   }
 });
 
-export const $HTML = Base.Interface.new({
+export const $HTML = Interface.new({
   name: '$HTML',
   slots: {
-    html: Base.Message.new(),
+    html: Message.new(),
   }
 });
 
-export const ListElement = Base.Class.new({
+export const ListElement = Class.new({
   name: 'ListElement',
   implements: [$HTML],
   super: Element,
@@ -51,7 +52,7 @@ export const ListElement = Base.Class.new({
   }
 });
 
-export const Div = Base.Class.new({
+export const Div = Class.new({
   name: 'Div',
   implements: [$HTML],
   super: Element,
@@ -62,7 +63,7 @@ export const Div = Base.Class.new({
   }
 });
 
-export const Span = Base.Class.new({
+export const Span = Class.new({
   name: 'Span',
   implements: [$HTML],
   super: Element,
@@ -73,12 +74,12 @@ export const Span = Base.Class.new({
   }
 });
 
-export const Button = Base.Class.new({
+export const Button = Class.new({
   name: 'Button',
   implements: [$HTML],
   super: Element,
   slots: {
-    click: Base.Var.new({ type: Base.$Command }),
+    click: Var.new({ type: $Command }),
     html() {
       return `<button id="${this.id()}" type="button">${this.inner().html()}</div>`;
     },
@@ -93,12 +94,12 @@ export const Button = Base.Class.new({
   }
 });
 
-export const Input = Base.Class.new({
+export const Input = Class.new({
   name: 'Input',
   implements: [$HTML],
   super: Element,
   slots: {
-    keyup: Base.Var.new({ type: Base.$Command }),
+    keyup: Var.new({ type: $Command }),
     html() {
       return `<input id="${this.id()}" type="text">`;
     },

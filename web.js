@@ -1,47 +1,22 @@
 import { readFileSync } from 'fs';
-import * as Base from './base.js';
-import * as HTML from './html.js';
+import { Class, Var, Method, Interface } from './base.js';
+import { $HTML } from './html.js';
 
-globalThis.simulabra = {
-  Module: Base.Class.new({
-    name: 'Module',
-    slots: {
-      define(obj) {
-
-      }
-    }
-  }),
-  Web: {},
-};
-const $ = globalThis.simulabra;
-const _ = $.Module.new({
-  name: 'Web'
-});
-
-function defer(fn) {
-  return fn();
-}
-
-_.define(Base.Class.new({
-  name: 'WebSocketRequest',
-  super: defer(() => _.Request)
-}));
-
-export const $Page = Base.Interface.new({
+export const $Page = Interface.new({
   name: '$Page',
   protocol: [
-    Base.Method.new({
+    Method.new({
       name: 'render',
-      ret: HTML.$HTML,
+      ret: $HTML,
     }),
-    Base.Method.new({
+    Method.new({
       name: 'route',
-      ret: Base.String,
+      ret: String,
     })
   ],
 });
 
-export const SURL = Base.Class.new({
+export const SURL = Class.new({
   name: 'URL',
   static: {
     parse(urlString) {
@@ -54,8 +29,8 @@ export const SURL = Base.Class.new({
     },
   },
   slots: {
-    url: Base.Var.new(),
-    parts: Base.Var.new(),
+    url: Var.new(),
+    parts: Var.new(),
     host() {
       return this._url.host;
     },
@@ -70,7 +45,7 @@ export const SURL = Base.Class.new({
     },
   },
 });
-export const SocketRequestHandler = Base.Class.new({
+export const SocketRequestHandler = Class.new({
   name: 'RequestHandler',
   slots: {
     handle(req, server) {
@@ -87,21 +62,21 @@ export const SocketRequestHandler = Base.Class.new({
   },
 });
 
-export const Request = Base.Class.new({
+export const Request = Class.new({
   name: 'Request',
   slots: {
-    url: Base.Var.new(),
-    native: Base.Var.new(),
+    url: Var.new(),
+    native: Var.new(),
     init() {
       this.url(SURL.parse(this.native().url));
     },
   },
 });
 
-export const HTMLRequestHandler = Base.Class.new({
+export const HTMLRequestHandler = Class.new({
   name: 'HTMLRequestHandler',
   slots: {
-    html: Base.Var.default('<h1>hello world!</h1'),
+    html: Var.default('<h1>hello world!</h1'),
     handle(req, server) {
       return new Response(this.html(),
         {
@@ -114,13 +89,13 @@ export const HTMLRequestHandler = Base.Class.new({
   },
 });
 
-export const PageHandler = Base.Class.new({
+export const PageHandler = Class.new({
   name: 'HTMLRequestHandler',
   slots: {
-    page: Base.Var.new({
+    page: Var.new({
       type: $Page,
     }),
-    html: Base.Method.new({
+    html: Method.new({
       do: function html() {
         return this.page().render();
       },
@@ -128,7 +103,7 @@ export const PageHandler = Base.Class.new({
   },
 });
 
-export const ModuleRequestHandler = Base.Class.new({
+export const ModuleRequestHandler = Class.new({
   name: 'ModuleRequestHandler',
   slots: {
     handle(req, server) {
@@ -143,11 +118,11 @@ export const ModuleRequestHandler = Base.Class.new({
   }
 });
 
-export const WebSocketServer = Base.Class.new({
+export const WebSocketServer = Class.new({
   name: 'WebSocketServer',
   slots: {
-    connections: Base.Var.new(),
-    bunConfig: Base.Method.new({
+    connections: Var.new(),
+    bunConfig: Method.new({
       do: function bunConfig() {
         return {
           message: (ws, msg) => {
@@ -157,7 +132,7 @@ export const WebSocketServer = Base.Class.new({
         }
       }
     }),
-    handle: Base.Method.new({
+    handle: Method.new({
       do: function handle(ws, msg) {
         console.log(msg);
       }
@@ -165,10 +140,10 @@ export const WebSocketServer = Base.Class.new({
   }
 })
 
-export const WebServer = Base.Class.new({
+export const WebServer = Class.new({
   name: 'WebServer',
   static: {
-    defaultRoute: Base.Method.do(function defaultRoute(route) {
+    defaultRoute: Method.do(function defaultRoute(route) {
       const ws = WebServer.new({
         handlers: {
           '/': route,
@@ -180,12 +155,12 @@ export const WebServer = Base.Class.new({
     }),
   },
   slots: {
-    pages: Base.Var.new({
-      // type: Base.$List.of(_$Page)
+    pages: Var.new({
+      // type: $List.of(_$Page)
     }),
-    sessions: Base.Var.default({}),
-    handlers: Base.Var.default({}),
-    sockets: Base.Var.default(() => WebSocketServer.new()),
+    sessions: Var.default({}),
+    handlers: Var.default({}),
+    sockets: Var.default(() => WebSocketServer.new()),
     serve() {
       const self = this;
       return Bun.serve({
