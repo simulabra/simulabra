@@ -37,18 +37,20 @@ export const TodoItemView = Class.new({
       }
     })
   }
-})
+});
+
+
 export const TodoItem = Class.new({
   name: 'TodoItem',
   static: {
     idCounter: Var.default(0),
-    create({ text }) {
+    create: Method.do(function create({ text }) {
       this.idCounter(this.idCounter() + 1);
       return this.new({
         text,
         num: this.idCounter(),
       });
-    },
+    }),
   },
   slots: {
     text: Var.new(),
