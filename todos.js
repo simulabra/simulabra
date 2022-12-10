@@ -1,21 +1,18 @@
-import * as Base from './base.js';
-import * as HTML from './html.js';
-import * as Commands from './commands.js';
+import { Class, Method, Var } from './base.js';
+import { ListElement, Element, Button, Input, Span, Div } from './html.js';
+import { CallbackCommand } from './commands.js';
 
-export const TodoItem = Base.Class.new({
-  name: 'TodoItem',
-  super: HTML.ListElement,
+export const TodoItemView = Class.new({
+  name: 'TodoItemView',
+  super: Element,
   static: {
-    idCounter: Base.Var.default(0),
-    create({ text }) {
-      this.idCounter(this.idCounter() + 1);
+    create(todo) {
       return this.new({
-        id: `todo-item-${this.idCounter()}`,
-        text,
-        toggleButton: HTML.Button.new({
+        todo,
+        button: Button.new({
           inner: 'Toggle',
-          id: `toggle-button-${this.idCounter()}`,
-          click: Commands.CallbackCommand.new({
+          id: `toggle-button-${todo.num()}`,
+          click: CallbackCommand.new({
             fn(ev) {
               this.isDone(!this.isDone());
               this.render();
@@ -23,50 +20,71 @@ export const TodoItem = Base.Class.new({
           }),
         }),
       });
+    }
+  },
+  slots: {
+    todo: Var.new(),
+    button: Var.new(),
+    html: Method.new({
+      do() {
+        return ListElement.new({
+          id: `todo-item-${this.todo().num()}`,
+          list: [
+            `[ ${this.todo().isDone() ? 'x' : ''} ]`,
+            this.todo().text(),
+          ]
+        }).html();
+      }
+    })
+  }
+})
+export const TodoItem = Class.new({
+  name: 'TodoItem',
+  static: {
+    idCounter: Var.default(0),
+    create({ text }) {
+      this.idCounter(this.idCounter() + 1);
+      return this.new({
+        text,
+        num: this.idCounter(),
+      });
     },
   },
   slots: {
-    text: Base.Var.new(),
-    isDone: Base.Var.default(false),
-    toggleButton: Base.Var.new({ type: HTML.Button }),
-    children() {
-      return [
-        HTML.Span.new({
-          inner: `${this.isDone() ? '[x]' : '[ ]'} ${this.text()}`
-        }),
-        this.toggleButton()
-      ];
-    }
+    text: Var.new(),
+    isDone: Var.default(false),
+    num: Var.new(),
+    html: Method.new({
+      do() {
+        return TodoItemView.create(this).html();
+      }
+    }),
   },
 });
 
-export const TodoList = Base.Class.new({
+export const TodoList = Class.new({
   name: 'TodoList',
-  super: HTML.ListElement,
+  super: ListElement,
   slots: {
-    items: Base.Var.default([]),
-    add: Base.Method.do(function add(text) {
+    add: Method.do(function add(text) {
       const todo = TodoItem.create({ text });
-      this.items().push(todo);
+      this.list().push(todo);
       this.render();
       return this;
     }),
-    clear: Base.Method.do(function clear() {
-      this.items([]);
+    clear: Method.do(function clear() {
+      this.list([]);
       return this;
     }),
-    children() {
-      return this.items();
-    },
   },
 });
 
-export const TodoInput = Base.Class.new({
+export const TodoInput = Class.new({
   name: 'TodoInput',
-  super: HTML.Input,
+  super: Input,
   slots: {
-    keyup: Base.Var.new({
-      default: Commands.CallbackCommand.new({
+    keyup: Var.new({
+      default: CallbackCommand.new({
         selfClass: TodoApplication,
         fn(event) {
           if (event.key === 'Enter') {
@@ -81,9 +99,9 @@ export const TodoInput = Base.Class.new({
   }
 })
 
-export var TodoApplication = Base.Class.new({
+export var TodoApplication = Class.new({
   name: 'TodoApplication',
-  super: HTML.ListElement,
+  super: Element,
   static: {
     create() {
       return this.new({
@@ -93,10 +111,10 @@ export var TodoApplication = Base.Class.new({
         input: TodoInput.new({
           id: 'todo-input',
         }),
-        clearButton: HTML.Button.new({
+        clearButton: Button.new({
           inner: 'Clear',
           id: 'clear-button',
-          click: Commands.CallbackCommand.new({
+          click: CallbackCommand.new({
             fn() {
               this.todoList().clear();
               this.render();
@@ -107,12 +125,18 @@ export var TodoApplication = Base.Class.new({
     },
   },
   slots: {
-    todoList: Base.Var.new(),
-    input: Base.Var.new(),
-    clearButton: Base.Var.new(),
-    id: Base.Var.default('app'),
+    todoList: Var.new(),
+    input: Var.new(),
+    clearButton: Var.new(),
+    id: Var.default('app'),
+    html() {
+      return ListElement.new({
+        id: this.id(),
+        list: this.children(),
+      }).html();
+    },
     children() {
       return [this.todoList(), this.input(), this.clearButton()];
-    },
+    }
   },
 });

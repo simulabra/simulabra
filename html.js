@@ -1,4 +1,4 @@
-import { Class, Var, Method, Interface, Message } from './base.js';
+import { Class, Var, Method, Interface, Message, debug } from './base.js';
 import { $Command } from './commands.js';
 
 export const Element = Class.new({
@@ -26,6 +26,7 @@ export const Element = Class.new({
     },
     render() {
       document.getElementById(this.id()).innerHTML = this.html();
+      console.log(this.html())
       this.load();
     },
     children() {
@@ -46,8 +47,12 @@ export const ListElement = Class.new({
   implements: [$HTML],
   super: Element,
   slots: {
+    list: Var.default([]),
     html() {
-      return `<div id="${this.id()}">${this.children().map(c => c.html()).join('')}</div>`;
+      return `<div id="${this.id()}">${this.list().map(c => c.html()).join('')}</div>`;
+    },
+    children() {
+      return this.list();
     }
   }
 });
@@ -104,6 +109,7 @@ export const Input = Class.new({
       return `<input id="${this.id()}" type="text">`;
     },
     load(parent) {
+      debug(this);
       this.keyup().self(parent);
       document.getElementById(this.id()).addEventListener('keyup', (ev) => {
         this.keyup().run(ev);
