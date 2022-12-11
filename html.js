@@ -13,8 +13,8 @@ export const Element = Class.new({
     }),
   },
   slots: {
-    inner: Var.new(),
     id: Var.new(),
+    node: Var.new(),
     load() {
       for (const child of this.children()) {
         child.load(this);
