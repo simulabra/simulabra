@@ -22,7 +22,30 @@ const ex = `
 		($var num {[type !number]})
 	}]
 })
+$(def ~class(new {
+  name[point]
+  slots[{
+    x[~var(new { default[0] })]
+    y[~var(new { default[0] })]
+    dist[~method(new {
+      args[{ other[{ type[] }] }]
+      do![
+        thix(x)(- other(x))(pow 2)(+ this(y)(- other(y))(pow 2))(sqrt)
+      ]
+    })]
+  }]
+}))
+$(defmacro defclass (classdef) (
+(~export-statement .new {
+:name [%classdef .name]
+:value (~class .new %classdef)
+})
+))
 `;
+
+$defclass({
+  name: 'TodoItem',
+})
 
 export const Lexer = Class.new({
   name: 'Lexer',

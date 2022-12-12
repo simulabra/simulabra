@@ -159,3 +159,11 @@ export const Literal = Base.Class.new({
 
 //   }
 // })
+
+/*
+($defclass TodoItem {
+static: {
+
+}
+})
+ */
