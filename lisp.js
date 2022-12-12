@@ -28,10 +28,10 @@ $(def ~class(new {
     x[~var(new { default[0] })]
     y[~var(new { default[0] })]
     dist[~method(new {
-      args[{ other[{ type[] }] }]
-      do![
-        thix(x)(- other(x))(pow 2)(+ this(y)(- other(y))(pow 2))(sqrt)
-      ]
+      args[{ other[{ type[!point] }] }]
+      do[fn(
+        this(x)(- other(x))(pow 2)(+ this(y)(- other(y))(pow 2))(sqrt)
+      )]
     })]
   }]
 }))
