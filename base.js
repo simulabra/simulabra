@@ -13,7 +13,7 @@ Every object has an identity
 
 // hook up object to class
 console.log('bootstrap');
-export const DEBUG = true;
+export const DEBUG = false;
 export function debug(...args) {
     console.log(...args);
 }
