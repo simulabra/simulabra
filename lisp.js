@@ -2,8 +2,7 @@
 import { debug, Class, Var, Method } from './base.js';
 
 const ex = `
-$(def ~Class(new {
-  name["Point"]
+$(def Point ~Class(new {
   slots[{
     x[~Var(new { default[0] })]
     y[~Var(new { default[0] })]
@@ -125,7 +124,8 @@ export const JSLiteral = Class.new({
       }
     })
   }
-})
+});
+
 export const StringLiteral = Class.new({
   name: 'StringLiteral',
   super: JSLiteral,
@@ -415,6 +415,7 @@ export const Parser = Class.new({
     },
     form() {
       let tok = this.cur();
+      console.log('form ' + tok)
       if (typeof tok === 'number') {
         return this.number();
       }
@@ -434,19 +435,20 @@ export const Parser = Class.new({
       if (tok[0] === '"') {
         return this.string();
       }
-      return ErrorTok.new({ tok, message: 'No matching parse form' })    },
+      if (/[A-Za-z]/.test(tok[0])) {
+        return this.nameLiteral();
+      }
+      throw new Error('No matching parse form for ' + tok);
+    },
   }
 })
 
-const l = Lexer.new({ code: ex });
-l.tokenize();
-const p = Parser.new({ toks: l.toks() });
 const ctx = MacroEnv.new();
 
 ctx.add(Macro.new({
   name: 'def',
-  fn: function(obj) {
-    const name = obj.sexp().cdr()[0].map().name.value();
+  fn: function(name, obj) {
+    obj.sexp().cdr()[0].map().name = StringLiteral.new({ value: name });
     return `export const ${name} = ${obj.js(this)}`;
   }
 }));
@@ -456,6 +458,10 @@ ctx.add(Macro.new({
   fn: function(obj) {
     return `function () { ${obj.js(this)} }`;
   }
-}))
+}));
+
+const l = Lexer.new({ code: ex });
+l.tokenize();
+const p = Parser.new({ toks: l.toks() });
 
 console.log(p.form().js(ctx));
