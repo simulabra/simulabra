@@ -15,7 +15,7 @@ Every object has an identity
 console.log('bootstrap');
 export const DEBUG = false;
 export function debug(...args) {
-    console.log(...args);
+    console.log(...args.map(a => a.shortDescription()));
 }
 
 export const BaseObject = {
