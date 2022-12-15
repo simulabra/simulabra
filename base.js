@@ -427,6 +427,9 @@ export const StringPrimitive = Primitive.new({
         },
         shortDescription() {
             return `'${this}'`;
+        },
+        js() {
+            return this;
         }
     }
 });
@@ -465,7 +468,16 @@ export const NumberPrimitive = Primitive.new({
         },
         shortDescription() {
             return this.toString();
-        }
+        },
+        add(n) {
+            return this + n;
+        },
+        sub(n) {
+            return this - n;
+        },
+        pow(n) {
+            return this ** n;
+        },
     }
 });
 

@@ -2,13 +2,13 @@
 import { debug, Class, Var, Method } from './base.js';
 
 const ex = `
-$(def Point ~Class(new {
+$(defclass Point ~Class(new {
   slots[{
     x[~Var(new { default[0] })]
     y[~Var(new { default[0] })]
     dist[~Method(new {
       args[{ other[{ type[!Point] }] }]
-      do[$(fn
+      do[$(fn (other)
         .(x)(sub %other(x))(pow 2)(add .(y)(sub %other(y))(pow 2))(sqrt)
       )]
     })]
@@ -154,7 +154,10 @@ export const Sexp = Class.new({
       do: function js(ctx) {
         return `${this.car()}(${this.cdr().map(a => a.js(ctx)).join(', ')})`;
       }
-    })
+    }),
+    jsList() {
+      return `${this.value().map(e => e.js()).join(', ')}`;
+    }
   }
 });
 
@@ -234,7 +237,7 @@ export const ClassRef = Class.new({
     name: Var.new(),
     js: Method.new({
       do: function js(ctx) {
-        return this.name();
+        return `globalThis.$.classes.${this.name()}`;
       }
     }),
   }
@@ -246,7 +249,7 @@ export const TypeRef = Class.new({
     name: Var.new(),
     js: Method.new({
       do: function js() {
-        return '$' + this.name();
+        return `globalThis.$.types.${this.name()}`;
       }
     })
   }
@@ -428,6 +431,9 @@ export const Parser = Class.new({
       if (tok === '{') {
         return this.pmap();
       }
+      if (tok === '(') {
+        return this.sexp();
+      }
       if (' \n\t'.includes(tok)) {
         this.advance();
         return this.form();
@@ -446,22 +452,37 @@ export const Parser = Class.new({
 const ctx = MacroEnv.new();
 
 ctx.add(Macro.new({
-  name: 'def',
+  name: 'defclass',
   fn: function(name, obj) {
     obj.sexp().cdr()[0].map().name = StringLiteral.new({ value: name });
-    return `export const ${name} = ${obj.js(this)}`;
+    return `globalThis.$.classes.${name} = ${obj.js(this)}`;
   }
 }));
 
 ctx.add(Macro.new({
   name: 'fn',
-  fn: function(obj) {
-    return `function () { ${obj.js(this)} }`;
+  fn: function(args, obj) {
+    return `function (${args.jsList()}) { return ${obj.js(this)} }`;
   }
 }));
 
 const l = Lexer.new({ code: ex });
 l.tokenize();
 const p = Parser.new({ toks: l.toks() });
+const js = p.form().js(ctx);
 
-console.log(p.form().js(ctx));
+globalThis.$ = {
+  classes: {
+    Class,
+    Var,
+    Method,
+  },
+  types: {
+
+  }
+}
+
+console.log(js);
+eval(js);
+
+debug(globalThis.$.classes.Point.new({ x: 3, y: 4 }).dist(globalThis.$.classes.Point.new()));
