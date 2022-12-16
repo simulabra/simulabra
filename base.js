@@ -494,6 +494,9 @@ export const ArrayPrimitive = Primitive.new({
         },
         class() {
             return Array;
+        },
+        shortDescription() {
+            return `(${this.map(a => a.shortDescription()).join(' ')})`;
         }
     }
 });

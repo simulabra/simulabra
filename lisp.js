@@ -1,6 +1,6 @@
 // now, what if it were a lisp machine?
 import { debug, Class, Var, Method } from './base.js';
-import { writeFileSync } from 'fs';
+import { cpSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 
 export const Lexer = Class.new({
   name: 'Lexer',
@@ -59,7 +59,7 @@ export const Lexer = Class.new({
     token: Method.new({
       do: function token() {
         const c = this.chomp();
-        if ('(){}[]>~$!.% \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.% \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
@@ -295,6 +295,26 @@ export const Dexp = Class.new({
   },
 });
 
+export const Body = Class.new({
+  name: 'Body',
+  slots: {
+    statements: Var.new(),
+    js(ctx) {
+      return this.statements().map((s, idx) => (idx === this.statements().length - 1 ? 'return ' : '') + s.js(ctx)).join(';');
+    }
+  }
+});
+
+export const Program = Class.new({
+  name: 'Program',
+  slots: {
+    statements: Var.new(),
+    js(ctx) {
+      return this.statements().map(s => s.js(ctx)).join(';');
+    }
+  }
+})
+
 export const Parser = Class.new({
   name: 'Parser',
   slots: {
@@ -302,6 +322,9 @@ export const Parser = Class.new({
     pos: Var.default(0),
     cur() {
       return this.toks()[this.pos()];
+    },
+    ended() {
+      return this.pos() >= this.toks().length;
     },
     advance() {
       const n = this.cur();
@@ -323,7 +346,7 @@ export const Parser = Class.new({
     },
     sexp() {
       this.assertAdvance('(');
-      const value = [this.advance()];
+      const value = [];
       this.stripws();
       while (this.cur() !== ')') {
         value.push(this.form());
@@ -405,9 +428,17 @@ export const Parser = Class.new({
       }
       return exp;
     },
+    body() {
+      this.assertAdvance('@');
+      const s = this.sexp();
+      debug(s.value());
+      return Body.new({ statements: s.value() });
+    },
     form() {
+      if (this.ended()) {
+        return null;
+      }
       let tok = this.cur();
-      console.log('form ' + tok)
       if (typeof tok === 'number') {
         return this.number();
       }
@@ -416,6 +447,9 @@ export const Parser = Class.new({
       }
       if (tok === '$') {
         return this.macro();
+      }
+      if (tok === '@') {
+        return this.body();
       }
       if (tok === '{') {
         return this.pmap();
@@ -435,6 +469,14 @@ export const Parser = Class.new({
       }
       throw new Error('No matching parse form for ' + tok);
     },
+    program() {
+      const statements = [];
+      let f;
+      while ((f = this.form()) !== null) {
+        statements.push(f);
+      }
+      return Program.new({ statements })
+    }
   }
 })
 
@@ -451,33 +493,69 @@ ctx.add(Macro.new({
 ctx.add(Macro.new({
   name: 'fn',
   fn: function(args, obj) {
-    return `function (${args.jsList()}) { return ${obj.js(this)} }`;
+    return `function (${args.jsList()}) { ${obj.js(this)} }`;
   }
 }));
 
+ctx.add(Macro.new({
+  name: 'std',
+  fn: function(args, obj) {
+    return `import { Class, Var, Method } from '../base.js'`;
+  }
+}));
 const ex = `
+$(std)
+
 $(defclass Point ~Class(new {
   slots[{
     x[~Var(new { default[0] })]
     y[~Var(new { default[0] })]
     dist[~Method(new {
       args[{ other[{ type[!Point] }] }]
-      do[$(fn (other)
+      do[$(fn (other) @(
         .(x)(sub %other(x))(pow 2)(add .(y)(sub %other(y))(pow 2))(sqrt)
-      )]
+      ))]
     })]
   }]
 }))
 `;
 
-const l = Lexer.new({ code: ex });
-l.tokenize();
-const p = Parser.new({ toks: l.toks() });
-const js = p.form().js(ctx);
+export const SourceModule = Class.new({
+  name: 'SourceModule',
+  slots: {
+    name: Var.new(),
+    imports: Var.new(),
+    classes: Var.new(),
+  },
+});
 
-console.log(js);
-writeFileSync('out.mjs', `import { Class, Var, Method } from './base.js';
-${js}`);
-const test = await import('./out.mjs');
+const ExMod = SourceModule.new({
+  name: 'ExMod',
+  classes: {
+  }
+})
 
+
+export const Compiler = Class.new({
+  name: 'Compiler',
+  slots: {
+    init() {
+      rmSync('./out', { recursive: true, force: true });
+      mkdirSync('./out');
+    },
+    load(code) {
+      const l = Lexer.new({ code });
+      l.tokenize();
+      const p = Parser.new({ toks: l.toks() });
+      const js = p.program().js(ctx);
+      console.log(js);
+      writeFileSync('./out/test.mjs', js);
+    }
+  }
+});
+
+const compiler = Compiler.new();
+compiler.load(ex);
+
+const test = await import('./out/test.mjs');
 debug(test.Point.new({ x: 3, y: 4 }).dist(test.Point.new()));
