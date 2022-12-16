@@ -15,7 +15,7 @@ Every object has an identity
 console.log('bootstrap');
 export const DEBUG = false;
 export function debug(...args) {
-    console.log(...args.map(a => a.shortDescription()));
+    console.log(...args.map(a => a.description()));
 }
 
 export const BaseObject = {
@@ -37,8 +37,31 @@ export const BaseObject = {
         displayName() {
             return this.name() || '?';
         },
+        baseDescription() {
+            return `${this.displayName()} class:${this.class().name()} id:${this._intid}`;
+        },
         shortDescription() {
-            return `[${this.displayName()} class:${this.class().name()} id:${this._intid}]`;
+            return `{${this.baseDescription()}}`;
+        },
+        vars() {
+            let vs = [];
+            for (const v of this.class().vars()) {
+                const o = this[v.name()]();
+                debug(v.name(), o);
+                if (o) {
+                    vs.push(VarState.new({
+                        v,
+                        state: o,
+                    }));
+                }
+            }
+            return vs;
+        },
+        varDescription() {
+            return this.vars().map(v => ` ${v.description()}`).join('');
+        },
+        description() {
+            return `{${this.baseDescription()}${this.varDescription()}}`
         },
         super(message, ...args) {
             return this.class().super().proto()[message].apply(this, args);
@@ -54,7 +77,7 @@ Object.prototype.eq = function(other) {
 }
 
 Object.prototype.class = function() {
-    return null;
+    return ObjectPrimitive;
 }
 
 Object.prototype.className = function() {
@@ -75,6 +98,10 @@ Object.prototype.displayName = function() {
 
 Object.prototype.shortDescription = function() {
     return `Native Object (${typeof this})`;
+}
+
+Object.prototype.description = function() {
+    return this.shortDescription();
 }
 
 function parametize(obj) {
@@ -331,6 +358,17 @@ export const Var = Class.new({
     }
 });
 
+export const VarState = Class.new({
+    name: 'VarState',
+    slots: {
+        v: Var.new(),
+        state: Var.new(),
+        description() {
+            return `${this.v().name()}:${this.state().description()}`;
+        }
+    }
+});
+
 export const Message = Class.new({
     name: 'Message',
     slots: {
@@ -415,6 +453,14 @@ export const Module = Class.new({
     },
 });
 
+export const ObjectPrimitive = Primitive.new({
+    name: 'ObjectPrimitive',
+    js_prototype: Object.prototype,
+    slots: {
+
+    }
+});
+
 export const StringPrimitive = Primitive.new({
     name: 'StringPrimitive',
     js_prototype: String.prototype,
@@ -423,7 +469,7 @@ export const StringPrimitive = Primitive.new({
             return this;
         },
         class() {
-            return String;
+            return StringPrimitive;
         },
         shortDescription() {
             return `'${this}'`;
@@ -442,7 +488,7 @@ export const BooleanPrimitive = Primitive.new({
             return this;
         },
         class() {
-            return Boolean;
+            return BooleanPrimitive;
         },
         shortDescription() {
             return this.toString();
@@ -464,7 +510,7 @@ export const NumberPrimitive = Primitive.new({
             return this ** 2;
         },
         class() {
-            return Number;
+            return NumberPrimitive;
         },
         shortDescription() {
             return this.toString();
@@ -493,10 +539,13 @@ export const ArrayPrimitive = Primitive.new({
             return res;
         },
         class() {
-            return Array;
+            return ArrayPrimitive;
         },
         shortDescription() {
             return `(${this.map(a => a.shortDescription()).join(' ')})`;
+        },
+        description() {
+            return `(${this.map(a => a.description()).join(' ')})`;
         }
     }
 });
