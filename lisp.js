@@ -1,20 +1,6 @@
 // now, what if it were a lisp machine?
 import { debug, Class, Var, Method } from './base.js';
-
-const ex = `
-$(defclass Point ~Class(new {
-  slots[{
-    x[~Var(new { default[0] })]
-    y[~Var(new { default[0] })]
-    dist[~Method(new {
-      args[{ other[{ type[!Point] }] }]
-      do[$(fn (other)
-        .(x)(sub %other(x))(pow 2)(add .(y)(sub %other(y))(pow 2))(sqrt)
-      )]
-    })]
-  }]
-}))
-`;
+import { writeFileSync } from 'fs';
 
 export const Lexer = Class.new({
   name: 'Lexer',
@@ -170,6 +156,9 @@ export const MacroEnv = Class.new({
         this.macros()[macro.name()] = macro;
       }
     }),
+    package(name) {
+      
+    },
     eval: Method.new({
       do: function evalFn(sexp) {
         const m = this.macros()[sexp.car()];
@@ -237,7 +226,7 @@ export const ClassRef = Class.new({
     name: Var.new(),
     js: Method.new({
       do: function js(ctx) {
-        return `globalThis.$.classes.${this.name()}`;
+        return `${this.name()}`;
       }
     }),
   }
@@ -249,7 +238,7 @@ export const TypeRef = Class.new({
     name: Var.new(),
     js: Method.new({
       do: function js() {
-        return `globalThis.$.types.${this.name()}`;
+        return `${this.name()}`;
       }
     })
   }
@@ -455,7 +444,7 @@ ctx.add(Macro.new({
   name: 'defclass',
   fn: function(name, obj) {
     obj.sexp().cdr()[0].map().name = StringLiteral.new({ value: name });
-    return `globalThis.$.classes.${name} = ${obj.js(this)}`;
+    return `export var ${name} = ${obj.js(this)}`;
   }
 }));
 
@@ -466,23 +455,29 @@ ctx.add(Macro.new({
   }
 }));
 
+const ex = `
+$(defclass Point ~Class(new {
+  slots[{
+    x[~Var(new { default[0] })]
+    y[~Var(new { default[0] })]
+    dist[~Method(new {
+      args[{ other[{ type[!Point] }] }]
+      do[$(fn (other)
+        .(x)(sub %other(x))(pow 2)(add .(y)(sub %other(y))(pow 2))(sqrt)
+      )]
+    })]
+  }]
+}))
+`;
+
 const l = Lexer.new({ code: ex });
 l.tokenize();
 const p = Parser.new({ toks: l.toks() });
 const js = p.form().js(ctx);
 
-globalThis.$ = {
-  classes: {
-    Class,
-    Var,
-    Method,
-  },
-  types: {
-
-  }
-}
-
 console.log(js);
-eval(js);
+writeFileSync('out.mjs', `import { Class, Var, Method } from './base.js';
+${js}`);
+const test = await import('./out.mjs');
 
-debug(globalThis.$.classes.Point.new({ x: 3, y: 4 }).dist(globalThis.$.classes.Point.new()));
+debug(test.Point.new({ x: 3, y: 4 }).dist(test.Point.new()));
