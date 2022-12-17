@@ -115,15 +115,43 @@ export const JSLiteral = Class.new({
 export const StringLiteral = Class.new({
   name: 'StringLiteral',
   super: JSLiteral,
+  static: {
+    parse(parser) {
+      const s = parser.advance();
+      parser.assert(s[0], '"');
+      parser.assert(s[s.length - 1], '"');
+      return this.new({ value: s.slice(1, s.length - 1) });
+    }
+  },
 });
 
 export const NumberLiteral = Class.new({
   name: 'NumberLiteral',
   super: JSLiteral,
+  static: {
+    parse(ctx) {
+      const n = ctx.advance();
+      ctx.assert(typeof n, 'number');
+      return NumberLiteral.new({ value: n });
+    },
+  },
 });
 
 export const Sexp = Class.new({
   name: 'Sexp',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('(');
+      const value = [];
+      ctx.stripws();
+      while (ctx.cur() !== ')') {
+        value.push(ctx.form());
+        ctx.stripws();
+      }
+      ctx.assertAdvance(')');
+      return this.new({ value });
+    }
+  },
   slots: {
     value: Var.default([]),
     car: Method.new({
@@ -182,6 +210,12 @@ export const Macro = Class.new({
 
 export const MacroCall = Class.new({
   name: 'MacroCall',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('$');
+      return MacroCall.new({ sexp: Sexp.parse(ctx) });
+    },
+  },
   slots: {
     sexp: Var.new(),
     js: Method.new({
@@ -222,6 +256,12 @@ export const ErrorTok = Class.new({
 
 export const ClassRef = Class.new({
   name: 'ClassRef',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('~');
+      return ClassRef.new({ name: ctx.nameLiteral() });
+    },
+  },
   slots: {
     name: Var.new(),
     js: Method.new({
@@ -234,6 +274,12 @@ export const ClassRef = Class.new({
 
 export const TypeRef = Class.new({
   name: 'TypeRef',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('!');
+      return this.new({ name: ctx.nameLiteral() });
+    },
+  },
   slots: {
     name: Var.new(),
     js: Method.new({
@@ -246,6 +292,12 @@ export const TypeRef = Class.new({
 
 export const ArgRef = Class.new({
   name: 'ArgRef',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('%');
+      return this.new({ name: ctx.nameLiteral() });
+    },
+  },
   slots: {
     name: Var.new(),
     js: Method.new({
@@ -258,6 +310,12 @@ export const ArgRef = Class.new({
 
 export const ThisRef = Class.new({
   name: 'ThisRef',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('.');
+      return this.new();
+    },
+  },
   slots: {
     js: Method.new({
       do: function js(ctx) {
@@ -269,6 +327,16 @@ export const ThisRef = Class.new({
 
 export const Pair = Class.new({
   name: 'Pair',
+  static: {
+    parse(ctx) {
+      const name = ctx.nameLiteral();
+      ctx.assertAdvance('[');
+      const value = ctx.form();
+      ctx.assertAdvance(']');
+
+      return Pair.new({ name, value })
+    },
+  },
   slots: {
     name: Var.new(),
     value: Var.new(),
@@ -277,6 +345,21 @@ export const Pair = Class.new({
 
 export const Dexp = Class.new({
   name: 'Dexp', // lmao?
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('{');
+      ctx.stripws();
+      const pairs = [];
+      while (ctx.cur() !== '}') {
+        pairs.push(Pair.parse(ctx));
+        ctx.stripws();
+      }
+      ctx.assertAdvance('}');
+      return Dexp.new({
+        pairs
+      });
+    },
+  },
   slots: {
     pairs: Var.default([]),
     map: Var.new(),
@@ -297,16 +380,34 @@ export const Dexp = Class.new({
 
 export const Body = Class.new({
   name: 'Body',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('@');
+      const s = Sexp.parse(ctx);
+      debug(s.value());
+      return Body.new({ statements: s.value() });
+    },
+  },
   slots: {
     statements: Var.new(),
     js(ctx) {
-      return this.statements().map((s, idx) => (idx === this.statements().length - 1 ? 'return ' : '') + s.js(ctx)).join(';');
+      return this.statements().map((s, idx) => (idx === this.statements().length - 1 ? 'return ' : '') + s.js(ctx) + ';').join('');
     }
   }
 });
 
 export const Program = Class.new({
   name: 'Program',
+  static: {
+    parse(ctx) {
+      const statements = [];
+      let f;
+      while ((f = ctx.form()) !== null) {
+        statements.push(f);
+      }
+      return Program.new({ statements })
+    }
+  },
   slots: {
     statements: Var.new(),
     js(ctx) {
@@ -344,95 +445,9 @@ export const Parser = Class.new({
         this.advance();
       }
     },
-    sexp() {
-      this.assertAdvance('(');
-      const value = [];
-      this.stripws();
-      while (this.cur() !== ')') {
-        value.push(this.form());
-        this.stripws();
-      }
-      this.assertAdvance(')');
-      return Sexp.new({ value });
-    },
-    macro() {
-      this.assertAdvance('$');
-      return MacroCall.new({ sexp: this.sexp() });
-    },
-    classRef() {
-      this.assertAdvance('~');
-      return ClassRef.new({ name: this.nameLiteral() });
-    },
-    typeRef() {
-      this.assertAdvance('!');
-      return TypeRef.new({ name: this.nameLiteral() });
-    },
-    argRef() {
-      this.assertAdvance('%');
-      return ArgRef.new({ name: this.nameLiteral() });
-    },
-    thisRef() {
-      this.assertAdvance('.');
-      return ThisRef.new();
-    },
     nameLiteral() {
       this.assert(/^[A-Za-z][A-Za-z\-\d]*$/.test(this.cur()), true);
       return this.advance();
-    },
-    string() {
-      const s = this.advance();
-      this.assert(s[0], '"');
-      this.assert(s[s.length - 1], '"');
-      return StringLiteral.new({ value: s.slice(1, s.length - 1) });
-    },
-    number() {
-      const n = this.advance();
-      this.assert(typeof n, 'number');
-      return NumberLiteral.new({ value: n });
-    },
-    pair() {
-      const name = this.nameLiteral();
-      this.assertAdvance('[');
-      const value = this.form();
-      this.assertAdvance(']');
-
-      return Pair.new({ name, value })
-    },
-    pmap() {
-      this.assertAdvance('{');
-      this.stripws();
-      const pairs = [];
-      while (this.cur() !== '}') {
-        pairs.push(this.pair());
-        this.stripws();
-      }
-      this.assertAdvance('}');
-      return Dexp.new({
-        pairs
-      });
-    },
-    symbol() {
-      let tt = this.cur();
-      switch (tt) {
-        case '~': return this.classRef();
-        case '!': return this.typeRef();
-        case '%': return this.argRef();
-        case '.': return this.thisRef();
-        default: return ErrorTok.new({ tok: tt, message: 'Not a valid symbol sigil' });
-      }
-    },
-    symbolExpression() {
-      let exp = this.symbol();
-      while (this.cur() === '(') {
-        exp = Call.new({ receiver: exp, sexp: this.sexp() });
-      }
-      return exp;
-    },
-    body() {
-      this.assertAdvance('@');
-      const s = this.sexp();
-      debug(s.value());
-      return Body.new({ statements: s.value() });
     },
     form() {
       if (this.ended()) {
@@ -440,43 +455,37 @@ export const Parser = Class.new({
       }
       let tok = this.cur();
       if (typeof tok === 'number') {
-        return this.number();
+        return NumberLiteral.parse(this);
       }
-      if ('~!%.'.includes(tok)) {
-        return this.symbolExpression();
-      }
-      if (tok === '$') {
-        return this.macro();
-      }
-      if (tok === '@') {
-        return this.body();
-      }
-      if (tok === '{') {
-        return this.pmap();
-      }
-      if (tok === '(') {
-        return this.sexp();
+      const tokamap = {
+        '~': ClassRef,
+        '!': TypeRef,
+        '%': ArgRef,
+        '.': ThisRef,
+        '$': MacroCall,
+        '@': Body,
+        '{': Dexp,
+        '(': Sexp,
+      };
+      let exp = tokamap[tok]?.parse(this);
+      if (exp) {
+        while (this.cur() === '(') {
+          exp = Call.new({ receiver: exp, sexp: Sexp.parse(this) });
+        }
+        return exp;
       }
       if (' \n\t'.includes(tok)) {
         this.advance();
         return this.form();
       }
       if (tok[0] === '"') {
-        return this.string();
+        return StringLiteral.parse(this);
       }
       if (/[A-Za-z]/.test(tok[0])) {
         return this.nameLiteral();
       }
       throw new Error('No matching parse form for ' + tok);
     },
-    program() {
-      const statements = [];
-      let f;
-      while ((f = this.form()) !== null) {
-        statements.push(f);
-      }
-      return Program.new({ statements })
-    }
   }
 })
 
@@ -529,13 +538,6 @@ export const SourceModule = Class.new({
   },
 });
 
-const ExMod = SourceModule.new({
-  name: 'ExMod',
-  classes: {
-  }
-})
-
-
 export const Compiler = Class.new({
   name: 'Compiler',
   slots: {
@@ -547,7 +549,7 @@ export const Compiler = Class.new({
       const l = Lexer.new({ code });
       l.tokenize();
       const p = Parser.new({ toks: l.toks() });
-      const js = p.program().js(ctx);
+      const js = Program.parse(p).js(ctx);
       console.log(js);
       writeFileSync('./out/test.mjs', js);
     }
