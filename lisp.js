@@ -5,6 +5,9 @@ import { cpSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 export const Lexer = Class.new({
   name: 'Lexer',
   slots: {
+    init() {
+      this.tokenize();
+    },
     code: Var.new(),
     pos: Var.default(0),
     toks: Var.default([]),
@@ -384,7 +387,6 @@ export const Body = Class.new({
     parse(ctx) {
       ctx.assertAdvance('@');
       const s = Sexp.parse(ctx);
-      debug(s.value());
       return Body.new({ statements: s.value() });
     },
   },
@@ -418,6 +420,11 @@ export const Program = Class.new({
 
 export const Parser = Class.new({
   name: 'Parser',
+  static: {
+    fromSource(source) {
+      return this.new({ toks: Lexer.new({ code: source }).toks() });
+    }
+  },
   slots: {
     toks: Var.new(),
     pos: Var.default(0),
@@ -487,7 +494,7 @@ export const Parser = Class.new({
       throw new Error('No matching parse form for ' + tok);
     },
   }
-})
+});
 
 const ctx = MacroEnv.new();
 
@@ -541,23 +548,23 @@ export const SourceModule = Class.new({
 export const Compiler = Class.new({
   name: 'Compiler',
   slots: {
+    program: Var.new(),
     init() {
       rmSync('./out', { recursive: true, force: true });
       mkdirSync('./out');
     },
     load(code) {
-      const l = Lexer.new({ code });
-      l.tokenize();
-      const p = Parser.new({ toks: l.toks() });
-      const js = Program.parse(p).js(ctx);
-      console.log(js);
-      writeFileSync('./out/test.mjs', js);
-    }
+      this.program(Program.parse(Parser.fromSource(code)));
+    },
+    save(ctx) {
+      writeFileSync('./out/test.mjs', this.program().js(ctx));
+    },
   }
 });
 
 const compiler = Compiler.new();
 compiler.load(ex);
+compiler.save(ctx);
 
 const test = await import('./out/test.mjs');
 debug(test.Point.new({ x: 3, y: 4 }).dist(test.Point.new()));
