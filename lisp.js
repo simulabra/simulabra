@@ -1,5 +1,5 @@
 // now, what if it were a lisp machine?
-import { debug, Class, Var, Method } from './base.js';
+import { Class, Var, Method, Debug } from './base.js';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 
 export const Lexer = Class.new({
@@ -496,7 +496,9 @@ export const Parser = Class.new({
   }
 });
 
-const ctx = MacroEnv.new();
+const ctx = MacroEnv.new({
+  shouldDebug: true,
+});
 
 ctx.add(Macro.new({
   name: 'defclass',
@@ -564,7 +566,8 @@ export const Compiler = Class.new({
 
 const compiler = Compiler.new();
 compiler.load(ex);
+// debug(compiler.program());
 compiler.save(ctx);
 
 const test = await import('./out/test.mjs');
-debug(test.Point.new({ x: 3, y: 4 }).dist(test.Point.new()));
+ctx.debug(test.Point.new({ x: 3, y: 4 }).dist(test.Point.new()));

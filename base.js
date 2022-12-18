@@ -13,10 +13,6 @@ Every object has an identity
 
 // hook up object to class
 console.log('bootstrap');
-export const DEBUG = false;
-export function debug(...args) {
-    console.log(...args.map(a => a.description()));
-}
 
 export const BaseObject = {
     _name: 'BaseObject',
@@ -47,7 +43,7 @@ export const BaseObject = {
             let vs = [];
             for (const v of this.class().vars()) {
                 const o = this[v.name()]();
-                debug(v.name(), o);
+                this.debug(v.name(), o);
                 if (o) {
                     vs.push(VarState.new({
                         v,
@@ -56,6 +52,14 @@ export const BaseObject = {
                 }
             }
             return vs;
+        },
+        shouldDebug() {
+            return Debug.debug() || this._shouldDebug;
+        },
+        debug(...args) {
+            if (this.shouldDebug()) {
+                Debug.log(...args);
+            }
         },
         varDescription() {
             return this.vars().map(v => ` ${v.description()}`).join('');
@@ -174,7 +178,6 @@ export const Class = {
             if ('init' in obj) {
                 obj.init(this);
             }
-            DEBUG && debug(`new ${obj.shortDescription()}`);
             return obj;
         },
         defaultInitSlot(slot, dval) {
@@ -318,8 +321,8 @@ export const Var = Class.new({
                 return true;
             }
         },
-        debug() {
-            return this._debug || DEBUG;
+        shouldDebug() {
+            return this._debug || Debug.debug();
         },
         load(parent) {
             // console.log('var load', this.name());
@@ -328,9 +331,7 @@ export const Var = Class.new({
                 return function(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
-                        if (self.debug()) {
-                            debug(`set ${this.shortDescription()}.${self.name()} = ${assign.shortDescription()}`);
-                        }
+                        this.debug(`set ${this.shortDescription()}.${self.name()} = ${assign.shortDescription()}`);
                         ('update' in this) && this.update({ changed: self.name() });
                     } else if (!(pk in this)) {
                         this[pk] = self.default(this);
@@ -363,8 +364,25 @@ export const VarState = Class.new({
     slots: {
         v: Var.new(),
         state: Var.new(),
-        description() {
+        description(d) {
             return `${this.v().name()}:${this.state().description()}`;
+        }
+    }
+});
+
+export const Description = Class.new({
+    name: 'Description',
+    slots: {
+        visited: Var.default({}),
+    },
+});
+
+export const Debug = Class.new({
+    name: 'Debug',
+    static: {
+        debug: Var.default(false),
+        log(...args) {
+            console.log(...args.map(a => a.description()));
         }
     }
 });
@@ -386,7 +404,7 @@ export const Method = Class.new({
         name: Var.new(),
         init() {
             const self = this;
-            if (DEBUG) {
+            if (Debug.debug()) {
                 const fn = this.do();
                 this.do(function(...args) {
                     console.log(`${this.displayName()}.${self.name()}(${args.map(a => a.displayName())})`);
