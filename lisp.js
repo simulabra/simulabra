@@ -115,6 +115,18 @@ export const JSLiteral = Class.new({
   }
 });
 
+export const NameLiteral = Class.new({
+  name: 'NameLiteral',
+  super: JSLiteral,
+  static: {
+    parse(parser) {
+      const s = parser.nameString();
+      Debug.log(s);
+      return this.new({ value: s });
+    }
+  },
+});
+
 export const StringLiteral = Class.new({
   name: 'StringLiteral',
   super: JSLiteral,
@@ -149,6 +161,7 @@ export const Sexp = Class.new({
       ctx.stripws();
       while (ctx.cur() !== ')') {
         value.push(ctx.form());
+        Debug.log(value[value.length - 1]);
         ctx.stripws();
       }
       ctx.assertAdvance(')');
@@ -223,7 +236,7 @@ export const MacroCall = Class.new({
     sexp: Var.new(),
     js: Method.new({
       do: function js(ctx) {
-        return ctx.eval(this.sexp());
+        return ctx.eval(this.sexp()).js(ctx);
       }
     }),
   }
@@ -262,7 +275,7 @@ export const ClassRef = Class.new({
   static: {
     parse(ctx) {
       ctx.assertAdvance('~');
-      return ClassRef.new({ name: ctx.nameLiteral() });
+      return ClassRef.new({ name: ctx.nameString() });
     },
   },
   slots: {
@@ -280,7 +293,7 @@ export const TypeRef = Class.new({
   static: {
     parse(ctx) {
       ctx.assertAdvance('!');
-      return this.new({ name: ctx.nameLiteral() });
+      return this.new({ name: ctx.nameString() });
     },
   },
   slots: {
@@ -298,7 +311,7 @@ export const ArgRef = Class.new({
   static: {
     parse(ctx) {
       ctx.assertAdvance('%');
-      return this.new({ name: ctx.nameLiteral() });
+      return this.new({ name: ctx.nameString() });
     },
   },
   slots: {
@@ -332,7 +345,7 @@ export const Pair = Class.new({
   name: 'Pair',
   static: {
     parse(ctx) {
-      const name = ctx.nameLiteral();
+      const name = NameLiteral.parse(ctx);
       ctx.assertAdvance('[');
       const value = ctx.form();
       ctx.assertAdvance(']');
@@ -414,6 +427,9 @@ export const Program = Class.new({
     statements: Var.new(),
     js(ctx) {
       return this.statements().map(s => s.js(ctx)).join(';');
+    },
+    macroexpand(ctx) {
+
     }
   }
 })
@@ -452,7 +468,7 @@ export const Parser = Class.new({
         this.advance();
       }
     },
-    nameLiteral() {
+    nameString() {
       this.assert(/^[A-Za-z][A-Za-z\-\d]*$/.test(this.cur()), true);
       return this.advance();
     },
@@ -489,10 +505,44 @@ export const Parser = Class.new({
         return StringLiteral.parse(this);
       }
       if (/[A-Za-z]/.test(tok[0])) {
-        return this.nameLiteral();
+        return NameLiteral.parse(this);
       }
       throw new Error('No matching parse form for ' + tok);
     },
+  }
+});
+
+export const ExportStatement = Class.new({
+  name: 'ExportStatement',
+  slots: {
+    name: Var.new(),
+    value: Var.new(),
+    js(ctx) {
+      return `export var ${this.name()} = ${this.value().js(ctx)}`;
+    }
+  }
+});
+
+export const FunctionStatement = Class.new({
+  name: 'FunctionStatement',
+  slots: {
+    name: Var.new(),
+    args: Var.new(),
+    body: Var.new(),
+    js(ctx) {
+      return `function (${this.args().jsList(ctx)}) { ${this.body().js(ctx)} }`;
+    }
+  }
+});
+
+export const ImportStatement = Class.new({
+  name: 'ImportStatement',
+  slots: {
+    imports: Var.new(),
+    module: Var.new(),
+    js(ctx) {
+      return `import { ${this.imports().join(', ')} } from '${this.module()}'`;
+    }
   }
 });
 
@@ -502,29 +552,40 @@ const ctx = MacroEnv.new({
 
 ctx.add(Macro.new({
   name: 'defclass',
-  fn: function(name, obj) {
-    obj.sexp().cdr()[0].map().name = StringLiteral.new({ value: name });
-    return `export var ${name} = ${obj.js(this)}`;
+  fn: function(name, value) {
+    value.sexp().cdr()[0].map().name = StringLiteral.new({ value: name });
+    return ExportStatement.new({
+      name,
+      value,
+    });
   }
 }));
 
 ctx.add(Macro.new({
   name: 'fn',
-  fn: function(args, obj) {
-    return `function (${args.jsList()}) { ${obj.js(this)} }`;
+  fn: function(args, body) {
+    return FunctionStatement.new({
+      args,
+      body
+    })
   }
 }));
 
 ctx.add(Macro.new({
   name: 'std',
   fn: function(args, obj) {
-    return `import { Class, Var, Method } from '../base.js'`;
+    return ImportStatement.new({
+      imports: ['Class', 'Var', 'Method'],
+      module: '../base.js',
+    })
   }
 }));
+
 const ex = `
 $(std)
 
-$(defclass Point ~Class(new {
+~Class(new {
+  name[Point]
   slots[{
     x[~Var(new { default[0] })]
     y[~Var(new { default[0] })]
@@ -535,15 +596,31 @@ $(defclass Point ~Class(new {
       ))]
     })]
   }]
-}))
+})
 `;
 
-export const SourceModule = Class.new({
-  name: 'SourceModule',
+export const Package = Class.new({
+  name: 'Package',
+  static: {
+    parse(ctx) {
+      const p = Program.parse(ctx);
+    },
+  },
   slots: {
     name: Var.new(),
     imports: Var.new(),
-    classes: Var.new(),
+    exports: Var.new(),
+    declarations(ctx) {
+      return this.exports().map(e => {
+        return ExportStatement.new({
+          name: e.sexp().cdr()[0].map().name(),
+          value: e,
+        });
+      })
+    },
+    js(ctx) {
+      const header = this.imports().map(i => i.js(ctx)).join('');
+    },
   },
 });
 
