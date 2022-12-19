@@ -62,7 +62,7 @@ export const Lexer = Class.new({
     token: Method.new({
       do: function token() {
         const c = this.chomp();
-        if ('(){}[]>~@$!.% \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.%\' \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
@@ -120,8 +120,8 @@ export const NameLiteral = Class.new({
   super: JSLiteral,
   static: {
     parse(parser) {
+      parser.assertAdvance('\'');
       const s = parser.nameString();
-      Debug.log(s);
       return this.new({ value: s });
     }
   },
@@ -161,7 +161,6 @@ export const Sexp = Class.new({
       ctx.stripws();
       while (ctx.cur() !== ')') {
         value.push(ctx.form());
-        Debug.log(value[value.length - 1]);
         ctx.stripws();
       }
       ctx.assertAdvance(')');
@@ -345,7 +344,7 @@ export const Pair = Class.new({
   name: 'Pair',
   static: {
     parse(ctx) {
-      const name = NameLiteral.parse(ctx);
+      const name = ctx.nameString();
       ctx.assertAdvance('[');
       const value = ctx.form();
       ctx.assertAdvance(']');
@@ -486,6 +485,7 @@ export const Parser = Class.new({
         '%': ArgRef,
         '.': ThisRef,
         '$': MacroCall,
+        "'": NameLiteral,
         '@': Body,
         '{': Dexp,
         '(': Sexp,
@@ -505,7 +505,7 @@ export const Parser = Class.new({
         return StringLiteral.parse(this);
       }
       if (/[A-Za-z]/.test(tok[0])) {
-        return NameLiteral.parse(this);
+        return this.nameString();
       }
       throw new Error('No matching parse form for ' + tok);
     },
@@ -551,9 +551,9 @@ const ctx = MacroEnv.new({
 });
 
 ctx.add(Macro.new({
-  name: 'defclass',
-  fn: function(name, value) {
-    value.sexp().cdr()[0].map().name = StringLiteral.new({ value: name });
+  name: 'def',
+  fn: function(value) {
+    let name = value.sexp().cdr()[0].map().name.value();
     return ExportStatement.new({
       name,
       value,
@@ -584,8 +584,8 @@ ctx.add(Macro.new({
 const ex = `
 $(std)
 
-~Class(new {
-  name[Point]
+$(def ~Class(new {
+  name['Point]
   slots[{
     x[~Var(new { default[0] })]
     y[~Var(new { default[0] })]
@@ -596,7 +596,7 @@ $(std)
       ))]
     })]
   }]
-})
+}))
 `;
 
 export const Package = Class.new({
