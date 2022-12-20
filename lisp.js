@@ -1,5 +1,5 @@
 // now, what if it were a lisp machine?
-import { Class, Var, Method, Debug } from './base.js';
+import { Class, Var, Method, Debug, StringPrimitive } from './base.js';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 
 export const Lexer = Class.new({
@@ -62,7 +62,7 @@ export const Lexer = Class.new({
     token: Method.new({
       do: function token() {
         const c = this.chomp();
-        if ('(){}[]>~@$!.%\' \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.%|\' \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
@@ -179,12 +179,7 @@ export const Sexp = Class.new({
         return this.value().slice(1);
       }
     }),
-    js: Method.new({
-      do: function js(ctx) {
-        return `${this.car()}(${this.cdr().map(a => a.js(ctx)).join(', ')})`;
-      }
-    }),
-    jsList() {
+    js() {
       return `${this.value().map(e => e.js()).join(', ')}`;
     }
   }
@@ -241,14 +236,62 @@ export const MacroCall = Class.new({
   }
 });
 
+export const MessagePart = Class.new({
+  name: 'MessagePart',
+  static: {
+    parse(ctx) {
+      const selector = ctx.nameString();
+      const args = [];
+      while (!'|)'.includes(ctx.head())) {
+        args.push(ctx.form());
+      }
+      return this.new({
+        selector,
+        args
+      });
+    }
+  },
+  slots: {
+    selector: Var.new(),
+    args: Var.new(),
+    js(ctx) {
+      return `${this.selector()}(${this.args().map(a => a.js(ctx)).join(',')})`;
+    },
+  }
+})
+
+export const Message = Class.new({
+  name: 'Message',
+  static: {
+    parse(ctx) {
+      ctx.assertAdvance('(');
+      let parts = [];
+      do {
+        parts.push(MessagePart.parse(ctx));
+        ctx.maybeAdvance('|');
+      } while (ctx.head() !== ')');
+      ctx.assertAdvance(')');
+      return this.new({
+        parts
+      });
+    }
+  },
+  slots: {
+    parts: Var.new(),
+    js(ctx) {
+      return this.parts().map(p => p.js(ctx)).join('.');
+    },
+  }
+})
+
 export const Call = Class.new({
   name: 'Call',
   slots: {
     receiver: Var.new(),
-    sexp: Var.new(),
+    message: Var.new(),
     js: Method.new({
       do: function js(ctx) {
-        return `${this.receiver().js(ctx)}.${this.sexp().js(ctx)}`;
+        return `${this.receiver().js(ctx)}.${this.message().js(ctx)}`;
       }
     })
   }
@@ -281,7 +324,8 @@ export const ClassRef = Class.new({
     name: Var.new(),
     js: Method.new({
       do: function js(ctx) {
-        return `${this.name()}`;
+        const n = this.name().split('-').map(p => p.split('').map((c, i) => i === 0 ? c.toUpperCase() : c).join('')).join('');
+        return `${n}`;
       }
     }),
   }
@@ -446,6 +490,19 @@ export const Parser = Class.new({
     cur() {
       return this.toks()[this.pos()];
     },
+    head() {
+      this.stripws();
+      return this.cur();
+    },
+    headChar(cs) {
+      return cs.includes(this.head());
+    },
+    maybeAdvance(cs) {
+      if (this.headChar(cs)) {
+        return this.advance();
+      }
+      return null;
+    },
     ended() {
       return this.pos() >= this.toks().length;
     },
@@ -492,8 +549,8 @@ export const Parser = Class.new({
       };
       let exp = tokamap[tok]?.parse(this);
       if (exp) {
-        while (this.cur() === '(') {
-          exp = Call.new({ receiver: exp, sexp: Sexp.parse(this) });
+        if (this.cur() === '(') {
+          return Call.new({ receiver: exp, message: Message.parse(this) });
         }
         return exp;
       }
@@ -530,7 +587,7 @@ export const FunctionStatement = Class.new({
     args: Var.new(),
     body: Var.new(),
     js(ctx) {
-      return `function (${this.args().jsList(ctx)}) { ${this.body().js(ctx)} }`;
+      return `function (${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
     }
   }
 });
@@ -553,7 +610,7 @@ const ctx = MacroEnv.new({
 ctx.add(Macro.new({
   name: 'def',
   fn: function(value) {
-    let name = value.sexp().cdr()[0].map().name.value();
+    let name = value.message().parts()[0].args()[0].map().name.value();
     return ExportStatement.new({
       name,
       value,
@@ -584,15 +641,15 @@ ctx.add(Macro.new({
 const ex = `
 $(std)
 
-$(def ~Class(new {
-  name['Point]
+$(def ~class(new {
+  name['point]
   slots[{
-    x[~Var(new { default[0] })]
-    y[~Var(new { default[0] })]
-    dist[~Method(new {
-      args[{ other[{ type[!Point] }] }]
+    x[~var(new { default[0] })]
+    y[~var(new { default[0] })]
+    dist[~method(new {
+      args[{ other[{ type[!point] }] }]
       do[$(fn (other) @(
-        .(x)(sub %other(x))(pow 2)(add .(y)(sub %other(y))(pow 2))(sqrt)
+        .(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
       ))]
     })]
   }]
@@ -647,4 +704,4 @@ compiler.load(ex);
 compiler.save(ctx);
 
 const test = await import('./out/test.mjs');
-ctx.debug(test.Point.new({ x: 3, y: 4 }).dist(test.Point.new()));
+ctx.debug(test.point.new({ x: 3, y: 4 }).dist(test.point.new()));
