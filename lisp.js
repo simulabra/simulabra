@@ -144,9 +144,9 @@ export const NumberLiteral = Class.new({
   name: 'NumberLiteral',
   super: JSLiteral,
   static: {
-    parse(ctx) {
-      const n = ctx.advance();
-      ctx.assert(typeof n, 'number');
+    parse(parser) {
+      const n = parser.advance();
+      parser.assert(typeof n, 'number');
       return NumberLiteral.new({ value: n });
     },
   },
@@ -155,15 +155,15 @@ export const NumberLiteral = Class.new({
 export const Sexp = Class.new({
   name: 'Sexp',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('(');
+    parse(parser) {
+      parser.assertAdvance('(');
       const value = [];
-      ctx.stripws();
-      while (ctx.cur() !== ')') {
-        value.push(ctx.form());
-        ctx.stripws();
+      parser.stripws();
+      while (parser.cur() !== ')') {
+        value.push(parser.form());
+        parser.stripws();
       }
-      ctx.assertAdvance(')');
+      parser.assertAdvance(')');
       return this.new({ value });
     }
   },
@@ -221,9 +221,9 @@ export const Macro = Class.new({
 export const MacroCall = Class.new({
   name: 'MacroCall',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('$');
-      return MacroCall.new({ sexp: Sexp.parse(ctx) });
+    parse(parser) {
+      parser.assertAdvance('$');
+      return MacroCall.new({ sexp: Sexp.parse(parser) });
     },
   },
   slots: {
@@ -239,11 +239,11 @@ export const MacroCall = Class.new({
 export const MessagePart = Class.new({
   name: 'MessagePart',
   static: {
-    parse(ctx) {
-      const selector = ctx.nameString();
+    parse(parser) {
+      const selector = parser.nameString();
       const args = [];
-      while (!'|)'.includes(ctx.head())) {
-        args.push(ctx.form());
+      while (!'|)'.includes(parser.head())) {
+        args.push(parser.form());
       }
       return this.new({
         selector,
@@ -263,14 +263,14 @@ export const MessagePart = Class.new({
 export const Message = Class.new({
   name: 'Message',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('(');
+    parse(parser) {
+      parser.assertAdvance('(');
       let parts = [];
       do {
-        parts.push(MessagePart.parse(ctx));
-        ctx.maybeAdvance('|');
-      } while (ctx.head() !== ')');
-      ctx.assertAdvance(')');
+        parts.push(MessagePart.parse(parser));
+        parser.maybeAdvance('|');
+      } while (parser.head() !== ')');
+      parser.assertAdvance(')');
       return this.new({
         parts
       });
@@ -315,9 +315,9 @@ export const ErrorTok = Class.new({
 export const ClassRef = Class.new({
   name: 'ClassRef',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('~');
-      return ClassRef.new({ name: ctx.nameString() });
+    parse(parser) {
+      parser.assertAdvance('~');
+      return ClassRef.new({ name: parser.nameString() });
     },
   },
   slots: {
@@ -334,9 +334,9 @@ export const ClassRef = Class.new({
 export const TypeRef = Class.new({
   name: 'TypeRef',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('!');
-      return this.new({ name: ctx.nameString() });
+    parse(parser) {
+      parser.assertAdvance('!');
+      return this.new({ name: parser.nameString() });
     },
   },
   slots: {
@@ -352,9 +352,9 @@ export const TypeRef = Class.new({
 export const ArgRef = Class.new({
   name: 'ArgRef',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('%');
-      return this.new({ name: ctx.nameString() });
+    parse(parser) {
+      parser.assertAdvance('%');
+      return this.new({ name: parser.nameString() });
     },
   },
   slots: {
@@ -370,8 +370,8 @@ export const ArgRef = Class.new({
 export const ThisRef = Class.new({
   name: 'ThisRef',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('.');
+    parse(parser) {
+      parser.assertAdvance('.');
       return this.new();
     },
   },
@@ -387,11 +387,11 @@ export const ThisRef = Class.new({
 export const Pair = Class.new({
   name: 'Pair',
   static: {
-    parse(ctx) {
-      const name = ctx.nameString();
-      ctx.assertAdvance('[');
-      const value = ctx.form();
-      ctx.assertAdvance(']');
+    parse(parser) {
+      const name = parser.nameString();
+      parser.assertAdvance('[');
+      const value = parser.form();
+      parser.assertAdvance(']');
 
       return Pair.new({ name, value })
     },
@@ -405,15 +405,15 @@ export const Pair = Class.new({
 export const Dexp = Class.new({
   name: 'Dexp', // lmao?
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('{');
-      ctx.stripws();
+    parse(parser) {
+      parser.assertAdvance('{');
+      parser.stripws();
       const pairs = [];
-      while (ctx.cur() !== '}') {
-        pairs.push(Pair.parse(ctx));
-        ctx.stripws();
+      while (parser.cur() !== '}') {
+        pairs.push(Pair.parse(parser));
+        parser.stripws();
       }
-      ctx.assertAdvance('}');
+      parser.assertAdvance('}');
       return Dexp.new({
         pairs
       });
@@ -440,9 +440,9 @@ export const Dexp = Class.new({
 export const Body = Class.new({
   name: 'Body',
   static: {
-    parse(ctx) {
-      ctx.assertAdvance('@');
-      const s = Sexp.parse(ctx);
+    parse(parser) {
+      parser.assertAdvance('@');
+      const s = Sexp.parse(parser);
       return Body.new({ statements: s.value() });
     },
   },
@@ -457,10 +457,10 @@ export const Body = Class.new({
 export const Program = Class.new({
   name: 'Program',
   static: {
-    parse(ctx) {
+    parse(parser) {
       const statements = [];
       let f;
-      while ((f = ctx.form()) !== null) {
+      while ((f = parser.form()) !== null) {
         statements.push(f);
       }
       return Program.new({ statements })
@@ -638,6 +638,7 @@ ctx.add(Macro.new({
   }
 }));
 
+
 const ex = `
 $(std)
 
@@ -658,13 +659,9 @@ $(def ~class(new {
 
 export const Package = Class.new({
   name: 'Package',
-  static: {
-    parse(ctx) {
-      const p = Program.parse(ctx);
-    },
-  },
   slots: {
     name: Var.new(),
+    program: Var.new(),
     imports: Var.new(),
     exports: Var.new(),
     declarations(ctx) {
@@ -676,32 +673,22 @@ export const Package = Class.new({
       })
     },
     js(ctx) {
-      const header = this.imports().map(i => i.js(ctx)).join('');
+      return this.program().js(ctx);
     },
+    outfile() {
+      return `./out/${this.name()}.mjs`
+    },
+    save(ctx) {
+      writeFileSync(this.outfile(), this.js(ctx))
+    }
   },
 });
 
-export const Compiler = Class.new({
-  name: 'Compiler',
-  slots: {
-    program: Var.new(),
-    init() {
-      rmSync('./out', { recursive: true, force: true });
-      mkdirSync('./out');
-    },
-    load(code) {
-      this.program(Program.parse(Parser.fromSource(code)));
-    },
-    save(ctx) {
-      writeFileSync('./out/test.mjs', this.program().js(ctx));
-    },
-  }
+const pkg = Package.new({
+  name: 'test',
+  program: Program.parse(Parser.fromSource(ex)),
 });
-
-const compiler = Compiler.new();
-compiler.load(ex);
-// debug(compiler.program());
-compiler.save(ctx);
+pkg.save(ctx);
 
 const test = await import('./out/test.mjs');
 ctx.debug(test.point.new({ x: 3, y: 4 }).dist(test.point.new()));
