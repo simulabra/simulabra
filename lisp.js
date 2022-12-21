@@ -74,7 +74,8 @@ export const Lexer = Class.new({
         if (/[0-9\-\+]/.test(c)) {
           return this.toks().push(Number.parseFloat(this.readToTerminal(c)));
         }
-        throw new Error('UNHANDLED TOKEN CHAR: ', c);
+
+        throw new Error('UNHANDLED TOKEN CHAR: ' + c);
       }
     }),
     tokenize: Method.new({
@@ -651,7 +652,7 @@ $(def ~class(new {
       args[{ other[{ type[!point] }] }]
       do[$(fn (other) @(
         .(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
-      ))]
+      ))#min]
     })]
   }]
 }))
