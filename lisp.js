@@ -1,6 +1,6 @@
 // now, what if it were a lisp machine?
 import { Class, Var, Method, Debug, StringPrimitive } from './base.js';
-import { cpSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 
 export const Lexer = Class.new({
   name: 'Lexer',
@@ -62,7 +62,7 @@ export const Lexer = Class.new({
     token: Method.new({
       do: function token() {
         const c = this.chomp();
-        if ('(){}[]>~@$!.%|\' \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.%#|\' \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
@@ -153,18 +153,18 @@ export const NumberLiteral = Class.new({
   },
 });
 
-export const Sexp = Class.new({
-  name: 'Sexp',
+export const List = Class.new({
+  name: 'List',
   static: {
     parse(parser) {
-      parser.assertAdvance('(');
+      parser.assertAdvance('[');
       const value = [];
       parser.stripws();
-      while (parser.cur() !== ')') {
+      while (parser.cur() !== ']') {
         value.push(parser.form());
         parser.stripws();
       }
-      parser.assertAdvance(')');
+      parser.assertAdvance(']');
       return this.new({ value });
     }
   },
@@ -195,20 +195,28 @@ export const MacroEnv = Class.new({
         this.macros()[macro.name()] = macro;
       }
     }),
-    package(name) {
-      
+    defmacro(name, fn) {
+      this.add(Macro.new({
+        name,
+        fn
+      }));
     },
     eval: Method.new({
-      do: function evalFn(sexp) {
-        const m = this.macros()[sexp.car()];
+      do: function evalFn(mcall) {
+        const mname = mcall.selector();
+        const m = this.macros()[mname];
         if (m) {
-          return m.fn().apply(this, sexp.cdr())
+          return m.fn().apply(this, mcall.args())
         } else {
-          throw new Error(`Invalid macro: ${sexp.car()}`)
+          throw new Error(`Invalid macro: ${mname}`)
         }
       }
     }),
   }
+});
+
+const ctx = MacroEnv.new({
+  shouldDebug: true,
 });
 
 export const Macro = Class.new({
@@ -224,14 +232,19 @@ export const MacroCall = Class.new({
   static: {
     parse(parser) {
       parser.assertAdvance('$');
-      return MacroCall.new({ sexp: Sexp.parse(parser) });
     },
   },
   slots: {
-    sexp: Var.new(),
+    message: Var.new(),
+    selector() {
+      return this.message().parts()[0].selector();
+    },
+    args() {
+      return this.message().parts()[0].args();
+    },
     js: Method.new({
       do: function js(ctx) {
-        return ctx.eval(this.sexp()).js(ctx);
+        return ctx.eval(this).js(ctx);
       }
     }),
   }
@@ -325,8 +338,8 @@ export const ClassRef = Class.new({
     name: Var.new(),
     js: Method.new({
       do: function js(ctx) {
-        const n = this.name().split('-').map(p => p.split('').map((c, i) => i === 0 ? c.toUpperCase() : c).join('')).join('');
-        return `${n}`;
+        const n = this.name();
+        return `$class_${this.name()}`;
       }
     }),
   }
@@ -390,9 +403,7 @@ export const Pair = Class.new({
   static: {
     parse(parser) {
       const name = parser.nameString();
-      parser.assertAdvance('[');
       const value = parser.form();
-      parser.assertAdvance(']');
 
       return Pair.new({ name, value })
     },
@@ -443,16 +454,25 @@ export const Body = Class.new({
   static: {
     parse(parser) {
       parser.assertAdvance('@');
-      const s = Sexp.parse(parser);
+      const s = List.parse(parser);
       return Body.new({ statements: s.value() });
     },
   },
   slots: {
     statements: Var.new(),
     js(ctx) {
-      return this.statements().map((s, idx) => (idx === this.statements().length - 1 ? 'return ' : '') + s.js(ctx) + ';').join('');
+      return this.statements()
+                 .map((s, idx) =>
+                   (idx === this.statements().length - 1 ? 'return ' : '') + s.js(ctx) + ';')
+                 .join('');
     }
   }
+});
+
+ctx.defmacro('body', function(...statements) {
+  return Body.new({
+    statements
+  });
 });
 
 export const Program = Class.new({
@@ -517,7 +537,7 @@ export const Parser = Class.new({
     },
     assert(l, r) {
       if (l !== r) {
-        throw new Error(`assertion failed: ${l} !== ${r}`);
+        throw new Error(`assertion failed: ${l} !== ${r} at ${this.cur()}`);
       }
     },
     stripws(set = ' \n\t') {
@@ -542,11 +562,10 @@ export const Parser = Class.new({
         '!': TypeRef,
         '%': ArgRef,
         '.': ThisRef,
-        '$': MacroCall,
         "'": NameLiteral,
         '@': Body,
         '{': Dexp,
-        '(': Sexp,
+        '[': List,
       };
       let exp = tokamap[tok]?.parse(this);
       if (exp) {
@@ -554,6 +573,11 @@ export const Parser = Class.new({
           return Call.new({ receiver: exp, message: Message.parse(this) });
         }
         return exp;
+      }
+
+      if (tok === '$') {
+        this.advance();
+        return MacroCall.new({ message: Message.parse(this) });
       }
       if (' \n\t'.includes(tok)) {
         this.advance();
@@ -576,36 +600,9 @@ export const ExportStatement = Class.new({
     name: Var.new(),
     value: Var.new(),
     js(ctx) {
-      return `export var ${this.name()} = ${this.value().js(ctx)}`;
+      return `export var \$class_${this.name()} = ${this.value().js(ctx)}`;
     }
   }
-});
-
-export const FunctionStatement = Class.new({
-  name: 'FunctionStatement',
-  slots: {
-    name: Var.new(),
-    args: Var.new(),
-    body: Var.new(),
-    js(ctx) {
-      return `function (${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
-    }
-  }
-});
-
-export const ImportStatement = Class.new({
-  name: 'ImportStatement',
-  slots: {
-    imports: Var.new(),
-    module: Var.new(),
-    js(ctx) {
-      return `import { ${this.imports().join(', ')} } from '${this.module()}'`;
-    }
-  }
-});
-
-const ctx = MacroEnv.new({
-  shouldDebug: true,
 });
 
 ctx.add(Macro.new({
@@ -619,43 +616,81 @@ ctx.add(Macro.new({
   }
 }));
 
-ctx.add(Macro.new({
-  name: 'fn',
-  fn: function(args, body) {
-    return FunctionStatement.new({
-      args,
-      body
-    })
+export const FunctionStatement = Class.new({
+  name: 'FunctionStatement',
+  slots: {
+    name: Var.new(),
+    args: Var.new(),
+    body: Var.new(),
+    js(ctx) {
+      return `function (${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
+    }
   }
-}));
+});
 
-ctx.add(Macro.new({
-  name: 'std',
-  fn: function(args, obj) {
-    return ImportStatement.new({
-      imports: ['Class', 'Var', 'Method'],
-      module: '../base.js',
-    })
+ctx.defmacro('fn', function(args, body) {
+  return FunctionStatement.new({
+    args,
+    body
+  });
+});
+
+export const ImportStatement = Class.new({
+  name: 'ImportStatement',
+  slots: {
+    imports: Var.new(),
+    module: Var.new(),
+    js(ctx) {
+      return `import { ${this.imports().join(', ')} } from '${this.module()}'`;
+    }
   }
-}));
+});
+
+ctx.defmacro('std', function() {
+  return ImportStatement.new({
+    imports: ['Class as $class_class', 'Var as $class_var', 'Method as $class_method', 'Debug as $class_debug'],
+    module: '../base.js',
+  });
+});
+
+export const LetStatement = Class.new({
+  name: 'LetStatement',
+  slots: {
+    name: Var.new(),
+    value: Var.new(),
+    js(ctx) {
+      return `let ${this.name()} = ${this.value().js(ctx)}`;
+    }
+  }
+});
+
+ctx.defmacro('let', function(name, value) {
+  return LetStatement.new({
+    name,
+    value
+  });
+});
+
 
 
 const ex = `
 $(std)
 
 $(def ~class(new {
-  name['point]
-  slots[{
-    x[~var(new { default[0] })]
-    y[~var(new { default[0] })]
-    dist[~method(new {
-      args[{ other[{ type[!point] }] }]
-      do[$(fn (other) @(
+  name 'point
+  slots {
+    x ~var(new { default 0  })
+    y ~var(new { default 0  })
+    dist ~method(new {
+      do $(fn [other] $(body
         .(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
-      ))#min]
-    })]
-  }]
+      ))
+    })
+  }
 }))
+
+$(let p ~point(new { x 3 y 4 }))
+~debug(log %p(dist ~point(new)))
 `;
 
 export const Package = Class.new({
@@ -680,7 +715,9 @@ export const Package = Class.new({
       return `./out/${this.name()}.mjs`
     },
     save(ctx) {
-      writeFileSync(this.outfile(), this.js(ctx))
+      const js = this.js(ctx);
+      // Debug.log(js);
+      writeFileSync(this.outfile(), js)
     }
   },
 });
@@ -692,4 +729,3 @@ const pkg = Package.new({
 pkg.save(ctx);
 
 const test = await import('./out/test.mjs');
-ctx.debug(test.point.new({ x: 3, y: 4 }).dist(test.point.new()));
