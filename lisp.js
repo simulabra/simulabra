@@ -1,6 +1,6 @@
 // now, what if it were a lisp machine?
 import { Class, Var, Method, Debug, StringPrimitive } from './base.js';
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 
 export const Lexer = Class.new({
   name: 'Lexer',
@@ -244,7 +244,11 @@ export const MacroCall = Class.new({
     },
     js: Method.new({
       do: function js(ctx) {
-        return ctx.eval(this).js(ctx);
+        try {
+          return ctx.eval(this).js(ctx);
+        } catch (e) {
+          throw new Error(`macro error: ${this.selector()} :: ${e.toString()}`)
+        }
       }
     }),
   }
@@ -457,6 +461,9 @@ export const Body = Class.new({
       const s = List.parse(parser);
       return Body.new({ statements: s.value() });
     },
+    of(statements) {
+      return this.new({ statements });
+    }
   },
   slots: {
     statements: Var.new(),
@@ -616,14 +623,23 @@ ctx.add(Macro.new({
   }
 }));
 
+export const EmptyStatement = Class.new({
+  name: 'EmptyStatement',
+  slots: {
+    js(ctx) {
+      return '';
+    }
+  }
+});
+
 export const FunctionStatement = Class.new({
   name: 'FunctionStatement',
   slots: {
     name: Var.new(),
-    args: Var.new(),
+    args: Var.default(EmptyStatement.new()),
     body: Var.new(),
     js(ctx) {
-      return `function (${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
+      return `function ${this.name() || ''}(${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
     }
   }
 });
@@ -671,43 +687,66 @@ ctx.defmacro('let', function(name, value) {
   });
 });
 
-
-
-const ex = `
-$(std)
-
-$(def ~class(new {
-  name 'point
-  slots {
-    x ~var(new { default 0  })
-    y ~var(new { default 0  })
-    dist ~method(new {
-      do $(fn [other] $(body
-        .(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
-      ))
-    })
+export const ForStatement = Class.new({
+  name: 'ForStatement',
+  slots: {
+    bindType: Var.default('const'),
+    bindName: Var.default('it'),
+    iterable: Var.new(),
+    body: Var.new(),
+    js(ctx) {
+      return `for (${this.bindType()} ${this.bindName()} of ${this.iterable().js(ctx)}) { ${this.body().js(ctx)} }`;
+    }
   }
-}))
+});
 
-$(let p ~point(new { x 3 y 4 }))
-~debug(log %p(dist ~point(new)))
+ctx.defmacro('loop', function (iterable, ...body) {
+  return ForStatement.new({
+    iterable,
+    body: Body.new({ statements: body })
+  });
+});
+
+ctx.defmacro('test', function (...body) {
+  return FunctionStatement.new({
+    name: 'test',
+    body: Body.of(body),
+  })
+})
+
+
+/*
+ * remaining syntax bits:
+ * spread args (...rest)
+ * quasiquotes/macro definition facilities
+ * external JS calling
+ * revisit extern names
+ * macro piping?
+ * !types
+ */
+
+const explus = `
+$(defmacro method (args ...body) ~method(new { do $(fn %args $(body ...%body)) }))
 `;
 
 export const Package = Class.new({
   name: 'Package',
+  static: {
+    loadLocal(name) {
+      const file = `./core/${name}.simulabra`;
+      const source = readFileSync(file).toString();
+      console.log(source);
+      return this.new({
+        name,
+        program: Program.parse(Parser.fromSource(source)),
+      });
+    }
+  },
   slots: {
     name: Var.new(),
     program: Var.new(),
     imports: Var.new(),
     exports: Var.new(),
-    declarations(ctx) {
-      return this.exports().map(e => {
-        return ExportStatement.new({
-          name: e.sexp().cdr()[0].map().name(),
-          value: e,
-        });
-      })
-    },
     js(ctx) {
       return this.program().js(ctx);
     },
@@ -716,16 +755,14 @@ export const Package = Class.new({
     },
     save(ctx) {
       const js = this.js(ctx);
-      // Debug.log(js);
       writeFileSync(this.outfile(), js)
+    },
+    //@async
+    module(ctx) {
+      this.save(ctx);
+      return import (this.outfile());
     }
   },
 });
 
-const pkg = Package.new({
-  name: 'test',
-  program: Program.parse(Parser.fromSource(ex)),
-});
-pkg.save(ctx);
-
-const test = await import('./out/test.mjs');
+await Package.loadLocal('2d').module(ctx);

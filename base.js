@@ -39,6 +39,9 @@ export const BaseObject = {
         shortDescription() {
             return `{${this.baseDescription()}}`;
         },
+        toString() {
+            return this.description();
+        },
         vars() {
             let vs = [];
             for (const v of this.class().vars()) {
@@ -382,7 +385,10 @@ export const Debug = Class.new({
     static: {
         debug: Var.default(false),
         log(...args) {
-            console.log(...args.map(a => a.description()));
+            console.log(...args.map(a => a.toString()));
+        },
+        logt(...args) {
+            console.log(args.map(a => a.toString()).join(''));
         }
     }
 });

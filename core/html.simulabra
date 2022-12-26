@@ -1,0 +1,38 @@
+$(std)
+
+$(def ~class(new {
+  name 'element
+  doc "base class for DOM elements"
+  static {
+    text $(method [t] .(new { inner %t }))
+  }
+  slots {
+    id ~var(new)
+    node ~var(new)
+    load $(method [] $(loop .(children) %it(load .)))
+    nameString $(method [] .(name | toString))
+    domNode $(method [] @document(getElementById .(id))
+    render $(method []
+      .(domNode | set 'innerHTML .(html))
+      .(load)
+    )
+    children $(method [] [])
+  }
+}))
+
+$(def ~interface(new {
+  name 'HTML
+  slots {
+    html ~message(new)
+  }
+}))
+
+$(def ~class(new {
+  name 'list-element
+  implements [!HTML]
+  super ~element
+  slots {
+    list ~var(default [])
+    html $(method [] `<div id="${.(id)}">${.(list | map $(do %it(html)) | join )}</div>`)
+  }
+}))
