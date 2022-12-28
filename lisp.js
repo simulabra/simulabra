@@ -638,8 +638,9 @@ export const FunctionStatement = Class.new({
     name: Var.new(),
     args: Var.default(EmptyStatement.new()),
     body: Var.new(),
+    export: Var.default(false),
     js(ctx) {
-      return `function ${this.name() || ''}(${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
+      return `${this.export() ? 'export ' : ''}function ${this.name() || ''}(${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
     }
   }
 });
@@ -710,9 +711,10 @@ ctx.defmacro('loop', function (iterable, ...body) {
 ctx.defmacro('test', function (...body) {
   return FunctionStatement.new({
     name: 'test',
+    export: true,
     body: Body.of(body),
   })
-})
+});
 
 
 /*
@@ -735,7 +737,6 @@ export const Package = Class.new({
     loadLocal(name) {
       const file = `./core/${name}.simulabra`;
       const source = readFileSync(file).toString();
-      console.log(source);
       return this.new({
         name,
         program: Program.parse(Parser.fromSource(source)),
@@ -765,4 +766,5 @@ export const Package = Class.new({
   },
 });
 
-await Package.loadLocal('2d').module(ctx);
+const d2d = await Package.loadLocal('2d').module(ctx);
+d2d.test();
