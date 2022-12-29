@@ -1,21 +1,24 @@
-$(std)
-
-$(def ~class(new {
-  name 'point
-  slots {
-    x ~var(new { default 0 })
-    y ~var(new { default 0 })
-    dist ~method(new {
-      do $(fn [other] $(body
-        .(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
-      ))
+~module(create {
+  defs [
+    ~class(new {
+      name 'point
+      slots {
+        x ~var(new { default 0 })
+        y ~var(new { default 0 })
+        dist ~method(new {
+          do $(fn [other] $(body
+            .(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
+          ))
+        })
+      }
     })
-  }
-}))
-
-$(test
-  $(let p ~point(new { x 3 }))
-  %p(y 4)
-  ~debug(log %p)
-  ~debug(logt "dist is:" %p(dist ~point(new)))
-)
+  ]
+  tests [
+    $(do
+      $(let p ~point(new { x 3 }))
+      $(let q ~point(new))
+      %p(y 4)
+      $(assert %p(dist %q) 5)
+    )
+  ]
+})

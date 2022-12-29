@@ -574,7 +574,7 @@ export const Parser = Class.new({
         '{': Dexp,
         '[': List,
       };
-      let exp = tokamap[tok]?.parse(this);
+      const exp = tokamap[tok]?.parse(this);
       if (exp) {
         if (this.cur() === '(') {
           return Call.new({ receiver: exp, message: Message.parse(this) });
@@ -615,7 +615,7 @@ export const ExportStatement = Class.new({
 ctx.add(Macro.new({
   name: 'def',
   fn: function(value) {
-    let name = value.message().parts()[0].args()[0].map().name.value();
+    const name = value.message().parts()[0].args()[0].map().name.value();
     return ExportStatement.new({
       name,
       value,
@@ -716,19 +716,29 @@ ctx.defmacro('test', function (...body) {
   })
 });
 
+ctx.defmacro('assert', function (a, b) {
+  return EmptyStatement.new();
+});
+
 
 /*
  * remaining syntax bits:
- * spread args (...rest)
- * quasiquotes/macro definition facilities
- * external JS calling
- * revisit extern names
+ * spread/unspread (... / ^ / @ / ^,)
+ * quasiquotes/macro definition facilities (`,)
+ * &externJS
  * macro piping?
  * !types
+ * @global
  */
 
 const explus = `
-$(defmacro method (args ...body) ~method(new { do $(fn %args $(body ...%body)) }))
+$(macro method (args ^body) ~method(new { do $(fn %args $(body ^%body)) }))
+~project(new {
+  modules [
+    'html
+    '2d
+  ]
+})
 `;
 
 export const Package = Class.new({

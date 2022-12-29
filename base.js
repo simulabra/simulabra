@@ -17,6 +17,7 @@ console.log('bootstrap');
 export const BaseObject = {
     _name: 'BaseObject',
     _slots: {
+        //=!object
         init() { },
         class() {
             if (this._class) {
@@ -25,11 +26,28 @@ export const BaseObject = {
                 return null;
             }
         },
+        super(message, ...args) {
+            return this.class().super().proto()[message].apply(this, args);
+        },
         name() {
             if ('_name' in this) {
                 return this._name;
             }
         },
+        //=!stringify
+        toString() {
+            return this.description();
+        },
+        //=!debug-target
+        shouldDebug() {
+            return Debug.debug() || this._shouldDebug;
+        },
+        debug(...args) {
+            if (this.shouldDebug()) {
+                Debug.log(...args);
+            }
+        },
+        //=!description
         displayName() {
             return this.name() || '?';
         },
@@ -39,8 +57,12 @@ export const BaseObject = {
         shortDescription() {
             return `{${this.baseDescription()}}`;
         },
-        toString() {
-            return this.description();
+        description() {
+            return `{${this.baseDescription()}${this.varDescription()}}`
+        },
+        //=!private
+        varDescription() {
+            return this.vars().map(v => ` ${v.description()}`).join('');
         },
         vars() {
             let vs = [];
@@ -56,23 +78,6 @@ export const BaseObject = {
             }
             return vs;
         },
-        shouldDebug() {
-            return Debug.debug() || this._shouldDebug;
-        },
-        debug(...args) {
-            if (this.shouldDebug()) {
-                Debug.log(...args);
-            }
-        },
-        varDescription() {
-            return this.vars().map(v => ` ${v.description()}`).join('');
-        },
-        description() {
-            return `{${this.baseDescription()}${this.varDescription()}}`
-        },
-        super(message, ...args) {
-            return this.class().super().proto()[message].apply(this, args);
-        },
     },
     proto() {
         return this._slots;
@@ -82,31 +87,24 @@ export const BaseObject = {
 Object.prototype.eq = function(other) {
     return this === other;
 }
-
 Object.prototype.class = function() {
     return ObjectPrimitive;
 }
-
 Object.prototype.className = function() {
     return this.class()?.name() || typeof this;
 }
-
 Object.prototype.entries = function() {
     return Object.entries(this);
 }
-
 Object.prototype.values = function() {
     return Object.values(this);
 }
-
 Object.prototype.displayName = function() {
     return typeof this;
 }
-
 Object.prototype.shortDescription = function() {
     return `Native Object (${typeof this})`;
 }
-
 Object.prototype.description = function() {
     return this.shortDescription();
 }
@@ -118,7 +116,6 @@ function parametize(obj) {
             ret['_' + k] = v;
         } else {
             throw new Error('unneeded _');
-            ret[k] = v;
         }
     }
     return ret;
@@ -126,9 +123,7 @@ function parametize(obj) {
 
 function nameSlots(obj) {
     for (const [k, v] of obj.entries()) {
-            // console.log('?nameslot', k, v);
         if (v && typeof v.name === 'function' && !v.name()) {
-            // console.log('nameslot', k);
             v.name(k);
         }
     }
@@ -136,10 +131,10 @@ function nameSlots(obj) {
 
 export const Class = {
     _slots: {
-        _name: 'Class', // non-type, non-slot object => default
+        _name: 'Class',
         _idctr: 0,
         _super: BaseObject,
-        init(_parent) {
+        init() {
             this._vars = [];
             this._methods = [];
             this._subclasses = [];
@@ -150,37 +145,31 @@ export const Class = {
             this.defaultInitSlot('implements', []);
             nameSlots(this.slots());
             nameSlots(this.static());
-            // console.log(this.name(), this.super().name());
 
             Object.setPrototypeOf(this.proto(), this.super().proto());
             // this.implements().map(iface => iface.satisfies(this));
             for (const [k, v] of this.static().entries()) {
-                // console.log('static? ' + k, v, this)
                 v.load(this);
             }
             for (const [k, v] of this.slots().entries()) {
-                // console.log('slots? ' + k, v, this)
                 v?.load && v.load(this.proto());
             }
             for (const [k, v] of this.mixed().entries()) {
-                // console.log('mix? ' + k, v, this)
                 v?.load && v.load(this.proto());
             }
         },
         new(props = {}) {
-            let obj = parametize(props);
+            const obj = parametize(props);
             Object.setPrototypeOf(obj, this.proto());
             if (!obj._intid) {
                 obj._intid = this.nextid();
             }
-            if (obj._super && obj._super.addSubclass) {
-                obj._super.addSubclass(obj);
+            if (obj._super && obj._super.subclasses) {
+                obj._super.subclasses().push(obj);
             } else if (obj._super == undefined) {
                 obj._super = BaseObject;
             }
-            if ('init' in obj) {
-                obj.init(this);
-            }
+            obj.init(this);
             return obj;
         },
         defaultInitSlot(slot, dval) {
@@ -204,9 +193,6 @@ export const Class = {
         class() {
             return Class;
         },
-        addSubclass(subclass) {
-            this._subclasses.push(subclass);
-        },
         subclasses() {
             return this._subclasses;
         },
@@ -216,14 +202,8 @@ export const Class = {
         proto() {
             return this._proto;
         },
-        addVar(v) {
-            this._vars.push(v);
-        },
         vars() {
             return this.slots().values().filter(v => v.className() === 'Var');
-        },
-        addMethod(m) {
-            this._methods.push(m);
         },
         methods() {
             return this._methods;
@@ -246,16 +226,6 @@ export const Class = {
         static() {
             return this._static;
         },
-        addslot(slot) {
-            if (slot.name() in this._slots) {
-                throw new Error('already in slots: ' + slot.name());
-            }
-            this._slots[slot.name()] = slot;
-            slot.load(this._proto);
-        },
-        type() {
-
-        },
     }
 }
 
@@ -270,31 +240,6 @@ Function.prototype.shortDescription = function() {
 Object.setPrototypeOf(Class, Class._slots); // prototypical roots mean we can avoid Metaclasses
 
 Class.init();
-
-// export const Id = Class.new({
-//     name: 'Id',
-//     slots: {
-//         child(name, num) {
-//             return _.id.new({
-//                 parent: this,
-//                 name: name,
-//                 num: num,
-//             });
-//         },
-//         toString() {
-//             return `${this._parent ? this._parent.toString() : ':'}:${this._name.name()}`;
-//         },
-//     },
-// });
-
-// export const BaseId = Id.new({
-//     name: 'Base',
-// })
-
-// Class._id = Id.new({
-//     name: 'Class',
-//     parent: BaseId,
-// });
 
 export const Var = Class.new({
     name: 'Var',
@@ -348,6 +293,7 @@ export const Var = Class.new({
                         throw new Error(`Attempt to set immutable variable ${self.name()} ${pk}`);
                     }
                     if (!(pk in this)) {
+                        // should this not be set?
                         this[pk] = self.default(this);
                     }
                     return this[pk];
