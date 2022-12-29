@@ -11,16 +11,15 @@ mangle the prototypes and ask questions later
 specifies the implementation and behavior of instance objects
 needs to be bootstrapped
 `new` instantiates objects
-super + mixins inheritance
+super & mixins inheritance
 ### var
 smarter than a property
 default, type, mutable, load
 ### method
 smarter than a function
-### symbol
-interned string
+arg & return types
 ### id
-URI
+URI, unique and distributable
 ### command
 objectified callback that does something
 ### module

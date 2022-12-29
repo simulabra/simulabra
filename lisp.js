@@ -623,7 +623,7 @@ export const ExportStatement = Class.new({
     name: Var.new(),
     value: Var.new(),
     js(ctx) {
-      return `export var \$class_${this.name()} = ${this.value().js(ctx)}`;
+      return `export var ${Ref.new({ name: this.name() }).upcase()} = ${this.value().js(ctx)}`;
     }
   }
 });
@@ -691,7 +691,7 @@ export const ImportStatement = Class.new({
 
 baseEnv.defmacro('std', function() {
   return ImportStatement.new({
-    imports: ['Class as $class_class', 'Var as $class_var', 'Method as $class_method', 'Debug as $class_debug'],
+    imports: ['Class', 'Var', 'Method', 'Debug'],
     module: '../base.js',
   });
 });
@@ -780,14 +780,9 @@ export const ModuleSource = Class.new({
   },
   slots: {
     source: Var.new(),
-    compile(ctx) {
-      const imports = `
-import { Class, Method, Var } from '../base.js';
-import { Module } from '../lisp.js';
-export default
-`
-      return imports + Parser.fromSource(this.source()).form().js(ctx);
-    }
+    parser() {
+      return Parser.fromSource(this.source());
+    },
   }
 });
 
@@ -798,13 +793,24 @@ export const Module = Class.new({
   name: 'Module',
   static: {
     async load(name, ctx) {
-      const s = ModuleSource.loadLocal(name);
+      const src = ModuleSource.loadLocal(name);
       const outfile = `./out/${this.name()}.mjs`;
-      const js = s.compile(ctx);
+      const program = Program.parse(src.parser());
+      const js = program.js(ctx);
       console.log('JS:' + js)
       writeFileSync(outfile, js);
       const esm = await import(outfile);
-      return esm.default;
+      const defs = [];
+      for (let v in esm) {
+        if (esm.hasOwnProperty(v)) {
+          defs.push(esm[v]);
+        }
+      }
+      return this.new({
+        name,
+        esm,
+        defs,
+      });
     }
   },
   slots: {
@@ -818,6 +824,7 @@ export const Module = Class.new({
     init() {
       for (const def of this.defs()) {
         if (def.class() === Class) {
+        Debug.log(def);
           this.classes()[def.name()] = def;
         }
       }
@@ -827,8 +834,8 @@ export const Module = Class.new({
       writeFileSync(this.outfile(), js)
     },
     runTests() {
-      for (const test of this.tests()) {
-        test();
+      for (const def of this.defs()) {
+        def.test();
       }
     },
     //@async
@@ -838,6 +845,7 @@ export const Module = Class.new({
   },
 });
 
-const m2d = await Module.load('2d', baseEnv);
-Debug.log(m2d.classes().point.new({ x: 3, y: 4 }));
-m2d.runTests();
+const m2d = await Module.load('2d2', baseEnv);
+const p = m2d.classes().point.new({ x: 3, y: 4 });
+const q = m2d.classes().point.new();
+Debug.log(p, q, p.dist(q));
