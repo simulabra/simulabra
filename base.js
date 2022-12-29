@@ -129,6 +129,7 @@ function nameSlots(obj) {
     }
 }
 
+globalThis.$$classes = {};
 export const Class = {
     _slots: {
         _name: 'Class',
@@ -157,6 +158,7 @@ export const Class = {
             for (const [k, v] of this.mixed().entries()) {
                 v?.load && v.load(this.proto());
             }
+            globalThis.$$classes[this.name()] = this;
         },
         new(props = {}) {
             const obj = parametize(props);

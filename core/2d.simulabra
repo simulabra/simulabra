@@ -1,4 +1,5 @@
-~module(create {
+~module(new {
+  name 'points
   defs [
     ~class(new {
       name 'point

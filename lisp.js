@@ -180,8 +180,11 @@ export const List = Class.new({
         return this.value().slice(1);
       }
     }),
-    js() {
-      return `${this.value().map(e => e.js()).join(', ')}`;
+    js(ctx) {
+      return `[${this.value().map(e => e.js(ctx)).join(', ')}]`;
+    },
+    argsjs(ctx) {
+      return `${this.value().map(e => e.js(ctx)).join(', ')}`;
     }
   }
 });
@@ -190,6 +193,7 @@ export const MacroEnv = Class.new({
   name: 'MacroEnv',
   slots: {
     macros: Var.default({}),
+    stack: Var.default([]),
     add: Method.new({
       do: function add(macro) {
         this.macros()[macro.name()] = macro;
@@ -203,19 +207,21 @@ export const MacroEnv = Class.new({
     },
     eval: Method.new({
       do: function evalFn(mcall) {
+        this.stack().push(mcall);
         const mname = mcall.selector();
         const m = this.macros()[mname];
         if (m) {
+          this.stack().pop();
           return m.fn().apply(this, mcall.args())
         } else {
-          throw new Error(`Invalid macro: ${mname}`)
+          throw new Error(`Invalid macro: ${this.stack().map(mc => mc.selector()).join(':')}`)
         }
       }
     }),
   }
 });
 
-const ctx = MacroEnv.new({
+const baseEnv = MacroEnv.new({
   shouldDebug: true,
 });
 
@@ -330,8 +336,20 @@ export const ErrorTok = Class.new({
   }
 });
 
+export const Ref = Class.new({
+  name: 'Ref',
+  slots: {
+    name: Var.new(),
+    upcase() {
+      const parts = this.name().split('-');
+      return parts.map(p => p[0].toUpperCase() + p.slice(1)).join('');
+    }
+  }
+})
+
 export const ClassRef = Class.new({
   name: 'ClassRef',
+  super: Ref,
   static: {
     parse(parser) {
       parser.assertAdvance('~');
@@ -339,11 +357,9 @@ export const ClassRef = Class.new({
     },
   },
   slots: {
-    name: Var.new(),
     js: Method.new({
       do: function js(ctx) {
-        const n = this.name();
-        return `$class_${this.name()}`;
+        return `${this.upcase()}`;
       }
     }),
   }
@@ -476,7 +492,7 @@ export const Body = Class.new({
   }
 });
 
-ctx.defmacro('body', function(...statements) {
+baseEnv.defmacro('body', function(...statements) {
   return Body.new({
     statements
   });
@@ -612,7 +628,7 @@ export const ExportStatement = Class.new({
   }
 });
 
-ctx.add(Macro.new({
+baseEnv.add(Macro.new({
   name: 'def',
   fn: function(value) {
     const name = value.message().parts()[0].args()[0].map().name.value();
@@ -628,6 +644,9 @@ export const EmptyStatement = Class.new({
   slots: {
     js(ctx) {
       return '';
+    },
+    argsjs(ctx) {
+      return '';
     }
   }
 });
@@ -640,14 +659,21 @@ export const FunctionStatement = Class.new({
     body: Var.new(),
     export: Var.default(false),
     js(ctx) {
-      return `${this.export() ? 'export ' : ''}function ${this.name() || ''}(${this.args().js(ctx)}) { ${this.body().js(ctx)} }`;
+      Debug.log(this.args());
+      return `${this.export() ? 'export ' : ''}function ${this.name() || ''}(${this.args().argsjs(ctx)}) { ${this.body().js(ctx)} }`;
     }
   }
 });
 
-ctx.defmacro('fn', function(args, body) {
+baseEnv.defmacro('fn', function(args, body) {
   return FunctionStatement.new({
     args,
+    body
+  });
+});
+
+baseEnv.defmacro('do', function (body) {
+  return FunctionStatement.new({
     body
   });
 });
@@ -663,7 +689,7 @@ export const ImportStatement = Class.new({
   }
 });
 
-ctx.defmacro('std', function() {
+baseEnv.defmacro('std', function() {
   return ImportStatement.new({
     imports: ['Class as $class_class', 'Var as $class_var', 'Method as $class_method', 'Debug as $class_debug'],
     module: '../base.js',
@@ -681,7 +707,7 @@ export const LetStatement = Class.new({
   }
 });
 
-ctx.defmacro('let', function(name, value) {
+baseEnv.defmacro('let', function(name, value) {
   return LetStatement.new({
     name,
     value
@@ -701,14 +727,14 @@ export const ForStatement = Class.new({
   }
 });
 
-ctx.defmacro('loop', function (iterable, ...body) {
+baseEnv.defmacro('loop', function (iterable, ...body) {
   return ForStatement.new({
     iterable,
     body: Body.new({ statements: body })
   });
 });
 
-ctx.defmacro('test', function (...body) {
+baseEnv.defmacro('test', function (...body) {
   return FunctionStatement.new({
     name: 'test',
     export: true,
@@ -716,7 +742,7 @@ ctx.defmacro('test', function (...body) {
   })
 });
 
-ctx.defmacro('assert', function (a, b) {
+baseEnv.defmacro('assert', function (a, b) {
   return EmptyStatement.new();
 });
 
@@ -741,40 +767,77 @@ $(macro method (args ^body) ~method(new { do $(fn %args $(body ^%body)) }))
 })
 `;
 
-export const Package = Class.new({
-  name: 'Package',
+export const ModuleSource = Class.new({
+  name: 'ModuleSource',
   static: {
     loadLocal(name) {
       const file = `./core/${name}.simulabra`;
       const source = readFileSync(file).toString();
       return this.new({
-        name,
-        program: Program.parse(Parser.fromSource(source)),
-      });
+        source
+      })
+    }
+  },
+  slots: {
+    source: Var.new(),
+    compile(ctx) {
+      const imports = `
+import { Class, Method, Var } from '../base.js';
+import { Module } from '../lisp.js';
+export default
+`
+      return imports + Parser.fromSource(this.source()).form().js(ctx);
+    }
+  }
+});
+
+// Source -> Out -> Module or Source -> Module -> Out, that is the q
+// also raises q of whether we need to have eval
+// compiler can be reentrant with dynamic imports???
+export const Module = Class.new({
+  name: 'Module',
+  static: {
+    async load(name, ctx) {
+      const s = ModuleSource.loadLocal(name);
+      const outfile = `./out/${this.name()}.mjs`;
+      const js = s.compile(ctx);
+      console.log('JS:' + js)
+      writeFileSync(outfile, js);
+      const esm = await import(outfile);
+      return esm.default;
     }
   },
   slots: {
     name: Var.new(),
-    program: Var.new(),
-    imports: Var.new(),
-    exports: Var.new(),
+    esm: Var.new(),
+    defs: Var.new(),
+    classes: Var.default({}),
+    tests: Var.new(),
     js(ctx) {
-      return this.program().js(ctx);
     },
-    outfile() {
-      return `./out/${this.name()}.mjs`
+    init() {
+      for (const def of this.defs()) {
+        if (def.class() === Class) {
+          this.classes()[def.name()] = def;
+        }
+      }
     },
     save(ctx) {
       const js = this.js(ctx);
       writeFileSync(this.outfile(), js)
     },
+    runTests() {
+      for (const test of this.tests()) {
+        test();
+      }
+    },
     //@async
-    module(ctx) {
+    esm(ctx) {
       this.save(ctx);
-      return import (this.outfile());
     }
   },
 });
 
-const d2d = await Package.loadLocal('2d').module(ctx);
-d2d.test();
+const m2d = await Module.load('2d', baseEnv);
+Debug.log(m2d.classes().point.new({ x: 3, y: 4 }));
+m2d.runTests();
