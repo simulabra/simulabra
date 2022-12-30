@@ -659,7 +659,6 @@ export const FunctionStatement = Class.new({
     body: Var.new(),
     export: Var.default(false),
     js(ctx) {
-      Debug.log(this.args());
       return `${this.export() ? 'export ' : ''}function ${this.name() || ''}(${this.args().argsjs(ctx)}) { ${this.body().js(ctx)} }`;
     }
   }
@@ -799,9 +798,14 @@ export const Module = Class.new({
       const outfile = `./out/${this.name()}.mjs`;
       const program = Program.parse(src.parser());
       const js = program.js(ctx);
-      console.log('JS:' + js)
       writeFileSync(outfile, js);
-      const esm = await import(outfile);
+      let esm;
+      try {
+        esm = await import(outfile);
+      } catch (e) {
+        console.error(e);
+        console.log(js);
+      }
       const defs = [];
       for (let v in esm) {
         if (esm.hasOwnProperty(v)) {
@@ -819,29 +823,12 @@ export const Module = Class.new({
     name: Var.new(),
     esm: Var.new(),
     defs: Var.new(),
-    classes: Var.default({}),
-    tests: Var.new(),
-    js(ctx) {
-    },
-    init() {
-      for (const def of this.defs()) {
-        if (def.class() === Class) {
-        Debug.log(def);
-          this.classes()[def.name()] = def;
-        }
-      }
-    },
     save(ctx) {
       const js = this.js(ctx);
       writeFileSync(this.outfile(), js)
     },
-    runTests() {
-      for (const def of this.defs()) {
-        def.test();
-      }
-    },
   },
 });
 
-const m2d = await Module.load('2d2', baseEnv);
-Debug.log(m2d.esm().test());
+const points = await Module.load('points', baseEnv);
+Debug.log(points.esm().test());
