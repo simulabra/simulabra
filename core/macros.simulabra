@@ -1,0 +1,12 @@
+$(macro poso [name $(rest vars)]
+  ~class(new {
+    name %name
+    slots %vars(map $(do [%it ~var(new)]) | intoObject)
+  })
+)
+
+$(defn test []
+  $(let c $(poso a b))
+  $(let ci %c(new { a 2 b 3 }))
+  ~debug(log %ci)
+)

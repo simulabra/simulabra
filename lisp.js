@@ -181,10 +181,13 @@ export const List = Class.new({
       }
     }),
     js(ctx) {
-      return `[${this.value().map(e => e.js(ctx)).join(', ')}]`;
+      return `[${this.argsjs(ctx)}]`;
+    },
+    args(ctx) {
+      return this.value().map(e => e.js(ctx));
     },
     argsjs(ctx) {
-      return `${this.value().map(e => e.js(ctx)).join(', ')}`;
+      return `${this.args(ctx).join(', ')}`;
     }
   }
 });
@@ -192,6 +195,7 @@ export const List = Class.new({
 export const MacroEnv = Class.new({
   name: 'MacroEnv',
   slots: {
+    parent: Var.new(), // right?
     macros: Var.default({}),
     stack: Var.default([]),
     add: Method.new({
@@ -233,6 +237,37 @@ export const Macro = Class.new({
   }
 });
 
+baseEnv.add(Macro.new({
+  name: 'macro',
+  fn: function(name, args, ...body) {
+    const fnp = [...args.args(this), Body.of(body).js(this)];
+    // hmm, here we run into module issues again, and a big ugly global container object is appealing once more
+    const fn = new Function(...fnp);
+    this.add(Macro.new({
+      name,
+      fn
+    }));
+    return EmptyStatement.new();
+  }
+}));
+
+export const RestArg = Class.new({
+  name: 'RestArg',
+  slots: {
+    name: Var.new(),
+    js(ctx) {
+      return `...${this.name()}`;
+    }
+  }
+});
+
+baseEnv.add(Macro.new({
+  name: 'rest',
+  fn(name) {
+    return RestArg.new({ name });
+  }
+}))
+
 export const MacroCall = Class.new({
   name: 'MacroCall',
   static: {
@@ -253,7 +288,8 @@ export const MacroCall = Class.new({
         try {
           return ctx.eval(this).js(ctx);
         } catch (e) {
-          throw new Error(`macro error: ${this.selector()} :: ${e.toString()}`)
+          console.log(`macro error: ${this.selector()}`);
+          throw e;
         }
       }
     }),
@@ -830,5 +866,5 @@ export const Module = Class.new({
   },
 });
 
-const points = await Module.load('points', baseEnv);
-Debug.log(points.esm().test());
+const mod = await Module.load(process.argv[2], baseEnv);
+Debug.log(mod.esm().test());
