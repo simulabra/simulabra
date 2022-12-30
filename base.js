@@ -4,7 +4,7 @@ Your task: to construct a better object system on top of Javascript
 Ultimately all objects belong to a class.
 Type system is like that of Strongtalk, using f-bounded polymorphism. 
 The class methods object is used as the instance's prototype
-Class methods' prototype is superclass' class methods (side chain?)
+_.class methods' prototype is superclass' class methods (side chain?)
 Instance can override them locally (it's still prototypical) 
 Subject to typechecking (which can be ignored or lied to, at peril!)
 Single inheritance with mixins, merged into intermediate anonymous parent
@@ -13,9 +13,11 @@ Every object has an identity
 
 // hook up object to class
 console.log('bootstrap');
+globalThis.SIMULABRA = {}; // glory be
+const _ = globalThis.SIMULABRA;
 
-export const BaseObject = {
-    _name: 'BaseObject',
+_.base_object = {
+    _name: 'base-object',
     _slots: {
         //=!object
         init() { },
@@ -39,29 +41,29 @@ export const BaseObject = {
             return this.description();
         },
         //=!debug-target
-        shouldDebug() {
-            return Debug.debug() || this._shouldDebug;
+        should_debug() {
+            return _.debug.debug() || this._should_debug;
         },
         debug(...args) {
-            if (this.shouldDebug()) {
-                Debug.log(...args);
+            if (this.should_debug()) {
+                _.debug.log(...args);
             }
         },
         //=!description
         displayName() {
             return this.name() || '?';
         },
-        baseDescription() {
+        base_description() {
             return `${this.displayName()} class:${this.class().name()} id:${this._intid}`;
         },
-        shortDescription() {
-            return `{${this.baseDescription()}}`;
+        short_description() {
+            return `{${this.base_description()}}`;
         },
         description() {
-            return `{${this.baseDescription()}${this.varDescription()}}`
+            return `{${this.base_description()}${this.var_.description()}}`
         },
         //=!private
-        varDescription() {
+        var_description() {
             return this.vars().map(v => ` ${v.description()}`).join('');
         },
         vars() {
@@ -70,7 +72,7 @@ export const BaseObject = {
                 const o = this[v.name()]();
                 this.debug(v.name(), o);
                 if (o) {
-                    vs.push(VarState.new({
+                    vs.push(_.var_state.new({
                         v,
                         state: o,
                     }));
@@ -88,7 +90,7 @@ Object.prototype.eq = function(other) {
     return this === other;
 }
 Object.prototype.class = function() {
-    return ObjectPrimitive;
+    return _.object_primitive;
 }
 Object.prototype.className = function() {
     return this.class()?.name() || typeof this;
@@ -102,11 +104,11 @@ Object.prototype.values = function() {
 Object.prototype.displayName = function() {
     return typeof this;
 }
-Object.prototype.shortDescription = function() {
+Object.prototype.short_description = function() {
     return `Native Object (${typeof this})`;
 }
 Object.prototype.description = function() {
-    return this.shortDescription();
+    return this.short_description();
 }
 
 function parametize(obj) {
@@ -129,12 +131,11 @@ function nameSlots(obj) {
     }
 }
 
-globalThis.$$classes = {};
-export const Class = {
+_.class = {
     _slots: {
-        _name: 'Class',
+        _name: 'class',
         _idctr: 0,
-        _super: BaseObject,
+        _super: _.base_object,
         init() {
             this._vars = [];
             this._methods = [];
@@ -158,7 +159,6 @@ export const Class = {
             for (const [k, v] of this.mixed().entries()) {
                 v?.load && v.load(this.proto());
             }
-            globalThis.$$classes[this.name()] = this;
         },
         new(props = {}) {
             const obj = parametize(props);
@@ -169,7 +169,7 @@ export const Class = {
             if (obj._super && obj._super.subclasses) {
                 obj._super.subclasses().push(obj);
             } else if (obj._super == undefined) {
-                obj._super = BaseObject;
+                obj._super = _.base_object;
             }
             obj.init(this);
             return obj;
@@ -193,7 +193,7 @@ export const Class = {
             return this._super;
         },
         class() {
-            return Class;
+            return _.class;
         },
         subclasses() {
             return this._subclasses;
@@ -205,7 +205,7 @@ export const Class = {
             return this._proto;
         },
         vars() {
-            return this.slots().values().filter(v => v.className() === 'Var');
+            return this.slots().values().filter(v => v.className() === '_.var');
         },
         methods() {
             return this._methods;
@@ -235,16 +235,16 @@ Function.prototype.load = function(parent) {
     parent[this.name] = this;
 };
 
-Function.prototype.shortDescription = function() {
+Function.prototype.short_description = function() {
     return `Native Function ${this.name}`;
 }
 
-Object.setPrototypeOf(Class, Class._slots); // prototypical roots mean we can avoid Metaclasses
+Object.setPrototypeOf(_.class, _.class._slots); // prototypical roots mean we can avoid Metaclasses
 
-Class.init();
+_.class.init();
 
-export const Var = Class.new({
-    name: 'Var',
+_.var = _.class.new({
+    name: 'var',
     static: {
         default(val) {
             return this.new({ default: val });
@@ -271,8 +271,8 @@ export const Var = Class.new({
                 return true;
             }
         },
-        shouldDebug() {
-            return this._debug || Debug.debug();
+        should_debug() {
+            return this._debug || _.debug.debug();
         },
         load(parent) {
             // console.log('var load', this.name());
@@ -281,7 +281,7 @@ export const Var = Class.new({
                 return function(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
-                        this.debug(`set ${this.shortDescription()}.${self.name()} = ${assign.shortDescription()}`);
+                        this.debug(`set ${this.short_description()}.${self.name()} = ${assign.short_description()}`);
                         ('update' in this) && this.update({ changed: self.name() });
                     } else if (!(pk in this)) {
                         this[pk] = self.default(this);
@@ -310,28 +310,28 @@ export const Var = Class.new({
     }
 });
 
-export const VarState = Class.new({
-    name: 'VarState',
+_.var_state = _.class.new({
+    name: 'var-state',
     slots: {
-        v: Var.new(),
-        state: Var.new(),
+        v: _.var.new(),
+        state: _.var.new(),
         description(d) {
             return `${this.v().name()}:${this.state().description()}`;
         }
     }
 });
 
-export const Description = Class.new({
-    name: 'Description',
+ _.description = _.class.new({
+    name: 'description',
     slots: {
-        visited: Var.default({}),
+        visited: _.var.default({}),
     },
 });
 
-export const Debug = Class.new({
-    name: 'Debug',
+ _.debug = _.class.new({
+    name: 'debug',
     static: {
-        debug: Var.default(false),
+        debug: _.var.default(false),
         log(...args) {
             console.log(...args.map(a => a.toString()));
         },
@@ -341,24 +341,24 @@ export const Debug = Class.new({
     }
 });
 
-export const Message = Class.new({
-    name: 'Message',
+ _.message = _.class.new({
+    name: 'message',
     slots: {
-        args: Var.default([]),
-        ret: Var.default(null),
-        name: Var.new(),
+        args: _.var.default([]),
+        ret: _.var.default(null),
+        name: _.var.new(),
     },
 })
 
-export const Method = Class.new({
-    name: 'Method',
+ _.method = _.class.new({
+    name: 'method',
     slots: {
-        do: Var.new(), // fn, meat and taters
-        message: Var.new(),
-        name: Var.new(),
+        do: _.var.new(), // fn, meat and taters
+        message: _.var.new(),
+        name: _.var.new(),
         init() {
             const self = this;
-            if (Debug.debug()) {
+            if (_.debug.debug()) {
                 const fn = this.do();
                 this.do(function(...args) {
                     console.log(`${this.displayName()}.${self.name()}(${args.map(a => a.displayName())})`);
@@ -366,7 +366,7 @@ export const Method = Class.new({
                 });
             }
             if (!this.message()) {
-                this.message(Message.new({
+                this.message(_.message.new({
                     args: this._args,
                     ret: this._ret,
                 }));
@@ -382,23 +382,23 @@ export const Method = Class.new({
     }
 });
 
-Method.do = function(fn) {
-    return Method.new({ do: fn });
+_.method.do = function(fn) {
+    return _.method.new({ do: fn });
 }
 
-export const Arg = Class.new({
-    name: 'Arg',
+_.arg = _.class.new({
+    name: 'arg',
     slots: {
-        type: Var.new(),
+        type: _.var.new(),
     },
 });
 
-Class.super(BaseObject);
-Class._proto._super = BaseObject;
+_.class.super(_.base_object);
+_.class._proto._super = _.base_object;
 
-export const Primitive = Class.new({
-    name: 'Primitive',
-    super: Class,
+ _.primitive = _.class.new({
+    name: 'primitive',
+    super: _.class,
     slots: {
         _js_prototype: null,
         _methods: {},
@@ -413,37 +413,25 @@ export const Primitive = Class.new({
     }
 });
 
-export const Module = Class.new({
-    name: 'Module',
-    slots: {
-        exports: Var.default([]),
-        init() {
-            for (const item of this.exports()) {
-                this[item.name()] = item;
-            }
-        }
-    },
-});
-
-export const ObjectPrimitive = Primitive.new({
-    name: 'ObjectPrimitive',
+ _.object_primitive = _.primitive.new({
+    name: 'object-primitive',
     js_prototype: Object.prototype,
     slots: {
 
     }
 });
 
-export const StringPrimitive = Primitive.new({
-    name: 'StringPrimitive',
+ _.string_primitive = _.primitive.new({
+    name: 'string-primitive',
     js_prototype: String.prototype,
     slots: {
         html() {
             return this;
         },
         class() {
-            return StringPrimitive;
+            return _.string_primitive;
         },
-        shortDescription() {
+        short_description() {
             return `'${this}'`;
         },
         js() {
@@ -452,24 +440,24 @@ export const StringPrimitive = Primitive.new({
     }
 });
 
-export const BooleanPrimitive = Primitive.new({
-    name: 'BooleanPrimitive',
+ _.boolean_primitive = _.primitive.new({
+    name: 'boolean-primitive',
     js_prototype: Boolean.prototype,
     slots: {
         html() {
             return this;
         },
         class() {
-            return BooleanPrimitive;
+            return _.boolean_primitive;
         },
-        shortDescription() {
+        short_description() {
             return this.toString();
         }
     }
 });
 
-export const NumberPrimitive = Primitive.new({
-    name: 'NumberPrimitive',
+ _.number_primitive = _.primitive.new({
+    name: 'number-primitive',
     js_prototype: Number.prototype,
     slots: {
         js() {
@@ -482,9 +470,9 @@ export const NumberPrimitive = Primitive.new({
             return this ** 2;
         },
         class() {
-            return NumberPrimitive;
+            return _.number_primitive;
         },
-        shortDescription() {
+        short_description() {
             return this.toString();
         },
         add(n) {
@@ -499,8 +487,8 @@ export const NumberPrimitive = Primitive.new({
     }
 });
 
-export const ArrayPrimitive = Primitive.new({
-    name: 'ArrayPrimitive',
+ _.array_primitive = _.primitive.new({
+    name: 'array-primitive',
     js_prototype: Array.prototype,
     slots: {
         intoMap() {
@@ -511,10 +499,10 @@ export const ArrayPrimitive = Primitive.new({
             return res;
         },
         class() {
-            return ArrayPrimitive;
+            return _.array_primitive;
         },
-        shortDescription() {
-            return `(${this.map(a => a.shortDescription()).join(' ')})`;
+        short_description() {
+            return `(${this.map(a => a.short_description()).join(' ')})`;
         },
         description() {
             return `(${this.map(a => a.description()).join(' ')})`;
@@ -522,22 +510,22 @@ export const ArrayPrimitive = Primitive.new({
     }
 });
 
-export const FunctionPrimitive = Primitive.new({
-    name: 'FunctionPrimitive',
+ _.function_primitive = _.primitive.new({
+    name: 'function-primitive',
     js_prototype: Function.prototype,
     slots: {
     },
 });
 
-export const Mixin = Class.new({
-    name: 'Mixin',
+ _.mixin = _.class.new({
+    name: 'mixin',
     slots: {
-        slots: Var.default({}),
+        slots: _.var.default({}),
         mix(base) {
             if (base === null) {
                 return this;
             }
-            return Mixin.new({
+            return _.mixin.new({
                 slots: {
                     ...this.slots(),
                     ...base
@@ -553,12 +541,12 @@ export const Mixin = Class.new({
     }
 });
 
-export const Interface = Class.new({
-    name: 'Interface',
+ _.interface = _.class.new({
+    name: 'interface',
     slots: {
-        name: Var.new(),
-        slots: Var.default({}),
-        slotList: Method.do(function() {
+        name: _.var.new(),
+        slots: _.var.default({}),
+        slotList: _.method.do(function() {
             return Object.values(this.slots());
         }),
         init() {
@@ -570,22 +558,9 @@ export const Interface = Class.new({
                 return !(slot.name() in klass.proto());
             });
             if (missing.length > 0) {
-                throw new Error(`Class ${klass.name()} doesn't satisfy interface ${this.name()}: ${missing.map(mi => mi.name()).join(', ')}`);
+                throw new Error(`class ${klass.name()} doesn't satisfy interface ${this.name()}: ${missing.map(mi => mi.name()).join(', ')}`);
             }
             return true;
         },
     },
 });
-
-export const $Slot = Interface.new({
-    name: 'Slot',
-    slots: {
-        load: Message.new({
-            args: [
-                Arg.new({
-                    name: 'parent',
-                })
-            ],
-        })
-    }
-})

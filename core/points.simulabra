@@ -1,5 +1,3 @@
-$(std)
-
 $(def ~class(new {
   name 'point
   slots {

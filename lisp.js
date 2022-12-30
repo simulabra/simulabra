@@ -1,34 +1,35 @@
 // now, what if it were a lisp machine?
-import { Class, Var, Method, Debug, StringPrimitive } from './base.js';
 import { readFileSync, writeFileSync } from 'fs';
+import './base.js';
+const _ = globalThis.SIMULABRA;
 
-export const Lexer = Class.new({
-  name: 'Lexer',
+_.lexer = _.class.new({
+  name: 'lexer',
   slots: {
     init() {
       this.tokenize();
     },
-    code: Var.new(),
-    pos: Var.default(0),
-    toks: Var.default([]),
-    cur: Method.new({
+    code: _.var.new(),
+    pos: _.var.default(0),
+    toks: _.var.default([]),
+    cur: _.method.new({
       do: function cur() {
         return this.code()[this.pos()];
       }
     }),
-    chomp: Method.new({
+    chomp: _.method.new({
       do: function chomp() {
         const c = this.cur();
         this.pos(this.pos() + 1);
         return c;
       }
     }),
-    ended: Method.new({
+    ended: _.method.new({
       do: function ended() {
         return this.pos() >= this.code().length;
       }
     }),
-    terminal: Method.new({
+    terminal: _.method.new({
       do: function terminal() {
         return this.ended() || '(){}[]. \n'.includes(this.cur());
       }
@@ -40,7 +41,7 @@ export const Lexer = Class.new({
       }
       return cs;
     },
-    readToTerminal: Method.new({
+    readToTerminal: _.method.new({
       do: function readToTerminal(c) {
         return [c, ...this.toksToTerminal()].join('');
       }
@@ -59,7 +60,7 @@ export const Lexer = Class.new({
       s += this.chomp(); // last delim
       return s;
     },
-    token: Method.new({
+    token: _.method.new({
       do: function token() {
         const c = this.chomp();
         if ('(){}[]>~@$!.%#|^\' \n\t'.includes(c)) {
@@ -78,7 +79,7 @@ export const Lexer = Class.new({
         throw new Error('UNHANDLED TOKEN CHAR: ' + c);
       }
     }),
-    tokenize: Method.new({
+    tokenize: _.method.new({
       do: function tokenize() {
         while (this.pos() < this.code().length) {
           this.token();
@@ -90,25 +91,25 @@ export const Lexer = Class.new({
 
 /*
  * Node classes
- * Call
+ * _.call
  * Map
  * String
- * Macro
- * Class
+ * _.macro
+ * _.class
  * Interface
  * Number
  * This
  * Arg
  * Boolean
- * List
+ * _.list_expression
  * Sexp
  */
 
-export const JSLiteral = Class.new({
-  name: 'JSLiteral',
+_.js_literal = _.class.new({
+  name: 'js_literal',
   slots: {
-    value: Var.new(),
-    js: Method.new({
+    value: _.var.new(),
+    js: _.method.new({
       do: function js(ctx) {
         return JSON.stringify(this.value());
       }
@@ -116,9 +117,9 @@ export const JSLiteral = Class.new({
   },
 });
 
-export const NameLiteral = Class.new({
-  name: 'NameLiteral',
-  super: JSLiteral,
+_.name_literal = _.class.new({
+  name: 'name_literal',
+  super: _.js_literal,
   static: {
     parse(parser) {
       parser.assertAdvance('\'');
@@ -128,9 +129,9 @@ export const NameLiteral = Class.new({
   },
 });
 
-export const StringLiteral = Class.new({
-  name: 'StringLiteral',
-  super: JSLiteral,
+_.string_literal = _.class.new({
+  name: 'string_literal',
+  super: _.js_literal,
   static: {
     parse(parser) {
       const s = parser.advance();
@@ -141,20 +142,20 @@ export const StringLiteral = Class.new({
   },
 });
 
-export const NumberLiteral = Class.new({
-  name: 'NumberLiteral',
-  super: JSLiteral,
+_.number_literal = _.class.new({
+  name: 'number_literal',
+  super: _.js_literal,
   static: {
     parse(parser) {
       const n = parser.advance();
       parser.assert(typeof n, 'number');
-      return NumberLiteral.new({ value: n });
+      return _.number_literal.new({ value: n });
     },
   },
 });
 
-export const List = Class.new({
-  name: 'List',
+_.list_expression = _.class.new({
+  name: 'list_expression',
   static: {
     parse(parser) {
       parser.assertAdvance('[');
@@ -169,13 +170,13 @@ export const List = Class.new({
     }
   },
   slots: {
-    value: Var.default([]),
-    car: Method.new({
+    value: _.var.default([]),
+    car: _.method.new({
       do: function car() {
         return this.value()[0];
       }
     }),
-    cdr: Method.new({
+    cdr: _.method.new({
       do: function cdr() {
         return this.value().slice(1);
       }
@@ -192,24 +193,24 @@ export const List = Class.new({
   }
 });
 
-export const MacroEnv = Class.new({
-  name: 'MacroEnv',
+_.macro_env = _.class.new({
+  name: 'macro_env',
   slots: {
-    parent: Var.new(), // right?
-    macros: Var.default({}),
-    stack: Var.default([]),
-    add: Method.new({
+    parent: _.var.new(), // right?
+    macros: _.var.default({}),
+    stack: _.var.default([]),
+    add: _.method.new({
       do: function add(macro) {
         this.macros()[macro.name()] = macro;
       }
     }),
     defmacro(name, fn) {
-      this.add(Macro.new({
+      this.add(_.macro.new({
         name,
         fn
       }));
     },
-    eval: Method.new({
+    eval: _.method.new({
       do: function evalFn(mcall) {
         this.stack().push(mcall);
         const mname = mcall.selector();
@@ -225,65 +226,65 @@ export const MacroEnv = Class.new({
   }
 });
 
-const baseEnv = MacroEnv.new({
-  shouldDebug: true,
+const baseEnv = _.macro_env.new({
+  should_debug: true,
 });
 
-export const Macro = Class.new({
-  name: 'Macro',
+_.macro = _.class.new({
+  name: 'macro',
   slots: {
-    name: Var.new(),
-    fn: Var.new(),
+    name: _.var.new(),
+    fn: _.var.new(),
   }
 });
 
-baseEnv.add(Macro.new({
+baseEnv.add(_.macro.new({
   name: 'macro',
   fn: function(name, args, ...body) {
-    const fnp = [...args.args(this), Body.of(body).js(this)];
+    const fnp = [...args.args(this), _.body.of(body).js(this)];
     // hmm, here we run into module issues again, and a big ugly global container object is appealing once more
     const fn = new Function(...fnp);
-    this.add(Macro.new({
+    this.add(_.macro.new({
       name,
       fn
     }));
-    return EmptyStatement.new();
+    return _.empty_statement.new();
   }
 }));
 
-export const RestArg = Class.new({
-  name: 'RestArg',
+_.rest_arg = _.class.new({
+  name: 'rest_arg',
   slots: {
-    name: Var.new(),
+    name: _.var.new(),
     js(ctx) {
       return `...${this.name()}`;
     }
   }
 });
 
-baseEnv.add(Macro.new({
+baseEnv.add(_.macro.new({
   name: 'rest',
   fn(name) {
-    return RestArg.new({ name });
+    return _.rest_arg.new({ name });
   }
 }))
 
-export const MacroCall = Class.new({
-  name: 'MacroCall',
+_.macro_call = _.class.new({
+  name: 'macro_call',
   static: {
     parse(parser) {
       parser.assertAdvance('$');
     },
   },
   slots: {
-    message: Var.new(),
+    message: _.var.new(),
     selector() {
       return this.message().parts()[0].selector();
     },
     args() {
       return this.message().parts()[0].args();
     },
-    js: Method.new({
+    js: _.method.new({
       do: function js(ctx) {
         try {
           return ctx.eval(this).js(ctx);
@@ -296,8 +297,8 @@ export const MacroCall = Class.new({
   }
 });
 
-export const MessagePart = Class.new({
-  name: 'MessagePart',
+_.message_part = _.class.new({
+  name: 'message_part',
   static: {
     parse(parser) {
       const selector = parser.nameString();
@@ -312,22 +313,22 @@ export const MessagePart = Class.new({
     }
   },
   slots: {
-    selector: Var.new(),
-    args: Var.new(),
+    selector: _.var.new(),
+    args: _.var.new(),
     js(ctx) {
       return `${this.selector()}(${this.args().map(a => a.js(ctx)).join(',')})`;
     },
   }
 })
 
-export const Message = Class.new({
-  name: 'Message',
+_.message = _.class.new({
+  name: 'message',
   static: {
     parse(parser) {
       parser.assertAdvance('(');
       let parts = [];
       do {
-        parts.push(MessagePart.parse(parser));
+        parts.push(_.message_part.parse(parser));
         parser.maybeAdvance('|');
       } while (parser.head() !== ')');
       parser.assertAdvance(')');
@@ -337,19 +338,19 @@ export const Message = Class.new({
     }
   },
   slots: {
-    parts: Var.new(),
+    parts: _.var.new(),
     js(ctx) {
       return this.parts().map(p => p.js(ctx)).join('.');
     },
   }
 })
 
-export const Call = Class.new({
-  name: 'Call',
+_.call = _.class.new({
+  name: 'call',
   slots: {
-    receiver: Var.new(),
-    message: Var.new(),
-    js: Method.new({
+    receiver: _.var.new(),
+    message: _.var.new(),
+    js: _.method.new({
       do: function js(ctx) {
         return `${this.receiver().js(ctx)}.${this.message().js(ctx)}`;
       }
@@ -357,52 +358,48 @@ export const Call = Class.new({
   }
 });
 
-export const ErrorTok = Class.new({
-  name: 'ErrorTok',
+_.error_tok = _.class.new({
+  name: 'error_tok',
   slots: {
     init() {
       this.error(new Error(`Could not compile: '${this.tok()}': ${this.message()}`));
     },
-    tok: Var.new(),
-    message: Var.default('errortok'),
-    error: Var.new(),
+    tok: _.var.new(),
+    message: _.var.default('errortok'),
+    error: _.var.new(),
     js() {
       throw this.error();
     }
   }
 });
 
-export const Ref = Class.new({
-  name: 'Ref',
+_.ref = _.class.new({
+  name: 'ref',
   slots: {
-    name: Var.new(),
-    upcase() {
-      const parts = this.name().split('-');
-      return parts.map(p => p[0].toUpperCase() + p.slice(1)).join('');
-    }
+    name: _.var.new(),
   }
 })
 
-export const ClassRef = Class.new({
-  name: 'ClassRef',
-  super: Ref,
+_.class_ref = _.class.new({
+  name: 'class_ref',
+  super: _.ref,
   static: {
     parse(parser) {
       parser.assertAdvance('~');
-      return ClassRef.new({ name: parser.nameString() });
+      return _.class_ref.new({ name: parser.nameString() });
     },
   },
   slots: {
-    js: Method.new({
+    js: _.method.new({
       do: function js(ctx) {
-        return `${this.upcase()}`;
+        return `_.${this.name()}`;
       }
     }),
   }
 });
 
-export const TypeRef = Class.new({
-  name: 'TypeRef',
+_.type_ref = _.class.new({
+  name: 'type_ref',
   static: {
     parse(parser) {
       parser.assertAdvance('!');
@@ -410,8 +407,8 @@ export const TypeRef = Class.new({
     },
   },
   slots: {
-    name: Var.new(),
-    js: Method.new({
+    name: _.var.new(),
+    js: _.method.new({
       do: function js() {
         return `${this.name()}`;
       }
@@ -419,8 +416,8 @@ export const TypeRef = Class.new({
   }
 });
 
-export const ArgRef = Class.new({
-  name: 'ArgRef',
+_.arg_ref = _.class.new({
+  name: 'arg_ref',
   static: {
     parse(parser) {
       parser.assertAdvance('%');
@@ -428,8 +425,8 @@ export const ArgRef = Class.new({
     },
   },
   slots: {
-    name: Var.new(),
-    js: Method.new({
+    name: _.var.new(),
+    js: _.method.new({
       do: function js(ctx) {
         return this.name();
       }
@@ -437,8 +434,8 @@ export const ArgRef = Class.new({
   }
 });
 
-export const ThisRef = Class.new({
-  name: 'ThisRef',
+_.this_ref = _.class.new({
+  name: 'this_ref',
   static: {
     parse(parser) {
       parser.assertAdvance('.');
@@ -446,7 +443,7 @@ export const ThisRef = Class.new({
     },
   },
   slots: {
-    js: Method.new({
+    js: _.method.new({
       do: function js(ctx) {
         return 'this';
       }
@@ -454,42 +451,42 @@ export const ThisRef = Class.new({
   }
 });
 
-export const Pair = Class.new({
-  name: 'Pair',
+_.pair = _.class.new({
+  name: 'pair',
   static: {
     parse(parser) {
       const name = parser.nameString();
       const value = parser.form();
 
-      return Pair.new({ name, value })
+      return _.pair.new({ name, value })
     },
   },
   slots: {
-    name: Var.new(),
-    value: Var.new(),
+    name: _.var.new(),
+    value: _.var.new(),
   }
 });
 
-export const Dexp = Class.new({
-  name: 'Dexp', // lmao?
+_.dexp = _.class.new({
+  name: 'dexp', // lmao?
   static: {
     parse(parser) {
       parser.assertAdvance('{');
       parser.stripws();
       const pairs = [];
       while (parser.cur() !== '}') {
-        pairs.push(Pair.parse(parser));
+        pairs.push(_.pair.parse(parser));
         parser.stripws();
       }
       parser.assertAdvance('}');
-      return Dexp.new({
+      return _.dexp.new({
         pairs
       });
     },
   },
   slots: {
-    pairs: Var.default([]),
-    map: Var.new(),
+    pairs: _.var.default([]),
+    map: _.var.new(),
     init() {
       let m = {};
       for (const p of this.pairs()) {
@@ -497,7 +494,7 @@ export const Dexp = Class.new({
       }
       this.map(m);
     },
-    js: Method.new({
+    js: _.method.new({
       do: function js(ctx) {
         return `{ ${this.pairs().map(p => `${p.name()}: ${p.value().js(ctx)}`).join(', ')} }`;
       }
@@ -505,20 +502,20 @@ export const Dexp = Class.new({
   },
 });
 
-export const Body = Class.new({
-  name: 'Body',
+_.body = _.class.new({
+  name: 'body',
   static: {
     parse(parser) {
       parser.assertAdvance('@');
-      const s = List.parse(parser);
-      return Body.new({ statements: s.value() });
+      const s = _.list_expression.parse(parser);
+      return _.body.new({ statements: s.value() });
     },
     of(statements) {
       return this.new({ statements });
     }
   },
   slots: {
-    statements: Var.new(),
+    statements: _.var.new(),
     js(ctx) {
       return this.statements()
                  .map((s, idx) =>
@@ -529,13 +526,13 @@ export const Body = Class.new({
 });
 
 baseEnv.defmacro('body', function(...statements) {
-  return Body.new({
+  return _.body.new({
     statements
   });
 });
 
-export const Program = Class.new({
-  name: 'Program',
+_.program = _.class.new({
+  name: 'program',
   static: {
     parse(parser) {
       const statements = [];
@@ -543,30 +540,27 @@ export const Program = Class.new({
       while ((f = parser.form()) !== null) {
         statements.push(f);
       }
-      return Program.new({ statements })
+      return _.program.new({ statements })
     }
   },
   slots: {
-    statements: Var.new(),
+    statements: _.var.new(),
     js(ctx) {
-      return this.statements().map(s => s.js(ctx)).join(';');
+      return 'const _ = globalThis.SIMULABRA;' + this.statements().map(s => s.js(ctx)).join(';');
     },
-    macroexpand(ctx) {
-
-    }
   }
 })
 
-export const Parser = Class.new({
-  name: 'Parser',
+_.parser = _.class.new({
+  name: 'parser',
   static: {
     fromSource(source) {
-      return this.new({ toks: Lexer.new({ code: source }).toks() });
+      return this.new({ toks: _.lexer.new({ code: source }).toks() });
     }
   },
   slots: {
-    toks: Var.new(),
-    pos: Var.default(0),
+    toks: _.var.new(),
+    pos: _.var.default(0),
     cur() {
       return this.toks()[this.pos()];
     },
@@ -614,36 +608,36 @@ export const Parser = Class.new({
       }
       let tok = this.cur();
       if (typeof tok === 'number') {
-        return NumberLiteral.parse(this);
+        return _.number_literal.parse(this);
       }
       const tokamap = {
-        '~': ClassRef,
-        '!': TypeRef,
-        '%': ArgRef,
-        '.': ThisRef,
-        "'": NameLiteral,
-        '@': Body,
-        '{': Dexp,
-        '[': List,
+        '~': _.class_ref,
+        '!': _.type_ref,
+        '%': _.arg_ref,
+        '.': _.this_ref,
+        "'": _.name_literal,
+        '@': _.body,
+        '{': _.dexp,
+        '[': _.list_expression,
       };
       const exp = tokamap[tok]?.parse(this);
       if (exp) {
         if (this.cur() === '(') {
-          return Call.new({ receiver: exp, message: Message.parse(this) });
+          return _.call.new({ receiver: exp, message: _.message.parse(this) });
         }
         return exp;
       }
 
       if (tok === '$') {
         this.advance();
-        return MacroCall.new({ message: Message.parse(this) });
+        return _.macro_call.new({ message: _.message.parse(this) });
       }
       if (' \n\t'.includes(tok)) {
         this.advance();
         return this.form();
       }
       if (tok[0] === '"') {
-        return StringLiteral.parse(this);
+        return _.string_literal.parse(this);
       }
       if (/[A-Za-z]/.test(tok[0])) {
         return this.nameString();
@@ -653,30 +647,30 @@ export const Parser = Class.new({
   }
 });
 
-export const ExportStatement = Class.new({
-  name: 'ExportStatement',
+_.export_statement = _.class.new({
+  name: 'export-statement',
   slots: {
-    name: Var.new(),
-    value: Var.new(),
+    name: _.var.new(),
+    value: _.var.new(),
     js(ctx) {
-      return `export var ${Ref.new({ name: this.name() }).upcase()} = ${this.value().js(ctx)}`;
+      return `_.${this.name()} = ${this.value().js(ctx)}`;
     }
   }
 });
 
-baseEnv.add(Macro.new({
+baseEnv.add(_.macro.new({
   name: 'def',
   fn: function(value) {
     const name = value.message().parts()[0].args()[0].map().name.value();
-    return ExportStatement.new({
+    return _.export_statement.new({
       name,
       value,
     });
   }
 }));
 
-export const EmptyStatement = Class.new({
-  name: 'EmptyStatement',
+_.empty_statement = _.class.new({
+  name: 'empty-statement',
   slots: {
     js(ctx) {
       return '';
@@ -687,13 +681,13 @@ export const EmptyStatement = Class.new({
   }
 });
 
-export const FunctionStatement = Class.new({
-  name: 'FunctionStatement',
+_.function_statement = _.class.new({
+  name: 'function_statement',
   slots: {
-    name: Var.new(),
-    args: Var.default(EmptyStatement.new()),
-    body: Var.new(),
-    export: Var.default(false),
+    name: _.var.new(),
+    args: _.var.default(_.empty_statement.new()),
+    body: _.var.new(),
+    export: _.var.default(false),
     js(ctx) {
       return `${this.export() ? 'export ' : ''}function ${this.name() || ''}(${this.args().argsjs(ctx)}) { ${this.body().js(ctx)} }`;
     }
@@ -701,53 +695,47 @@ export const FunctionStatement = Class.new({
 });
 
 baseEnv.defmacro('fn', function(args, ...body) {
-  return FunctionStatement.new({
+  return _.function_statement.new({
     args,
-    body: Body.of(body)
+    body: _.body.of(body)
   });
 });
 
-baseEnv.add(Macro.new({
+baseEnv.add(_.macro.new({
   name: 'defn',
   fn: function(name, args, ...body) {
-    return FunctionStatement.new({
+    return _.export_statement.new({
       name,
-      args,
-      export: true,
-      body: Body.of(body),
+      value: _.function_statement.new({
+        args,
+        body: _.body.of(body),
+      })
     });
   }
 }));
 
 baseEnv.defmacro('do', function (...body) {
-  return FunctionStatement.new({
-    body: Body.of(body)
+  return _.function_statement.new({
+    body: _.body.of(body)
   });
 });
 
-export const ImportStatement = Class.new({
-  name: 'ImportStatement',
+_.import_statement = _.class.new({
+  name: 'import_statement',
   slots: {
-    imports: Var.new(),
-    module: Var.new(),
+    imports: _.var.new(),
+    module: _.var.new(),
     js(ctx) {
       return `import { ${this.imports().join(', ')} } from '${this.module()}'`;
     }
   }
 });
 
-baseEnv.defmacro('std', function() {
-  return ImportStatement.new({
-    imports: ['Class', 'Var', 'Method', 'Debug'],
-    module: '../base.js',
-  });
-});
-
-export const LetStatement = Class.new({
-  name: 'LetStatement',
+_.let_statement = _.class.new({
+  name: 'let_statement',
   slots: {
-    name: Var.new(),
-    value: Var.new(),
+    name: _.var.new(),
+    value: _.var.new(),
     js(ctx) {
       return `let ${this.name()} = ${this.value().js(ctx)}`;
     }
@@ -755,19 +743,19 @@ export const LetStatement = Class.new({
 });
 
 baseEnv.defmacro('let', function(name, value) {
-  return LetStatement.new({
+  return _.let_statement.new({
     name,
     value
   });
 });
 
-export const ForStatement = Class.new({
-  name: 'ForStatement',
+_.for_statement = _.class.new({
+  name: 'for_statement',
   slots: {
-    bindType: Var.default('const'),
-    bindName: Var.default('it'),
-    iterable: Var.new(),
-    body: Var.new(),
+    bindType: _.var.default('const'),
+    bindName: _.var.default('it'),
+    iterable: _.var.new(),
+    body: _.var.new(),
     js(ctx) {
       return `for (${this.bindType()} ${this.bindName()} of ${this.iterable().js(ctx)}) { ${this.body().js(ctx)} }`;
     }
@@ -775,22 +763,22 @@ export const ForStatement = Class.new({
 });
 
 baseEnv.defmacro('loop', function (iterable, ...body) {
-  return ForStatement.new({
+  return _.for_statement.new({
     iterable,
-    body: Body.of(body)
+    body: _.body.of(body)
   });
 });
 
 baseEnv.defmacro('test', function (...body) {
-  return FunctionStatement.new({
+  return _.function_statement.new({
     name: 'test',
     export: true,
-    body: Body.of(body),
+    body: _.body.of(body),
   })
 });
 
 baseEnv.defmacro('assert', function (a, b) {
-  return EmptyStatement.new();
+  return _.empty_statement.new();
 });
 
 
@@ -804,8 +792,8 @@ baseEnv.defmacro('assert', function (a, b) {
  * @global
  */
 
-export const ModuleSource = Class.new({
-  name: 'ModuleSource',
+_.module_source = _.class.new({
+  name: 'module_source',
   static: {
     loadLocal(name) {
       const file = `./core/${name}.simulabra`;
@@ -816,23 +804,23 @@ export const ModuleSource = Class.new({
     }
   },
   slots: {
-    source: Var.new(),
+    source: _.var.new(),
     parser() {
-      return Parser.fromSource(this.source());
+      return _.parser.fromSource(this.source());
     },
   }
 });
 
-// Source -> Out -> Module or Source -> Module -> Out, that is the q
+// Source -> Out -> _.module or Source -> _.module -> Out, that is the q
 // also raises q of whether we need to have eval
 // compiler can be reentrant with dynamic imports???
-export const Module = Class.new({
-  name: 'Module',
+_.module_file = _.class.new({
+  name: 'module-file',
   static: {
     async load(name, ctx) {
-      const src = ModuleSource.loadLocal(name);
+      const src = _.module_source.loadLocal(name);
       const outfile = `./out/${this.name()}.mjs`;
-      const program = Program.parse(src.parser());
+      const program = _.program.parse(src.parser());
       const js = program.js(ctx);
       writeFileSync(outfile, js);
       let esm;
@@ -856,9 +844,9 @@ export const Module = Class.new({
     }
   },
   slots: {
-    name: Var.new(),
-    esm: Var.new(),
-    defs: Var.new(),
+    name: _.var.new(),
+    esm: _.var.new(),
+    defs: _.var.new(),
     save(ctx) {
       const js = this.js(ctx);
       writeFileSync(this.outfile(), js)
@@ -866,5 +854,5 @@ export const Module = Class.new({
   },
 });
 
-const mod = await Module.load(process.argv[2], baseEnv);
-Debug.log(mod.esm().test());
+await _.module_file.load(process.argv[2], baseEnv);
+_.debug.log(_.test());
