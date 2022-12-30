@@ -62,7 +62,7 @@ export const Lexer = Class.new({
     token: Method.new({
       do: function token() {
         const c = this.chomp();
-        if ('(){}[]>~@$!.%#|\' \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.%#|^\' \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
@@ -112,8 +112,8 @@ export const JSLiteral = Class.new({
       do: function js(ctx) {
         return JSON.stringify(this.value());
       }
-    })
-  }
+    }),
+  },
 });
 
 export const NameLiteral = Class.new({
@@ -665,16 +665,28 @@ export const FunctionStatement = Class.new({
   }
 });
 
-baseEnv.defmacro('fn', function(args, body) {
+baseEnv.defmacro('fn', function(args, ...body) {
   return FunctionStatement.new({
     args,
-    body
+    body: Body.of(body)
   });
 });
 
-baseEnv.defmacro('do', function (body) {
+baseEnv.add(Macro.new({
+  name: 'defn',
+  fn: function(name, args, ...body) {
+    return FunctionStatement.new({
+      name,
+      args,
+      export: true,
+      body: Body.of(body),
+    });
+  }
+}));
+
+baseEnv.defmacro('do', function (...body) {
   return FunctionStatement.new({
-    body
+    body: Body.of(body)
   });
 });
 
@@ -730,7 +742,7 @@ export const ForStatement = Class.new({
 baseEnv.defmacro('loop', function (iterable, ...body) {
   return ForStatement.new({
     iterable,
-    body: Body.new({ statements: body })
+    body: Body.of(body)
   });
 });
 
@@ -756,16 +768,6 @@ baseEnv.defmacro('assert', function (a, b) {
  * !types
  * @global
  */
-
-const explus = `
-$(macro method (args ^body) ~method(new { do $(fn %args $(body ^%body)) }))
-~project(new {
-  modules [
-    'html
-    '2d
-  ]
-})
-`;
 
 export const ModuleSource = Class.new({
   name: 'ModuleSource',
@@ -838,14 +840,8 @@ export const Module = Class.new({
         def.test();
       }
     },
-    //@async
-    esm(ctx) {
-      this.save(ctx);
-    }
   },
 });
 
 const m2d = await Module.load('2d2', baseEnv);
-const p = m2d.classes().point.new({ x: 3, y: 4 });
-const q = m2d.classes().point.new();
-Debug.log(p, q, p.dist(q));
+Debug.log(m2d.esm().test());

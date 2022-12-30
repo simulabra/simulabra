@@ -36,3 +36,11 @@ $(def ~class(new {
     html $(method [] `<div id="${.(id)}">${.(list | map $(do %it(html)) | join )}</div>`)
   }
 }))
+
+$(def ~class(new {
+  name 'div
+  implements [!HTML]
+  super ~element
+}))
+
+~div(of "hello, world!")
