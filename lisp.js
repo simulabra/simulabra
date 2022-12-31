@@ -64,7 +64,7 @@ _.lexer = _.class.new({
     token: _.method.new({
       do: function token() {
         const c = this.chomp();
-        if ('(){}[]>~@$!.%#|^\' \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.%#|,\' \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
@@ -105,9 +105,20 @@ _.lexer = _.class.new({
  * _.list_expression
  * Sexp
  */
+_.node = _.class.new({
+  name: 'node',
+  abstract: true,
+  slots: {
+    children() {
+      return [];
+    },
+    js: _.virtual.new(),
+  }
+});
 
 _.js_literal = _.class.new({
   name: 'js_literal',
+  super: _.node,
   slots: {
     value: _.var.new(),
     js: _.method.new({
@@ -120,6 +131,7 @@ _.js_literal = _.class.new({
 
 _.name_literal = _.class.new({
   name: 'name_literal',
+  super: _.node,
   super: _.js_literal,
   static: {
     parse(parser) {
@@ -132,6 +144,7 @@ _.name_literal = _.class.new({
 
 _.string_literal = _.class.new({
   name: 'string_literal',
+  super: _.node,
   super: _.js_literal,
   static: {
     parse(parser) {
@@ -145,6 +158,7 @@ _.string_literal = _.class.new({
 
 _.number_literal = _.class.new({
   name: 'number_literal',
+  super: _.node,
   super: _.js_literal,
   static: {
     parse(parser) {
@@ -157,6 +171,7 @@ _.number_literal = _.class.new({
 
 _.list_expression = _.class.new({
   name: 'list_expression',
+  super: _.node,
   static: {
     parse(parser) {
       parser.assertAdvance('[');
@@ -189,10 +204,15 @@ _.list_expression = _.class.new({
       return `[${this.argsjs(ctx)}]`;
     },
     args(ctx) {
-      return this.value().map(e => e.js(ctx));
+      return this.value().map(e => {
+        return e.js(ctx);
+      });
     },
     argsjs(ctx) {
       return `${this.args(ctx).join(', ')}`;
+    },
+    children() {
+      return this.value();
     }
   }
 });
@@ -265,10 +285,14 @@ baseEnv.add(_.macro.new({
 
 _.rest_arg = _.class.new({
   name: 'rest_arg',
+  super: _.node,
   slots: {
     name: _.var.new(),
     js(ctx) {
       return `...${this.name()}`;
+    },
+    children() {
+      return this.name();
     }
   }
 });
@@ -282,6 +306,7 @@ baseEnv.add(_.macro.new({
 
 _.macro_call = _.class.new({
   name: 'macro_call',
+  super: _.node,
   static: {
     parse(parser) {
       parser.assertAdvance('$');
@@ -311,6 +336,7 @@ _.macro_call = _.class.new({
 
 _.message_part = _.class.new({
   name: 'message_part',
+  super: _.node,
   static: {
     parse(parser) {
       const selector = parser.nameString();
@@ -335,6 +361,7 @@ _.message_part = _.class.new({
 
 _.message = _.class.new({
   name: 'message',
+  super: _.node,
   static: {
     parse(parser) {
       parser.assertAdvance('(');
@@ -359,6 +386,7 @@ _.message = _.class.new({
 
 _.call = _.class.new({
   name: 'call',
+  super: _.node,
   slots: {
     receiver: _.var.new(),
     message: _.var.new(),
@@ -372,6 +400,7 @@ _.call = _.class.new({
 
 _.error_tok = _.class.new({
   name: 'error_tok',
+  super: _.node,
   slots: {
     init() {
       this.error(new Error(`Could not compile: '${this.tok()}': ${this.message()}`));
@@ -385,8 +414,11 @@ _.error_tok = _.class.new({
   }
 });
 
+// o, but I want for composition with classes
 _.ref = _.class.new({
   name: 'ref',
+  super: _.node,
+  abstract: true,
   slots: {
     name: _.var.new(),
   }
@@ -412,6 +444,7 @@ _.class_ref = _.class.new({
 
 _.type_ref = _.class.new({
   name: 'type_ref',
+  super: _.ref,
   static: {
     parse(parser) {
       parser.assertAdvance('!');
@@ -430,6 +463,7 @@ _.type_ref = _.class.new({
 
 _.arg_ref = _.class.new({
   name: 'arg_ref',
+  super: _.ref,
   static: {
     parse(parser) {
       parser.assertAdvance('%');
@@ -448,6 +482,7 @@ _.arg_ref = _.class.new({
 
 _.this_ref = _.class.new({
   name: 'this_ref',
+  super: _.ref,
   static: {
     parse(parser) {
       parser.assertAdvance('.');
@@ -463,8 +498,33 @@ _.this_ref = _.class.new({
   }
 });
 
+_.unquote = _.class.new({
+  name: 'unquote',
+  // super: _.node,
+  static: {
+    parse(parser) {
+      parser.assertAdvance(',');
+      const value = parser.form();
+
+      return _.unquote.new({ value })
+    },
+  },
+  slots: {
+    value: _.var.new(),
+  }
+});
+
+baseEnv.add(_.macro.new({
+  name: 'qq',
+  super: _.node,
+  fn(form) {
+
+  }
+}))
+
 _.pair = _.class.new({
   name: 'pair',
+  super: _.node,
   static: {
     parse(parser) {
       const name = parser.nameString();
@@ -476,11 +536,15 @@ _.pair = _.class.new({
   slots: {
     name: _.var.new(),
     value: _.var.new(),
+    js(ctx) {
+      return `${this.name()}: ${this.value().js(ctx)},`
+    }
   }
 });
 
 _.dexp = _.class.new({
   name: 'dexp', // lmao?
+  super: _.node,
   static: {
     parse(parser) {
       parser.assertAdvance('{');
@@ -508,7 +572,7 @@ _.dexp = _.class.new({
     },
     js: _.method.new({
       do: function js(ctx) {
-        return `{ ${this.pairs().map(p => `${p.name()}: ${p.value().js(ctx)}`).join(', ')} }`;
+        return `{ ${this.pairs().map(p => p.js(ctx)).join('')} }`;
       }
     }),
   },
@@ -516,6 +580,7 @@ _.dexp = _.class.new({
 
 _.body = _.class.new({
   name: 'body',
+  super: _.node,
   static: {
     parse(parser) {
       parser.assertAdvance('@');
@@ -545,6 +610,7 @@ baseEnv.defmacro('body', function(...statements) {
 
 _.program = _.class.new({
   name: 'program',
+  super: _.node,
   static: {
     parse(parser) {
       const statements = [];
@@ -558,7 +624,7 @@ _.program = _.class.new({
   slots: {
     statements: _.var.new(),
     js(ctx) {
-      return  + this.statements().map(s => s.js(ctx)).join(';');
+      return stanza + this.statements().map(s => s.js(ctx)).join(';');
     },
   }
 })
@@ -631,6 +697,7 @@ _.parser = _.class.new({
         '@': _.body,
         '{': _.dexp,
         '[': _.list_expression,
+        ',': _.unquote,
       };
       const exp = tokamap[tok]?.parse(this);
       if (exp) {
@@ -661,6 +728,7 @@ _.parser = _.class.new({
 
 _.export_statement = _.class.new({
   name: 'export-statement',
+  super: _.node,
   slots: {
     name: _.var.new(),
     value: _.var.new(),
@@ -683,6 +751,7 @@ baseEnv.add(_.macro.new({
 
 _.empty_statement = _.class.new({
   name: 'empty-statement',
+  super: _.node,
   slots: {
     js(ctx) {
       return '';
@@ -695,6 +764,7 @@ _.empty_statement = _.class.new({
 
 _.function_statement = _.class.new({
   name: 'function_statement',
+  super: _.node,
   slots: {
     name: _.var.new(),
     args: _.var.default(_.empty_statement.new()),
@@ -735,6 +805,7 @@ baseEnv.defmacro('do', function (...body) {
 
 _.import_statement = _.class.new({
   name: 'import_statement',
+  super: _.node,
   slots: {
     imports: _.var.new(),
     module: _.var.new(),
@@ -746,6 +817,7 @@ _.import_statement = _.class.new({
 
 _.let_statement = _.class.new({
   name: 'let_statement',
+  super: _.node,
   slots: {
     name: _.var.new(),
     value: _.var.new(),
@@ -764,6 +836,7 @@ baseEnv.defmacro('let', function(name, value) {
 
 _.for_statement = _.class.new({
   name: 'for_statement',
+  super: _.node,
   slots: {
     bindType: _.var.default('const'),
     bindName: _.var.default('it'),
@@ -834,10 +907,11 @@ _.module_file = _.class.new({
       const src = _.module_source.loadLocal(name);
       const outfile = `./out/${this.name()}.mjs`;
       const program = _.program.parse(src.parser());
+      _.debug.log(program)
       const js = program.js(ctx);
-      writeFileSync(outfile, js);
       let esm;
       try {
+        writeFileSync(outfile, js);
         esm = await import(outfile);
       } catch (e) {
         console.error(e);

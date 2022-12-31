@@ -36,6 +36,9 @@ _.base_object = {
                 return this._name;
             }
         },
+        abstract() {
+            return this._abstract || false;
+        },
         //=!stringify
         toString() {
             return this.description();
@@ -80,6 +83,9 @@ _.base_object = {
             }
             return vs;
         },
+    },
+    load() {
+        return;
     },
     proto() {
         return this._slots;
@@ -150,14 +156,19 @@ _.class = {
 
             Object.setPrototypeOf(this.proto(), this.super().proto());
             // this.implements().map(iface => iface.satisfies(this));
+            this.load(this);
+            this.super().load(this);
+        },
+        load(target) {
             for (const [k, v] of this.static().entries()) {
-                v.load(this);
+                v.load(target);
             }
             for (const [k, v] of this.slots().entries()) {
-                v?.load && v.load(this.proto());
+                // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
+                v?.load && v.load(target.proto());
             }
             for (const [k, v] of this.mixed().entries()) {
-                v?.load && v.load(this.proto());
+                v?.load && v.load(target.proto());
             }
         },
         new(props = {}) {
@@ -321,19 +332,19 @@ _.var_state = _.class.new({
     }
 });
 
- _.description = _.class.new({
+_.description = _.class.new({
     name: 'description',
     slots: {
         visited: _.var.default({}),
     },
 });
 
- _.debug = _.class.new({
+_.debug = _.class.new({
     name: 'debug',
     static: {
         debug: _.var.default(false),
         log(...args) {
-            console.log(...args.map(a => a.toString()));
+            console.log(...args.map(a => '' + a));
         },
         logt(...args) {
             console.log(args.map(a => a.toString()).join(''));
@@ -341,7 +352,7 @@ _.var_state = _.class.new({
     }
 });
 
- _.message = _.class.new({
+_.message = _.class.new({
     name: 'message',
     slots: {
         args: _.var.default([]),
@@ -350,7 +361,7 @@ _.var_state = _.class.new({
     },
 })
 
- _.method = _.class.new({
+_.method = _.class.new({
     name: 'method',
     slots: {
         do: _.var.new(), // fn, meat and taters
@@ -386,6 +397,18 @@ _.method.do = function(fn) {
     return _.method.new({ do: fn });
 }
 
+_.virtual = _.class.new({
+    slots: {
+        name: _.var.new(),
+        load(parent) {
+            // console.log(`virtual load ${this.name()} ${parent._class.name()}`)
+            if (!parent._class.abstract() && !(this.name() in parent)) {
+                throw new Error(`need to implement ${this.name()} for ${parent._class.name()}`);
+            }
+        },
+    }
+});
+
 _.arg = _.class.new({
     name: 'arg',
     slots: {
@@ -396,33 +419,31 @@ _.arg = _.class.new({
 _.class.super(_.base_object);
 _.class._proto._super = _.base_object;
 
- _.primitive = _.class.new({
+_.primitive = _.class.new({
     name: 'primitive',
-    super: _.class,
+    abstract: true,
     slots: {
-        _js_prototype: null,
-        _methods: {},
+        slots: _.var.default({}),
+        js_prototype: _.var.new(),
+        methods: _.var.default({}),
         init() {
-            for (const [name, fn] of Object.entries(this._slots)) {
+            for (const [name, fn] of this.slots().entries()) {
+                // console.log(`jack in to primitive ${this.name()} ${name}`)
                 this._js_prototype[name] = fn;
             }
         },
-        extend(iface, slots) {
-
-        }
+        // extend(iface, slots) {}
     }
 });
 
- _.object_primitive = _.primitive.new({
+_.object_primitive = _.primitive.new({
     name: 'object-primitive',
     js_prototype: Object.prototype,
-    slots: {
-
-    }
 });
 
- _.string_primitive = _.primitive.new({
+_.string_primitive = _.primitive.new({
     name: 'string-primitive',
+    super: _.primitive,
     js_prototype: String.prototype,
     slots: {
         html() {
@@ -440,7 +461,7 @@ _.class._proto._super = _.base_object;
     }
 });
 
- _.boolean_primitive = _.primitive.new({
+_.boolean_primitive = _.primitive.new({
     name: 'boolean-primitive',
     js_prototype: Boolean.prototype,
     slots: {
@@ -456,7 +477,7 @@ _.class._proto._super = _.base_object;
     }
 });
 
- _.number_primitive = _.primitive.new({
+_.number_primitive = _.primitive.new({
     name: 'number-primitive',
     js_prototype: Number.prototype,
     slots: {
@@ -487,7 +508,7 @@ _.class._proto._super = _.base_object;
     }
 });
 
- _.array_primitive = _.primitive.new({
+_.array_primitive = _.primitive.new({
     name: 'array-primitive',
     js_prototype: Array.prototype,
     slots: {
@@ -510,14 +531,14 @@ _.class._proto._super = _.base_object;
     }
 });
 
- _.function_primitive = _.primitive.new({
+_.function_primitive = _.primitive.new({
     name: 'function-primitive',
     js_prototype: Function.prototype,
     slots: {
     },
 });
 
- _.mixin = _.class.new({
+_.mixin = _.class.new({
     name: 'mixin',
     slots: {
         slots: _.var.default({}),
@@ -541,7 +562,7 @@ _.class._proto._super = _.base_object;
     }
 });
 
- _.interface = _.class.new({
+_.interface = _.class.new({
     name: 'interface',
     slots: {
         name: _.var.new(),

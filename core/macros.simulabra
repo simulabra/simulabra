@@ -1,7 +1,8 @@
 $(macro poso [name $(rest vars)]
-  $(def %name ~class(new {
-    slots %vars(map $(do ~var(new { name %it })) | intoObject)
-  }))
+  $(def $(qq ~class(new {
+    name ,%name
+    slots ,%vars(map $(do $(qq ~var(new { name ,%it }))) | intoObject)
+  })))
 )
 
 $(defn test []
