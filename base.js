@@ -60,7 +60,7 @@ _.base_object = {
             return `{${this.base_description()}}`;
         },
         description() {
-            return `{${this.base_description()}${this.var_.description()}}`
+            return `{${this.base_description()}${this.var_description()}}`
         },
         //=!private
         var_description() {
@@ -491,7 +491,7 @@ _.class._proto._super = _.base_object;
     name: 'array-primitive',
     js_prototype: Array.prototype,
     slots: {
-        intoMap() {
+        intoObject() {
             const res = {};
             for (const it of this) {
                 res[it.name()] = it;
@@ -506,7 +506,7 @@ _.class._proto._super = _.base_object;
         },
         description() {
             return `(${this.map(a => a.description()).join(' ')})`;
-        }
+        },
     }
 });
 

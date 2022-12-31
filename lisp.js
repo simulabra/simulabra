@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import './base.js';
 const _ = globalThis.SIMULABRA;
+const stanza = 'const _ = globalThis.SIMULABRA;';
 
 _.lexer = _.class.new({
   name: 'lexer',
@@ -167,6 +168,9 @@ _.list_expression = _.class.new({
       }
       parser.assertAdvance(']');
       return this.new({ value });
+    },
+    of(arr) {
+      return this.new({ value: arr });
     }
   },
   slots: {
@@ -241,14 +245,21 @@ _.macro = _.class.new({
 baseEnv.add(_.macro.new({
   name: 'macro',
   fn: function(name, args, ...body) {
-    const fnp = [...args.args(this), _.body.of(body).js(this)];
+    const fnp = [...args.args(this), stanza + _.body.of(body).js(this)];
     // hmm, here we run into module issues again, and a big ugly global container object is appealing once more
-    const fn = new Function(...fnp);
-    this.add(_.macro.new({
-      name,
-      fn
-    }));
-    return _.empty_statement.new();
+    console.error(fnp);
+    try {
+      const fn = new Function(...fnp);
+      this.add(_.macro.new({
+        name,
+        fn
+      }));
+      return _.empty_statement.new();
+    } catch (e) {
+      console.error('macro error ' + name);
+      console.error(fnp);
+      throw e;
+    }
   }
 }));
 
@@ -290,6 +301,7 @@ _.macro_call = _.class.new({
           return ctx.eval(this).js(ctx);
         } catch (e) {
           console.log(`macro error: ${this.selector()}`);
+          _.debug.log(ctx.eval(this))
           throw e;
         }
       }
@@ -546,7 +558,7 @@ _.program = _.class.new({
   slots: {
     statements: _.var.new(),
     js(ctx) {
-      return 'const _ = globalThis.SIMULABRA;' + this.statements().map(s => s.js(ctx)).join(';');
+      return  + this.statements().map(s => s.js(ctx)).join(';');
     },
   }
 })
@@ -716,6 +728,7 @@ baseEnv.add(_.macro.new({
 
 baseEnv.defmacro('do', function (...body) {
   return _.function_statement.new({
+    args: _.list_expression.of(['it']),
     body: _.body.of(body)
   });
 });
