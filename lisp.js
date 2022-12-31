@@ -110,7 +110,9 @@ _.node = _.class.new({
   abstract: true,
   slots: {
     children() {
-      return [];
+    },
+    macroexpand() {
+      return this;
     },
     js: _.virtual.new(),
   }

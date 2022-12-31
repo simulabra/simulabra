@@ -11,6 +11,13 @@ $(def ~class(new {
   }
 }))
 
+$(def ~mixin(new {
+  name 'color
+  slots {
+    color ~var(new)
+  }
+}))
+
 $(defn test []
   $(let p ~point(new))
   $(let q ~point(new))

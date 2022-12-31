@@ -28,7 +28,7 @@ _.base_object = {
                 return null;
             }
         },
-        super(message, ...args) {
+        supercall(message, ...args) {
             return this.class().super().proto()[message].apply(this, args);
         },
         name() {
@@ -86,6 +86,9 @@ _.base_object = {
     },
     load() {
         return;
+    },
+    components() {
+        return [];
     },
     proto() {
         return this._slots;
@@ -157,17 +160,13 @@ _.class = {
             Object.setPrototypeOf(this.proto(), this.super().proto());
             // this.implements().map(iface => iface.satisfies(this));
             this.load(this);
-            this.super().load(this);
         },
         load(target) {
             for (const [k, v] of this.static().entries()) {
                 v.load(target);
             }
-            for (const [k, v] of this.slots().entries()) {
+            for (const [k, v] of this.components().entries()) {
                 // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
-                v?.load && v.load(target.proto());
-            }
-            for (const [k, v] of this.mixed().entries()) {
                 v?.load && v.load(target.proto());
             }
         },
@@ -235,6 +234,9 @@ _.class = {
         },
         slots() {
             return this._slots;
+        },
+        components() {
+            return [...this._slots.values(), ...this.super().components()];
         },
         static() {
             return this._static;
