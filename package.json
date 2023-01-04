@@ -14,6 +14,7 @@
   "dependencies": {
     "acorn": "^8.8.0",
     "meriyah": "^4.3.2",
+    "recast": "^0.22.0",
     "uvu": "^0.5.6"
   }
 }

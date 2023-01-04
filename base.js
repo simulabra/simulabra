@@ -154,6 +154,7 @@ _.class = {
             this.defaultInitSlot('slots', {});
             this.defaultInitSlot('static', {});
             this.defaultInitSlot('implements', []);
+            this.defaultInitSlot('components', []);
             nameSlots(this.slots());
             nameSlots(this.static());
 
@@ -165,7 +166,10 @@ _.class = {
             for (const [k, v] of this.static().entries()) {
                 v.load(target);
             }
-            for (const [k, v] of this.components().entries()) {
+            for (const v of this.components()) {
+                v?.load && v.load(target);
+            }
+            for (const [k, v] of this.slots().entries()) {
                 // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
                 v?.load && v.load(target.proto());
             }
@@ -223,20 +227,11 @@ _.class = {
         mixins() {
             return this._mixins;
         },
-        mixed() {
-            if (this.mixins()?.length > 0) {
-                return this.mixins().reduce((prev, cur) => {
-                    return cur.mix(prev);
-                }, null).slots();
-            } else {
-                return {};
-            }
-        },
         slots() {
             return this._slots;
         },
         components() {
-            return [...this._slots.values(), ...this.super().components()];
+            return this._components;
         },
         static() {
             return this._static;
@@ -347,9 +342,11 @@ _.debug = _.class.new({
         debug: _.var.default(false),
         log(...args) {
             console.log(...args.map(a => '' + a));
+            return this;
         },
         logt(...args) {
             console.log(args.map(a => a.toString()).join(''));
+            return this;
         }
     }
 });

@@ -1,5 +1,7 @@
 // now, what if it were a lisp machine?
 import { readFileSync, writeFileSync } from 'fs';
+import { parse, print, prettyPrint } from 'recast';
+import { parseScript } from 'meriyah';
 import './base.js';
 const _ = globalThis.SIMULABRA;
 const stanza = 'const _ = globalThis.SIMULABRA;';
@@ -110,6 +112,7 @@ _.node = _.class.new({
   abstract: true,
   slots: {
     children() {
+      return [];
     },
     macroexpand() {
       return this;
@@ -140,8 +143,13 @@ _.name_literal = _.class.new({
       parser.assertAdvance('\'');
       const s = parser.nameString();
       return this.new({ value: s });
-    }
+    },
   },
+  slots: {
+    jsSymbol() {
+      return this.value().replace(/-/g, '_');
+    }
+  }
 });
 
 _.string_literal = _.class.new({
@@ -438,7 +446,7 @@ _.class_ref = _.class.new({
   slots: {
     js: _.method.new({
       do: function js(ctx) {
-        return `_.${this.name()}`;
+        return `_.${this.name().replace(/-/g, '_')}`;
       }
     }),
   }
@@ -743,7 +751,7 @@ _.export_statement = _.class.new({
 baseEnv.add(_.macro.new({
   name: 'def',
   fn: function(value) {
-    const name = value.message().parts()[0].args()[0].map().name.value();
+    const name = value.message().parts()[0].args()[0].map().name.jsSymbol();
     return _.export_statement.new({
       name,
       value,
@@ -909,7 +917,6 @@ _.module_file = _.class.new({
       const src = _.module_source.loadLocal(name);
       const outfile = `./out/${this.name()}.mjs`;
       const program = _.program.parse(src.parser());
-      _.debug.log(program)
       const js = program.js(ctx);
       let esm;
       try {
@@ -917,7 +924,13 @@ _.module_file = _.class.new({
         esm = await import(outfile);
       } catch (e) {
         console.error(e);
-        console.log(js);
+        console.log(prettyPrint(parse(js, {
+          parser: {
+            parse(source) {
+              return parseScript(source);
+            }
+          }
+        })).code.replace(/\\n/g, '\n'));
       }
       const defs = [];
       for (let v in esm) {
@@ -944,4 +957,4 @@ _.module_file = _.class.new({
 });
 
 await _.module_file.load(process.argv[2], baseEnv);
-_.debug.log(_.test());
+_.test();

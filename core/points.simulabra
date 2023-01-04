@@ -11,17 +11,22 @@ $(def ~class(new {
   }
 }))
 
-$(def ~mixin(new {
+$(def ~class(new {
   name 'color
   slots {
     color ~var(new)
   }
 }))
 
+$(def ~class(new {
+  name 'color-point
+  components [~point ~color]
+}))
+
 $(defn test []
   $(let p ~point(new))
-  $(let q ~point(new))
+  $(let q ~color-point(new { color 'blue }))
   %p(x 3)
   %q(y 4)
-  %p(dist %q)
+  ~debug(log %q(color) %p(dist %q))
 )
