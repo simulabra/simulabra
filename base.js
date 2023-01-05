@@ -161,6 +161,7 @@ _.class = {
             Object.setPrototypeOf(this.proto(), this.super().proto());
             // this.implements().map(iface => iface.satisfies(this));
             this.load(this);
+            _.$mod?.addClass(this);
         },
         load(target) {
             for (const [k, v] of this.static().entries()) {
@@ -341,11 +342,7 @@ _.debug = _.class.new({
     static: {
         debug: _.var.default(false),
         log(...args) {
-            console.log(...args.map(a => '' + a));
-            return this;
-        },
-        logt(...args) {
-            console.log(args.map(a => a.toString()).join(''));
+            console.log(...args.map(a => a ? a.short_description() : '' + a));
             return this;
         }
     }
@@ -452,7 +449,7 @@ _.string_primitive = _.primitive.new({
             return _.string_primitive;
         },
         short_description() {
-            return `'${this}'`;
+            return this;
         },
         js() {
             return this;
@@ -522,10 +519,10 @@ _.array_primitive = _.primitive.new({
             return _.array_primitive;
         },
         short_description() {
-            return `(${this.map(a => a.short_description()).join(' ')})`;
+            return `[${this.map(a => a.short_description()).join(' ')}]`;
         },
         description() {
-            return `(${this.map(a => a.description()).join(' ')})`;
+            return `[${this.map(a => a.description()).join(' ')}]`;
         },
     }
 });

@@ -634,7 +634,7 @@ _.program = _.class.new({
   slots: {
     statements: _.var.new(),
     js(ctx) {
-      return stanza + this.statements().map(s => s.js(ctx)).join(';');
+      return this.statements().map(s => s.js(ctx)).join(';');
     },
   }
 })
@@ -907,23 +907,15 @@ _.module_source = _.class.new({
   }
 });
 
-// Source -> Out -> _.module or Source -> _.module -> Out, that is the q
-// also raises q of whether we need to have eval
-// compiler can be reentrant with dynamic imports???
-_.module_file = _.class.new({
-  name: 'module-file',
-  static: {
-    async load(name, ctx) {
-      const src = _.module_source.loadLocal(name);
-      const outfile = `./out/${this.name()}.mjs`;
-      const program = _.program.parse(src.parser());
-      const js = program.js(ctx);
-      let esm;
+_.evaluator = _.class.new({
+  name: 'evaluator',
+  slots: {
+    ctx: _.var.new(),
+    run(program) {
+      const js = stanza + program.js(this.ctx());
       try {
-        writeFileSync(outfile, js);
-        esm = await import(outfile);
-      } catch (e) {
-        console.error(e);
+        eval?.(js);
+      } catch(e) {
         console.log(prettyPrint(parse(js, {
           parser: {
             parse(source) {
@@ -931,30 +923,43 @@ _.module_file = _.class.new({
             }
           }
         })).code.replace(/\\n/g, '\n'));
+        throw e;
       }
-      const defs = [];
-      for (let v in esm) {
-        if (esm.hasOwnProperty(v)) {
-          defs.push(esm[v]);
-        }
-      }
-      return this.new({
-        name,
-        esm,
-        defs,
-      });
+    },
+  }
+});
+
+_.$evl = _.evaluator.new({
+  ctx: baseEnv
+});
+
+_.module = _.class.new({
+  name: 'module',
+  static: {
+    loadFromFile(name) {
+      const src = _.module_source.loadLocal(name);
+      const program = _.program.parse(src.parser());
+      const mod = this.new()
+      _.$mod = mod;
+      _.$evl.run(program);
+      _.debug.log(_.$mod.classes().short_description());
+      _.debug.log(null);
+      delete _.$mod;
+      return mod;
     }
   },
   slots: {
     name: _.var.new(),
-    esm: _.var.new(),
-    defs: _.var.new(),
-    save(ctx) {
-      const js = this.js(ctx);
-      writeFileSync(this.outfile(), js)
+    classes: _.var.default([]),
+    functions: _.var.default([]),
+    addClass(cls) {
+      this.classes().push(cls);
     },
-  },
-});
+    addFunction(fn) {
+      this.functions().push(fn);
+    }
+  }
+})
 
-await _.module_file.load(process.argv[2], baseEnv);
+await _.module.loadFromFile(process.argv[2]);
 _.test();
