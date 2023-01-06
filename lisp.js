@@ -462,7 +462,6 @@ _.type_ref = _.class.new({
     },
   },
   slots: {
-    name: _.var.new(),
     js: _.method.new({
       do: function js() {
         return `${this.name()}`;
@@ -481,7 +480,6 @@ _.arg_ref = _.class.new({
     },
   },
   slots: {
-    name: _.var.new(),
     js: _.method.new({
       do: function js(ctx) {
         return this.name();

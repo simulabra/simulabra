@@ -31,11 +31,11 @@ _.base_object = {
         supercall(message, ...args) {
             return this.class().super().proto()[message].apply(this, args);
         },
-        name() {
-            if ('_name' in this) {
-                return this._name;
-            }
-        },
+        // name() {
+        //     if ('_name' in this) {
+        //         return this._name;
+        //     }
+        // },
         abstract() {
             return this._abstract || false;
         },
@@ -54,7 +54,7 @@ _.base_object = {
         },
         //=!description
         displayName() {
-            return this.name() || '?';
+            return this._name || '?';
         },
         base_description() {
             return `${this.displayName()} class:${this.class().name()} id:${this._intid}`;
@@ -172,6 +172,9 @@ _.class = {
             }
             for (const [k, v] of this.slots().entries()) {
                 // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
+                if (k in target.proto() && !v.overrides(target.proto())) {
+                    throw new Error(`attempt to define already bound slot ${k} with ${_.debug.formatArgs(v)}`);
+                }
                 v?.load && v.load(target.proto());
             }
         },
@@ -248,6 +251,10 @@ Function.prototype.short_description = function() {
     return `Native Function ${this.name}`;
 }
 
+Function.prototype.overrides = function() {
+    return true;
+}
+
 Object.setPrototypeOf(_.class, _.class._slots); // prototypical roots mean we can avoid Metaclasses
 
 _.class.init();
@@ -315,6 +322,9 @@ _.var = _.class.new({
             } else {
                 parent[this.name()] = immutableAccess(this);
             }
+        },
+        overrides(_proto) {
+            return this._override;
         }
     }
 });
@@ -342,8 +352,11 @@ _.debug = _.class.new({
     static: {
         debug: _.var.default(false),
         log(...args) {
-            console.log(...args.map(a => a ? a.short_description() : '' + a));
+            console.log(...this.formatArgs(...args));
             return this;
+        },
+        formatArgs(...args) {
+            return args.map(a => a ? a.short_description() : '' + a)
         }
     }
 });
@@ -386,6 +399,9 @@ _.method = _.class.new({
                 parent.methods().push(this);
             }
         },
+        overrides(_proto) {
+            return this._override;
+        }
     }
 });
 
@@ -531,6 +547,9 @@ _.function_primitive = _.primitive.new({
     name: 'function-primitive',
     js_prototype: Function.prototype,
     slots: {
+        overrides(_proto) {
+            return true;
+        }
     },
 });
 
