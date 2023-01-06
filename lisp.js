@@ -66,7 +66,7 @@ _.lexer = _.class.new({
     token: _.method.new({
       do: function token() {
         const c = this.chomp();
-        if ('(){}[]>~@$!.%#|,\' \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.%#|,:^= \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
@@ -140,7 +140,7 @@ _.name_literal = _.class.new({
   super: _.js_literal,
   static: {
     parse(parser) {
-      parser.assertAdvance('\'');
+      parser.assertAdvance(':');
       const s = parser.nameString();
       return this.new({ value: s });
     },
@@ -320,6 +320,7 @@ _.macro_call = _.class.new({
   static: {
     parse(parser) {
       parser.assertAdvance('$');
+      return this.new({ message: _.message.parse(parser) });
     },
   },
   slots: {
@@ -344,6 +345,7 @@ _.macro_call = _.class.new({
   }
 });
 
+
 _.message_part = _.class.new({
   name: 'message_part',
   super: _.node,
@@ -351,7 +353,7 @@ _.message_part = _.class.new({
     parse(parser) {
       const selector = parser.nameString();
       const args = [];
-      while (!'|)'.includes(parser.head())) {
+      while (!'|>)'.includes(parser.head())) {
         args.push(parser.form());
       }
       return this.new({
@@ -392,7 +394,7 @@ _.message = _.class.new({
       return this.parts().map(p => p.js(ctx)).join('.');
     },
   }
-})
+});
 
 _.call = _.class.new({
   name: 'call',
@@ -488,9 +490,8 @@ _.arg_ref = _.class.new({
   }
 });
 
-_.this_ref = _.class.new({
-  name: 'this_ref',
-  super: _.ref,
+_.get_var = _.class.new({
+  name: 'get_var',
   static: {
     parse(parser) {
       parser.assertAdvance('.');
@@ -505,6 +506,22 @@ _.this_ref = _.class.new({
     }),
   }
 });
+
+_.set_var = _.class.new({
+  static: {
+    parse(parser) {
+      parser.assertAdvance('=');
+      return this.new();
+    }
+  },
+  slots: {
+    js: _.method.new({
+      do: function js(ctx) {
+        return 'this';
+      }
+    }),
+  }
+})
 
 _.unquote = _.class.new({
   name: 'unquote',
@@ -602,19 +619,45 @@ _.body = _.class.new({
   slots: {
     statements: _.var.new(),
     js(ctx) {
-      return this.statements()
-                 .map((s, idx) =>
-                   (idx === this.statements().length - 1 ? 'return ' : '') + s.js(ctx) + ';')
-                 .join('');
+      return this.statements().map(s => s.js(ctx) + ';').join('');
     }
   }
 });
 
-baseEnv.defmacro('body', function(...statements) {
-  return _.body.new({
-    statements
-  });
+_.if_statement = _.class.new({
+  name: 'if-statement',
+  super: _.node,
+  slots: {
+    cond: _.var.new(),
+    then: _.var.new(),
+    else: _.var.new(),
+    js(ctx) {
+      const elssJs = this.else() !== undefined ? `else { ${this.else().js(ctx)} }` : '';
+      const j = `if (${this.cond().js(ctx)}) { ${this.then().js(ctx)} } ${elssJs}`
+      _.debug.log(j);
+      return j;
+    }
+  }
 });
+
+_.return = _.class.new({
+  name: 'return',
+  super: _.node,
+  static: {
+    parse(parser) {
+      parser.assertAdvance('^');
+      return this.new({
+        value: parser.form()
+      });
+    },
+  },
+  slots: {
+    value: _.var.new(),
+    js(ctx) {
+      return 'return ' + this.value().js(ctx);
+    }
+  }
+})
 
 _.program = _.class.new({
   name: 'program',
@@ -656,6 +699,15 @@ _.parser = _.class.new({
     },
     headChar(cs) {
       return cs.includes(this.head());
+    },
+    curInContext() {
+      return this.toks().map((tok, i) => {
+        if (i === this.pos()) {
+          return `////${tok}////`;
+        } else {
+          return tok;
+        }
+      }).join('');
     },
     maybeAdvance(cs) {
       if (this.headChar(cs)) {
@@ -700,24 +752,23 @@ _.parser = _.class.new({
         '~': _.class_ref,
         '!': _.type_ref,
         '%': _.arg_ref,
-        '.': _.this_ref,
-        "'": _.name_literal,
+        '.': _.get_var,
+        '=': _.set_var,
+        ":": _.name_literal,
         '@': _.body,
         '{': _.dexp,
         '[': _.list_expression,
         ',': _.unquote,
+        '^': _.return,
+        '$': _.macro_call,
       };
       const exp = tokamap[tok]?.parse(this);
       if (exp) {
+        console.log(tok, this.cur())
         if (this.cur() === '(') {
           return _.call.new({ receiver: exp, message: _.message.parse(this) });
         }
         return exp;
-      }
-
-      if (tok === '$') {
-        this.advance();
-        return _.macro_call.new({ message: _.message.parse(this) });
       }
       if (' \n\t'.includes(tok)) {
         this.advance();
@@ -729,7 +780,7 @@ _.parser = _.class.new({
       if (/[A-Za-z]/.test(tok[0])) {
         return this.nameString();
       }
-      throw new Error('No matching parse form for ' + tok);
+      throw new Error(`No matching parse form for ${tok} in ${this.curInContext()}`);
     },
   }
 });
@@ -875,6 +926,31 @@ baseEnv.defmacro('assert', function (a, b) {
   return _.empty_statement.new();
 });
 
+baseEnv.add(_.macro.new({
+  name: 'if',
+  fn(cond, then, elss) {
+    return _.if_statement.new({
+      cond,
+      then,
+      else: elss
+    })
+  }
+}))
+
+baseEnv.add(_.macro.new({
+  name: 'dupdate',
+  fn(name) {
+    // return _.call.new({
+    //   receiver: _.get_var.new(),
+    //   message: _.message.new({
+    //     parts: [_.message_part.new({ selector: name, args: [this.parts(),
+    //   }),
+    //   else: elss
+    // })
+  }
+}))
+
+
 
 /*
  * remaining syntax bits:
@@ -917,6 +993,7 @@ _.evaluator = _.class.new({
         console.log(prettyPrint(parse(js, {
           parser: {
             parse(source) {
+              console.log(source);
               return parseScript(source);
             }
           }

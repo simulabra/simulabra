@@ -508,9 +508,6 @@ _.number_primitive = _.primitive.new({
         short_description() {
             return this.toString();
         },
-        add(n) {
-            return this + n;
-        },
         sub(n) {
             return this - n;
         },
