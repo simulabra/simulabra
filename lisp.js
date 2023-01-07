@@ -634,7 +634,6 @@ _.if_statement = _.class.new({
     js(ctx) {
       const elssJs = this.else() !== undefined ? `else { ${this.else().js(ctx)} }` : '';
       const j = `if (${this.cond().js(ctx)}) { ${this.then().js(ctx)} } ${elssJs}`
-      _.debug.log(j);
       return j;
     }
   }
@@ -764,7 +763,6 @@ _.parser = _.class.new({
       };
       const exp = tokamap[tok]?.parse(this);
       if (exp) {
-        console.log(tok, this.cur())
         if (this.cur() === '(') {
           return _.call.new({ receiver: exp, message: _.message.parse(this) });
         }
@@ -845,14 +843,22 @@ baseEnv.defmacro('fn', function(args, ...body) {
 baseEnv.add(_.macro.new({
   name: 'defn',
   fn: function(name, args, ...body) {
-    return _.export_statement.new({
-      name,
-      value: _.function_statement.new({
-        args,
-        body: _.body.of(body),
-      })
+    // TODO: add function to module
+    return _.body.new({
+      statements: [
+        _.export_statement.new({
+          name,
+          value: _.function_statement.new({
+            args,
+            body: _.body.of(body),
+          })
+        }),
+        _.js_snippet.new({
+          code: `_.$mod.addFunction('${name}', _.${name})`
+        }),
+      ],
     });
-  }
+  },
 }));
 
 baseEnv.defmacro('do', function (...body) {
@@ -906,6 +912,24 @@ _.for_statement = _.class.new({
     }
   }
 });
+
+_.js_snippet = _.class.new({
+  name: 'js-snippet',
+  super: _.node,
+  slots: {
+    code: _.var.new(),
+    js(ctx) {
+      return this.code();
+    }
+  }
+});
+
+baseEnv.add(_.macro.new({
+  name: 'js',
+  fn(code) {
+    return _.js_snippet.new({ code });
+  }
+}));
 
 baseEnv.defmacro('loop', function (iterable, ...body) {
   return _.for_statement.new({
@@ -990,17 +1014,24 @@ _.evaluator = _.class.new({
       try {
         eval?.(js);
       } catch(e) {
-        console.log(prettyPrint(parse(js, {
-          parser: {
-            parse(source) {
-              console.log(source);
-              return parseScript(source);
-            }
-          }
-        })).code.replace(/\\n/g, '\n'));
+        console.log('throwin')
+        this.prettify(js);
         throw e;
       }
     },
+    prettify(js) {
+      try {
+      _.debug.log(prettyPrint(parse(js, {
+        parser: {
+          parse(source) {
+            return parseScript(source);
+          }
+        }
+      })).code.replace(/\\n/g, '\n'));
+      } catch (e) {
+        _.debug.log(`failed to parse for pretty-printing ${js}`);
+      }
+    }
   }
 });
 
@@ -1013,28 +1044,39 @@ _.module = _.class.new({
   static: {
     loadFromFile(name) {
       const src = _.module_source.loadLocal(name);
-      const program = _.program.parse(src.parser());
-      const mod = this.new()
+      const node = _.program.parse(src.parser());
+      const mod = this.new({
+        src,
+        node
+      });
       _.$mod = mod;
-      _.$evl.run(program);
-      _.debug.log(_.$mod.classes().short_description());
-      _.debug.log(null);
+      _.$evl.run(node);
       delete _.$mod;
       return mod;
     }
   },
   slots: {
     name: _.var.new(),
-    classes: _.var.default([]),
-    functions: _.var.default([]),
+    classes: _.var.default({}),
+    functions: _.var.default({}),
+    src: _.var.new(),
+    node: _.var.new(),
     addClass(cls) {
-      this.classes().push(cls);
+      this.classes()[cls.name()] = cls;
     },
-    addFunction(fn) {
-      this.functions().push(fn);
+    addFunction(name, fn) {
+      this.functions()[name] = fn;
+    },
+    test() {
+      this.functions().test()
     }
   }
 })
 
-await _.module.loadFromFile(process.argv[2]);
-_.test();
+const m = await _.module.loadFromFile(process.argv[2]);
+try {
+  m.test();
+} catch (e) {
+  _.$evl.prettify(m.node().js(baseEnv));
+  console.log(e);
+}

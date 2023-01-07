@@ -357,7 +357,8 @@ _.debug = _.class.new({
         },
         formatArgs(...args) {
             return args.map(a => a ? a.short_description() : '' + a)
-        }
+        },
+        
     }
 });
 
@@ -444,6 +445,9 @@ _.primitive = _.class.new({
                 this._js_prototype[name] = fn;
             }
         },
+        name() {
+            return this.class().name();
+        }
         // extend(iface, slots) {}
     }
 });
@@ -469,6 +473,9 @@ _.string_primitive = _.primitive.new({
         },
         js() {
             return this;
+        },
+        className() {
+            return 'string';
         }
     }
 });
@@ -507,6 +514,9 @@ _.number_primitive = _.primitive.new({
         },
         short_description() {
             return this.toString();
+        },
+        add(n) {
+            return this + n;
         },
         sub(n) {
             return this - n;

@@ -1,31 +1,31 @@
 $(def ~class(new {
-  name 'point
+  name :point
   slots {
     x ~var(new { default 0 })
     y ~var(new { default 0 })
     dist ~method(new {
       do $(fn [other]
-        .(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
+        ^.(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
       )
     })
   }
 }))
 
 $(def ~class(new {
-  name 'color
+  name :color
   slots {
     color ~var(new)
   }
 }))
 
 $(def ~class(new {
-  name 'color-point
+  name :color-point
   components [~point ~color]
 }))
 
 $(defn test []
   $(let p ~point(new))
-  $(let q ~color-point(new { color 'blue }))
+  $(let q ~color-point(new { color :blue }))
   %p(x 3)
   %q(y 4)
   ~debug(log %q(color) %p(dist %q))
