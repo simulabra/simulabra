@@ -8,4 +8,6 @@
  * { name :something value %x(* 42 | + 5) }
  * &%conn(async-method)
  *
+ * traits?
+ * desires for the shape of something?
  */
