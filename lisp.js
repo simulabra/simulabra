@@ -140,7 +140,7 @@ _.name_literal = _.class.new({
   static: {
     parse(parser) {
       parser.assertAdvance(':');
-      const s = parser.nameString();
+      const s = parser.advance();
       return this.new({ value: s });
     },
   },
@@ -333,7 +333,7 @@ _.macro_call = _.class.new({
         try {
           return ctx.eval(this).js(ctx);
         } catch (e) {
-          console.log(`macro error: ${this.selector().value()}`);
+          console.log(`macro error: ${this.selector()}`);
           _.debug.log(ctx.eval(this))
           throw e;
         }
@@ -562,7 +562,7 @@ _.pair = _.class.new({
     name: _.var.new(),
     value: _.var.new(),
     js(ctx) {
-      return `${this.name()}: ${this.value().js(ctx)},`
+      return `${this.name().jsSymbol()}: ${this.value().js(ctx)},`
     }
   }
 });
@@ -591,6 +591,7 @@ _.dexp = _.class.new({
     init() {
       let m = {};
       for (const p of this.pairs()) {
+        _.debug.log(p.name())
         m[p.name()] = p.value();
       }
       this.map(m);
@@ -798,6 +799,7 @@ _.export_statement = _.class.new({
 baseEnv.add(_.macro.new({
   name: 'def',
   fn: function(value) {
+    _.debug.log(value.message().parts()[0].args()[0]);
     const name = value.message().parts()[0].args()[0].map().name.jsSymbol();
     return _.export_statement.new({
       name,
@@ -1089,7 +1091,7 @@ _.module = _.class.new({
       this.functions().test()
     }
   }
-})
+});
 
 const m = await _.module.loadFromFile(process.argv[2]);
 try {

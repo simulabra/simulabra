@@ -1,9 +1,12 @@
 $(def ~class(new {
   name :point
+  desc "2d point"
   slots {
     x ~var(new { default 0 })
     y ~var(new { default 0 })
     dist ~method(new {
+      desc "cartesian distance to other point"
+      arg !point
       do $(fn [other]
         ^.(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
       )
