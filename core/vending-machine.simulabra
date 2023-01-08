@@ -7,10 +7,6 @@ $(def ~class(new {
   }
 }))
 
-$(macro update [name $(rest parts)]
-  $(qq .(,name .(,name ,parts)))
-)
-
 $(def ~class(new {
   name :vending-machine
   slots {
@@ -18,28 +14,33 @@ $(def ~class(new {
     products ~var(new { default $(do ^{}) })
     deposit ~method(new {
       desc "add some change into the machine"
-      do $(fn [amount]
-        $(update balance | add %amount)
+      do $(fn [%amount]
+        .(balance .(balance | add %amount))
       )
     })
     purchase ~method(new {
       desc "buy a product"
-      do $(fn [product-name]
+      do $(fn [%product-name]
         $(let purchase .(stock | get %product-name))
         $(if .(balance | lt %purchase(price)) $(throws "Not enough change"))
         $(if %purchase(stock | lt 1) $(throws "Out of stock"))
         %purchase(dispense)
-        $(update balance | sub %purchase(price))
+        .(balance .(balance | sub %purchase(price)))
       )
     })
     restock ~method(new {
-      do $(fn [product quantity]
-        .(inventory | update %product | add %quantity)
+      do $(fn [%product-name %quantity]
+        .(get-product %product-name | add-stock %quantity)
       )
     })
     add-product ~method(new {
+      do $(fn [product]
+        .(products | put %product)
+      )
+    })
+    get-product ~method(new {
       do $(fn [product-name]
-        .(price-list | update %product | set %price)
+        .(products | get %product-name)
       )
     })
   }

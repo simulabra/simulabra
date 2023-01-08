@@ -136,7 +136,6 @@ _.js_literal = _.class.new({
 
 _.name_literal = _.class.new({
   name: 'name_literal',
-  super: _.node,
   super: _.js_literal,
   static: {
     parse(parser) {
@@ -154,7 +153,6 @@ _.name_literal = _.class.new({
 
 _.string_literal = _.class.new({
   name: 'string_literal',
-  super: _.node,
   super: _.js_literal,
   static: {
     parse(parser) {
@@ -168,7 +166,6 @@ _.string_literal = _.class.new({
 
 _.number_literal = _.class.new({
   name: 'number_literal',
-  super: _.node,
   super: _.js_literal,
   static: {
     parse(parser) {
@@ -326,7 +323,7 @@ _.macro_call = _.class.new({
   slots: {
     message: _.var.new(),
     selector() {
-      return this.message().parts()[0].selector();
+      return this.message().parts()[0].selector().value();
     },
     args() {
       return this.message().parts()[0].args();
@@ -336,7 +333,7 @@ _.macro_call = _.class.new({
         try {
           return ctx.eval(this).js(ctx);
         } catch (e) {
-          console.log(`macro error: ${this.selector()}`);
+          console.log(`macro error: ${this.selector().value()}`);
           _.debug.log(ctx.eval(this))
           throw e;
         }
@@ -433,6 +430,9 @@ _.ref = _.class.new({
   abstract: true,
   slots: {
     name: _.var.new(),
+    deskewer() {
+      return this.name().replace(/-/g, '_');
+    }
   }
 })
 
@@ -448,7 +448,7 @@ _.class_ref = _.class.new({
   slots: {
     js: _.method.new({
       do: function js(ctx) {
-        return `_.${this.name().replace(/-/g, '_')}`;
+        return `_.${this.deskewer()}`;
       }
     }),
   }
@@ -466,7 +466,7 @@ _.type_ref = _.class.new({
   slots: {
     js: _.method.new({
       do: function js() {
-        return `${this.name()}`;
+        return `_.\$${this.deskewer()}`;
       }
     })
   }
@@ -484,7 +484,7 @@ _.arg_ref = _.class.new({
   slots: {
     js: _.method.new({
       do: function js(ctx) {
-        return this.name();
+        return this.deskewer();
       }
     }),
   }
@@ -525,7 +525,7 @@ _.set_var = _.class.new({
 
 _.unquote = _.class.new({
   name: 'unquote',
-  // super: _.node,
+  super: _.node,
   static: {
     parse(parser) {
       parser.assertAdvance(',');
@@ -737,7 +737,7 @@ _.parser = _.class.new({
     },
     nameString() {
       this.assert(/^[A-Za-z][A-Za-z\-\d]*$/.test(this.cur()), true);
-      return this.advance();
+      return _.name_literal.new({ value: this.advance() });
     },
     form() {
       if (this.ended()) {
@@ -923,6 +923,24 @@ _.js_snippet = _.class.new({
     }
   }
 });
+
+_.throws = _.class.new({
+  name: 'throws',
+  super: _.node,
+  slots: {
+    msg: _.var.new(),
+    js(ctx) {
+      return `throw new Error("${this.msg()}")`;
+    }
+  }
+});
+
+baseEnv.add(_.macro.new({
+  name: 'throws',
+  fn(msg) {
+    return _.throws.new({ msg });
+  }
+}));
 
 baseEnv.add(_.macro.new({
   name: 'js',
