@@ -121,8 +121,9 @@ _.node = _.class.new({
   }
 });
 
-_.js_literal = _.class.new({
-  name: 'js_literal',
+
+_.literal = _.class.new({
+  name: 'literal',
   super: _.node,
   slots: {
     value: _.var.new(),
@@ -136,7 +137,7 @@ _.js_literal = _.class.new({
 
 _.name_literal = _.class.new({
   name: 'name_literal',
-  super: _.js_literal,
+  super: _.node,
   static: {
     parse(parser) {
       parser.assertAdvance(':');
@@ -147,6 +148,9 @@ _.name_literal = _.class.new({
   slots: {
     jsSymbol() {
       return this.value().replace(/-/g, '_');
+    },
+    js(ctx) {
+      return this.jsSymbol();
     }
   }
 });
@@ -160,7 +164,7 @@ _.string_literal = _.class.new({
       parser.assert(s[0], '"');
       parser.assert(s[s.length - 1], '"');
       return this.new({ value: s.slice(1, s.length - 1) });
-    }
+    },
   },
 });
 
@@ -363,7 +367,7 @@ _.message_part = _.class.new({
     selector: _.var.new(),
     args: _.var.new(),
     js(ctx) {
-      return `${this.selector()}(${this.args().map(a => a.js(ctx)).join(',')})`;
+      return `${this.selector().js(ctx)}(${this.args().map(a => a.js(ctx)).join(',')})`;
     },
   }
 })
@@ -431,7 +435,7 @@ _.ref = _.class.new({
   slots: {
     name: _.var.new(),
     deskewer() {
-      return this.name().replace(/-/g, '_');
+      return this.name().jsSymbol();
     }
   }
 })
@@ -567,8 +571,8 @@ _.pair = _.class.new({
   }
 });
 
-_.dexp = _.class.new({
-  name: 'dexp', // lmao?
+_.object_literal = _.class.new({
+  name: 'object-literal', // lmao?
   super: _.node,
   static: {
     parse(parser) {
@@ -580,7 +584,7 @@ _.dexp = _.class.new({
         parser.stripws();
       }
       parser.assertAdvance('}');
-      return _.dexp.new({
+      return _.object_literal.new({
         pairs
       });
     },
@@ -592,7 +596,7 @@ _.dexp = _.class.new({
       let m = {};
       for (const p of this.pairs()) {
         _.debug.log(p.name())
-        m[p.name()] = p.value();
+        m[p.name().jsSymbol()] = p.value();
       }
       this.map(m);
     },
@@ -756,7 +760,7 @@ _.parser = _.class.new({
         '=': _.set_var,
         ":": _.name_literal,
         '@': _.body,
-        '{': _.dexp,
+        '{': _.object_literal,
         '[': _.list_expression,
         ',': _.unquote,
         '^': _.return,

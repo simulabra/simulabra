@@ -10,4 +10,7 @@
  *
  * traits?
  * desires for the shape of something?
+ *
+ * ObjectLiteral
+ * Literal
  */
