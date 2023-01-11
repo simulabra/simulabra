@@ -97,6 +97,23 @@ _.p = _.class.new({
     n: _.var.new(),
     a: _.method.new({
       do(n) {
+        this.n(this.n() + n);
+      }
+    }),
+    b: _.method.new({
+      do(n) {
+        this.n(this.n() - (n / 2));
+      }
+    }),
+  }
+});
+
+_.popt = _.class.new({
+  name: 'popt',
+  slots: {
+    n: _.var.new(),
+    a: _.method.new({
+      do(n) {
         this._n = (this._n + n); // optimization for as long as the var is basic?
       }
     }),
@@ -114,5 +131,6 @@ bench('multiple', () => sweat(mdo()));
 bench('direct', () => sweat(direct));
 bench('directproto', () => sweat(directProto()));
 bench('simulabra', () => sweat(_.p.new()));
+bench('simulabra-opt', () => sweat(_.popt.new()));
 
 await run();
