@@ -120,16 +120,15 @@ Object.prototype.description = function() {
     return this.short_description();
 }
 
-function parametize(obj) {
-    const ret = {};
-    for (const [k, v] of Object.entries(obj)) {
+function parametize(props, obj) {
+    for (const [k, v] of Object.entries(props)) {
         if (k[0] !== '_') {
-            ret['_' + k] = v;
+            obj['_' + k] = v;
         } else {
             throw new Error('unneeded _');
         }
     }
-    return ret;
+    return obj;
 }
 
 function nameSlots(obj) {
@@ -179,8 +178,8 @@ _.class = {
             }
         },
         new(props = {}) {
-            const obj = parametize(props);
-            Object.setPrototypeOf(obj, this.proto());
+            const obj = Object.create(this.proto());
+            parametize(props, obj);
             if (!obj._intid) {
                 obj._intid = this.nextid();
             }
