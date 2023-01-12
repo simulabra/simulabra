@@ -119,6 +119,16 @@ Object.prototype.short_description = function() {
 Object.prototype.description = function() {
     return this.short_description();
 }
+Function.prototype.load = function(parent) {
+    parent[this.name] = this;
+};
+Function.prototype.short_description = function() {
+    return `Native Function ${this.name}`;
+}
+Function.prototype.overrides = function() {
+    return true;
+}
+
 
 function parametize(props, obj) {
     for (const [k, v] of Object.entries(props)) {
@@ -139,123 +149,109 @@ function nameSlots(obj) {
     }
 }
 
-_.class = {
-    _slots: {
-        _name: 'class',
-        _idctr: 0,
-        _super: _.base_object,
-        init() {
-            this._vars = [];
-            this._methods = [];
-            this._subclasses = [];
-            this._idctr = 0;
-            this._proto = { _class: this };
-            this.defaultInitSlot('slots', {});
-            this.defaultInitSlot('static', {});
-            this.defaultInitSlot('implements', []);
-            this.defaultInitSlot('components', []);
-            nameSlots(this.slots());
-            nameSlots(this.static());
+const classSlots = {
+    _name: 'class',
+    _idctr: 0,
+    _super: _.base_object,
+    init() {
+        this._vars = [];
+        this._methods = [];
+        this._subclasses = [];
+        this._idctr = 0;
+        this._proto = Object.create(this.super().proto());
+        this._proto._class = this;
+        this.defaultInitSlot('slots', {});
+        this.defaultInitSlot('static', {});
+        this.defaultInitSlot('implements', []);
+        this.defaultInitSlot('components', []);
+        nameSlots(this.slots());
+        nameSlots(this.static());
 
-            Object.setPrototypeOf(this.proto(), this.super().proto());
-            // this.implements().map(iface => iface.satisfies(this));
-            this.load(this);
-            _.$mod?.addClass(this);
-        },
-        load(target) {
-            for (const [k, v] of this.static().entries()) {
-                v.load(target);
+        // this.implements().map(iface => iface.satisfies(this));
+        this.load(this);
+        _.$mod?.addClass(this);
+    },
+    load(target) {
+        for (const [k, v] of this.static().entries()) {
+            v.load(target);
+        }
+        for (const v of this.components()) {
+            v?.load && v.load(target);
+        }
+        for (const [k, v] of this.slots().entries()) {
+            // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
+            if (k in target.proto() && !v.overrides(target.proto())) {
+                throw new Error(`attempt to define already bound slot ${k} with ${_.debug.formatArgs(v)}`);
             }
-            for (const v of this.components()) {
-                v?.load && v.load(target);
-            }
-            for (const [k, v] of this.slots().entries()) {
-                // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
-                if (k in target.proto() && !v.overrides(target.proto())) {
-                    throw new Error(`attempt to define already bound slot ${k} with ${_.debug.formatArgs(v)}`);
-                }
-                v?.load && v.load(target.proto());
-            }
-        },
-        new(props = {}) {
-            const obj = Object.create(this.proto());
-            parametize(props, obj);
-            if (!obj._intid) {
-                obj._intid = this.nextid();
-            }
-            if (obj._super && obj._super.subclasses) {
-                obj._super.subclasses().push(obj);
-            } else if (obj._super == undefined) {
-                obj._super = _.base_object;
-            }
-            obj.init(this);
-            return obj;
-        },
-        defaultInitSlot(slot, dval) {
-            const pk = '_' + slot;
-            if (!(pk in this)) {
-                this[pk] = dval;
-            }
-        },
-        name() {
-            return this._name;
-        },
-        eq(other) {
-            return this.name().eq(other.name());
-        },
-        nextid() {
-            return ++this._idctr;
-        },
-        super() {
-            return this._super;
-        },
-        class() {
-            return _.class;
-        },
-        subclasses() {
-            return this._subclasses;
-        },
-        implements() {
-            return this._implements;
-        },
-        proto() {
-            return this._proto;
-        },
-        vars() {
-            return this.slots().values().filter(v => v.className() === '_.var');
-        },
-        methods() {
-            return this._methods;
-        },
-        mixins() {
-            return this._mixins;
-        },
-        slots() {
-            return this._slots;
-        },
-        components() {
-            return this._components;
-        },
-        static() {
-            return this._static;
-        },
-    }
-}
-
-Function.prototype.load = function(parent) {
-    parent[this.name] = this;
+            v?.load && v.load(target.proto());
+        }
+    },
+    new(props = {}) {
+        const obj = Object.create(this.proto());
+        parametize(props, obj);
+        if (!obj._intid) {
+            obj._intid = this.nextid();
+        }
+        if (obj._super && obj._super.subclasses) {
+            obj._super.subclasses().push(obj);
+        } else if (obj._super == undefined) {
+            obj._super = _.base_object;
+        }
+        obj.init(this);
+        return obj;
+    },
+    defaultInitSlot(slot, dval) {
+        const pk = '_' + slot;
+        if (!(pk in this)) {
+            this[pk] = dval;
+        }
+    },
+    name() {
+        return this._name;
+    },
+    eq(other) {
+        return this.name().eq(other.name());
+    },
+    nextid() {
+        return ++this._idctr;
+    },
+    super() {
+        return this._super;
+    },
+    class() {
+        return _.class;
+    },
+    subclasses() {
+        return this._subclasses;
+    },
+    implements() {
+        return this._implements;
+    },
+    proto() {
+        return this._proto;
+    },
+    vars() {
+        return this.slots().values().filter(v => v.className() === '_.var');
+    },
+    methods() {
+        return this._methods;
+    },
+    mixins() {
+        return this._mixins;
+    },
+    slots() {
+        return this._slots;
+    },
+    components() {
+        return this._components;
+    },
+    static() {
+        return this._static;
+    },
 };
 
-Function.prototype.short_description = function() {
-    return `Native Function ${this.name}`;
-}
-
-Function.prototype.overrides = function() {
-    return true;
-}
-
-Object.setPrototypeOf(_.class, _.class._slots); // prototypical roots mean we can avoid Metaclasses
-
+_.class = Object.create(classSlots);
+_.class._slots = classSlots;
 _.class.init();
 
 _.var = _.class.new({
