@@ -2,37 +2,39 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { parse, print, prettyPrint } from 'recast';
 import { parseScript } from 'meriyah';
-import './base.js';
-const _ = globalThis.SIMULABRA;
-const stanza = 'const _ = globalThis.SIMULABRA;';
+import { $class, $var, $method, $virtual, $debug } from './base.js';
+const $_ = globalThis.SIMULABRA;
+const stanza = `
+const $_ = globalThis.SIMULABRA;
+`;
 
-_.lexer = _.class.new({
+export const $lexer = $class.new({
   name: 'lexer',
   slots: {
     init() {
       this.tokenize();
     },
-    code: _.var.new(),
-    pos: _.var.default(0),
-    toks: _.var.default([]),
-    cur: _.method.new({
+    code: $var.new(),
+    pos: $var.default(0),
+    toks: $var.default([]),
+    cur: $method.new({
       do: function cur() {
         return this.code()[this.pos()];
       }
     }),
-    chomp: _.method.new({
+    chomp: $method.new({
       do: function chomp() {
         const c = this.cur();
         this.pos(this.pos() + 1);
         return c;
       }
     }),
-    ended: _.method.new({
+    ended: $method.new({
       do: function ended() {
         return this.pos() >= this.code().length;
       }
     }),
-    terminal: _.method.new({
+    terminal: $method.new({
       do: function terminal() {
         return this.ended() || '(){}[]. \n'.includes(this.cur());
       }
@@ -44,7 +46,7 @@ _.lexer = _.class.new({
       }
       return cs;
     },
-    readToTerminal: _.method.new({
+    readToTerminal: $method.new({
       do: function readToTerminal(c) {
         return [c, ...this.toksToTerminal()].join('');
       }
@@ -63,7 +65,7 @@ _.lexer = _.class.new({
       s += this.chomp(); // last delim
       return s;
     },
-    token: _.method.new({
+    token: $method.new({
       do: function token() {
         const c = this.chomp();
         if ('(){}[]>~@$!.%#|,:^= \n\t'.includes(c)) {
@@ -82,7 +84,7 @@ _.lexer = _.class.new({
         throw new Error('UNHANDLED TOKEN CHAR: ' + c);
       }
     }),
-    tokenize: _.method.new({
+    tokenize: $method.new({
       do: function tokenize() {
         while (this.pos() < this.code().length) {
           this.token();
@@ -94,20 +96,20 @@ _.lexer = _.class.new({
 
 /*
  * Node classes
- * _.call
+ * $call
  * Map
  * String
- * _.macro
- * _.class
+ * $macro
+ * $class
  * Interface
  * Number
  * This
  * Arg
  * Boolean
- * _.list_expression
+ * $list_expression
  * Sexp
  */
-_.node = _.class.new({
+export const $node = $class.new({
   name: 'node',
   abstract: true,
   slots: {
@@ -117,17 +119,17 @@ _.node = _.class.new({
     macroexpand() {
       return this;
     },
-    js: _.virtual.new(),
+    js: $virtual.new(),
   }
 });
 
 
-_.literal = _.class.new({
+export const $literal = $class.new({
   name: 'literal',
-  super: _.node,
+  super: $node,
   slots: {
-    value: _.var.new(),
-    js: _.method.new({
+    value: $var.new(),
+    js: $method.new({
       do: function js(ctx) {
         return JSON.stringify(this.value());
       }
@@ -135,9 +137,9 @@ _.literal = _.class.new({
   },
 });
 
-_.name_literal = _.class.new({
+export const $name_literal = $class.new({
   name: 'name_literal',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance(':');
@@ -146,6 +148,7 @@ _.name_literal = _.class.new({
     },
   },
   slots: {
+    value: $var.new(),
     jsSymbol() {
       return this.value().replace(/-/g, '_');
     },
@@ -155,9 +158,9 @@ _.name_literal = _.class.new({
   }
 });
 
-_.string_literal = _.class.new({
+export const $string_literal = $class.new({
   name: 'string_literal',
-  super: _.js_literal,
+  super: $literal,
   static: {
     parse(parser) {
       const s = parser.advance();
@@ -168,21 +171,21 @@ _.string_literal = _.class.new({
   },
 });
 
-_.number_literal = _.class.new({
+export const $number_literal = $class.new({
   name: 'number_literal',
-  super: _.js_literal,
+  super: $literal,
   static: {
     parse(parser) {
       const n = parser.advance();
       parser.assert(typeof n, 'number');
-      return _.number_literal.new({ value: n });
+      return $number_literal.new({ value: n });
     },
   },
 });
 
-_.list_expression = _.class.new({
+export const $list_expression = $class.new({
   name: 'list_expression',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance('[');
@@ -200,13 +203,13 @@ _.list_expression = _.class.new({
     }
   },
   slots: {
-    value: _.var.default([]),
-    car: _.method.new({
+    value: $var.default([]),
+    car: $method.new({
       do: function car() {
         return this.value()[0];
       }
     }),
-    cdr: _.method.new({
+    cdr: $method.new({
       do: function cdr() {
         return this.value().slice(1);
       }
@@ -228,24 +231,24 @@ _.list_expression = _.class.new({
   }
 });
 
-_.macro_env = _.class.new({
+export const $macro_env = $class.new({
   name: 'macro_env',
   slots: {
-    parent: _.var.new(), // right?
-    macros: _.var.default({}),
-    stack: _.var.default([]),
-    add: _.method.new({
+    parent: $var.new(), // right?
+    macros: $var.default({}),
+    stack: $var.default([]),
+    add: $method.new({
       do: function add(macro) {
         this.macros()[macro.name()] = macro;
       }
     }),
     defmacro(name, fn) {
-      this.add(_.macro.new({
+      this.add($macro.new({
         name,
         fn
       }));
     },
-    eval: _.method.new({
+    eval: $method.new({
       do: function evalFn(mcall) {
         this.stack().push(mcall);
         const mname = mcall.selector();
@@ -261,31 +264,31 @@ _.macro_env = _.class.new({
   }
 });
 
-const baseEnv = _.macro_env.new({
+const baseEnv = $macro_env.new({
   should_debug: true,
 });
 
-_.macro = _.class.new({
+export const $macro = $class.new({
   name: 'macro',
   slots: {
-    name: _.var.new(),
-    fn: _.var.new(),
+    name: $var.new(),
+    fn: $var.new(),
   }
 });
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'macro',
   fn: function(name, args, ...body) {
-    const fnp = [...args.args(this), stanza + _.body.of(body).js(this)];
+    const fnp = [...args.args(this), stanza + $body.of(body).js(this)];
     // hmm, here we run into module issues again, and a big ugly global container object is appealing once more
     console.error(fnp);
     try {
       const fn = new Function(...fnp);
-      this.add(_.macro.new({
+      this.add($macro.new({
         name,
         fn
       }));
-      return _.empty_statement.new();
+      return $empty_statement.new();
     } catch (e) {
       console.error('macro error ' + name);
       console.error(fnp);
@@ -294,11 +297,11 @@ baseEnv.add(_.macro.new({
   }
 }));
 
-_.rest_arg = _.class.new({
+export const $rest_arg = $class.new({
   name: 'rest_arg',
-  super: _.node,
+  super: $node,
   slots: {
-    name: _.var.new(),
+    name: $var.new(),
     js(ctx) {
       return `...${this.name()}`;
     },
@@ -308,37 +311,37 @@ _.rest_arg = _.class.new({
   }
 });
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'rest',
   fn(name) {
-    return _.rest_arg.new({ name });
+    return $rest_arg.new({ name });
   }
 }))
 
-_.macro_call = _.class.new({
+export const $macro_call = $class.new({
   name: 'macro_call',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance('$');
-      return this.new({ message: _.message.parse(parser) });
+      return this.new({ message: $message.parse(parser) });
     },
   },
   slots: {
-    message: _.var.new(),
+    message: $var.new(),
     selector() {
       return this.message().parts()[0].selector().value();
     },
     args() {
       return this.message().parts()[0].args();
     },
-    js: _.method.new({
+    js: $method.new({
       do: function js(ctx) {
         try {
           return ctx.eval(this).js(ctx);
         } catch (e) {
           console.log(`macro error: ${this.selector()}`);
-          _.debug.log(ctx.eval(this))
+          $debug.log(ctx.eval(this))
           throw e;
         }
       }
@@ -347,9 +350,9 @@ _.macro_call = _.class.new({
 });
 
 
-_.message_part = _.class.new({
+export const $message_part = $class.new({
   name: 'message_part',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       const selector = parser.nameString();
@@ -364,23 +367,23 @@ _.message_part = _.class.new({
     }
   },
   slots: {
-    selector: _.var.new(),
-    args: _.var.new(),
+    selector: $var.new(),
+    args: $var.new(),
     js(ctx) {
       return `${this.selector().js(ctx)}(${this.args().map(a => a.js(ctx)).join(',')})`;
     },
   }
 })
 
-_.message = _.class.new({
+export const $message = $class.new({
   name: 'message',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance('(');
       let parts = [];
       do {
-        parts.push(_.message_part.parse(parser));
+        parts.push($message_part.parse(parser));
         parser.maybeAdvance('|');
       } while (parser.head() !== ')');
       parser.assertAdvance(')');
@@ -390,20 +393,20 @@ _.message = _.class.new({
     }
   },
   slots: {
-    parts: _.var.new(),
+    parts: $var.new(),
     js(ctx) {
       return this.parts().map(p => p.js(ctx)).join('.');
     },
   }
 });
 
-_.call = _.class.new({
+export const $call = $class.new({
   name: 'call',
-  super: _.node,
+  super: $node,
   slots: {
-    receiver: _.var.new(),
-    message: _.var.new(),
-    js: _.method.new({
+    receiver: $var.new(),
+    message: $var.new(),
+    js: $method.new({
       do: function js(ctx) {
         return `${this.receiver().js(ctx)}.${this.message().js(ctx)}`;
       }
@@ -411,16 +414,16 @@ _.call = _.class.new({
   }
 });
 
-_.error_tok = _.class.new({
+export const $error_tok = $class.new({
   name: 'error_tok',
-  super: _.node,
+  super: $node,
   slots: {
     init() {
       this.error(new Error(`Could not compile: '${this.tok()}': ${this.message()}`));
     },
-    tok: _.var.new(),
-    message: _.var.default('errortok'),
-    error: _.var.new(),
+    tok: $var.new(),
+    message: $var.default('errortok'),
+    error: $var.new(),
     js() {
       throw this.error();
     }
@@ -428,39 +431,39 @@ _.error_tok = _.class.new({
 });
 
 // o, but I want for composition with classes
-_.ref = _.class.new({
+export const $ref = $class.new({
   name: 'ref',
-  super: _.node,
+  super: $node,
   abstract: true,
   slots: {
-    name: _.var.new(),
+    name: $var.new(),
     deskewer() {
       return this.name().jsSymbol();
     }
   }
 })
 
-_.class_ref = _.class.new({
+export const $class_ref = $class.new({
   name: 'class_ref',
-  super: _.ref,
+  super: $ref,
   static: {
     parse(parser) {
       parser.assertAdvance('~');
-      return _.class_ref.new({ name: parser.nameString() });
+      return $class_ref.new({ name: parser.nameString() });
     },
   },
   slots: {
-    js: _.method.new({
+    js: $method.new({
       do: function js(ctx) {
-        return `_.${this.deskewer()}`;
+        return `$${this.deskewer()}`;
       }
     }),
   }
 });
 
-_.type_ref = _.class.new({
+export const $type_ref = $class.new({
   name: 'type_ref',
-  super: _.ref,
+  super: $ref,
   static: {
     parse(parser) {
       parser.assertAdvance('!');
@@ -468,17 +471,17 @@ _.type_ref = _.class.new({
     },
   },
   slots: {
-    js: _.method.new({
+    js: $method.new({
       do: function js() {
-        return `_.\$${this.deskewer()}`;
+        return `$\$${this.deskewer()}`;
       }
     })
   }
 });
 
-_.arg_ref = _.class.new({
+export const $arg_ref = $class.new({
   name: 'arg_ref',
-  super: _.ref,
+  super: $ref,
   static: {
     parse(parser) {
       parser.assertAdvance('%');
@@ -486,7 +489,7 @@ _.arg_ref = _.class.new({
     },
   },
   slots: {
-    js: _.method.new({
+    js: $method.new({
       do: function js(ctx) {
         return this.deskewer();
       }
@@ -494,7 +497,7 @@ _.arg_ref = _.class.new({
   }
 });
 
-_.get_var = _.class.new({
+export const $get_var = $class.new({
   name: 'get_var',
   static: {
     parse(parser) {
@@ -503,7 +506,7 @@ _.get_var = _.class.new({
     },
   },
   slots: {
-    js: _.method.new({
+    js: $method.new({
       do: function js(ctx) {
         return 'this';
       }
@@ -511,7 +514,7 @@ _.get_var = _.class.new({
   }
 });
 
-_.set_var = _.class.new({
+export const $set_var = $class.new({
   static: {
     parse(parser) {
       parser.assertAdvance('=');
@@ -519,7 +522,7 @@ _.set_var = _.class.new({
     }
   },
   slots: {
-    js: _.method.new({
+    js: $method.new({
       do: function js(ctx) {
         return 'this';
       }
@@ -527,80 +530,80 @@ _.set_var = _.class.new({
   }
 })
 
-_.unquote = _.class.new({
+export const $unquote = $class.new({
   name: 'unquote',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance(',');
       const value = parser.form();
 
-      return _.unquote.new({ value })
+      return $unquote.new({ value })
     },
   },
   slots: {
-    value: _.var.new(),
+    value: $var.new(),
   }
 });
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'qq',
-  super: _.node,
+  super: $node,
   fn(form) {
 
   }
 }))
 
-_.pair = _.class.new({
+export const $pair = $class.new({
   name: 'pair',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       const name = parser.nameString();
       const value = parser.form();
 
-      return _.pair.new({ name, value })
+      return $pair.new({ name, value })
     },
   },
   slots: {
-    name: _.var.new(),
-    value: _.var.new(),
+    name: $var.new(),
+    value: $var.new(),
     js(ctx) {
       return `${this.name().jsSymbol()}: ${this.value().js(ctx)},`
     }
   }
 });
 
-_.object_literal = _.class.new({
+export const $object_literal = $class.new({
   name: 'object-literal', // lmao?
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance('{');
       parser.stripws();
       const pairs = [];
       while (parser.cur() !== '}') {
-        pairs.push(_.pair.parse(parser));
+        pairs.push($pair.parse(parser));
         parser.stripws();
       }
       parser.assertAdvance('}');
-      return _.object_literal.new({
+      return $object_literal.new({
         pairs
       });
     },
   },
   slots: {
-    pairs: _.var.default([]),
-    map: _.var.new(),
+    pairs: $var.default([]),
+    map: $var.new(),
     init() {
       let m = {};
       for (const p of this.pairs()) {
-        _.debug.log(p.name())
+        $debug.log(p.name())
         m[p.name().jsSymbol()] = p.value();
       }
       this.map(m);
     },
-    js: _.method.new({
+    js: $method.new({
       do: function js(ctx) {
         return `{ ${this.pairs().map(p => p.js(ctx)).join('')} }`;
       }
@@ -608,34 +611,34 @@ _.object_literal = _.class.new({
   },
 });
 
-_.body = _.class.new({
+export const $body = $class.new({
   name: 'body',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance('@');
-      const s = _.list_expression.parse(parser);
-      return _.body.new({ statements: s.value() });
+      const s = $list_expression.parse(parser);
+      return $body.new({ statements: s.value() });
     },
     of(statements) {
       return this.new({ statements });
     }
   },
   slots: {
-    statements: _.var.new(),
+    statements: $var.new(),
     js(ctx) {
       return this.statements().map(s => s.js(ctx) + ';').join('');
     }
   }
 });
 
-_.if_statement = _.class.new({
+export const $if_statement = $class.new({
   name: 'if-statement',
-  super: _.node,
+  super: $node,
   slots: {
-    cond: _.var.new(),
-    then: _.var.new(),
-    else: _.var.new(),
+    cond: $var.new(),
+    then: $var.new(),
+    else: $var.new(),
     js(ctx) {
       const elssJs = this.else() !== undefined ? `else { ${this.else().js(ctx)} }` : '';
       const j = `if (${this.cond().js(ctx)}) { ${this.then().js(ctx)} } ${elssJs}`
@@ -644,9 +647,9 @@ _.if_statement = _.class.new({
   }
 });
 
-_.return = _.class.new({
+export const $return = $class.new({
   name: 'return',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       parser.assertAdvance('^');
@@ -656,16 +659,16 @@ _.return = _.class.new({
     },
   },
   slots: {
-    value: _.var.new(),
+    value: $var.new(),
     js(ctx) {
       return 'return ' + this.value().js(ctx);
     }
   }
 })
 
-_.program = _.class.new({
+export const $program = $class.new({
   name: 'program',
-  super: _.node,
+  super: $node,
   static: {
     parse(parser) {
       const statements = [];
@@ -673,27 +676,27 @@ _.program = _.class.new({
       while ((f = parser.form()) !== null) {
         statements.push(f);
       }
-      return _.program.new({ statements })
+      return $program.new({ statements })
     }
   },
   slots: {
-    statements: _.var.new(),
+    statements: $var.new(),
     js(ctx) {
       return this.statements().map(s => s.js(ctx)).join(';');
     },
   }
 })
 
-_.parser = _.class.new({
+export const $parser = $class.new({
   name: 'parser',
   static: {
     fromSource(source) {
-      return this.new({ toks: _.lexer.new({ code: source }).toks() });
+      return this.new({ toks: $lexer.new({ code: source }).toks() });
     }
   },
   slots: {
-    toks: _.var.new(),
-    pos: _.var.default(0),
+    toks: $var.new(),
+    pos: $var.default(0),
     cur() {
       return this.toks()[this.pos()];
     },
@@ -742,7 +745,7 @@ _.parser = _.class.new({
     },
     nameString() {
       this.assert(/^[A-Za-z][A-Za-z\-\d]*$/.test(this.cur()), true);
-      return _.name_literal.new({ value: this.advance() });
+      return $name_literal.new({ value: this.advance() });
     },
     form() {
       if (this.ended()) {
@@ -750,26 +753,26 @@ _.parser = _.class.new({
       }
       let tok = this.cur();
       if (typeof tok === 'number') {
-        return _.number_literal.parse(this);
+        return $number_literal.parse(this);
       }
       const tokamap = {
-        '~': _.class_ref,
-        '!': _.type_ref,
-        '%': _.arg_ref,
-        '.': _.get_var,
-        '=': _.set_var,
-        ":": _.name_literal,
-        '@': _.body,
-        '{': _.object_literal,
-        '[': _.list_expression,
-        ',': _.unquote,
-        '^': _.return,
-        '$': _.macro_call,
+        '~': $class_ref,
+        '!': $type_ref,
+        '%': $arg_ref,
+        '.': $get_var,
+        '=': $set_var,
+        ":": $name_literal,
+        '@': $body,
+        '{': $object_literal,
+        '[': $list_expression,
+        ',': $unquote,
+        '^': $return,
+        '$': $macro_call,
       };
       const exp = tokamap[tok]?.parse(this);
       if (exp) {
         if (this.cur() === '(') {
-          return _.call.new({ receiver: exp, message: _.message.parse(this) });
+          return $call.new({ receiver: exp, message: $message.parse(this) });
         }
         return exp;
       }
@@ -778,7 +781,7 @@ _.parser = _.class.new({
         return this.form();
       }
       if (tok[0] === '"') {
-        return _.string_literal.parse(this);
+        return $string_literal.parse(this);
       }
       if (/[A-Za-z]/.test(tok[0])) {
         return this.nameString();
@@ -788,33 +791,34 @@ _.parser = _.class.new({
   }
 });
 
-_.export_statement = _.class.new({
+export const $export_statement = $class.new({
   name: 'export-statement',
-  super: _.node,
+  super: $node,
   slots: {
-    name: _.var.new(),
-    value: _.var.new(),
+    name: $var.new(),
+    value: $var.new(),
+    type: $var.default('const'),
     js(ctx) {
-      return `_.${this.name()} = ${this.value().js(ctx)}`;
+      return `${this.type()} $${this.name()} = ${this.value().js(ctx)}`;
     }
   }
 });
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'def',
   fn: function(value) {
-    _.debug.log(value.message().parts()[0].args()[0]);
+    $debug.log(value.message().parts()[0].args()[0]);
     const name = value.message().parts()[0].args()[0].map().name.jsSymbol();
-    return _.export_statement.new({
+    return $export_statement.new({
       name,
       value,
     });
   }
 }));
 
-_.empty_statement = _.class.new({
+export const $empty_statement = $class.new({
   name: 'empty-statement',
-  super: _.node,
+  super: $node,
   slots: {
     js(ctx) {
       return '';
@@ -825,14 +829,14 @@ _.empty_statement = _.class.new({
   }
 });
 
-_.function_statement = _.class.new({
+export const $function_statement = $class.new({
   name: 'function_statement',
-  super: _.node,
+  super: $node,
   slots: {
-    name: _.var.new(),
-    args: _.var.default(_.empty_statement.new()),
-    body: _.var.new(),
-    export: _.var.default(false),
+    name: $var.new(),
+    args: $var.default($empty_statement.new()),
+    body: $var.new(),
+    export: $var.default(false),
     js(ctx) {
       return `${this.export() ? 'export ' : ''}function ${this.name() || ''}(${this.args().argsjs(ctx)}) { ${this.body().js(ctx)} }`;
     }
@@ -840,27 +844,27 @@ _.function_statement = _.class.new({
 });
 
 baseEnv.defmacro('fn', function(args, ...body) {
-  return _.function_statement.new({
+  return $function_statement.new({
     args,
-    body: _.body.of(body)
+    body: $body.of(body)
   });
 });
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'defn',
   fn: function(name, args, ...body) {
     // TODO: add function to module
-    return _.body.new({
+    return $body.new({
       statements: [
-        _.export_statement.new({
-          name,
-          value: _.function_statement.new({
+        $export_statement.new({
+          name: name.value(),
+          value: $function_statement.new({
             args,
-            body: _.body.of(body),
+            body: $body.of(body),
           })
         }),
-        _.js_snippet.new({
-          code: `_.$mod.addFunction('${name}', _.${name})`
+        $js_snippet.new({
+          code: `$_.mod.addFunction('${name.value()}', $${name.value()})`
         }),
       ],
     });
@@ -868,116 +872,116 @@ baseEnv.add(_.macro.new({
 }));
 
 baseEnv.defmacro('do', function (...body) {
-  return _.function_statement.new({
-    args: _.list_expression.of(['it']),
-    body: _.body.of(body)
+  return $function_statement.new({
+    args: $list_expression.of(['it']),
+    body: $body.of(body)
   });
 });
 
-_.import_statement = _.class.new({
+export const $import_statement = $class.new({
   name: 'import_statement',
-  super: _.node,
+  super: $node,
   slots: {
-    imports: _.var.new(),
-    module: _.var.new(),
+    imports: $var.new(),
+    module: $var.new(),
     js(ctx) {
       return `import { ${this.imports().join(', ')} } from '${this.module()}'`;
     }
   }
 });
 
-_.let_statement = _.class.new({
+export const $let_statement = $class.new({
   name: 'let_statement',
-  super: _.node,
+  super: $node,
   slots: {
-    name: _.var.new(),
-    value: _.var.new(),
+    name: $var.new(),
+    value: $var.new(),
     js(ctx) {
-      return `let ${this.name()} = ${this.value().js(ctx)}`;
+      return `let ${this.name().value()} = ${this.value().js(ctx)}`;
     }
   }
 });
 
 baseEnv.defmacro('let', function(name, value) {
-  return _.let_statement.new({
+  return $let_statement.new({
     name,
     value
   });
 });
 
-_.for_statement = _.class.new({
+export const $for_statement = $class.new({
   name: 'for_statement',
-  super: _.node,
+  super: $node,
   slots: {
-    bindType: _.var.default('const'),
-    bindName: _.var.default('it'),
-    iterable: _.var.new(),
-    body: _.var.new(),
+    bindType: $var.default('const'),
+    bindName: $var.default('it'),
+    iterable: $var.new(),
+    body: $var.new(),
     js(ctx) {
       return `for (${this.bindType()} ${this.bindName()} of ${this.iterable().js(ctx)}) { ${this.body().js(ctx)} }`;
     }
   }
 });
 
-_.js_snippet = _.class.new({
+export const $js_snippet = $class.new({
   name: 'js-snippet',
-  super: _.node,
+  super: $node,
   slots: {
-    code: _.var.new(),
+    code: $var.new(),
     js(ctx) {
       return this.code();
     }
   }
 });
 
-_.throws = _.class.new({
+export const $throws = $class.new({
   name: 'throws',
-  super: _.node,
+  super: $node,
   slots: {
-    msg: _.var.new(),
+    msg: $var.new(),
     js(ctx) {
       return `throw new Error("${this.msg()}")`;
     }
   }
 });
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'throws',
   fn(msg) {
-    return _.throws.new({ msg });
+    return $throws.new({ msg });
   }
 }));
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'js',
   fn(code) {
-    return _.js_snippet.new({ code });
+    return $js_snippet.new({ code });
   }
 }));
 
 baseEnv.defmacro('loop', function (iterable, ...body) {
-  return _.for_statement.new({
+  return $for_statement.new({
     iterable,
-    body: _.body.of(body)
+    body: $body.of(body)
   });
 });
 
 baseEnv.defmacro('test', function (...body) {
-  return _.function_statement.new({
+  return $function_statement.new({
     name: 'test',
     export: true,
-    body: _.body.of(body),
+    body: $body.of(body),
   })
 });
 
 baseEnv.defmacro('assert', function (a, b) {
-  return _.empty_statement.new();
+  return $empty_statement.new();
 });
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'if',
   fn(cond, then, elss) {
-    return _.if_statement.new({
+    return $if_statement.new({
       cond,
       then,
       else: elss
@@ -985,13 +989,13 @@ baseEnv.add(_.macro.new({
   }
 }))
 
-baseEnv.add(_.macro.new({
+baseEnv.add($macro.new({
   name: 'dupdate',
   fn(name) {
-    // return _.call.new({
-    //   receiver: _.get_var.new(),
-    //   message: _.message.new({
-    //     parts: [_.message_part.new({ selector: name, args: [this.parts(),
+    // return $call.new({
+    //   receiver: $get_var.new(),
+    //   message: $message.new({
+    //     parts: [$message_part.new({ selector: name, args: [this.parts(),
     //   }),
     //   else: elss
     // })
@@ -1010,7 +1014,7 @@ baseEnv.add(_.macro.new({
  * @global
  */
 
-_.module_source = _.class.new({
+export const $module_source = $class.new({
   name: 'module_source',
   static: {
     loadLocal(name) {
@@ -1022,17 +1026,17 @@ _.module_source = _.class.new({
     }
   },
   slots: {
-    source: _.var.new(),
+    source: $var.new(),
     parser() {
-      return _.parser.fromSource(this.source());
+      return $parser.fromSource(this.source());
     },
   }
 });
 
-_.evaluator = _.class.new({
+export const $evaluator = $class.new({
   name: 'evaluator',
   slots: {
-    ctx: _.var.new(),
+    ctx: $var.new(),
     run(program) {
       const js = stanza + program.js(this.ctx());
       try {
@@ -1045,46 +1049,46 @@ _.evaluator = _.class.new({
     },
     prettify(js) {
       try {
-      _.debug.log(prettyPrint(parse(js, {
-        parser: {
-          parse(source) {
-            return parseScript(source);
+        $debug.log(prettyPrint(parse(js, {
+          parser: {
+            parse(source) {
+              return parseScript(source);
+            }
           }
-        }
-      })).code.replace(/\\n/g, '\n'));
+        })).code.replace(/\\n/g, '\n'));
       } catch (e) {
-        _.debug.log(`failed to parse for pretty-printing ${js}`);
+        $debug.log(`failed to parse for pretty-printing ${js}`);
       }
     }
   }
 });
 
-_.$evl = _.evaluator.new({
+export const $$evl = $evaluator.new({
   ctx: baseEnv
 });
 
-_.module = _.class.new({
+export const $module = $class.new({
   name: 'module',
   static: {
     loadFromFile(name) {
-      const src = _.module_source.loadLocal(name);
-      const node = _.program.parse(src.parser());
+      const src = $module_source.loadLocal(name);
+      const node = $program.parse(src.parser());
       const mod = this.new({
         src,
         node
       });
-      _.$mod = mod;
-      _.$evl.run(node);
-      delete _.$mod;
+      $_.mod = mod;
+      $$evl.run(node);
+      delete $_.mod;
       return mod;
     }
   },
   slots: {
-    name: _.var.new(),
-    classes: _.var.default({}),
-    functions: _.var.default({}),
-    src: _.var.new(),
-    node: _.var.new(),
+    name: $var.new(),
+    classes: $var.default({}),
+    functions: $var.default({}),
+    src: $var.new(),
+    node: $var.new(),
     addClass(cls) {
       this.classes()[cls.name()] = cls;
     },
@@ -1097,10 +1101,10 @@ _.module = _.class.new({
   }
 });
 
-const m = await _.module.loadFromFile(process.argv[2]);
+const m = await $module.loadFromFile(process.argv[2]);
 try {
   m.test();
 } catch (e) {
-  _.$evl.prettify(m.node().js(baseEnv));
+  $$evl.prettify(m.node().js(baseEnv));
   console.log(e);
 }

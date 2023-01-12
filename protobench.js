@@ -1,5 +1,5 @@
 import { run, bench } from 'mitata';
-import './base.js';
+import { $class, $var, $method } from './base.js';
 
 class Basic {
   _n = 0;
@@ -91,16 +91,16 @@ function sweat(p) {
 }
 
 const _ = globalThis.SIMULABRA;
-_.p = _.class.new({
+const $p = $class.new({
   name: 'p',
   slots: {
-    n: _.var.new(),
-    a: _.method.new({
+    n: $var.new(),
+    a: $method.new({
       do(n) {
         this.n(this.n() + n);
       }
     }),
-    b: _.method.new({
+    b: $method.new({
       do(n) {
         this.n(this.n() - (n / 2));
       }
@@ -108,16 +108,16 @@ _.p = _.class.new({
   }
 });
 
-_.popt = _.class.new({
+const $popt = $class.new({
   name: 'popt',
   slots: {
-    n: _.var.new(),
-    a: _.method.new({
+    n: $var.new(),
+    a: $method.new({
       do(n) {
         this._n = (this._n + n); // optimization for as long as the var is basic?
       }
     }),
-    b: _.method.new({
+    b: $method.new({
       do(n) {
         this._n = (this._n - (n / 2));
       }
@@ -130,7 +130,7 @@ bench('single', () => sweat(sdo()));
 bench('multiple', () => sweat(mdo()));
 bench('direct', () => sweat(direct));
 bench('directproto', () => sweat(directProto()));
-bench('simulabra', () => sweat(_.p.new()));
-bench('simulabra-opt', () => sweat(_.popt.new()));
+bench('simulabra', () => sweat($p.new()));
+bench('simulabra-opt', () => sweat($popt.new()));
 
 await run();
