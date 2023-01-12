@@ -106,6 +106,9 @@ Object.prototype.short_description = function() {
 Object.prototype.description = function() {
     return this.short_description();
 }
+Object.prototype.contains = function(i) {
+    return i in this;
+}
 Function.prototype.load = function(parent) {
     parent[this.name] = this;
 };

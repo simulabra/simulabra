@@ -1,10 +1,12 @@
 // now, what if it were a lisp machine?
 import { readFileSync, writeFileSync } from 'fs';
 import { parse, print, prettyPrint } from 'recast';
+import { createHash } from 'node:crypto';
 import { parseScript } from 'meriyah';
 import { $class, $var, $method, $virtual, $debug } from './base.js';
 const $_ = globalThis.SIMULABRA;
 const stanza = `
+import { $class, $var, $method, $debug } from '../base.js';
 const $_ = globalThis.SIMULABRA;
 `;
 
@@ -142,10 +144,8 @@ export const $name_literal = $class.new({
   super: $node,
   static: {
     parse(parser) {
-      parser.assertAdvance(':');
-      const s = parser.advance();
-      return this.new({ value: s });
-    },
+      return this.new({ value: parser.advance() });
+    }
   },
   slots: {
     value: $var.new(),
@@ -157,6 +157,23 @@ export const $name_literal = $class.new({
     }
   }
 });
+
+export const $symbol_literal = $class.new({
+  name: 'symbol-literal',
+  super: $literal,
+  slots: {
+    js(ctx) {
+      return `"${this.value()}"`;
+    }
+  },
+  static: {
+    parse(parser) {
+      parser.assertAdvance(':');
+      const s = parser.advance();
+      return this.new({ value: s });
+    },
+  }
+})
 
 export const $string_literal = $class.new({
   name: 'string_literal',
@@ -473,7 +490,7 @@ export const $type_ref = $class.new({
   slots: {
     js: $method.new({
       do: function js() {
-        return `$\$${this.deskewer()}`;
+        return `\$${this.deskewer()}`;
       }
     })
   }
@@ -598,7 +615,6 @@ export const $object_literal = $class.new({
     init() {
       let m = {};
       for (const p of this.pairs()) {
-        $debug.log(p.name())
         m[p.name().jsSymbol()] = p.value();
       }
       this.map(m);
@@ -761,7 +777,7 @@ export const $parser = $class.new({
         '%': $arg_ref,
         '.': $get_var,
         '=': $set_var,
-        ":": $name_literal,
+        ":": $symbol_literal,
         '@': $body,
         '{': $object_literal,
         '[': $list_expression,
@@ -799,7 +815,7 @@ export const $export_statement = $class.new({
     value: $var.new(),
     type: $var.default('const'),
     js(ctx) {
-      return `${this.type()} $${this.name()} = ${this.value().js(ctx)}`;
+      return `export ${this.type()} $${this.name().replace(/-/g, '_')} = ${this.value().js(ctx)}`;
     }
   }
 });
@@ -807,8 +823,7 @@ export const $export_statement = $class.new({
 baseEnv.add($macro.new({
   name: 'def',
   fn: function(value) {
-    $debug.log(value.message().parts()[0].args()[0]);
-    const name = value.message().parts()[0].args()[0].map().name.jsSymbol();
+    const name = value.message().parts()[0].args()[0].map().name.value();
     return $export_statement.new({
       name,
       value,
@@ -1033,31 +1048,54 @@ export const $module_source = $class.new({
   }
 });
 
+export const $esm_cache = $class.new({
+  name: 'esm-cache',
+  desc: 'caches esm by content hash of js',
+  slots: {
+    cache: $var.default(() => ({})),
+    hash(js) {
+      const hash = createHash('md5');
+      hash.update(js);
+      return hash.digest('base64');
+    },
+    async import(js) {
+      const hash = this.hash(js);
+      if (this.cache().contains(hash)) {
+        return this.cache()[hash];
+      } else {
+        const path = `./out/${hash}.mjs`;
+        writeFileSync(path, js);
+        const mod = await import(path);
+        this.cache()[hash] = mod;
+        return mod;
+      }
+    }
+  }
+})
+
 export const $evaluator = $class.new({
   name: 'evaluator',
   slots: {
     ctx: $var.new(),
     run(program) {
-      const js = stanza + program.js(this.ctx());
-      try {
-        eval?.(js);
-      } catch(e) {
-        console.log('throwin')
-        this.prettify(js);
-        throw e;
-      }
+      const cache = $esm_cache.new();
+      const js = this.prettify(stanza + program.js(this.ctx()));
+      return cache.import(js);
     },
     prettify(js) {
       try {
-        $debug.log(prettyPrint(parse(js, {
+        return prettyPrint(parse(js, {
           parser: {
             parse(source) {
-              return parseScript(source);
+              return parseScript(source, {
+                module: true
+              });
             }
           }
-        })).code.replace(/\\n/g, '\n'));
+        })).code.replace(/\\n/g, '\n');
       } catch (e) {
-        $debug.log(`failed to parse for pretty-printing ${js}`);
+        console.log(`failed to parse for pretty-printing ${js}`);
+        throw e;
       }
     }
   }
@@ -1078,9 +1116,7 @@ export const $module = $class.new({
         node
       });
       $_.mod = mod;
-      $$evl.run(node);
-      delete $_.mod;
-      return mod;
+      return $$evl.run(node);
     }
   },
   slots: {
@@ -1103,8 +1139,7 @@ export const $module = $class.new({
 
 const m = await $module.loadFromFile(process.argv[2]);
 try {
-  m.test();
+  m.$test();
 } catch (e) {
-  $$evl.prettify(m.node().js(baseEnv));
   console.log(e);
 }
