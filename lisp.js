@@ -153,7 +153,7 @@ export const $identifier = $class.new({
     }
   },
   slots: {
-    name: $var.new(),
+    name: $var.new({ required: true }),
     deskewer() {
       return this.name().replace(/-/g, '_');
     },
@@ -224,16 +224,16 @@ export const $list_expression = $class.new({
   },
   slots: {
     value: $var.default([]),
-    js(ctx) {
-      return `[${this.argsjs(ctx)}]`;
+    estree(ctx) {
+      return {
+        type: 'ArrayExpression',
+        elements: this.value().map(e => e.estree(ctx)),
+      }
     },
     args(ctx) {
       return this.value().map(e => {
         return e.estree(ctx);
       });
-    },
-    argsjs(ctx) {
-      return `${this.args(ctx).join(', ')}`;
     },
     children() {
       return this.value();
@@ -267,7 +267,7 @@ export const $macro_env = $class.new({
     eval: $method.new({
       do: function evalFn(mcall) {
         this.stack().push(mcall);
-        const mname = mcall.selector();
+        const mname = mcall.selector().name();
         const m = this.macros()[mname];
         if (m) {
           this.stack().pop();
@@ -356,13 +356,13 @@ export const $macro_call = $class.new({
     args() {
       return this.message().parts()[0].args();
     },
-    macroexpand(ctx) {
+    estree(ctx) {
       let res;
       try {
         res = ctx.eval(this);
         return res.estree(ctx);
       } catch (e) {
-        $debug.log(`macro error: ${this.selector()}`, res, this);
+        $debug.log(`macro error: ${this.selector().name()}`, res, this);
         throw e;
       }
     },
@@ -435,7 +435,7 @@ export const $call = $class.new({
             computed: false,
             property: part.selector().estree(ctx),
           },
-          arguments: part.args().args(),
+          arguments: part.args().map(a => a.estree(ctx)),
         };
       }
       return exp;
@@ -473,7 +473,8 @@ export const $ref = $class.new({
   slots: {
     name: $var.new(),
     estree(ctx) {
-      return $identifier.new({ name: this.js_prefix() + this.name() }).estree(ctx);
+      $debug.log(this.name());
+      return $identifier.new({ name: this.class().js_prefix() + this.name().deskewer() }).estree(ctx);
     },
   }
 })
@@ -593,10 +594,7 @@ export const $pair = $class.new({
     estree(ctx) {
       return {
         type: 'Property',
-        key: {
-          type: 'Identifier',
-          name: this.name(),
-        },
+        key: this.name().estree(ctx),
         value: this.value().estree(ctx),
       }
     }
@@ -627,7 +625,7 @@ export const $object_literal = $class.new({
     init() {
       let m = {};
       for (const p of this.pairs()) {
-        m[p.name()] = p.value();
+        m[p.name().name()] = p.value();
       }
       this.map(m);
     },
@@ -653,7 +651,7 @@ export const $block = $class.new({
     estree(ctx) {
       return {
         type: 'BlockStatement',
-        body: this.body().map(b => b.estree(ctx)),
+        body: this.body().map(b => $debug.log(b) && b.estree(ctx)),
       }
     },
   }
@@ -718,6 +716,7 @@ export const $program = $class.new({
   slots: {
     statements: $var.new(),
     estree(ctx) {
+      $debug.log(this.statements());
       return {
         type: 'Program',
         body: this.statements().map(s => s.estree(ctx)),
@@ -784,7 +783,7 @@ export const $parser = $class.new({
     },
     nameString() {
       this.assert(/^[A-Za-z][A-Za-z\-\d]*$/.test(this.cur()), true);
-      return $identifier.new({ value: this.advance() });
+      return $identifier.new({ name: this.advance() });
     },
     form() {
       if (this.ended()) {
@@ -817,7 +816,8 @@ export const $parser = $class.new({
           return exp;
         }
       } catch (e) {
-        $debug.log(tokamap[tok], e.toString());
+        console.error(e);
+        $debug.log(tokamap[tok]);
         throw new Error(`could not parse with token ${tok} ${tokamap[tok].name()} ${this.curInContext()}`);
       }
       if (' \n\t'.includes(tok)) {
@@ -842,16 +842,33 @@ export const $export_statement = $class.new({
     name: $var.new(),
     value: $var.new(),
     type: $var.default('const'),
-    js(ctx) {
-      return `export ${this.type()} $${this.name().replace(/-/g, '_')} = ${this.value().js(ctx)}`;
-    }
+    estree(ctx) {
+      $debug.log('export', this.name(), this.value());
+      return {
+        type: 'ExportNamedDeclaration',
+        declaration: {
+          type: 'VariableDeclaration',
+          kind: this.type(),
+          declarations: [
+            {
+              type: 'VariableDeclarator',
+              id: $class_ref.new({ name: this.name() }).estree(ctx),
+              init: this.value().estree(ctx),
+            }
+          ]
+        }
+      }
+    },
   }
 });
 
 baseEnv.add($macro.new({
   name: 'def',
   fn: function(value) {
-    const name = value.message().parts()[0].args()[0].map().name.value();
+    $debug.log(Object.keys(value.message().parts()[0].args()[0].map()));
+    const name = $identifier.new({
+      name: value.message().parts()[0].args()[0].map().name.value()
+    });
     return $export_statement.new({
       name,
       value,
@@ -863,31 +880,33 @@ export const $empty_statement = $class.new({
   name: 'empty-statement',
   super: $node,
   slots: {
-    js(ctx) {
-      return '';
-    },
-    argsjs(ctx) {
-      return '';
+    estree(ctx) {
+      return null;
     }
   }
 });
 
-export const $function_statement = $class.new({
-  name: 'function_statement',
+export const $function_expression = $class.new({
+  name: 'function_expression',
   super: $node,
   slots: {
     name: $var.new(),
     args: $var.default($empty_statement.new()),
     body: $var.new(),
     export: $var.default(false),
-    js(ctx) {
-      return `${this.export() ? 'export ' : ''}function ${this.name() || ''}(${this.args().argsjs(ctx)}) { ${this.body().js(ctx)} }`;
-    }
+    estree(ctx) {
+      return {
+        type: 'FunctionDeclaration',
+        id: this.name()?.estree(ctx),
+        params: this.args().args(),
+        body: this.body().estree(ctx),
+      };
+    },
   }
 });
 
 baseEnv.defmacro('fn', function(args, ...body) {
-  return $function_statement.new({
+  return $function_expression.new({
     args,
     body: $block.of(body)
   });
@@ -898,16 +917,16 @@ baseEnv.add($macro.new({
   fn: function(name, args, ...body) {
     // TODO: add function to module
     return $block.new({
-      statements: [
+      body: [
         $export_statement.new({
-          name: name.value(),
-          value: $function_statement.new({
+          name,
+          value: $function_expression.new({
             args,
             body: $block.of(body),
           })
         }),
         $js_snippet.new({
-          code: `$_.mod.addFunction('${name.value()}', $${name.value()})`
+          code: `$_.mod.addFunction('${name.name()}', $${name.name()})`
         }),
       ],
     });
@@ -915,7 +934,7 @@ baseEnv.add($macro.new({
 }));
 
 baseEnv.defmacro('do', function (...body) {
-  return $function_statement.new({
+  return $function_expression.new({
     args: $list_expression.of(['it']),
     body: $block.of(body)
   });
@@ -927,8 +946,15 @@ export const $import_statement = $class.new({
   slots: {
     imports: $var.new(),
     module: $var.new(),
-    js(ctx) {
-      return `import { ${this.imports().join(', ')} } from '${this.module()}'`;
+    estree(ctx) {
+      return {
+        type: 'ImportDeclaration',
+        specifiers: this.imports().map(i => ({
+          type: 'ImportSpecifier',
+          local: i.name(),
+          imported: i.name(),
+        })),
+      };
     }
   }
 });
@@ -939,8 +965,19 @@ export const $let_statement = $class.new({
   slots: {
     name: $var.new(),
     value: $var.new(),
-    js(ctx) {
-      return `let ${this.name().value()} = ${this.value().js(ctx)}`;
+    kind: $var.default('let'),
+    estree(ctx) {
+        return {
+          type: 'VariableDeclaration',
+          kind: this.kind(),
+          declarations: [
+            {
+              type: 'VariableDeclarator',
+              id: this.name().estree(ctx),
+              init: this.value().estree(ctx),
+            }
+          ]
+        }
     }
   }
 });
@@ -960,6 +997,9 @@ export const $for_statement = $class.new({
     bindName: $var.default('it'),
     iterable: $var.new(),
     body: $var.new(),
+    estree(ctx) {
+
+    },
     js(ctx) {
       return `for (${this.bindType()} ${this.bindName()} of ${this.iterable().js(ctx)}) { ${this.body().js(ctx)} }`;
     }
@@ -971,7 +1011,7 @@ export const $js_snippet = $class.new({
   super: $node,
   slots: {
     code: $var.new(),
-    js(ctx) {
+    estree(ctx) {
       return this.code();
     }
   }
@@ -982,8 +1022,23 @@ export const $throws = $class.new({
   super: $node,
   slots: {
     msg: $var.new(),
-    js(ctx) {
-      return `throw new Error("${this.msg()}")`;
+    estree(ctx) {
+      return {
+        type: 'ThrowStatement',
+        argument: {
+          type: 'NewExpression',
+          callee: {
+            type: 'Identifier',
+            name: 'Error',
+          },
+          arguments: [
+            {
+              type: 'Literal',
+              value: this.msg(),
+            }
+          ]
+        }
+      };
     }
   }
 });

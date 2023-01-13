@@ -85,9 +85,6 @@ export const $base_object = {
 Object.prototype.eq = function(other) {
     return this === other;
 }
-Object.prototype.class = function() {
-    return $object_primitive;
-}
 Object.prototype.className = function() {
     return this.class()?.name() || typeof this;
 }
@@ -141,9 +138,6 @@ function nameSlots(obj) {
 }
 
 const classSlots = {
-    _name: 'class',
-    _idctr: 0,
-    _super: $base_object,
     init() {
         this._vars = [];
         this._methods = [];
@@ -177,6 +171,9 @@ const classSlots = {
             //     throw new Error(`attempt to define already bound slot ${k} with ${$debug.formatArgs(v)}`);
             // }
             v?.load && v.load(target.proto());
+            if (v && 'class' in v && v.class().name() === 'var') {
+                this._vars.push(v);
+            }
         }
     },
     new(props = {}) {
@@ -191,7 +188,16 @@ const classSlots = {
             obj._super = $base_object;
         }
         obj.init(this);
+        this.validate(obj);
         return obj;
+    },
+
+    validate(obj) {
+        for (const v of this.vars()) {
+            if (v.required() && !('_' + v.name() in obj)) {
+                throw new Error(`var ${v.name()} required in ${obj.description()}`);
+            }
+        }
     },
     defaultInitSlot(slot, dval) {
         const pk = '_' + slot;
@@ -224,7 +230,7 @@ const classSlots = {
         return this._proto;
     },
     vars() {
-        return this.slots().values().filter(v => v.className() === '$var');
+        return this._vars;
     },
     methods() {
         return this._methods;
@@ -248,6 +254,9 @@ const classSlots = {
 
 export const $class = Object.create(classSlots);
 $class._slots = classSlots;
+$class._name = 'class';
+$class._idctr = 0;
+$class._super = $base_object;
 $class.init();
 
 export const $var = $class.new({
@@ -280,6 +289,9 @@ export const $var = $class.new({
         },
         should_debug() {
             return this._debug || $debug.debug();
+        },
+        required() {
+            return this._required || false;
         },
         load(parent) {
             // console.log('var load', this.name());
@@ -403,11 +415,13 @@ export const $method = $class.new({
 });
 
 export const $virtual = $class.new({
+    name: 'virtual',
     slots: {
         name: $var.new(),
         load(parent) {
-            parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
-            parent[this.name()].virtual = true;
+            $debug.log('virtual load', this);
+            // parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
+            // parent[this.name()].virtual = true;
         },
         overrides() {
             return false;
@@ -449,6 +463,10 @@ export const $object_primitive = $primitive.new({
     name: 'object-primitive',
     js_prototype: Object.prototype,
 });
+
+Object.prototype.class = function() {
+    return $object_primitive;
+}
 
 export const $string_primitive = $primitive.new({
     name: 'string-primitive',
