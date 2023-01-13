@@ -32,3 +32,13 @@ $(defn test []
   %q(y 4)
   ~debug(log %q(color) %p(dist %q))
 )
+
+$(def ~class(new {
+  name :botherer
+  slots {
+    announce ~method(new {
+      desc "HEAR YE HEAR YE"
+      do $(fn [^])
+})
+}
+}))

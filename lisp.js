@@ -70,6 +70,10 @@ export const $lexer = $class.new({
     token: $method.new({
       do: function token() {
         const c = this.chomp();
+        if (c === ';') {
+          while (this.chomp() !== '\n') {}
+          return this.token();
+        }
         if ('(){}[]>~@$!.%#|,:^= \n\t'.includes(c)) {
           return this.toks().push(c);
         }
@@ -121,7 +125,7 @@ export const $node = $class.new({
     macroexpand() {
       return this;
     },
-    js: $virtual.new(),
+    estree: $virtual.new(),
   }
 });
 
@@ -131,29 +135,33 @@ export const $literal = $class.new({
   super: $node,
   slots: {
     value: $var.new(),
-    js: $method.new({
-      do: function js(ctx) {
-        return JSON.stringify(this.value());
+    estree(ctx) {
+      return {
+        type: 'Literal',
+        value: this.value(),
       }
-    }),
+    }
   },
 });
 
-export const $name_literal = $class.new({
-  name: 'name_literal',
+export const $identifier = $class.new({
+  name: 'identifier',
   super: $node,
   static: {
     parse(parser) {
-      return this.new({ value: parser.advance() });
+      return this.new({ name: parser.advance() });
     }
   },
   slots: {
-    value: $var.new(),
-    jsSymbol() {
-      return this.value().replace(/-/g, '_');
+    name: $var.new(),
+    deskewer() {
+      return this.name().replace(/-/g, '_');
     },
-    js(ctx) {
-      return this.jsSymbol();
+    estree(ctx) {
+      return {
+        type: 'Identifier',
+        name: this.deskewer(),
+      };
     }
   }
 });
@@ -161,11 +169,6 @@ export const $name_literal = $class.new({
 export const $symbol_literal = $class.new({
   name: 'symbol-literal',
   super: $literal,
-  slots: {
-    js(ctx) {
-      return `"${this.value()}"`;
-    }
-  },
   static: {
     parse(parser) {
       parser.assertAdvance(':');
@@ -194,7 +197,7 @@ export const $number_literal = $class.new({
   static: {
     parse(parser) {
       const n = parser.advance();
-      parser.assert(typeof n, 'number');
+      parser.assert(typeof n, 'number'); // ????
       return $number_literal.new({ value: n });
     },
   },
@@ -221,22 +224,12 @@ export const $list_expression = $class.new({
   },
   slots: {
     value: $var.default([]),
-    car: $method.new({
-      do: function car() {
-        return this.value()[0];
-      }
-    }),
-    cdr: $method.new({
-      do: function cdr() {
-        return this.value().slice(1);
-      }
-    }),
     js(ctx) {
       return `[${this.argsjs(ctx)}]`;
     },
     args(ctx) {
       return this.value().map(e => {
-        return e.js(ctx);
+        return e.estree(ctx);
       });
     },
     argsjs(ctx) {
@@ -244,7 +237,13 @@ export const $list_expression = $class.new({
     },
     children() {
       return this.value();
-    }
+    },
+    estree(ctx) {
+      return {
+        type: 'ArrayExpression',
+        elements: this.args(),
+      };
+    },
   }
 });
 
@@ -296,11 +295,11 @@ export const $macro = $class.new({
 baseEnv.add($macro.new({
   name: 'macro',
   fn: function(name, args, ...body) {
-    const fnp = [...args.args(this), stanza + $body.of(body).js(this)];
+    const fnp = [...args.args(this), stanza + $body.of(body).estree(this)];
     // hmm, here we run into module issues again, and a big ugly global container object is appealing once more
     console.error(fnp);
     try {
-      const fn = new Function(...fnp);
+      const fn = new Function(...fnp.map(a => prettyPrint(a)));
       this.add($macro.new({
         name,
         fn
@@ -314,26 +313,29 @@ baseEnv.add($macro.new({
   }
 }));
 
-export const $rest_arg = $class.new({
-  name: 'rest_arg',
+export const $spread = $class.new({
+  name: 'spread',
   super: $node,
-  slots: {
-    name: $var.new(),
-    js(ctx) {
-      return `...${this.name()}`;
+  static: {
+    parse(parser) {
+      parser.assertAdvance('@');
+      const argument = parser.form();
+      return this.new({ argument });
     },
+  },
+  slots: {
+    argument: $var.new(),
     children() {
-      return this.name();
-    }
+      return [this.argument()];
+    },
+    estree(ctx) {
+      return {
+        type: 'SpreadElement',
+        argment: this.argument().estree(ctx),
+      };
+    },
   }
 });
-
-baseEnv.add($macro.new({
-  name: 'rest',
-  fn(name) {
-    return $rest_arg.new({ name });
-  }
-}))
 
 export const $macro_call = $class.new({
   name: 'macro_call',
@@ -341,7 +343,9 @@ export const $macro_call = $class.new({
   static: {
     parse(parser) {
       parser.assertAdvance('$');
-      return this.new({ message: $message.parse(parser) });
+      const message = $message.parse(parser);
+      $debug.log('mc', message);
+      return this.new({ message });
     },
   },
   slots: {
@@ -352,17 +356,16 @@ export const $macro_call = $class.new({
     args() {
       return this.message().parts()[0].args();
     },
-    js: $method.new({
-      do: function js(ctx) {
-        try {
-          return ctx.eval(this).js(ctx);
-        } catch (e) {
-          console.log(`macro error: ${this.selector()}`);
-          $debug.log(ctx.eval(this))
-          throw e;
-        }
+    estree(ctx) {
+      let res;
+      try {
+        res = ctx.eval(this);
+        return res.estree(ctx);
+      } catch (e) {
+        $debug.log(`macro error: ${this.selector()}`, res);
+        throw e;
       }
-    }),
+    }
   }
 });
 
@@ -427,7 +430,27 @@ export const $call = $class.new({
       do: function js(ctx) {
         return `${this.receiver().js(ctx)}.${this.message().js(ctx)}`;
       }
-    })
+    }),
+    children() {
+      return [this.receiver(), this.message()];
+    },
+    estree(ctx) {
+      const rp = this.message().parts().slice().reverse();
+      let exp = this.receiver().estree(ctx);
+      for (const part of rp) {
+        exp = {
+          type: 'CallExpression',
+          callee: {
+            type: 'MemberExpression',
+            object: exp,
+            computed: false,
+            property: part.selector().estree(ctx),
+          },
+          arguments: part.args().args(),
+        };
+      }
+      return exp;
+    }
   }
 });
 
@@ -441,7 +464,7 @@ export const $error_tok = $class.new({
     tok: $var.new(),
     message: $var.default('errortok'),
     error: $var.new(),
-    js() {
+    estree() {
       throw this.error();
     }
   }
@@ -451,67 +474,42 @@ export const $error_tok = $class.new({
 export const $ref = $class.new({
   name: 'ref',
   super: $node,
-  abstract: true,
+  static: {
+    parse(parser) {
+      console.log('ref parse');
+      parser.assertAdvance(this.prefix());
+      return this.new({ name: parser.nameString() });
+    },
+    prefix: $var.new(),
+    js_prefix: $var.new(),
+  },
   slots: {
     name: $var.new(),
-    deskewer() {
-      return this.name().jsSymbol();
-    }
+    estree(ctx) {
+      return $identifier.new({ name: this.js_prefix() + this.name() }).estree(ctx);
+    },
   }
 })
 
 export const $class_ref = $class.new({
   name: 'class_ref',
   super: $ref,
-  static: {
-    parse(parser) {
-      parser.assertAdvance('~');
-      return $class_ref.new({ name: parser.nameString() });
-    },
-  },
-  slots: {
-    js: $method.new({
-      do: function js(ctx) {
-        return `$${this.deskewer()}`;
-      }
-    }),
-  }
+  prefix: '~',
+  js_prefix: '$',
 });
 
 export const $type_ref = $class.new({
-  name: 'type_ref',
+  name: 'type-ref',
   super: $ref,
-  static: {
-    parse(parser) {
-      parser.assertAdvance('!');
-      return this.new({ name: parser.nameString() });
-    },
-  },
-  slots: {
-    js: $method.new({
-      do: function js() {
-        return `\$${this.deskewer()}`;
-      }
-    })
-  }
+  prefix: '!',
+  js_prefix: '$$',
 });
 
 export const $arg_ref = $class.new({
-  name: 'arg_ref',
+  name: 'arg-ref',
   super: $ref,
-  static: {
-    parse(parser) {
-      parser.assertAdvance('%');
-      return this.new({ name: parser.nameString() });
-    },
-  },
-  slots: {
-    js: $method.new({
-      do: function js(ctx) {
-        return this.deskewer();
-      }
-    }),
-  }
+  prefix: '%',
+  js_prefix: '_',
 });
 
 export const $get_var = $class.new({
@@ -631,11 +629,6 @@ export const $body = $class.new({
   name: 'body',
   super: $node,
   static: {
-    parse(parser) {
-      parser.assertAdvance('@');
-      const s = $list_expression.parse(parser);
-      return $body.new({ statements: s.value() });
-    },
     of(statements) {
       return this.new({ statements });
     }
@@ -761,7 +754,7 @@ export const $parser = $class.new({
     },
     nameString() {
       this.assert(/^[A-Za-z][A-Za-z\-\d]*$/.test(this.cur()), true);
-      return $name_literal.new({ value: this.advance() });
+      return $identifier.new({ value: this.advance() });
     },
     form() {
       if (this.ended()) {
@@ -785,12 +778,17 @@ export const $parser = $class.new({
         '^': $return,
         '$': $macro_call,
       };
-      const exp = tokamap[tok]?.parse(this);
-      if (exp) {
-        if (this.cur() === '(') {
-          return $call.new({ receiver: exp, message: $message.parse(this) });
+      try {
+        const exp = tokamap[tok]?.parse(this);
+        if (exp) {
+          if (this.cur() === '(') {
+            return $call.new({ receiver: exp, message: $message.parse(this) });
+          }
+          return exp;
         }
-        return exp;
+      } catch (e) {
+        $debug.log(tokamap[tok], e.toString());
+        throw new Error(`could not parse with token ${tok} ${tokamap[tok].name()} ${this.curInContext()}`);
       }
       if (' \n\t'.includes(tok)) {
         this.advance();

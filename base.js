@@ -23,9 +23,6 @@ export const $base_object = {
         //         return this._name;
         //     }
         // },
-        abstract() {
-            return this._abstract || false;
-        },
         //=!stringify
         toString() {
             return this.description();
@@ -71,6 +68,9 @@ export const $base_object = {
             return vs;
         },
     },
+    static() {
+        return {};
+    },
     load() {
         return;
     },
@@ -110,6 +110,7 @@ Object.prototype.contains = function(i) {
     return i in this;
 }
 Function.prototype.load = function(parent) {
+    console.log('fnload', this.name, parent._name)
     parent[this.name] = this;
 };
 Function.prototype.short_description = function() {
@@ -162,17 +163,19 @@ const classSlots = {
         $_.mod?.addClass(this);
     },
     load(target) {
-        for (const [k, v] of this.static().entries()) {
+        this.super().load(target);
+        for (const [k, v] of this._static.entries()) {
             v.load(target);
         }
         for (const v of this.components()) {
             v?.load && v.load(target);
         }
         for (const [k, v] of this.slots().entries()) {
-            // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
-            if (k in target.proto() && !v.overrides(target.proto())) {
-                throw new Error(`attempt to define already bound slot ${k} with ${$debug.formatArgs(v)}`);
-            }
+            console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
+
+            // if (k in target.proto() && !v.overrides(target.proto())) {
+            //     throw new Error(`attempt to define already bound slot ${k} with ${$debug.formatArgs(v)}`);
+            // }
             v?.load && v.load(target.proto());
         }
     },
@@ -237,6 +240,9 @@ const classSlots = {
     },
     static() {
         return this._static;
+    },
+    abstract() {
+        return this._abstract || false;
     },
 };
 
@@ -400,10 +406,11 @@ export const $virtual = $class.new({
     slots: {
         name: $var.new(),
         load(parent) {
-            // console.log(`virtual load ${this.name()} ${parent._class.name()}`)
-            if (!parent._class.abstract() && !(this.name() in parent)) {
-                throw new Error(`need to implement ${this.name()} for ${parent._class.name()}`);
-            }
+            parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
+            parent[this.name()].virtual = true;
+        },
+        overrides() {
+            return false;
         },
     }
 });
