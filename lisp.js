@@ -152,6 +152,9 @@ export const $identifier = $class.new({
   },
   slots: {
     name: $var.new({ required: true }),
+    arg() {
+      return $arg_ref.new({ name: this });
+    },
     deskewer() {
       return this.name().replace(/-/g, '_');
     },
@@ -306,27 +309,6 @@ baseEnv.add($macro.new({
   }
 }));
 
-export const $spread = $class.new({
-  name: 'spread',
-  super: $node,
-  static: {
-    parse(parser) {
-      parser.assertAdvance('@');
-      const argument = parser.form();
-      return this.new({ argument });
-    },
-  },
-  slots: {
-    argument: $var.new(),
-    children() {
-      return [this.argument()];
-    },
-    estree(ctx) {
-      return b.spreadElement(this.argument().estree(ctx));
-    },
-  }
-});
-
 export const $macro_call = $class.new({
   name: 'macro_call',
   super: $node,
@@ -463,6 +445,9 @@ export const $ref = $class.new({
   },
   slots: {
     name: $var.new(),
+    arg() {
+      return this;
+    },
     estree(ctx) {
       $debug.log(this.name());
       return $identifier.new({ name: this.class().js_prefix() + this.name().deskewer() }).estree(ctx);
@@ -489,6 +474,33 @@ export const $arg_ref = $class.new({
   super: $ref,
   prefix: '%',
   js_prefix: '_',
+});
+
+export const $spread = $class.new({
+  name: 'spread',
+  super: $node,
+  static: {
+    parse(parser) {
+      parser.assertAdvance('@');
+      const argument = parser.form();
+      return this.new({ argument });
+    },
+  },
+  slots: {
+    argument: $var.new(),
+    children() {
+      return [this.argument()];
+    },
+    arg() {
+      return $spread.new({ argument: $arg_ref.new({ name: this.argument() }) });
+    },
+    estree(ctx) {
+      return b.spreadElement(this.argument().estree(ctx));
+    },
+    deskewer() {
+      return $spread.new({ argument: this.argument().deskewer() });
+    }
+  }
 });
 
 export const $this_expression = $class.new({
@@ -910,7 +922,7 @@ export const $function_expression = $class.new({
       return {
         type: 'FunctionDeclaration',
         id: this.name()?.estree(ctx),
-        params: this.args().value().map(a => $debug.log('n', a) && $arg_ref.new({ name: a }).estree(ctx)),
+        params: this.args().value().map(a => a.arg().estree(ctx)),
         body: this.body().estree(ctx),
       };
     },
@@ -942,7 +954,7 @@ baseEnv.add($macro.new({
 
 baseEnv.defmacro('do', function (...body) {
   return $function_expression.new({
-    args: $list_expression.of([$arg_ref.new({ name: $identifier.new({ name: 'it' }) })]),
+    args: $list_expression.of([$identifier.new({ name: 'it' }) ]),
     body: $block.of(body)
   });
 });
@@ -1145,6 +1157,7 @@ export const $esm_cache = $class.new({
   slots: {
     cache: $var.default(() => ({})),
     hash(js) {
+      return 'default'; // so it don't change
       const hash = createHash('md5');
       hash.update(js);
       return hash.digest('base64').replace(/\//g, '_');

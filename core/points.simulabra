@@ -39,7 +39,7 @@ $(def ~class(new {
   slots {
     announce ~method(new {
       desc "HEAR YE HEAR YE"
-      do $(fn [@args] %args(map $(do ~debug(log "it's " %it))))
+      do $(fn [@args] %args(map $(do ~debug(log "it's " %it @%args))))
     })
   }
 }))
