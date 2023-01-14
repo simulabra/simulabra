@@ -1,10 +1,11 @@
 // now, what if it were a lisp machine?
 import { readFileSync, writeFileSync } from 'fs';
-import { parse, print, prettyPrint } from 'recast';
+import { parse, print, prettyPrint, types } from 'recast';
 import { createHash } from 'node:crypto';
 import { parseScript } from 'meriyah';
 import { $class, $var, $method, $virtual, $debug } from './base.js';
 const $_ = globalThis.SIMULABRA;
+const b = types.builders;
 const stanza = `
 import { $class, $var, $method, $debug } from '../base.js';
 const $_ = globalThis.SIMULABRA;
@@ -136,10 +137,7 @@ export const $literal = $class.new({
   slots: {
     value: $var.new(),
     estree(ctx) {
-      return {
-        type: 'Literal',
-        value: this.value(),
-      }
+      return b.literal(this.value());
     }
   },
 });
@@ -158,10 +156,7 @@ export const $identifier = $class.new({
       return this.name().replace(/-/g, '_');
     },
     estree(ctx) {
-      return {
-        type: 'Identifier',
-        name: this.deskewer(),
-      };
+      return b.identifier(this.deskewer());
     }
   }
 });
@@ -225,13 +220,11 @@ export const $list_expression = $class.new({
   slots: {
     value: $var.default([]),
     estree(ctx) {
-      return {
-        type: 'ArrayExpression',
-        elements: this.value().map(e => e.estree(ctx)),
-      }
+      return b.arrayExpression(this.value().map(e => e.estree(ctx)));
     },
     args(ctx) {
       return this.value().map(e => {
+        $debug.log('arg', e);
         return e.estree(ctx);
       });
     },
@@ -329,10 +322,7 @@ export const $spread = $class.new({
       return [this.argument()];
     },
     estree(ctx) {
-      return {
-        type: 'SpreadElement',
-        argment: this.argument().estree(ctx),
-      };
+      return b.spreadElement(this.argument().estree(ctx));
     },
   }
 });
@@ -424,7 +414,7 @@ export const $call = $class.new({
       return [this.receiver(), this.message()];
     },
     estree(ctx) {
-      const rp = this.message().parts().slice().reverse();
+      const rp = this.message().parts();
       let exp = this.receiver().estree(ctx);
       for (const part of rp) {
         exp = {
@@ -438,6 +428,7 @@ export const $call = $class.new({
           arguments: part.args().map(a => a.estree(ctx)),
         };
       }
+      console.log(JSON.stringify(exp, null, 2));
       return exp;
     }
   }
@@ -651,7 +642,17 @@ export const $block = $class.new({
     estree(ctx) {
       return {
         type: 'BlockStatement',
-        body: this.body().map(b => $debug.log(b) && b.estree(ctx)),
+        body: this.body().map(b => {
+          let o = b.estree(ctx);
+          $debug.log(o);
+          if (o.type.indexOf('Statement') === -1) {
+            o = {
+              type: 'ExpressionStatement',
+              expression: o,
+            };
+          }
+          return o;
+        }),
       }
     },
   }
@@ -719,7 +720,18 @@ export const $program = $class.new({
       $debug.log(this.statements());
       return {
         type: 'Program',
-        body: this.statements().map(s => s.estree(ctx)),
+        body: [
+          $import_statement.new({
+            imports: [
+              $identifier.new({ name: '$class' }),
+              $identifier.new({ name: '$var' }),
+              $identifier.new({ name: '$method' }),
+              $identifier.new({ name: '$debug' }),
+            ],
+            module: '../base.js',
+          }).estree(ctx),
+          ...this.statements().map(s => s.estree(ctx)),
+        ],
       };
     },
   }
@@ -800,7 +812,7 @@ export const $parser = $class.new({
         '.': $this_expression,
         '=': $assignment,
         ":": $symbol_literal,
-        '@': $block,
+        '@': $spread,
         '{': $object_literal,
         '[': $list_expression,
         ',': $unquote,
@@ -898,7 +910,7 @@ export const $function_expression = $class.new({
       return {
         type: 'FunctionDeclaration',
         id: this.name()?.estree(ctx),
-        params: this.args().args(),
+        params: this.args().value().map(a => $debug.log('n', a) && $arg_ref.new({ name: a }).estree(ctx)),
         body: this.body().estree(ctx),
       };
     },
@@ -906,8 +918,9 @@ export const $function_expression = $class.new({
 });
 
 baseEnv.defmacro('fn', function(args, ...body) {
+  $debug.log(args);
   return $function_expression.new({
-    args,
+    args: args,
     body: $block.of(body)
   });
 });
@@ -916,26 +929,20 @@ baseEnv.add($macro.new({
   name: 'defn',
   fn: function(name, args, ...body) {
     // TODO: add function to module
-    return $block.new({
-      body: [
-        $export_statement.new({
-          name,
-          value: $function_expression.new({
-            args,
-            body: $block.of(body),
-          })
-        }),
-        $js_snippet.new({
-          code: `$_.mod.addFunction('${name.name()}', $${name.name()})`
-        }),
-      ],
+    return $export_statement.new({
+      name,
+      value: $function_expression.new({
+        args,
+        body: $block.of(body),
+      })
     });
-  },
+    // TODO: add function to module
+  }
 }));
 
 baseEnv.defmacro('do', function (...body) {
   return $function_expression.new({
-    args: $list_expression.of(['it']),
+    args: $list_expression.of([$arg_ref.new({ name: $identifier.new({ name: 'it' }) })]),
     body: $block.of(body)
   });
 });
@@ -954,6 +961,7 @@ export const $import_statement = $class.new({
           local: i.name(),
           imported: i.name(),
         })),
+        source: b.literal(this.module()),
       };
     }
   }
@@ -984,7 +992,7 @@ export const $let_statement = $class.new({
 
 baseEnv.defmacro('let', function(name, value) {
   return $let_statement.new({
-    name,
+    name: $arg_ref.new({ name }),
     value
   });
 });
@@ -1139,7 +1147,7 @@ export const $esm_cache = $class.new({
     hash(js) {
       const hash = createHash('md5');
       hash.update(js);
-      return hash.digest('base64');
+      return hash.digest('base64').replace(/\//g, '_');
     },
     async import(js) {
       const hash = this.hash(js);
@@ -1169,7 +1177,7 @@ export const $evaluator = $class.new({
       try {
         return prettyPrint(estree).code.replace(/\\n/g, '\n');
       } catch (e) {
-        console.log(`failed to parse for pretty-printing ${js}`);
+        console.log(JSON.stringify(estree, null, 1));
         throw e;
       }
     }
