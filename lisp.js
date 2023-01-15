@@ -6,10 +6,6 @@ import { parseScript } from 'meriyah';
 import { $class, $var, $method, $virtual, $debug } from './base.js';
 const $_ = globalThis.SIMULABRA;
 const b = types.builders;
-const stanza = `
-import { $class, $var, $method, $debug } from '../base.js';
-const $_ = globalThis.SIMULABRA;
-`;
 
 export const $lexer = $class.new({
   name: 'lexer',
@@ -439,6 +435,9 @@ export const $ref = $class.new({
     parse(parser) {
       parser.assertAdvance(this.prefix());
       return this.new({ name: parser.nameString() });
+    },
+    named(name) {
+      return this.new({ name: $identifier.new({ name }) });
     },
     prefix: $var.new(),
     js_prefix: $var.new(),
@@ -1013,12 +1012,16 @@ export const $for_statement = $class.new({
   name: 'for_statement',
   super: $node,
   slots: {
-    bindType: $var.default('const'),
-    bindName: $var.default('it'),
+    kind: $var.default('const'),
+    it: $var.default('it'),
     iterable: $var.new(),
     body: $var.new(),
     estree(ctx) {
-
+      return b.forOfStatement(
+        b.variableDeclaration(this.kind(), [b.variableDeclarator($arg_ref.named(this.it()))]),
+        this.iterable().estree(ctx),
+        this.body().estree(ctx),
+      )
     },
     js(ctx) {
       return `for (${this.bindType()} ${this.bindName()} of ${this.iterable().js(ctx)}) { ${this.body().js(ctx)} }`;

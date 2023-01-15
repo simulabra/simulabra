@@ -1,12 +1,12 @@
-$(macro poso [name $(rest vars)]
-  $(def $(qq ~class(new {
+$(macro poso [name @vars]
+  `~class(new {
     name ,%name
-    slots ,%vars(map $(do $(qq ~var(new { name ,%it }))) | intoObject)
-  })))
+    slots ,%vars(objectify $(do [%name `~var(new { name ,%it })]))
+  })
 )
 
 $(defn test []
-  $(let c $(poso a b))
-  $(let ci %c(new { a 2 b 3 }))
+  $(poso c a b)
+  $(let ci ~c(new { a 2 b 3 }))
   ~debug(log %ci)
 )
