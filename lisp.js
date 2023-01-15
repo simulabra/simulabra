@@ -223,7 +223,6 @@ export const $list_expression = $class.new({
     },
     args(ctx) {
       return this.value().map(e => {
-        $debug.log('arg', e);
         return e.estree(ctx);
       });
     },
@@ -312,7 +311,6 @@ export const $macro_call = $class.new({
     parse(parser) {
       parser.assertAdvance('$');
       const message = $message.parse(parser);
-      $debug.log('mc', message);
       return this.new({ message });
     },
   },
@@ -406,7 +404,6 @@ export const $call = $class.new({
           arguments: part.args().map(a => a.estree(ctx)),
         };
       }
-      console.log(JSON.stringify(exp, null, 2));
       return exp;
     }
   }
@@ -437,6 +434,7 @@ export const $ref = $class.new({
       return this.new({ name: parser.nameString() });
     },
     named(name) {
+      $debug.log('named', name);
       return this.new({ name: $identifier.new({ name }) });
     },
     prefix: $var.new(),
@@ -448,7 +446,8 @@ export const $ref = $class.new({
       return this;
     },
     estree(ctx) {
-      $debug.log(this.name());
+      $debug.log('ref estree', this.name(), this.class().name());
+      return b.identifier(this.class().js_prefix() + this.name().deskewer());
       return $identifier.new({ name: this.class().js_prefix() + this.name().deskewer() }).estree(ctx);
     },
   }
@@ -655,7 +654,6 @@ export const $block = $class.new({
         type: 'BlockStatement',
         body: this.body().map(b => {
           let o = b.estree(ctx);
-          $debug.log(o);
           if (o.type.indexOf('Statement') === -1) {
             o = {
               type: 'ExpressionStatement',
@@ -728,16 +726,15 @@ export const $program = $class.new({
   slots: {
     statements: $var.new(),
     estree(ctx) {
-      $debug.log(this.statements());
       return {
         type: 'Program',
         body: [
           $import_statement.new({
             imports: [
-              $identifier.new({ name: '$class' }),
-              $identifier.new({ name: '$var' }),
-              $identifier.new({ name: '$method' }),
-              $identifier.new({ name: '$debug' }),
+              $class_ref.named('class'),
+              $class_ref.named('var'),
+              $class_ref.named('method'),
+              $class_ref.named('debug'),
             ],
             module: '../base.js',
           }).estree(ctx),
@@ -888,7 +885,6 @@ export const $export_statement = $class.new({
 baseEnv.add($macro.new({
   name: 'def',
   fn: function(value) {
-    $debug.log(Object.keys(value.message().parts()[0].args()[0].map()));
     const name = $identifier.new({
       name: value.message().parts()[0].args()[0].map().name.value()
     });
@@ -929,7 +925,6 @@ export const $function_expression = $class.new({
 });
 
 baseEnv.defmacro('fn', function(args, ...body) {
-  $debug.log(args);
   return $function_expression.new({
     args: args,
     body: $block.of(body)
@@ -1193,7 +1188,7 @@ export const $evaluator = $class.new({
       try {
         return prettyPrint(estree).code.replace(/\\n/g, '\n');
       } catch (e) {
-        console.log(JSON.stringify(estree, null, 1));
+        // console.log(JSON.stringify(estree, null, 1));
         throw e;
       }
     }
