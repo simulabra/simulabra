@@ -275,6 +275,10 @@ const baseEnv = $macro_env.new({
   should_debug: true,
 });
 
+function logEstree(es) {
+  $debug.log(JSON.stringify(es, null, 1));
+}
+
 export const $macro = $class.new({
   name: 'macro',
   slots: {
@@ -317,10 +321,10 @@ export const $macro_call = $class.new({
   slots: {
     message: $var.new(),
     selector() {
-      return this.message().parts()[0].selector();
+      return this.message().selector();
     },
     args() {
-      return this.message().parts()[0].args();
+      return this.message().args();
     },
     estree(ctx) {
       let res;
@@ -328,7 +332,7 @@ export const $macro_call = $class.new({
         res = ctx.eval(this);
         return res.estree(ctx);
       } catch (e) {
-        $debug.log(`macro error: ${this.selector().name()}`, res, this);
+        $debug.log(`macro error: ${this.message().selector().name()}`, res, this);
         throw e;
       }
     },
@@ -377,6 +381,12 @@ export const $message = $class.new({
   },
   slots: {
     parts: $var.new(),
+    selector() {
+      return this.parts()[0].selector();
+    },
+    args() {
+      return this.parts()[0].args();
+    }
   }
 });
 
@@ -434,7 +444,7 @@ export const $ref = $class.new({
       return this.new({ name: parser.nameString() });
     },
     named(name) {
-      $debug.log('named', name);
+      $debug.log('named', name, this.name());
       return this.new({ name: $identifier.new({ name }) });
     },
     prefix: $var.new(),
@@ -447,8 +457,9 @@ export const $ref = $class.new({
     },
     estree(ctx) {
       $debug.log('ref estree', this.name(), this.class().name());
-      return b.identifier(this.class().js_prefix() + this.name().deskewer());
-      return $identifier.new({ name: this.class().js_prefix() + this.name().deskewer() }).estree(ctx);
+      const estree = $identifier.new({ name: this.class().js_prefix() + this.name().deskewer() }).estree(ctx);
+      logEstree(estree);
+      return estree;
     },
   }
 })
@@ -496,7 +507,8 @@ export const $spread = $class.new({
       return b.spreadElement(this.argument().estree(ctx));
     },
     deskewer() {
-      return $spread.new({ argument: this.argument().deskewer() });
+      // return $spread.new({ argument: this.argument().deskewer() });
+      return this.argument().deskewer();
     }
   }
 });
@@ -962,11 +974,7 @@ export const $import_statement = $class.new({
     estree(ctx) {
       return {
         type: 'ImportDeclaration',
-        specifiers: this.imports().map(i => ({
-          type: 'ImportSpecifier',
-          local: i.name(),
-          imported: i.name(),
-        })),
+        specifiers: this.imports().map(i => b.importSpecifier(i.estree(ctx))),
         source: b.literal(this.module()),
       };
     }
@@ -1188,7 +1196,7 @@ export const $evaluator = $class.new({
       try {
         return prettyPrint(estree).code.replace(/\\n/g, '\n');
       } catch (e) {
-        // console.log(JSON.stringify(estree, null, 1));
+        console.log(JSON.stringify(estree, null, 1));
         throw e;
       }
     }
