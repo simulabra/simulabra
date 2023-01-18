@@ -444,7 +444,6 @@ export const $ref = $class.new({
       return this.new({ name: parser.nameString() });
     },
     named(name) {
-      $debug.log('named', name, this.name());
       return this.new({ name: $identifier.new({ name }) });
     },
     prefix: $var.new(),
@@ -456,9 +455,9 @@ export const $ref = $class.new({
       return this;
     },
     estree(ctx) {
-      $debug.log('ref estree', this.name(), this.class().name());
+      // $debug.log('ref estree', this.name(), this.class().name());
       const estree = $identifier.new({ name: this.class().js_prefix() + this.name().deskewer() }).estree(ctx);
-      logEstree(estree);
+      // logEstree(estree);
       return estree;
     },
   }
@@ -875,7 +874,6 @@ export const $export_statement = $class.new({
     value: $var.new(),
     type: $var.default('const'),
     estree(ctx) {
-      $debug.log('export', this.name(), this.value());
       return {
         type: 'ExportNamedDeclaration',
         declaration: {
@@ -925,9 +923,10 @@ export const $function_expression = $class.new({
     args: $var.default($empty_statement.new()),
     body: $var.new(),
     export: $var.default(false),
+    arrow: $var.default(false),
     estree(ctx) {
       return {
-        type: 'FunctionDeclaration',
+        type: this.arrow() ? 'ArrowFunctionExpression' : 'FunctionDeclaration',
         id: this.name()?.estree(ctx),
         params: this.args().value().map(a => a.arg().estree(ctx)),
         body: this.body().estree(ctx),
@@ -961,7 +960,8 @@ baseEnv.add($macro.new({
 baseEnv.defmacro('do', function (...body) {
   return $function_expression.new({
     args: $list_expression.of([$identifier.new({ name: 'it' }) ]),
-    body: $block.of(body)
+    body: $block.of(body),
+    arrow: true,
   });
 });
 

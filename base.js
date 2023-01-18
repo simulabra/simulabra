@@ -107,7 +107,7 @@ Object.prototype.contains = function(i) {
     return i in this;
 }
 Function.prototype.load = function(parent) {
-    console.log('fnload', this.name, parent._name)
+    // console.log('fnload', this.name, parent._name)
     parent[this.name] = this;
 };
 Function.prototype.short_description = function() {
@@ -165,7 +165,7 @@ const classSlots = {
             v?.load && v.load(target);
         }
         for (const [k, v] of this.slots().entries()) {
-            console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
+            // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
 
             // if (k in target.proto() && !v.overrides(target.proto())) {
             //     throw new Error(`attempt to define already bound slot ${k} with ${$debug.formatArgs(v)}`);
@@ -302,7 +302,9 @@ export const $var = $class.new({
                         this[pk] = assign;
                         this.debug(`set ${this.short_description()}.${self.name()} = ${assign.short_description()}`);
                         ('update' in this) && this.update({ changed: self.name() });
-                    } else if (!(pk in this)) {
+                        return this;
+                    }
+                    if (!(pk in this)) {
                         this[pk] = self.default(this);
                     }
                     return this[pk];
@@ -419,7 +421,7 @@ export const $virtual = $class.new({
     slots: {
         name: $var.new(),
         load(parent) {
-            $debug.log('virtual load', this);
+            // $debug.log('virtual load', this);
             // parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
             // parent[this.name()].virtual = true;
         },

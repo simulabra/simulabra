@@ -30,17 +30,17 @@ $(defn test []
   $(let q ~color-point(new { color :blue }))
   %p(x 3)
   %q(y 4)
-  ~botherer(new | announce %q(color) %p(dist %q))
-  ~debug(log %q(color) %p(dist %q))
+  ~botherer(new | ps "SAYS:" | announce %q(color) %p(dist %q))
 )
 
 
 $(def ~class(new {
   name :botherer
   slots {
+    ps ~var(default "~")
     announce ~method(new {
       desc "HEAR YE HEAR YE"
-      do $(fn [@args] %args(map $(do ~debug(log ">>>" %it))))
+      do $(fn [@args] %args(map $(do ~debug(log .(ps) %it))))
     })
   }
 }))
