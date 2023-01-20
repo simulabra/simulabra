@@ -71,13 +71,13 @@ export const $lexer = $class.new({
           while (this.chomp() !== '\n') {}
           return this.token();
         }
-        if ('(){}[]>~@$!.%#|,:^= \n\t'.includes(c)) {
+        if ('(){}[]>~@$!.%#|:^=`, \n\t'.includes(c)) {
           return this.toks().push(c);
         }
         if (/[A-Za-z]/.test(c)) {
           return this.toks().push(this.readToTerminal(c));
         }
-        if ('"`'.includes(c)) {
+        if ('"'.includes(c)) {
           return this.toks().push(this.readString(c));
         }
         if (/[0-9\-\+]/.test(c)) {
@@ -587,7 +587,7 @@ baseEnv.add($macro.new({
   fn(form) {
 
   }
-}))
+}));
 
 export const $pair = $class.new({
   name: 'pair',
