@@ -66,6 +66,18 @@ export const $this = $class.new({
   }
 });
 
+export const $macroenv = $class.new({
+  name: 'macroenv',
+  slots: {
+    print() {
+      return '$';
+    },
+    estree() {
+      throw new Error('unexpanded macro!');
+    }
+  }
+})
+
 export const $car = $class.new({
   name: 'car',
   slots: {
@@ -127,8 +139,22 @@ export const $stream = $class.new({
 
 export const $readtable = $class.new({
   name: 'readtable',
+  static: {
+    standard: $var.new(),
+  },
   slots: {
+    table: $var.default({}),
+    add(macro) {
 
+    }
+  }
+});
+
+export const $reader_macro = $class.new({
+  name: 'reader-macro',
+  slots: {
+    char: $var.new(),
+    parse: $virtual.new(),
   }
 })
 
