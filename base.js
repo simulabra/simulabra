@@ -106,6 +106,9 @@ Object.prototype.description = function() {
 Object.prototype.contains = function(i) {
     return i in this;
 }
+Object.prototype.print = function() {
+    return this.toString();
+}
 Function.prototype.load = function(parent) {
     // console.log('fnload', this.name, parent._name)
     parent[this.name] = this;
@@ -361,7 +364,7 @@ export const $debug = $class.new({
             return this;
         },
         formatArgs(...args) {
-            return args.map(a => a ? a.short_description() : '' + a)
+            return args.map(a => a ? a.description() : '' + a)
         },
         
     }

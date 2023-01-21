@@ -4,8 +4,8 @@
  * make it lispier?
  *
  * symbol .this-msg ~class-name !type-name %arg-name ^return :symbol $macro-name |pipe-name
- * (.msg-name %x %y) ($macro-name s (.frob))
- * (%arg/msg .) (~debug/log "testing") (.x |+ 5 |sqrt)
+ * (./msg-name %x %y) ($/macro-name s (./frob))
+ * (%arg/msg .) (~debug/log "testing") (./x |+ 5 |sqrt)
  * [2 4 6 8]
  * {name :something value (%x/* 42 |pow 3)}
  *
@@ -38,9 +38,48 @@ const b = types.builders;
 
 export const $symbol = $class.new({
   name: 'symbol',
+  static: {
+    of(value) {
+      return this.new({ value });
+    }
+  },
   slots: {
     value: $var.new(),
+    print() {
+      return this.value();
+    },
   }
+});
+
+export const $this = $class.new({
+  name: 'this',
+  slots: {
+    print() {
+      return '.';
+    }
+  }
+});
+
+export const $car = $class.new({
+  name: 'car',
+  slots: {
+    receiver: $var.new(),
+    message: $var.new(),
+    print() {
+      return this.receiver().print() + '/' + this.message().print();
+    }
+  }
+});
+
+export const $cons = $class.new({
+  name: 'cons',
+  slots: {
+    car: $var.new(),
+    cdr: $var.default([]),
+    print() {
+      return `(${this.car().print()} ${this.cdr().map(c => c.print()).join(' ')})`;
+    }
+  },
 });
 
 export const $stream = $class.new({
@@ -72,91 +111,113 @@ export const $stream = $class.new({
       }
     }),
   }
-})
-
-export const $tokenizer = $class.new({
-  name: 'tokenizer',
-  doc: 'reads source code into tokens',
-  static: {
-    stream(stream) {
-      return this.new({
-        stream
-      });
-    }
-  },
-  slots: {
-    init() {
-      this.tokenize();
-    },
-    code: $var.new(),
-    pos: $var.default(0),
-    stream: $var.new(),
-    toks: $var.default([]),
-    terminal() {
-      return this.stream().ended() || '(){}[]. \n'.includes(this.stream().peek()());
-    },
-    toksToTerminal() {
-      let cs = [];
-      while (!this.terminal()) {
-        cs.push(this.stream().next());
-      }
-      return cs;
-    },
-    readToTerminal(c) {
-      return [c, ...this.toksToTerminal()].join('');
-    },
-    readString(delim) {
-      let s = '';
-      while (this.stream().peek() !== delim) {
-        if (this.stream().ended()) {
-          throw new Error('Read string EOF ' + delim + s);
-        }
-        s += this.stream().next();
-        if (this.stream().peek() === delim && s[s.length - 1] === '\\') {
-          s += this.stream().next(); // escape
-        }
-      }
-      this.stream().next(); // last delim
-      return s;
-    },
-    token() {
-      const c = this.stream().next();
-      if (c === ';') {
-        while (this.stream().next() !== '\n') { }
-        return this.token();
-      }
-      if ('(){}[]>~@$!.%#|:^=`, \n\t'.includes(c)) {
-        return this.toks().push(c);
-      }
-      if (/[A-Za-z]/.test(c)) {
-        return this.toks().push($symbol.new({ value: this.readToTerminal(c) }));
-      }
-      if ('"'.includes(c)) {
-        return this.toks().push(this.readString(c));
-      }
-      if (/[0-9\-\+]/.test(c)) {
-        return this.toks().push(Number.parseFloat(this.readToTerminal(c)));
-      }
-
-      throw new Error('UNHANDLED TOKEN CHAR: ' + c);
-    },
-    tokenize() {
-      while (this.pos() < this.code().length) {
-        this.token();
-      }
-      return this.toks();
-    }
-  }
 });
 
 export const $reader = $class.new({
   name: 'reader',
   doc: 'read source into forms',
   slots: {
-    toks: $var.new(),
-    read(stream) {
-      let tkn = $tokenizer.stream(stream);
-      const toks = tkn.tokenize();
-    }
+    stream: $var.new(),
+    peek() {
+      return this.stream().peek();
+    },
+    next() {
+      return this.stream().next();
+    },
+    in(chars) {
+      return chars.includes(this.peek());
+    },
+    test(re) {
+      return re.test(this.peek());
+    },
+    advance(n) {
+      if (!this[n]()) {
+        throw new Error(`expected ${n} at ${this.peek()}`);
+      }
+      return this.next();
+    },
+    whitespace() {
+      return this.in(' \n');
+    },
+    alpha() {
+      return this.test(/[A-Za-z]/);
+    },
+    digit() {
+      return this.test(/[0-9]/);
+    },
+    delimiter() {
+      return this.in('(){}[]');
+    },
+    slash() {
+      return this.in('/')
+    },
+    term() {
+      return this.delimiter() || this.whitespace();
+    },
+    number() {
+      let n = '';
+      while (this.digit() || this.peek() === '.') {
+        n += this.next();
+      }
+      return new Number(n);
+    },
+    symbol() {
+      let s = '';
+      while (!this.term()) {
+        s += this.next();
+      }
+      if (s[0] === '$') {
+        return $macro_symbol.of(s.slice(1));
+      } else {
+        return $symbol.of(s);
+      }
+    },
+    strip() {
+      while (this.whitespace()) {
+        this.stream().next();
+      }
+    },
+    car() {
+      const s = this.read();
+      $debug.log(s);
+      this.advance('slash');
+      const m = this.symbol();
+      return $car.new({ receiver: s, message: m });
+    },
+    read() {
+      this.strip();
+      if (this.peek() === '-') {
+        this.next();
+        if (this.digit()) {
+          return -this.number();
+        } else {
+          return $symbol.of('-');
+        }
+      }
+      if (this.digit()) {
+        return this.number();
+      }
+      if (this.peek() === '(') {
+        this.next();
+        this.strip();
+
+        const car = this.car();
+        let cdr = [];
+        while (this.peek() !== ')') {
+          this.strip();
+          cdr.push(this.read());
+          this.strip();
+        }
+        return $cons.new({ car, cdr });
+      }
+      if (this.peek() === '.') {
+        this.next();
+        return $this.new();
+      }
+      throw new Error(`unhandled: ${this.peek()}`);
+    },
   }
-})
+});
+
+const ex = `(./add (1/+ 2))`
+$debug.log($reader.new({ stream: $stream.new({ value: ex })}).read().print());
