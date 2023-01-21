@@ -109,6 +109,12 @@ Object.prototype.contains = function(i) {
 Object.prototype.print = function() {
     return this.toString();
 }
+Object.prototype.estree = function() {
+    return {
+        type: 'Literal',
+        value: this,
+    };
+}
 Function.prototype.load = function(parent) {
     // console.log('fnload', this.name, parent._name)
     parent[this.name] = this;

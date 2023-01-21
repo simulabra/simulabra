@@ -48,6 +48,9 @@ export const $symbol = $class.new({
     print() {
       return this.value();
     },
+    estree() {
+      return b.identifier(this.value());
+    },
   }
 });
 
@@ -56,6 +59,9 @@ export const $this = $class.new({
   slots: {
     print() {
       return '.';
+    },
+    estree() {
+      return b.thisExpression();
     }
   }
 });
@@ -67,6 +73,9 @@ export const $car = $class.new({
     message: $var.new(),
     print() {
       return this.receiver().print() + '/' + this.message().print();
+    },
+    estree() {
+      return b.memberExpression(this.receiver().estree(), this.message().estree());
     }
   }
 });
@@ -78,6 +87,9 @@ export const $cons = $class.new({
     cdr: $var.default([]),
     print() {
       return `(${this.car().print()} ${this.cdr().map(c => c.print()).join(' ')})`;
+    },
+    estree() {
+      return b.callExpression(this.car().estree(), this.cdr().map(c => c.estree()));
     }
   },
 });
@@ -179,7 +191,6 @@ export const $reader = $class.new({
     },
     car() {
       const s = this.read();
-      $debug.log(s);
       this.advance('slash');
       const m = this.symbol();
       return $car.new({ receiver: s, message: m });
@@ -219,5 +230,7 @@ export const $reader = $class.new({
   }
 });
 
-const ex = `(./add (1/+ 2))`
-$debug.log($reader.new({ stream: $stream.new({ value: ex })}).read().print());
+const ex = `(./add (42/pow 2))`
+const program = $reader.new({ stream: $stream.new({ value: ex })}).read();
+$debug.log(program.print());
+$debug.log(prettyPrint(program.estree()).code);
