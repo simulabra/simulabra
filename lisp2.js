@@ -125,11 +125,21 @@ export const $stream = $class.new({
   }
 });
 
+export const $readtable = $class.new({
+  name: 'readtable',
+  slots: {
+
+  }
+})
+
 export const $reader = $class.new({
   name: 'reader',
   doc: 'read source into forms',
   slots: {
     stream: $var.new(),
+    read_table: $var.default(() => {
+
+    }),
     peek() {
       return this.stream().peek();
     },
