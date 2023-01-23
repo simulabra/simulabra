@@ -5,7 +5,8 @@
     "test": "uvu",
     "watch": "watchexec -w . -e js uvu",
     "demo": "watchexec -w . -e js -r bun run demo-web.js",
-    "lisp": "watchexec -w . -i out/ -e js,simulabra -r bun run lisp.js"
+    "lisp": "watchexec -w . -i out/ -e js,simulabra -r bun run lisp.js",
+    "lisp2": "watchexec -w . -i out/ -e js,simulabra -r bun run lisp2.js"
   },
   "type": "module",
   "devDependencies": {

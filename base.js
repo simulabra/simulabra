@@ -164,6 +164,7 @@ const classSlots = {
         // this.implements().map(iface => iface.satisfies(this));
         this.load(this);
         $_.mod?.addClass(this);
+        console.log('class init', this.name());
     },
     load(target) {
         this.super().load(target);
@@ -239,7 +240,7 @@ const classSlots = {
         return this._proto;
     },
     vars() {
-        return this._vars;
+        return this._vars || [];
     },
     methods() {
         return this._methods;
