@@ -164,7 +164,7 @@ const classSlots = {
         // this.implements().map(iface => iface.satisfies(this));
         this.load(this);
         $_.mod?.addClass(this);
-        console.log('class init', this.name());
+        $debug && $debug.log('class init', this.name(), this.class());
     },
     load(target) {
         this.super().load(target);
@@ -228,7 +228,7 @@ const classSlots = {
         return this._super;
     },
     class() {
-        return $class;
+        return this._class;
     },
     subclasses() {
         return this._subclasses;
@@ -260,6 +260,12 @@ const classSlots = {
     abstract() {
         return this._abstract || false;
     },
+    description() {
+        return `~${this.name()}`;
+    },
+    short_description() {
+        return `~${this.name()}`;
+    }
 };
 
 export const $class = Object.create(classSlots);
@@ -362,7 +368,7 @@ export const $description = $class.new({
     },
 });
 
-export const $debug = $class.new({
+export var $debug = $class.new({
     name: 'debug',
     static: {
         debug: $var.default(false),
@@ -466,6 +472,10 @@ export const $primitive = $class.new({
         },
         name() {
             return this.class().name();
+        },
+        extend(method) {
+            this.slots[method.name()] = method;
+            this._js_prototype[method.name()] = method.do();
         }
         // extend(iface, slots) {}
     }
