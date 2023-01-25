@@ -33,8 +33,8 @@
  */
 
 import { $class, $var, $method, $virtual, $debug, $string_primitive, $object_primitive, $array_primitive } from './base.js';
-import { readFileSync, writeFileSync } from 'fs';
-import { parse, print, prettyPrint, types } from 'recast';
+import { $module } from './loader.js';
+import { prettyPrint, types } from 'recast';
 const b = types.builders;
 
 export const $stream = $class.new({
@@ -110,8 +110,15 @@ export const $reader_macro = $class.new({
   }
 })
 
-export const $macroclass = $class.new({
-  name: 'macroclass',
+export const $macro = $class.new({
+  name: 'macro',
+  slots: {
+
+  }
+})
+
+export const $reader_macro_class = $class.new({
+  name: 'reader_macro_class',
   super: $class,
   slots: {
     char: $var.new(),
@@ -129,7 +136,7 @@ export const $macroclass = $class.new({
   }
 });
 
-export const $symbol = $macroclass.new({
+export const $symbol = $reader_macro_class.new({
   name: 'symbol',
   char: ':',
   super: $reader_macro,
@@ -173,7 +180,7 @@ $string_primitive.extend($method.new({
   }
 }));
 
-export const $this = $macroclass.new({
+export const $this = $reader_macro_class.new({
   name: 'this',
   char: '.',
   static: {
@@ -195,9 +202,10 @@ export const $this = $macroclass.new({
   }
 });
 
-export const $cons = $macroclass.new({
+export const $cons = $reader_macro_class.new({
   name: 'cons',
   char: '(',
+  super: $reader_macro,
   static: {
     parse(reader) {
       reader.next(); // (
@@ -219,19 +227,23 @@ export const $cons = $macroclass.new({
     receiver: $var.new(),
     message: $var.new(),
     args: $var.default([]),
+    vau() {
+      return this.receiver() === $invoke.inst();
+    },
     print() {
       return `(${this.receiver().print()} ${this.message().print()} ${this.args().map(c => c.print()).join(' ')})`;
     },
     estree() {
-      return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(c => c.estree()));
+      if (this.vau()) {
+        const mname = this.message();
+        $debug.log(mname);
+        return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.quote()));
+      } else {
+        return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
+      }
     },
     quote() {
-      return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
-        this.vars().map(v => {
-          $debug.log(v.state());
-          return b.property('init', b.identifier(v.v().name()), v.state().quote());
-        })
-      )])
+      return this.supercall('quote');
     },
     macroexpand() {
       if (this.receiver().className() === 'invoke') {
@@ -243,7 +255,7 @@ export const $cons = $macroclass.new({
   },
 });
 
-export const $quote = $macroclass.new({
+export const $quote = $reader_macro_class.new({
   name: 'quote',
   super: $reader_macro,
   char: '\'',
@@ -262,25 +274,64 @@ export const $quote = $macroclass.new({
     },
     macroexpand() {
       return this.value().quote();
+    },
+    estree() {
+      return this.value().quote();
     }
   }
 });
 
-export const $invoke = $macroclass.new({
+export const $invoke = $reader_macro_class.new({
   name: 'invoke',
   char: '$',
   static: {
+    inst() {
+      if (!this._inst) {
+        this._inst = this.new();
+      }
+      return this._inst;
+    },
     parse(reader) {
       reader.next();
-      return this.new();
+      return this.inst();
     }
   },
   slots: {
     print() {
       return '$';
     },
+    estree() {
+      return b.identifier('__macros');
+    }
   }
 });
+
+const $do = $reader_macro_class.new({
+  name: 'do',
+  slots: {
+
+  }
+})
+
+export const $argref = $reader_macro_class.new({
+  name: 'argref',
+  char: '%',
+  static: {
+    parse(reader) {
+      reader.next(); // %
+      return this.new({ symbol: reader.read() })
+    }
+  },
+  slots: {
+    symbol: $var.new(),
+    print() {
+      return `%${this.symbol().print()}`;
+    },
+    estree() {
+      return b.identifier(`_${this.symbol().value()}`);
+    },
+  }
+})
 
 export const $reader = $class.new({
   name: 'reader',
@@ -317,9 +368,6 @@ export const $reader = $class.new({
     },
     delimiter() {
       return this.in('(){}[]');
-    },
-    slash() {
-      return this.in('/')
     },
     term() {
       return this.delimiter() || this.whitespace();
@@ -401,7 +449,7 @@ export const $macroenv = $class.new({
   }
 });
 
-const ex = `'(. add (42 pow 2))`
+const ex = `(%l map ($ do . add (42 pow 2)))`
 const program = $reader.new({ stream: $stream.new({ value: ex })}).read();
 $debug.log(program.print());
-$debug.log(prettyPrint(program.quote()).code);
+$debug.log(prettyPrint(program.estree()).code);
