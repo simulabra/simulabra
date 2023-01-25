@@ -116,7 +116,7 @@ Object.prototype.estree = function() {
     };
 }
 Function.prototype.load = function(parent) {
-    // console.log('fnload', this.name, parent._name)
+    // console.log('fnload', this.name)
     parent[this.name] = this;
 };
 Function.prototype.short_description = function() {
@@ -164,7 +164,7 @@ const classSlots = {
         // this.implements().map(iface => iface.satisfies(this));
         this.load(this);
         $_.mod?.addClass(this);
-        $debug && $debug.log('class init', this.name(), this.class());
+        $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init', this.name());
     },
     load(target) {
         this.super().load(target);
@@ -431,6 +431,48 @@ export const $method = $class.new({
         }
     }
 });
+
+export const $before = $class.new({
+    name: 'before',
+    slots: {
+        name: $var.new(),
+        do: $var.new(),
+        load(parent) {
+            const self = this;
+            const orig = parent[this.name()];
+            if (!orig) {
+                throw new Error('before loaded on missing method ' + this.description());
+            }
+            parent[this.name()] = function(...args) {
+                self.do.apply(this, args);
+                return orig();
+            }
+        }
+    }
+});
+
+export const $after = $class.new({
+    name: 'after',
+    slots: {
+        name: $var.new(),
+        do: $var.new(),
+        load(parent) {
+            $debug.log('after load', this, parent);
+            const self = this;
+            const orig = parent[this.name()];
+            if (!orig) {
+                throw new Error('before loaded on missing method ' + this.description());
+            }
+            parent[this.name()] = function(...args) {
+                $debug.log('after do', this, self, parent);
+                const ret = orig.apply(this, args);
+                self.do().apply(this, args);
+                return ret;
+            }
+        }
+    }
+});
+
 
 export const $virtual = $class.new({
     name: 'virtual',

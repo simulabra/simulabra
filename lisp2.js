@@ -32,7 +32,7 @@
  * Literal
  */
 
-import { $class, $var, $method, $virtual, $debug, $string_primitive, $object_primitive, $array_primitive } from './base.js';
+import { $class, $var, $method, $virtual, $after, $before, $debug, $string_primitive, $object_primitive, $array_primitive } from './base.js';
 import { $module } from './loader.js';
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
@@ -76,11 +76,11 @@ export const $readtable = $class.new({
   slots: {
     table: $var.default({}),
     add(macro) {
-      $debug.log(`rt add ${macro.char()} ${macro.name()}`);
+      // $debug.log(`rt add ${macro.char()} ${macro.name()}`);
       this.table()[macro.char()] = macro;
     },
     get(char) {
-      $debug.log(`rt get ${char} ${this.table()[char]}`);
+      // $debug.log(`rt get ${char} ${this.table()[char]}`);
       return this.table()[char];
     },
     has_char(char) {
@@ -122,11 +122,12 @@ export const $reader_macro_class = $class.new({
   super: $class,
   slots: {
     char: $var.new(),
-    init() {
-      $class.proto().init.apply(this);
-      $debug.log('add to readtable', this, this.char());
-      $readtable.standard().add(this);
-    },
+    init: $after.new({
+      do() {
+        $debug.log('add to readtable', this, this.char());
+        $readtable.standard().add(this);
+      }
+    })
     // quote() {
     //   return b.identifier('$' + this.name());
     // },
@@ -306,7 +307,7 @@ export const $invoke = $reader_macro_class.new({
   }
 });
 
-const $do = $reader_macro_class.new({
+const $do = $macro.new({
   name: 'do',
   slots: {
 
@@ -315,6 +316,7 @@ const $do = $reader_macro_class.new({
 
 export const $argref = $reader_macro_class.new({
   name: 'argref',
+  super: $reader_macro,
   char: '%',
   static: {
     parse(reader) {
