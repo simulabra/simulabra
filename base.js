@@ -57,7 +57,7 @@ export const $base_object = {
             let vs = [];
             for (const v of this.class().vars()) {
                 const o = this[v.name()]();
-                this.debug(v.name(), o);
+                // $debug.log('vars var', v.name(), o);
                 if (o) {
                     vs.push($var_state.new({
                         v,
@@ -67,6 +67,9 @@ export const $base_object = {
             }
             return vs;
         },
+    },
+    description() {
+       return '~base-object';
     },
     static() {
         return {};
@@ -148,6 +151,12 @@ function nameSlots(obj) {
 
 const classSlots = {
     init() {
+        if (this.super() == undefined) {
+            this._super = this.default_superclass();
+        }
+        if (this.super()?.subclasses) {
+            this._super.subclasses().push(this);
+        }
         this._vars = [];
         this._methods = [];
         this._subclasses = [];
@@ -158,6 +167,7 @@ const classSlots = {
         this.defaultInitSlot('static', {});
         this.defaultInitSlot('implements', []);
         this.defaultInitSlot('components', []);
+        this.defaultInitSlot('default_superclass', $base_object);
         nameSlots(this.slots());
         nameSlots(this.static());
 
@@ -192,16 +202,19 @@ const classSlots = {
         if (!obj._intid) {
             obj._intid = this.nextid();
         }
-        if (obj._super && obj._super.subclasses) {
-            obj._super.subclasses().push(obj);
-        } else if (obj._super == undefined) {
-            obj._super = $base_object;
-        }
         obj.init(this);
         this.validate(obj);
         return obj;
     },
-
+    default_superclass(c) {
+        if (c) {
+            // $debug.log('set default superclass', this, c);
+            this._default_superclass = c;
+            return this;
+        } else {
+            return this._default_superclass || $base_object;
+        }
+    },
     validate(obj) {
         for (const v of this.vars()) {
             if (v.required() && !('_' + v.name() in obj)) {
@@ -464,8 +477,8 @@ export const $after = $class.new({
                 throw new Error('before loaded on missing method ' + this.description());
             }
             parent[this.name()] = function(...args) {
-                $debug.log('after do', this, self, parent);
                 const ret = orig.apply(this, args);
+                $debug.log('after do', this, self, parent);
                 self.do().apply(this, args);
                 return ret;
             }
@@ -479,9 +492,9 @@ export const $virtual = $class.new({
     slots: {
         name: $var.new(),
         load(parent) {
-            // $debug.log('virtual load', this);
-            // parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
-            // parent[this.name()].virtual = true;
+            $debug.log('virtual load', this);
+            parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
+            parent[this.name()].virtual = true;
         },
         overrides() {
             return false;
@@ -506,14 +519,12 @@ export const $primitive = $class.new({
         slots: $var.default({}),
         js_prototype: $var.new(),
         methods: $var.default({}),
+        name: $var.new(),
         init() {
             for (const [name, fn] of this.slots().entries()) {
                 // console.log(`jack in to primitive ${this.name()} ${name}`)
                 this._js_prototype[name] = fn;
             }
-        },
-        name() {
-            return this.class().name();
         },
         extend(method) {
             this.slots[method.name()] = method;

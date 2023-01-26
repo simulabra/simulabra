@@ -84,9 +84,9 @@ export const $readtable = $class.new({
       return this.table()[char];
     },
     has_char(char) {
-      $debug.log(char)
+      // $debug.log(char)
       if (char in this.table()) {
-        $debug.log(this.table()[char]);
+        // $debug.log(this.table()[char]);
         return true;
       }
       return false;
@@ -102,7 +102,6 @@ export const $reader_macro = $class.new({
     quote() {
       return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
         this.vars().map(v => {
-          $debug.log(v.state());
           return b.property('init', b.identifier(v.v().name()), v.state().quote());
         })
       )])
@@ -110,21 +109,16 @@ export const $reader_macro = $class.new({
   }
 })
 
-export const $macro = $class.new({
-  name: 'macro',
-  slots: {
-
-  }
-})
-
 export const $reader_macro_class = $class.new({
   name: 'reader_macro_class',
   super: $class,
+  default_superclass: $reader_macro,
   slots: {
     char: $var.new(),
     init: $after.new({
       do() {
-        $debug.log('add to readtable', this, this.char());
+        this.default_superclass($reader_macro);
+        $debug.log('add to readtable', this, this.char(), this.super(), this.default_superclass());
         $readtable.standard().add(this);
       }
     })
@@ -159,6 +153,8 @@ export const $symbol = $reader_macro_class.new({
     },
   }
 });
+
+$debug.log('symbol super', $symbol.super(), $reader_macro_class.default_superclass())
 
 $object_primitive.extend($method.new({
   name: 'quote',
@@ -220,7 +216,6 @@ export const $cons = $reader_macro_class.new({
         args.push(reader.read());
         reader.strip();
       }
-      $debug.log('cons parse');
       return this.new({ receiver, message, args });
     }
   },
@@ -237,7 +232,6 @@ export const $cons = $reader_macro_class.new({
     estree() {
       if (this.vau()) {
         const mname = this.message();
-        $debug.log(mname);
         return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.quote()));
       } else {
         return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
@@ -307,13 +301,6 @@ export const $invoke = $reader_macro_class.new({
   }
 });
 
-const $do = $macro.new({
-  name: 'do',
-  slots: {
-
-  }
-})
-
 export const $argref = $reader_macro_class.new({
   name: 'argref',
   super: $reader_macro,
@@ -332,6 +319,27 @@ export const $argref = $reader_macro_class.new({
     estree() {
       return b.identifier(`_${this.symbol().value()}`);
     },
+  }
+});
+
+export const $macro = $class.new({
+  name: 'macro',
+  slots: {
+
+  }
+})
+
+export const $macro_class = $class.new({
+  name: 'macro-class',
+  slots: {
+    super: $var.default($macro),
+  }
+})
+
+const $do = $macro.new({
+  name: 'do',
+  slots: {
+
   }
 })
 
@@ -402,7 +410,6 @@ export const $reader = $class.new({
     read() {
       this.strip();
       if (this.readtable().has_char(this.peek())) {
-        $debug.log(this.readtable().get(this.peek()));
         return this.readtable().get(this.peek()).parse(this);
       }
       if (this.peek() === '-') {
