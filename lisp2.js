@@ -336,10 +336,19 @@ export const $macro_class = $class.new({
   }
 })
 
+const $function = $class.new({
+  name: 'function',
+  slots: {
+
+  }
+})
+
 const $do = $macro.new({
   name: 'do',
   slots: {
+    expand() {
 
+    }
   }
 })
 
@@ -458,7 +467,7 @@ export const $macroenv = $class.new({
   }
 });
 
-const ex = `(%l map ($ do . add (42 pow 2)))`
+const ex = `(%l map ($ do (. add (42 pow 2))))`
 const program = $reader.new({ stream: $stream.new({ value: ex })}).read();
 $debug.log(program.print());
 $debug.log(prettyPrint(program.estree()).code);
