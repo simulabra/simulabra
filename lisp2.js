@@ -105,6 +105,9 @@ export const $reader_macro = $class.new({
           return b.property('init', b.identifier(v.v().name()), v.state().quote());
         })
       )])
+    },
+    expand() {
+      return this;
     }
   }
 })
@@ -240,11 +243,16 @@ export const $cons = $reader_macro_class.new({
     quote() {
       return this.supercall('quote');
     },
-    macroexpand() {
-      if (this.receiver().className() === 'invoke') {
+    expand() {
+      if (this.vau()) {
         $debug.log('INVOKE!!')
+
       } else {
-        return this;
+        return $cons.new({
+          receiver: this.receiver().expand(),
+          message: this.message().expand(),
+          args: this.args().map(a => a.expand()),
+        });
       }
     }
   },
@@ -336,18 +344,27 @@ export const $macro_class = $class.new({
   }
 })
 
-const $function = $class.new({
-  name: 'function',
+const $lambda = $class.new({
+  name: 'lambda',
   slots: {
-
+    args: $var.new(),
+    body: $var.new(),
+    estree() {
+      return b.arrowFunctionExpression(this.args().map(a => a.estree()), this.body().estree());
+    }
   }
 })
 
-const $do = $macro.new({
+const $do = $class.new({
   name: 'do',
+  super: $macro,
   slots: {
-    expand() {
-
+    body: $var.new(),
+    expand(env) {
+      return $lambda.new({
+        args: [$symbol.of('it')],
+        body: this.body(),
+      });
     }
   }
 })
@@ -470,4 +487,4 @@ export const $macroenv = $class.new({
 const ex = `(%l map ($ do (. add (42 pow 2))))`
 const program = $reader.new({ stream: $stream.new({ value: ex })}).read();
 $debug.log(program.print());
-$debug.log(prettyPrint(program.estree()).code);
+$debug.log(prettyPrint(program.expand().estree()).code);
