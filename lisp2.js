@@ -36,7 +36,7 @@ import './base.js';
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
 const __ = globalThis.SIMULABRA;
-const _ = __.submod('lisp2');
+const _ = __.mod('lisp2');
 const $ = _.class_proxy();
 
 $.class.new({
@@ -159,23 +159,23 @@ $.reader_macro_class.new({
   }
 });
 
-$.debug.log('symbol super', $.symbol.super(), $.reader_macro_class.default_superclass())
+$.debug.log('symbol super', _.classes()['_symbol'], $.symbol, $.reader_macro_class.default_superclass())
 
-$.object_primitive.extend($.method.new({
+$.primitive.for_type('object').extend($.method.new({
   name: 'quote',
   do() {
     return b.literal(this);
   }
 }));
 
-$.array_primitive.extend($.method.new({
+$.primitive.for_type('array').extend($.method.new({
   name: 'quote',
   do() {
     return b.arrayExpression(this.map(e => e.quote()));
   },
 }))
 
-$.string_primitive.extend($.method.new({
+$.primitive.for_type('string').extend($.method.new({
   name: 'quote',
   do() {
     return b.stringLiteral(this);
@@ -248,8 +248,9 @@ $.reader_macro_class.new({
     expand() {
       if (this.vau()) {
         $.debug.log('INVOKE!!')
-
+        return;
       } else {
+        $.debug.log(this.receiver());
         return $.cons.new({
           receiver: this.receiver().expand(),
           message: this.message().expand(),
@@ -346,7 +347,7 @@ $.class.new({
   }
 })
 
-const $.lambda = $.class.new({
+$.lambda = $.class.new({
   name: 'lambda',
   slots: {
     args: $.var.new(),
@@ -489,4 +490,5 @@ $.class.new({
 const ex = `(%l map ($ do (. add (42 pow 2))))`
 const program = $.reader.new({ stream: $.stream.new({ value: ex })}).read();
 $.debug.log(program.print());
+$.debug.log('expand', program.expand());
 $.debug.log(prettyPrint(program.expand().estree()).code);
