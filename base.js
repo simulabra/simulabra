@@ -1,9 +1,9 @@
 console.log('bootstrap');
 globalThis.SIMULABRA = {}; // glory be
-const $_ = globalThis.SIMULABRA;
+const __ = globalThis.SIMULABRA;
 
 export const $base_object = {
-// $base_object = {
+// $.base_object = {
     _name: 'base-object',
     _slots: {
         //=!object
@@ -29,11 +29,11 @@ export const $base_object = {
         },
         //=!debug-target
         should_debug() {
-            return $debug.debug() || this._should_debug;
+            return $.debug.debug() || this._should_debug;
         },
         debug(...args) {
             if (this.should_debug()) {
-                $debug.log(...args);
+                $.debug.log(...args);
             }
         },
         //=!description
@@ -57,7 +57,7 @@ export const $base_object = {
             let vs = [];
             for (const v of this.class().vars()) {
                 const o = this[v.name()]();
-                // $debug.log('vars var', v.name(), o);
+                // $.debug.log('vars var', v.name(), o);
                 if (o) {
                     vs.push($var_state.new({
                         v,
@@ -173,7 +173,7 @@ const classSlots = {
 
         // this.implements().map(iface => iface.satisfies(this));
         this.load(this);
-        $_.mod?.addClass(this);
+        __.mod?.def(this);
         $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init', this.name());
     },
     load(target) {
@@ -188,10 +188,10 @@ const classSlots = {
             // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
 
             // if (k in target.proto() && !v.overrides(target.proto())) {
-            //     throw new Error(`attempt to define already bound slot ${k} with ${$debug.formatArgs(v)}`);
+            //     throw new Error(`attempt to define already bound slot ${k} with ${$.debug.formatArgs(v)}`);
             // }
             v?.load && v.load(target.proto());
-            if (v && 'class' in v && v.class().name() === 'var') {
+            if (v && v.class && v.class() === $var) {
                 this._vars.push(v);
             }
         }
@@ -208,7 +208,7 @@ const classSlots = {
     },
     default_superclass(c) {
         if (c) {
-            // $debug.log('set default superclass', this, c);
+            // $.debug.log('set default superclass', this, c);
             this._default_superclass = c;
             return this;
         } else {
@@ -281,14 +281,15 @@ const classSlots = {
     }
 };
 
-export const $class = Object.create(classSlots);
+const $class = Object.create(classSlots);
 $class._slots = classSlots;
 $class._name = 'class';
 $class._idctr = 0;
 $class._super = $base_object;
+$class._class = $class;
 $class.init();
 
-export const $var = $class.new({
+var $var = $class.new({
     name: 'var',
     static: {
         default(val) {
@@ -363,25 +364,26 @@ export const $var = $class.new({
     }
 });
 
-export const $var_state = $class.new({
+const $var_state = $class.new({
     name: 'var-state',
     slots: {
         v: $var.new(),
         state: $var.new(),
         description(d) {
+            console.log(this.v().name());
             return `${this.v().name()}:${this.state().description()}`;
         }
     }
 });
 
-export const $description = $class.new({
+const $description = $class.new({
     name: 'description',
     slots: {
         visited: $var.default({}),
     },
 });
 
-export var $debug = $class.new({
+var $debug = $class.new({
     name: 'debug',
     static: {
         debug: $var.default(false),
@@ -396,7 +398,7 @@ export var $debug = $class.new({
     }
 });
 
-export const $message = $class.new({
+const $message = $class.new({
     name: 'message',
     slots: {
         args: $var.default([]),
@@ -405,7 +407,7 @@ export const $message = $class.new({
     },
 })
 
-export const $method = $class.new({
+const $method = $class.new({
     name: 'method',
     static: {
         do(fn) {
@@ -445,7 +447,7 @@ export const $method = $class.new({
     }
 });
 
-export const $before = $class.new({
+const $before = $class.new({
     name: 'before',
     slots: {
         name: $var.new(),
@@ -464,7 +466,7 @@ export const $before = $class.new({
     }
 });
 
-export const $after = $class.new({
+const $after = $class.new({
     name: 'after',
     slots: {
         name: $var.new(),
@@ -487,7 +489,7 @@ export const $after = $class.new({
 });
 
 
-export const $virtual = $class.new({
+const $virtual = $class.new({
     name: 'virtual',
     slots: {
         name: $var.new(),
@@ -502,24 +504,66 @@ export const $virtual = $class.new({
     }
 });
 
-export const $arg = $class.new({
-    name: 'arg',
-    slots: {
-        type: $var.new(),
-    },
-});
-
 $class.super($base_object);
 $class._proto._super = $base_object;
 
-export const $primitive = $class.new({
+const $module = $class.new({
+    name: 'module',
+    slots: {
+        classes: $var.new({
+            desc: 'locally defined classes',
+            default: {},
+        }),
+        imports: $var.new({
+            desc: 'the other modules available within this one',
+            default: [],
+        }),
+        find_class(name) {
+            // totally dies to recursion!
+            return this.classes()['_' + name] || this.imports().reduce((prev, cur) => prev ? prev : cur.find_class(name), undefined);
+        },
+        class_proxy() {
+            return new Proxy(this, {
+                get(target, p) {
+                    return target.find_class(p);
+                }
+            })
+        },
+        def(obj) {
+            $debug.log(this, obj, obj.class());
+            if (obj.class() === $class) {
+                this.classes()['_' + obj.name()] = obj;
+            }
+        }
+    }
+});
+
+__._base = $module.new();
+var _ = __._base;
+__._mod = _;
+
+_.def($class);
+_.def($var);
+_.def($method);
+_.def($message);
+_.def($debug);
+_.def($description);
+_.def($var_state);
+_.def($virtual);
+_.def($before);
+_.def($after);
+
+
+var $ = _.class_proxy();
+
+$.class.new({
     name: 'primitive',
     abstract: true,
     slots: {
-        slots: $var.default({}),
-        js_prototype: $var.new(),
-        methods: $var.default({}),
-        name: $var.new(),
+        slots: $.var.default({}),
+        js_prototype: $.var.new(),
+        methods: $.var.default({}),
+        name: $.var.new(),
         init() {
             for (const [name, fn] of this.slots().entries()) {
                 // console.log(`jack in to primitive ${this.name()} ${name}`)
@@ -534,25 +578,25 @@ export const $primitive = $class.new({
     }
 });
 
-export const $object_primitive = $primitive.new({
+$.primitive.new({
     name: 'object-primitive',
     js_prototype: Object.prototype,
 });
 
 Object.prototype.class = function() {
-    return $object_primitive;
+    return $.object_primitive;
 }
 
-export const $string_primitive = $primitive.new({
+$.primitive.new({
     name: 'string-primitive',
-    super: $primitive,
+    super: $.primitive,
     js_prototype: String.prototype,
     slots: {
         html() {
             return this;
         },
         class() {
-            return $string_primitive;
+            return $.string_primitive;
         },
         short_description() {
             return this;
@@ -566,7 +610,7 @@ export const $string_primitive = $primitive.new({
     }
 });
 
-export const $boolean_primitive = $primitive.new({
+$.primitive.new({
     name: 'boolean-primitive',
     js_prototype: Boolean.prototype,
     slots: {
@@ -574,7 +618,7 @@ export const $boolean_primitive = $primitive.new({
             return this;
         },
         class() {
-            return $boolean_primitive;
+            return $.boolean_primitive;
         },
         short_description() {
             return this.toString();
@@ -582,7 +626,7 @@ export const $boolean_primitive = $primitive.new({
     }
 });
 
-export const $number_primitive = $primitive.new({
+$.primitive.new({
     name: 'number-primitive',
     js_prototype: Number.prototype,
     slots: {
@@ -596,7 +640,7 @@ export const $number_primitive = $primitive.new({
             return this ** 2;
         },
         class() {
-            return $number_primitive;
+            return $.number_primitive;
         },
         short_description() {
             return this.toString();
@@ -613,7 +657,7 @@ export const $number_primitive = $primitive.new({
     }
 });
 
-export const $array_primitive = $primitive.new({
+$.primitive.new({
     name: 'array-primitive',
     js_prototype: Array.prototype,
     slots: {
@@ -625,7 +669,7 @@ export const $array_primitive = $primitive.new({
             return res;
         },
         class() {
-            return $array_primitive;
+            return $.array_primitive;
         },
         short_description() {
             return `[${this.map(a => a.short_description()).join(' ')}]`;
@@ -636,7 +680,7 @@ export const $array_primitive = $primitive.new({
     }
 });
 
-export const $function_primitive = $primitive.new({
+$.primitive.new({
     name: 'function-primitive',
     js_prototype: Function.prototype,
     slots: {
@@ -646,15 +690,15 @@ export const $function_primitive = $primitive.new({
     },
 });
 
-export const $mixin = $class.new({
+$.class.new({
     name: 'mixin',
     slots: {
-        slots: $var.default({}),
+        slots: $.var.default({}),
         mix(base) {
             if (base === null) {
                 return this;
             }
-            return $mixin.new({
+            return $.mixin.new({
                 slots: {
                     ...this.slots(),
                     ...base
@@ -670,12 +714,12 @@ export const $mixin = $class.new({
     }
 });
 
-export const $interface = $class.new({
+$.class.new({
     name: 'interface',
     slots: {
-        name: $var.new(),
-        slots: $var.default({}),
-        slotList: $method.do(function() {
+        name: $.var.new(),
+        slots: $.var.default({}),
+        slotList: $.method.do(function() {
             return Object.values(this.slots());
         }),
         init() {
