@@ -32,7 +32,7 @@
  * Literal
  */
 
-import './base.js';
+import { $s } from './base.js';
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
 const __ = globalThis.SIMULABRA;
@@ -40,7 +40,7 @@ const _ = __.mod('lisp2');
 const $ = _.class_proxy();
 
 $.class.new({
-  name: 'stream',
+  name: $s('stream'),
   slots: {
     pos: $.var.default(0),
     value: $.var.new(),
@@ -71,7 +71,7 @@ $.class.new({
 });
 
 $.class.new({
-  name: 'readtable',
+  name: $s('readtable'),
   static: {
     standard: $.var.new(),
   },
@@ -99,7 +99,7 @@ $.class.new({
 $.readtable.standard($.readtable.new());
 
 $.class.new({
-  name: 'reader-macro',
+  name: $s('reader-macro'),
   slots: {
     quote() {
       return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
@@ -115,9 +115,12 @@ $.class.new({
 })
 
 $.class.new({
-  name: 'reader_macro_class',
+  name: $s('reader-macro-class'),
   super: $.class,
   default_superclass: $.reader_macro,
+  components: [
+
+  ],
   slots: {
     char: $.var.new(),
     init: $.after.new({
@@ -137,7 +140,7 @@ $.class.new({
 });
 
 $.reader_macro_class.new({
-  name: 'symbol',
+  name: $s('symbol'),
   char: ':',
   super: $.reader_macro,
   static: {
@@ -156,34 +159,37 @@ $.reader_macro_class.new({
     estree() {
       return b.identifier(this.value());
     },
+    description() {
+      return ':' + this.value();
+    }
   }
 });
 
 $.debug.log('symbol super', _.classes()['_symbol'], $.symbol, $.reader_macro_class.default_superclass())
 
 $.primitive.for_type('object').extend($.method.new({
-  name: 'quote',
+  name: $s('quote'),
   do() {
     return b.literal(this);
   }
 }));
 
 $.primitive.for_type('array').extend($.method.new({
-  name: 'quote',
+  name: $s('quote'),
   do() {
     return b.arrayExpression(this.map(e => e.quote()));
   },
 }))
 
 $.primitive.for_type('string').extend($.method.new({
-  name: 'quote',
+  name: $s('quote'),
   do() {
     return b.stringLiteral(this);
   }
 }));
 
 $.reader_macro_class.new({
-  name: 'this',
+  name: $s('this'),
   char: '.',
   static: {
     parse(reader) {
@@ -205,7 +211,7 @@ $.reader_macro_class.new({
 });
 
 $.reader_macro_class.new({
-  name: 'cons',
+  name: $s('cons'),
   char: '(',
   super: $.reader_macro,
   static: {
@@ -235,20 +241,18 @@ $.reader_macro_class.new({
       return `(${this.receiver().print()} ${this.message().print()} ${this.args().map(c => c.print()).join(' ')})`;
     },
     estree() {
-      if (this.vau()) {
-        const mname = this.message();
-        return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.quote()));
-      } else {
-        return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
-      }
+      return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
     },
     quote() {
       return this.supercall('quote');
     },
     expand() {
       if (this.vau()) {
-        $.debug.log('INVOKE!!')
-        return;
+        $.debug.log('INVOKE!!', this.message());
+        // find macro
+        const m = _.macro(this.message().value());
+        // apply macro
+        return m.expand(this.args());
       } else {
         $.debug.log(this.receiver());
         return $.cons.new({
@@ -262,7 +266,7 @@ $.reader_macro_class.new({
 });
 
 $.reader_macro_class.new({
-  name: 'quote',
+  name: $s('quote'),
   super: $.reader_macro,
   char: '\'',
   static: {
@@ -288,7 +292,7 @@ $.reader_macro_class.new({
 });
 
 $.reader_macro_class.new({
-  name: 'invoke',
+  name: $s('invoke'),
   char: '$',
   static: {
     inst() {
@@ -313,7 +317,7 @@ $.reader_macro_class.new({
 });
 
 $.reader_macro_class.new({
-  name: 'argref',
+  name: $s('argref'),
   super: $.reader_macro,
   char: '%',
   static: {
@@ -334,21 +338,27 @@ $.reader_macro_class.new({
 });
 
 $.class.new({
-  name: 'macro',
+  name: $s('macro'),
   slots: {
-
+    name: $.var.new(),
+    expand: $.var.new(),
+    init: $.after.new({
+      do() {
+        _.defmacro(this);
+      }
+    }),
   }
 })
 
 $.class.new({
-  name: 'macro-class',
+  name: $s('macro-class'),
   slots: {
     super: $.var.default($.macro),
   }
 })
 
-$.lambda = $.class.new({
-  name: 'lambda',
+$.class.new({
+  name: $s('lambda'),
   slots: {
     args: $.var.new(),
     body: $.var.new(),
@@ -356,24 +366,20 @@ $.lambda = $.class.new({
       return b.arrowFunctionExpression(this.args().map(a => a.estree()), this.body().estree());
     }
   }
-})
+});
 
-$.class.new({
-  name: 'do',
-  super: $.macro,
-  slots: {
-    body: $.var.new(),
-    expand(env) {
-      return $.lambda.new({
-        args: [$.symbol.of('it')],
-        body: this.body(),
-      });
-    }
+$.macro.new({
+  name: $s('do'),
+  expand(body) {
+    return $.lambda.new({
+      args: [$.symbol.of('it')],
+      body,
+    })
   }
-})
+});
 
 $.class.new({
-  name: 'reader',
+  name: $s('reader'),
   doc: 'read source into forms',
   slots: {
     stream: $.var.new(),
@@ -478,7 +484,7 @@ $.class.new({
 });
 
 $.class.new({
-  name: 'macroenv',
+  name: $s('macroenv'),
   slots: {
     macros: $.var.new(),
     expand(cons) {

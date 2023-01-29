@@ -178,7 +178,7 @@ const classSlots = {
         this.load(this);
         if (__._mod) {
             __._mod.def(this);
-            $debug.log('def', this)
+            $debug.log('def', this.name())
         }
         $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init', this.name());
     },
@@ -280,10 +280,10 @@ const classSlots = {
         return this._abstract || false;
     },
     description() {
-        return `~${this.name()}`;
+        return `~${this.name().value()}`;
     },
     short_description() {
-        return `~${this.name()}`;
+        return `~${this.name().value()}`;
     },
     descended(target) {
         return this === target || this.super().descended(target);
@@ -292,8 +292,8 @@ const classSlots = {
 
 const $class = Object.create(classSlots);
 $class._slots = classSlots;
-$class._name = 'class';
 $class._idctr = 0;
+$class._name = 'class';
 $class._super = $base_object;
 $class._class = $class;
 $class.init();
@@ -376,8 +376,30 @@ var $var = $class.new({
     }
 });
 
+const $symbol = $class.new({
+    slots: {
+        value: $var.new(),
+        description() {
+            return ':' + this.value();
+        },
+        eq(other) {
+            return this.value() === other.value();
+        },
+        deskewer() {
+            return this.value().replace(/-/g, '_');
+        },
+    }
+});
+
+export function $s(value) {
+    return $symbol.new({ value });
+}
+
+$class._name = $s('class');
+$var._name = $s('var');
+
 const $var_state = $class.new({
-    name: 'var-state',
+    name: $s('var-state'),
     slots: {
         v: $var.new(),
         state: $var.new(),
@@ -389,14 +411,14 @@ const $var_state = $class.new({
 });
 
 const $description = $class.new({
-    name: 'description',
+    name: $s('description'),
     slots: {
         visited: $var.default({}),
     },
 });
 
 var $debug = $class.new({
-    name: 'debug',
+    name: $s('debug'),
     static: {
         debug: $var.default(false),
         log(...args) {
@@ -411,7 +433,7 @@ var $debug = $class.new({
 });
 
 const $message = $class.new({
-    name: 'message',
+    name: $s('message'),
     slots: {
         args: $var.default([]),
         ret: $var.default(null),
@@ -420,7 +442,7 @@ const $message = $class.new({
 })
 
 const $method = $class.new({
-    name: 'method',
+    name: $s('method'),
     static: {
         do(fn) {
             return this.new({ do: fn })
@@ -460,7 +482,7 @@ const $method = $class.new({
 });
 
 const $before = $class.new({
-    name: 'before',
+    name: $s('before'),
     slots: {
         name: $var.new(),
         do: $var.new(),
@@ -472,19 +494,19 @@ const $before = $class.new({
             }
             parent[this.name()] = function(...args) {
                 self.do.apply(this, args);
-                return orig();
+                return orig.apply(this, args);
             }
         }
     }
 });
 
 const $after = $class.new({
-    name: 'after',
+    name: $s('after'),
     slots: {
         name: $var.new(),
         do: $var.new(),
         load(parent) {
-            $debug.log('after load', this, parent);
+            $debug.log('after load', this, parent.class());
             const self = this;
             const orig = parent[this.name()];
             if (!orig) {
@@ -492,7 +514,7 @@ const $after = $class.new({
             }
             parent[this.name()] = function(...args) {
                 const ret = orig.apply(this, args);
-                $debug.log('after do', this, self, parent, ret);
+                $debug.log('after do', this, self, parent._class);
                 self.do().apply(this, args);
                 return ret;
             }
@@ -502,7 +524,7 @@ const $after = $class.new({
 
 
 const $virtual = $class.new({
-    name: 'virtual',
+    name: $s('virtual'),
     slots: {
         name: $var.new(),
         load(parent) {
@@ -521,14 +543,23 @@ $class._proto._super = $base_object;
 
 String.prototype.deskewer = function() {
     return this.replace(/-/g, '_');
-}
+};
+
+String.prototype.description = function() {
+    return this;
+};
 
 const $module = $class.new({
-    name: 'module',
+    name: $s('module'),
     slots: {
         name: $var.new(),
         classes: $var.new({
             desc: 'locally defined classes',
+            default: {},
+            debug: false,
+        }),
+        macros: $var.new({
+            desc: 'macro definitions',
             default: {},
             debug: false,
         }),
@@ -547,15 +578,24 @@ const $module = $class.new({
                 }
             })
         },
+        symname(sym) {
+            return '_' + sym.deskewer();
+        },
         def(obj) {
             if (obj.class().descended($class)) {
                 this.classes()['_' + obj.name().deskewer()] = obj;
             }
+        },
+        defmacro(macro) {
+            this.macros()['_' + macro.name().deskewer()] = macro;
+        },
+        macro(name) {
+            return this.macros()[name];
         }
     }
 });
 
-__._base = $module.new({ name: 'base' });
+__._base = $module.new({ name: $s('base') });
 var _ = __._base;
 __._mod = _;
 __.mod = function mod(name) {
@@ -575,11 +615,10 @@ _.def($virtual);
 _.def($before);
 _.def($after);
 
-
 const $ = _.class_proxy();
 
 $.class.new({
-    name: 'primitive',
+    name: $s('primitive'),
     abstract: true,
     static: {
         instances: $.var.default({}),
@@ -597,18 +636,19 @@ $.class.new({
                 // console.log(`jack in to primitive ${this.name()} ${name}`)
                 this._js_prototype[name] = fn;
             }
-            $.primitive.instances()[this.name()] = this;
+            $.debug.log('primitive init', this);
+            $.primitive.instances()[this.name().deskewer()] = this;
         },
         extend(method) {
-            this.slots[method.name()] = method;
-            this._js_prototype[method.name()] = method.do();
+            this.slots[method.name().deskewer()] = method;
+            this._js_prototype[method.name().deskewer()] = method.do();
         }
         // extend(iface, slots) {}
     }
 });
 
 $.primitive.new({
-    name: 'object-primitive',
+    name: $s('object-primitive'),
     js_prototype: Object.prototype,
 });
 
@@ -617,7 +657,7 @@ Object.prototype.class = function() {
 }
 
 $.primitive.new({
-    name: 'string-primitive',
+    name: $s('string-primitive'),
     super: $.primitive,
     js_prototype: String.prototype,
     slots: {
@@ -640,7 +680,7 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'boolean-primitive',
+    name: $s('boolean-primitive'),
     js_prototype: Boolean.prototype,
     slots: {
         html() {
@@ -656,7 +696,7 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'number-primitive',
+    name: $s('number-primitive'),
     js_prototype: Number.prototype,
     slots: {
         js() {
@@ -687,7 +727,7 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'array-primitive',
+    name: $s('array-primitive'),
     js_prototype: Array.prototype,
     slots: {
         intoObject() {
@@ -710,7 +750,7 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'function-primitive',
+    name: $s('function-primitive'),
     js_prototype: Function.prototype,
     slots: {
         overrides(_proto) {
@@ -720,7 +760,7 @@ $.primitive.new({
 });
 
 $.class.new({
-    name: 'mixin',
+    name: $s('mixin'),
     slots: {
         slots: $.var.default({}),
         mix(base) {
@@ -744,7 +784,7 @@ $.class.new({
 });
 
 $.class.new({
-    name: 'interface',
+    name: $s('interface'),
     slots: {
         name: $.var.new(),
         slots: $.var.default({}),
