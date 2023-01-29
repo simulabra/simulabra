@@ -64,7 +64,7 @@ $.class.new({
     }),
     ended: $.method.new({
       do() {
-        return this.pos() >= this.value().length();
+        return this.pos() >= this.value().length;
       }
     }),
   }
@@ -227,6 +227,7 @@ $.reader_macro_class.new({
         args.push(reader.read());
         reader.strip();
       }
+      reader.next(); // )
       return this.new({ receiver, message, args });
     }
   },
@@ -316,10 +317,9 @@ $.reader_macro_class.new({
   }
 });
 
-$.reader_macro_class.new({
-  name: $s('argref'),
+$.class.new({
+  name: $s('ref-reader-macro'),
   super: $.reader_macro,
-  char: '%',
   static: {
     parse(reader) {
       reader.next(); // %
@@ -329,10 +329,29 @@ $.reader_macro_class.new({
   slots: {
     symbol: $.var.new(),
     print() {
-      return `%${this.symbol().print()}`;
+      return `${this.char()}${this.symbol().print()}`;
     },
+  }
+})
+
+$.reader_macro_class.new({
+  name: $s('argref'),
+  super: $.ref_reader_macro,
+  char: '%',
+  slots: {
     estree() {
       return b.identifier(`_${this.symbol().value()}`);
+    },
+  }
+});
+
+$.reader_macro_class.new({
+  name: $s('classref'),
+  super: $.ref_reader_macro,
+  char: '~',
+  slots: {
+    estree() {
+      return b.memberExpression(b.identifier('$'), b.identifier(`${this.symbol().value()}`));
     },
   }
 });
@@ -378,6 +397,22 @@ $.macro.new({
     })
   }
 });
+
+$.class.new({
+  name: $s('program'),
+  slots: {
+    forms: $.var.new(),
+    print() {
+      return this.forms().map(f => f.print()).join('\n');
+    },
+    estree() {
+      return b.program(this.forms().map(f => f.estree()));
+    },
+    expand() {
+      return $.program.new({ forms: this.forms().map(f => f.expand()) });
+    }
+  }
+})
 
 $.class.new({
   name: $s('reader'),
@@ -447,6 +482,8 @@ $.class.new({
       this.strip();
       if (this.readtable().has_char(this.peek())) {
         return this.readtable().get(this.peek()).parse(this);
+      } else {
+        $.debug.log('not in readtable:', this.peek());
       }
       if (this.peek() === '-') {
         this.next();
@@ -459,28 +496,22 @@ $.class.new({
       if (this.digit()) {
         return this.number();
       }
-      if (this.peek() === '(') {
-        this.next();
-        this.strip();
-
-        const car = this.car();
-        const cdr = [];
-        while (this.peek() !== ')') {
-          this.strip();
-          cdr.push(this.read());
-          this.strip();
-        }
-        return $.cons.new({ car, cdr });
-      }
-      if (this.peek() === '.') {
-        this.next();
-        return $.this.new();
-      }
       if (this.alpha()) {
         return this.symbol();
       }
-      throw new Error(`unhandled: ${this.peek()}`);
+      throw new Error(`unhandled: ${this.peek()} at ${this.stream().pos()}`);
     },
+    program() {
+      const ps = [];
+      while (!this.stream().ended()) {
+        const p = this.read();
+        $.debug.log('read', p);
+        if (p) {
+          ps.push(p);
+        }
+      }
+
+    }
   }
 });
 
@@ -494,8 +525,9 @@ $.class.new({
   }
 });
 
-const ex = `(%l map ($ do (. add (42 pow 2))))`
-const program = $.reader.new({ stream: $.stream.new({ value: ex })}).read();
+const ex = `(%l map ($ do (. add (42 pow 2))))
+(~class new { :name :point :slots { x (~var new) y (~var new) } })`
+const program = $.reader.new({ stream: $.stream.new({ value: ex })}).program();
 $.debug.log(program.print());
 $.debug.log('expand', program.expand().print());
 $.debug.log(prettyPrint(program.expand().estree()).code);
