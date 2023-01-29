@@ -252,7 +252,7 @@ $.reader_macro_class.new({
         // find macro
         const m = _.macro(this.message().value());
         // apply macro
-        return m.expand(this.args());
+        return m.expand()(...this.args());
       } else {
         $.debug.log(this.receiver());
         return $.cons.new({
@@ -371,6 +371,7 @@ $.class.new({
 $.macro.new({
   name: $s('do'),
   expand(body) {
+    $.debug.log('do expand');
     return $.lambda.new({
       args: [$.symbol.of('it')],
       body,
@@ -496,5 +497,5 @@ $.class.new({
 const ex = `(%l map ($ do (. add (42 pow 2))))`
 const program = $.reader.new({ stream: $.stream.new({ value: ex })}).read();
 $.debug.log(program.print());
-$.debug.log('expand', program.expand());
+$.debug.log('expand', program.expand().print());
 $.debug.log(prettyPrint(program.expand().estree()).code);

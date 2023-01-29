@@ -590,7 +590,7 @@ const $module = $class.new({
             this.macros()['_' + macro.name().deskewer()] = macro;
         },
         macro(name) {
-            return this.macros()[name];
+            return this.macros()['_' + name];
         }
     }
 });
@@ -623,7 +623,7 @@ $.class.new({
     static: {
         instances: $.var.default({}),
         for_type(type) {
-            return this.instances()[type + '-primitive'];
+            return this.instances()[type + '_primitive'];
         }
     },
     slots: {
