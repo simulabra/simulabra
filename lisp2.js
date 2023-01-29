@@ -110,6 +110,9 @@ $.class.new({
     },
     expand() {
       return this;
+    },
+    char() {
+      return this.class().char();
     }
   }
 })
@@ -130,12 +133,6 @@ $.class.new({
         $.readtable.standard().add(this);
       }
     })
-    // quote() {
-    //   return b.identifier('$' + this.name());
-    // },
-    // macroexpand() {
-    //   return this;
-    // },
   }
 });
 
@@ -266,6 +263,51 @@ $.reader_macro_class.new({
   },
 });
 
+$.class.new({
+  name: $s('property'),
+  slots: {
+    name: $.var.new(),
+    value: $.var.new(),
+    print() {
+      return `${this.name().print()} ${this.value().print()}`;
+    },
+    estree() {
+      return b.property('init', this.name().estree(), this.value().estree());
+    }
+  }
+})
+
+$.reader_macro_class.new({
+  name: $s('map'),
+  char: '{',
+  super: $.reader_macro,
+  static: {
+    parse(reader) {
+      reader.next(); // {
+      const properties = [];
+      while (reader.peek() !== '}') {
+        reader.strip();
+        const name = reader.symbol();
+        reader.strip();
+        const value = reader.read();
+        properties.push($.property.new({ name, value }))
+        reader.strip();
+      }
+      reader.next(); // }
+      return this.new({ properties });
+    }
+  },
+  slots: {
+    properties: $.var.new(),
+    print() {
+      return `{ ${this.properties().map(prop => prop.print()).join('\n')}}`;
+    },
+    estree() {
+      return b.objectExpression(this.properties().map(p => p.estree()))
+    }
+  }
+})
+
 $.reader_macro_class.new({
   name: $s('quote'),
   super: $.reader_macro,
@@ -329,6 +371,7 @@ $.class.new({
   slots: {
     symbol: $.var.new(),
     print() {
+      $.debug.log('ref-m print', this);
       return `${this.char()}${this.symbol().print()}`;
     },
   }
@@ -406,7 +449,7 @@ $.class.new({
       return this.forms().map(f => f.print()).join('\n');
     },
     estree() {
-      return b.program(this.forms().map(f => f.estree()));
+      return b.program(this.forms().map(f => b.expressionStatement(f.estree())));
     },
     expand() {
       return $.program.new({ forms: this.forms().map(f => f.expand()) });
@@ -510,7 +553,7 @@ $.class.new({
           ps.push(p);
         }
       }
-
+      return $.program.new({ forms: ps });
     }
   }
 });
@@ -526,7 +569,7 @@ $.class.new({
 });
 
 const ex = `(%l map ($ do (. add (42 pow 2))))
-(~class new { :name :point :slots { x (~var new) y (~var new) } })`
+(~class new { name :point slots { x (~var new) y (~var new) } })`
 const program = $.reader.new({ stream: $.stream.new({ value: ex })}).program();
 $.debug.log(program.print());
 $.debug.log('expand', program.expand().print());
