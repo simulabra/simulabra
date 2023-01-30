@@ -145,7 +145,8 @@ $.reader_macro_class.new({
       return this.new({ value });
     },
     parse(reader) {
-      return reader.symbol();
+      reader.next(); // :
+      return this.new({ value: reader.symbol() });
     },
   },
   slots: {
@@ -154,7 +155,7 @@ $.reader_macro_class.new({
       return this.value();
     },
     estree() {
-      return b.identifier(this.value());
+      return b.callExpression(b.identifier('$s'), [b.stringLiteral(this.value())]);
     },
     description() {
       return ':' + this.value();
@@ -239,7 +240,7 @@ $.reader_macro_class.new({
       return `(${this.receiver().print()} ${this.message().print()} ${this.args().map(c => c.print()).join(' ')})`;
     },
     estree() {
-      return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
+      return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.message())), this.args().map(a => a.estree()));
     },
     quote() {
       return this.supercall('quote');
@@ -248,14 +249,14 @@ $.reader_macro_class.new({
       if (this.vau()) {
         $.debug.log('INVOKE!!', this.message());
         // find macro
-        const m = _.macro(this.message().value());
+        const m = _.macro(this.message());
         // apply macro
         return m.expand()(...this.args());
       } else {
         $.debug.log(this.receiver());
         return $.cons.new({
           receiver: this.receiver().expand(),
-          message: this.message().expand(),
+          message: this.message(),
           args: this.args().map(a => a.expand()),
         });
       }
@@ -383,7 +384,7 @@ $.reader_macro_class.new({
   char: '%',
   slots: {
     estree() {
-      return b.identifier(`_${this.symbol().value()}`);
+      return b.identifier(`_${this.symbol()}`);
     },
   }
 });
@@ -394,7 +395,7 @@ $.reader_macro_class.new({
   char: '~',
   slots: {
     estree() {
-      return b.memberExpression(b.identifier('$'), b.identifier(`${this.symbol().value()}`));
+      return b.memberExpression(b.identifier('$'), b.identifier(`${this.symbol()}`));
     },
   }
 });
@@ -425,7 +426,8 @@ $.class.new({
     args: $.var.new(),
     body: $.var.new(),
     estree() {
-      return b.arrowFunctionExpression(this.args().map(a => a.estree()), this.body().estree());
+      $.debug.log(this.args())
+      return b.arrowFunctionExpression(this.args().map(a => b.identifier(a)), this.body().estree());
     }
   }
 });
@@ -435,7 +437,7 @@ $.macro.new({
   expand(body) {
     $.debug.log('do expand');
     return $.lambda.new({
-      args: [$.symbol.of('it')],
+      args: ['it'],
       body,
     })
   }
@@ -508,7 +510,7 @@ $.class.new({
       while (!this.term()) {
         s += this.next();
       }
-      return $.symbol.of(s);
+      return s;
     },
     strip() {
       while (this.whitespace()) {
