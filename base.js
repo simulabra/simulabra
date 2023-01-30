@@ -587,9 +587,11 @@ const $module = $class.new({
             }
         },
         defmacro(macro) {
+            $.debug.log('defmacro', macro.name().deskewer());
             this.macros()['_' + macro.name().deskewer()] = macro;
         },
         macro(name) {
+            $.debug.log('get macro', name);
             return this.macros()['_' + name];
         }
     }

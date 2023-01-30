@@ -400,11 +400,30 @@ $.reader_macro_class.new({
   }
 });
 
+
+// issues with macro implementation: macros live at such an interesting part of the layer that
+// adding them requires a surgical, dedicated precision. the object itself that we invoke when
+// reading a form needs to handle the expansion of the arguments, given the environment.
+// does that mean that ($ frob (a b c)) would be an instance of the `frob` class? or is it
+// much more existential? kind of liking the idea that "macro invocations are instances of
+// the corresponding class", then macro definitions are just defining classes.
+// been running into a lot of ugliness with the class system too that I need to address -
+// my `reader-macro-class` feels kludgy to me, should be able to do that kind of class init
+// from the superclass relation. but that brings me to superclasses, and whether they should even
+// exist, or just be subsumed into a component system. remember, inheritance is a minefield!
+// and I am freer to maneuver now than evermore.
 $.class.new({
   name: $s('macro'),
   slots: {
     name: $.var.new(),
-    expand: $.var.new(),
+  }
+})
+
+$.class.new({
+  name: $s('macro-class'),
+  super: $.class,
+  slots: {
+    super: $.var.default($.macro),
     init: $.after.new({
       do() {
         _.defmacro(this);
@@ -413,27 +432,22 @@ $.class.new({
   }
 })
 
-$.class.new({
-  name: $s('macro-class'),
-  slots: {
-    super: $.var.default($.macro),
-  }
-})
-
-$.class.new({
+$.macro_class.new({
   name: $s('lambda'),
+  super: $.macro,
   slots: {
     args: $.var.new(),
     body: $.var.new(),
     estree() {
-      $.debug.log(this.args())
+      $.debug.log(this.args());
       return b.arrowFunctionExpression(this.args().map(a => b.identifier(a)), this.body().estree());
     }
   }
 });
 
-$.macro.new({
+$.macro_class.new({
   name: $s('do'),
+  super: $.macro,
   expand(body) {
     $.debug.log('do expand');
     return $.lambda.new({
