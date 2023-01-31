@@ -151,9 +151,6 @@ $.reader_macro_class.new({
   },
   slots: {
     value: $.var.new(),
-    print() {
-      return this.value();
-    },
     estree() {
       return b.callExpression(b.identifier('$s'), [b.stringLiteral(this.value())]);
     },
@@ -471,6 +468,22 @@ $.class.new({
       return $.program.new({ forms: this.forms().map(f => f.expand()) });
     }
   }
+});
+
+$.class.new({
+  name: $s('identifier'),
+  slots: {
+    value: $.var.new(),
+    print() {
+      return this.value();
+    },
+    estree() {
+      return b.identifier(this.value());
+    },
+    expand() {
+      return this;
+    }
+  }
 })
 
 $.class.new({
@@ -524,7 +537,7 @@ $.class.new({
       while (!this.term()) {
         s += this.next();
       }
-      return s;
+      return $.identifier.new({ value: s });
     },
     strip() {
       while (this.whitespace()) {
