@@ -33,11 +33,11 @@
  */
 
 import { $s } from './base.js';
-import { prettyPrint, types } from 'recast';
-const b = types.builders;
 const __ = globalThis.SIMULABRA;
 const _ = __.mod('lisp2');
 const $ = _.class_proxy();
+import { prettyPrint, types } from 'recast';
+const b = types.builders;
 
 $.class.new({
   name: $s('stream'),
@@ -238,9 +238,6 @@ $.reader_macro_class.new({
     },
     estree() {
       return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.message())), this.args().map(a => a.estree()));
-    },
-    quote() {
-      return this.supercall('quote');
     },
     expand() {
       if (this.vau()) {

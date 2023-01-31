@@ -15,14 +15,6 @@ export const $base_object = {
                 return null;
             }
         },
-        supercall(message, ...args) {
-            return this.class().super().proto()[message].apply(this, args);
-        },
-        // name() {
-        //     if ('_name' in this) {
-        //         return this._name;
-        //     }
-        // },
         //=!stringify
         toString() {
             return this.description();
@@ -432,15 +424,6 @@ var $debug = $class.new({
     }
 });
 
-const $message = $class.new({
-    name: $s('message'),
-    slots: {
-        args: $var.default([]),
-        ret: $var.default(null),
-        name: $var.new(),
-    },
-})
-
 const $method = $class.new({
     name: $s('method'),
     static: {
@@ -460,12 +443,6 @@ const $method = $class.new({
                     console.log(`${this.displayName()}.${self.name()}(${args.map(a => a.displayName())})`);
                     return fn.apply(this, args);
                 });
-            }
-            if (!this.message()) {
-                this.message($message.new({
-                    args: this._args,
-                    ret: this._ret,
-                }));
             }
         },
         load(parent) {
@@ -609,7 +586,6 @@ __.mod = function mod(name) {
 _.def($class);
 _.def($var);
 _.def($method);
-_.def($message);
 _.def($debug);
 _.def($description);
 _.def($var_state);

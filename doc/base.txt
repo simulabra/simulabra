@@ -1,0 +1,18 @@
+~base-object
+root of class hierarchy - every instance of a class inherits ~base-object
+#class get what ~class I'm an instance of
+#vars list of ~var-state active on object
+#toString universal string representation
+#init called after ~class#new
+~class
+#new create object instances
+_
+~symbol
+~var
+~var-state
+~method
+~before
+~after
+~virtual
+~module
+~primitive
