@@ -2,9 +2,8 @@
   "name": "simulabra",
   "module": "simulabra-core",
   "scripts": {
-    "test": "uvu",
     "watch": "watchexec -w . -e js uvu",
-    "demo": "watchexec -w . -e js -r bun run demo-web.js",
+    "test": "watchexec -w . -e js -r bun run tests/classes.js",
     "lisp": "watchexec -w . -i out/ -e js,simulabra -r bun run lisp.js",
     "lisp2": "watchexec -w . -i out/ -e js,simulabra -r bun run lisp2.js"
   },

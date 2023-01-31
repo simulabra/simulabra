@@ -6,13 +6,22 @@ root of class hierarchy - every instance of a class inherits ~base-object
 #init called after ~class#new
 ~class
 #new create object instances
-_
+inherits methods and vars from _components
 ~symbol
+idk if we need it, just a wrapper over string
 ~var
+describes a stateful slot
 ~var-state
+reified state ref of var
 ~method
+describes a procedural slot
 ~before
+wraps a slot in the inheritance chain, executing before
 ~after
+like before but after
 ~virtual
+describes a virutal slot on an abstract class
 ~module
+a set of classes, interfaces, functions, macros, etc in a namespace
 ~primitive
+manages a native javascript prototype like String, Array, etc

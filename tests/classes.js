@@ -3,7 +3,9 @@ const __ = globalThis.SIMULABRA;
 const _ = __.mod('lisp2');
 const $ = _.class_proxy();
 
-function ASSERT()
+function ASSERT() {
+
+}
 
 $.class.new({
   name: 'color',
