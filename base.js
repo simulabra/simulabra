@@ -91,6 +91,7 @@ const $class = {
     },
     load(target) {
         for (const v of this.components()) {
+            $debug ? $debug.log('component load', this, v) : '';
             v.load(target);
         }
     },

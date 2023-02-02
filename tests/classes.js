@@ -1,6 +1,6 @@
 import { $s } from '../base.js';
 const __ = globalThis.SIMULABRA;
-const _ = __.mod('lisp2');
+const _ = __.mod('test-classes');
 const $ = _.class_proxy();
 
 function ASSERT() {
