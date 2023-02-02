@@ -119,27 +119,24 @@ $.class.new({
 
 $.class.new({
   name: $s('reader-macro-class'),
-  super: $.class,
-  default_superclass: $.reader_macro,
   components: [
-
-  ],
-  slots: {
-    char: $.var.new(),
-    init: $.after.new({
+    $.class,
+    $.after.new({
+      name: 'init',
       do() {
-        this.default_superclass($.reader_macro);
-        $.debug.log('add to readtable', this, this.char(), this.super(), this.default_superclass());
+        $.debug.log('add to readtable', this, this.char());
         $.readtable.standard().add(this);
       }
     })
+  ],
+  slots: {
+    char: $.var.new(),
   }
 });
 
 $.reader_macro_class.new({
   name: $s('symbol'),
   char: ':',
-  super: $.reader_macro,
   static: {
     of(value) {
       return this.new({ value });
@@ -420,7 +417,7 @@ $.class.new({
     super: $.var.default($.macro),
     init: $.after.new({
       do() {
-        _.defmacro(this);
+        // _.defmacro(this);
       }
     }),
   }

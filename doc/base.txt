@@ -1,27 +1,75 @@
+format: ~class _var #method !type < subclasses
+
 ~base-object
 root of class hierarchy - every instance of a class inherits ~base-object
-#class get what ~class I'm an instance of
+_class get what ~class I'm an instance of
 #vars list of ~var-state active on object
 #toString universal string representation
 #init called after ~class#new
+
 ~class
 #new create object instances
 inherits methods and vars from _components
+
 ~symbol
 idk if we need it, just a wrapper over string
-~var
+
+~identity
+_name
+
+~component < ~identity
+#load onto a target prototype
+_doc
+
+~var < ~component
 describes a stateful slot
+_default value or thunk
+
+
 ~var-state
 reified state ref of var
-~method
+
+~method < ~component
 describes a procedural slot
+_
+
 ~before
 wraps a slot in the inheritance chain, executing before
+
 ~after
 like before but after
+
 ~virtual
 describes a virutal slot on an abstract class
+
 ~module
 a set of classes, interfaces, functions, macros, etc in a namespace
+create a submodule pointing to this one
+look up by class
+
 ~primitive
 manages a native javascript prototype like String, Array, etc
+
+(~class new {
+  name :point
+  components [
+    ~geometry
+    (~static-var new {name :origin default (~point new { x 0 y 0 })})
+    (~var new {name :x type !number})
+    (~var new {name :y type !number})
+  ]
+})
+
+(~class new { ; define a new class
+  name :point ; named point
+  slots { ; slot dictionary
+    title (~var new { type !string doc "words about the var" }) ; var slot to hold state
+    is-applied (~virtual new { doc "words about virtual" }) ; virtual slot that must be overwritten
+    apply (~method new { ; method slot named apply
+      do ($ do (%it apply .)) ; method fn is take the anonymous arg it and call its method apply with this (.)
+      doc "words about method"
+    })
+  }
+  doc "words about the class
+  it's a good class"
+})
