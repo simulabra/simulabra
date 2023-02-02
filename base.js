@@ -2,9 +2,23 @@ console.log('bootstrap');
 globalThis.SIMULABRA = {}; // glory be
 const __ = globalThis.SIMULABRA;
 
+let symbolTable = {};
+export function $s(value) {
+    if (!symbolTable[value]) {
+        symbolTable[value] = value;
+    }
+    return symbolTable[value];
+}
+
+Object.defineProperty(String.prototype, 's', {
+    get() {
+        return $s(this);
+    }
+});
+
 export const $base_object = {
 // $.base_object = {
-    _name: 'base-object',
+    _name: 'base-object'.s,
     _slots: {
         //=!object
         init() { console.log('base-object init ' + this._name); },
@@ -94,11 +108,8 @@ Object.prototype.values = function() {
 Object.prototype.displayName = function() {
     return typeof this;
 }
-Object.prototype.short_description = function() {
-    return `Native Object (${typeof this})`;
-}
 Object.prototype.description = function() {
-    return this.short_description();
+    return `Native Object (${typeof this})`;
 }
 Object.prototype.contains = function(i) {
     return i in this;
@@ -165,7 +176,7 @@ const $class = {
             __._mod.def(this);
             $debug.log('def', this.name())
         }
-        $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init', this.name());
+        $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init ' + this.name());
     },
     load(target) {
         for (const v of this.components()) {
@@ -260,10 +271,10 @@ const $class = {
         return this._abstract || false;
     },
     description() {
-        return `~${this.name().value()}`;
+        return `~${this.name()}`;
     },
     short_description() {
-        return `~${this.name().value()}`;
+        return `~${this.name()}`;
     },
     descended(target) {
         return this === target || !!this.components().find(c => c === target);
@@ -271,27 +282,35 @@ const $class = {
 };
 
 $class._idctr = 0;
-$class._name = 'class';
-$class._super = $base_object;
+$class._name = 'class'.s;
 $class._class = $class;
 $class._proto = $class;
 $class.init();
 
+const defaultFn = {
+    load(target) {
+        target['default'] = function(ctx) {
+            if (this._default instanceof Function) {
+                return this._default.apply(ctx);
+            } else {
+                return this._default;
+            }
+        };
+    },
+    name: 'default',
+}
+
+defaultFn.name = 'default';
+
 var $var = $class.new({
-    name: 'var',
+    name: 'var'.s,
     static: {
         default(val) {
             return this.new({ default: val });
         },
     },
     components: [
-        function def(ctx) {
-            if (this._default instanceof Function) {
-                return this._default.apply(ctx);
-            } else {
-                return this._default;
-            }
-        },
+        defaultFn,
         function name(assign) {
             if (assign) {
                 this._name = assign;
@@ -355,33 +374,14 @@ var $var = $class.new({
     ]
 });
 
-const $symbol = $class.new({
-    components: [
-        $var.new({ name: 'value' }),
-        function description() {
-            return ':' + this.value();
-        },
-        function eq(other) {
-            return this.value() === other.value();
-        },
-        function deskewer() {
-            return this.value().replace(/-/g, '_');
-        },
-    ]
-});
-
-export function $s(value) {
-    return $symbol.new({ value });
-}
-
-$class._name = $s('class');
-$var._name = $s('var');
+$class._name = 'class'.s;
+$var._name = 'var'.s;
 
 const $var_state = $class.new({
-    name: $s('var-state'),
+    name: 'var-state'.s,
     components: [
-        $var.new({ name: $s('v') }),
-        $var.new({ name: $s('state') }),
+        $var.new({ name: 'v'.s }),
+        $var.new({ name: 'state'.s }),
         function description(d) {
             // console.log(this.v().name());
             return `${this.v().name()}:${this.state().description()}`;
@@ -389,60 +389,56 @@ const $var_state = $class.new({
     ]
 });
 
-const $description = $class.new({
-    name: $s('description'),
-    components: [
-    ],
-});
-
 const $method = $class.new({
-    name: $s('method'),
-    slots: {
-        do: $var.new(), // fn, meat and taters
-        message: $var.new(),
-        name: $var.new(),
-        init() {
-            const self = this;
-            if ($debug.debug()) {
-                const fn = this.do();
-                this.do(function(...args) {
-                    // console.log(`${this.displayName()}.${self.name()}(${args.map(a => a.displayName())})`);
-                    return fn.apply(this, args);
-                });
+    name: 'method'.s,
+    components: [
+        $var.new({ name: 'do' }), // fn, meat and taters
+        $var.new({ name: 'message' }),
+        $var.new({ name: 'name' }),
+        $var.new({ name: 'static', default: false }),
+        function load(target) {
+            if (this.static()) {
+                target = target._class;
             }
-        },
-        load(parent) {
             this.do()._method = this;
-            parent[this.name()] = this.do();
-            if (parent.methods instanceof Function) {
-                parent.methods().push(this);
+            target[this.name()] = this.do();
+            if (target.methods instanceof Function) {
+                target.methods().push(this);
             }
         },
-        overrides(_proto) {
+        function overrides(_proto) {
             return this._override;
         }
-    }
+    ]
 });
 
 var $debug = $class.new({
-    name: $s('debug'),
+    name: 'debug'.s,
     components: [
-        function log(...args) {
-            console.log(...this.formatArgs(...args));
-            return this;
-        },
-        function formatArgs(...args) {
-            return args.map(a => a ? a.description() : '' + a)
-        },
+        $method.new({
+            name: 'log',
+            static: true,
+            do: function log(...args) {
+                console.log(...this.formatArgs(...args));
+                return this;
+            }
+        }),
+        $method.new({
+            name: 'formatArgs',
+            static: true,
+            do: function formatArgs(...args) {
+                return args.map(a => a ? a.description() : '' + a)
+            }
+        }),
     ]
 });
 
 const $before = $class.new({
-    name: $s('before'),
-    slots: {
-        name: $var.new(),
-        do: $var.new(),
-        load(parent) {
+    name: 'before'.s,
+    components: [
+        $var.new({ name: 'name'.s }),
+        $var.new({ name: 'do'.s }),
+        function load(parent) {
             const self = this;
             const orig = parent[this.name()];
             if (!orig) {
@@ -453,15 +449,15 @@ const $before = $class.new({
                 return orig.apply(this, args);
             }
         }
-    }
+    ]
 });
 
 const $after = $class.new({
-    name: $s('after'),
-    slots: {
-        name: $var.new(),
-        do: $var.new(),
-        load(parent) {
+    name: 'after'.s,
+    components: [
+        $var.new({ name: 'name'.s }),
+        $var.new({ name: 'do'.s }),
+        function load(parent) {
             $debug.log('after load', this, parent.class());
             const self = this;
             const orig = parent[this.name()];
@@ -475,23 +471,23 @@ const $after = $class.new({
                 return ret;
             }
         }
-    }
+    ]
 });
 
 
 const $virtual = $class.new({
-    name: $s('virtual'),
-    slots: {
-        name: $var.new(),
-        load(parent) {
+    name: 'virtual'.s,
+    components: [
+        $var.new({ name: 'name'.s }),
+        function load(parent) {
             $debug.log('virtual load', this);
             parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
             parent[this.name()].virtual = true;
         },
-        overrides() {
+        function overrides() {
             return false;
         },
-    }
+    ]
 });
 
 String.prototype.deskewer = function() {
@@ -503,54 +499,59 @@ String.prototype.description = function() {
 };
 
 const $module = $class.new({
-    name: $s('module'),
-    slots: {
-        name: $var.new(),
-        classes: $var.new({
+    name: 'module'.s,
+    components: [
+        $var.new({ name: 'name'.s }),
+        $var.new({
+            name: 'classes'.s,
             desc: 'locally defined classes',
             default: {},
             debug: false,
         }),
-        macros: $var.new({
+        $var.new({
+            name: 'macros'.s,
             desc: 'macro definitions',
             default: {},
             debug: false,
         }),
-        imports: $var.new({
+        $var.new({
+            name: 'imports'.s,
             desc: 'the other modules available within this one',
             default: [],
         }),
-        find_class(name) {
+        function find_class(name) {
             // totally dies to recursion!
             return this.classes()['_' + name] || this.imports().reduce((prev, cur) => prev ? prev : cur.find_class(name), undefined);
         },
-        class_proxy() {
+        function class_proxy() {
             return new Proxy(this, {
                 get(target, p) {
                     return target.find_class(p);
                 }
             })
         },
-        symname(sym) {
+        function symname(sym) {
             return '_' + sym.deskewer();
         },
-        def(obj) {
+        function def(obj) {
             if (obj.class().descended($class)) {
+                console.log(obj.name());
+                $debug.log(obj)
                 this.classes()['_' + obj.name().deskewer()] = obj;
             }
         },
-        defmacro(macro) {
+        function defmacro(macro) {
             $.debug.log('defmacro', macro.name().deskewer());
             this.macros()['_' + macro.name().deskewer()] = macro;
         },
-        macro(name) {
+        function macro(name) {
             $.debug.log('get macro', name);
             return this.macros()['_' + name];
         }
-    }
+    ]
 });
 
-__._base = $module.new({ name: $s('base') });
+__._base = $module.new({ name: 'base'.s });
 var _ = __._base;
 __._mod = _;
 __.mod = function mod(name) {
@@ -563,7 +564,6 @@ _.def($class);
 _.def($var);
 _.def($method);
 _.def($debug);
-_.def($description);
 _.def($var_state);
 _.def($virtual);
 _.def($before);
@@ -571,38 +571,29 @@ _.def($after);
 
 const $ = _.class_proxy();
 
-$.class.new({
-    name: $s('primitive'),
-    abstract: true,
-    static: {
-        instances: $.var.default({}),
-        for_type(type) {
-            return this.instances()[type + '_primitive'];
-        }
-    },
-    slots: {
-        slots: $.var.default({}),
-        js_prototype: $.var.new(),
-        methods: $.var.default({}),
-        name: $.var.new(),
-        init() {
-            for (const [name, fn] of this.slots().entries()) {
-                // console.log(`jack in to primitive ${this.name()} ${name}`)
-                this._js_prototype[name] = fn;
+$class.new({
+    name: 'primitive'.s,
+    components: [
+        $var.new({ name: 'components'.s, default: [] }),
+        $var.new({ name: 'js_prototype'.s }),
+        $var.new({ name: 'methods'.s, default: {} }),
+        $var.new({ name: 'name'.s }),
+        function init() {
+            for (let c of this.components()) {
+                c.load(this._js_prototype);
             }
             $.debug.log('primitive init', this);
-            $.primitive.instances()[this.name().deskewer()] = this;
         },
-        extend(method) {
-            this.slots[method.name().deskewer()] = method;
+        function extend(method) {
+            this.slots()[method.name().deskewer()] = method;
             this._js_prototype[method.name().deskewer()] = method.do();
         }
-        // extend(iface, slots) {}
-    }
+    ]
 });
 
+
 $.primitive.new({
-    name: $s('object-primitive'),
+    name: 'object-primitive'.s,
     js_prototype: Object.prototype,
 });
 
@@ -611,7 +602,7 @@ Object.prototype.class = function() {
 }
 
 $.primitive.new({
-    name: $s('string-primitive'),
+    name: 'string-primitive'.s,
     super: $.primitive,
     js_prototype: String.prototype,
     slots: {
@@ -634,7 +625,7 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: $s('boolean-primitive'),
+    name: 'boolean-primitive'.s,
     js_prototype: Boolean.prototype,
     slots: {
         html() {
@@ -650,38 +641,41 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: $s('number-primitive'),
+    name: 'number-primitive'.s,
     js_prototype: Number.prototype,
-    slots: {
-        js() {
+    components: [
+        function js() {
             return this;
         },
-        sqrt() {
+        function sqrt() {
             return Math.sqrt(this);
         },
-        square() {
+        function square() {
             return this ** 2;
         },
-        class() {
-            return $.number_primitive;
-        },
-        short_description() {
+        $method.new({
+            name: 'class'.s,
+            do() {
+                return $.number_primitive;
+            },
+        }),
+        function description() {
             return this.toString();
         },
-        add(n) {
+        function add(n) {
             return this + n;
         },
-        sub(n) {
+        function sub(n) {
             return this - n;
         },
-        pow(n) {
+        function pow(n) {
             return this ** n;
         },
-    }
+    ]
 });
 
 $.primitive.new({
-    name: $s('array-primitive'),
+    name: 'array-primitive'.s,
     js_prototype: Array.prototype,
     slots: {
         intoObject() {
@@ -704,59 +698,11 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: $s('function-primitive'),
+    name: 'function-primitive'.s,
     js_prototype: Function.prototype,
     slots: {
         overrides(_proto) {
             return true;
         }
-    },
-});
-
-$.class.new({
-    name: $s('mixin'),
-    slots: {
-        slots: $.var.default({}),
-        mix(base) {
-            if (base === null) {
-                return this;
-            }
-            return $.mixin.new({
-                slots: {
-                    ...this.slots(),
-                    ...base
-                },
-            });
-        },
-        init() {
-            nameSlots(this.slots());
-        },
-        name() {
-            return this._name;
-        }
-    }
-});
-
-$.class.new({
-    name: $s('interface'),
-    slots: {
-        name: $.var.new(),
-        slots: $.var.default({}),
-        slotList: $.method.do(function() {
-            return Object.values(this.slots());
-        }),
-        init() {
-            nameSlots(this.slots());
-        },
-        satisfies(klass) {
-            // console.log(`check satisfies ${this.name()} for class ${klass.name()}`);
-            const missing = this.slotList().filter(slot => {
-                return !(slot.name() in klass.proto());
-            });
-            if (missing.length > 0) {
-                throw new Error(`class ${klass.name()} doesn't satisfy interface ${this.name()}: ${missing.map(mi => mi.name()).join(', ')}`);
-            }
-            return true;
-        },
     },
 });
