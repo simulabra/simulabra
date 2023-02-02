@@ -16,83 +16,6 @@ Object.defineProperty(String.prototype, 's', {
     }
 });
 
-export const $base_object = {
-// $.base_object = {
-    _name: 'base-object'.s,
-    _slots: {
-        //=!object
-        init() { console.log('base-object init ' + this._name); },
-        class() {
-            if (this._class) {
-                return this._class;
-            } else {
-                return null;
-            }
-        },
-        //=!stringify
-        //=!debug-target
-        should_debug() {
-            return $.debug.debug() || this._should_debug;
-        },
-        debug(...args) {
-            if (this.should_debug()) {
-                $.debug.log(...args);
-            }
-        },
-        //=!description
-        displayName() {
-            return this._name || '?';
-        },
-        base_description() {
-            return `${this.displayName()} class:${this.class().name()} id:${this._intid}`;
-        },
-        short_description() {
-            return `{${this.base_description()}}`;
-        },
-        description() {
-            return `{${this.base_description()}${this.var_description()}}`
-        },
-        //=!private
-        var_description() {
-            return this.var_states().filter(v => v.debug()).map(v => ` ${v.description()}`).join('');
-        },
-        var_states() {
-            let vs = [];
-            for (const v of this.class().vars()) {
-                const o = this[v.name()]();
-                // $.debug.log('vars var', v.name(), o);
-                if (o) {
-                    vs.push($var_state.new({
-                        v,
-                        state: o,
-                    }));
-                }
-            }
-            return vs;
-        },
-    },
-    description() {
-       return '~base-object';
-    },
-    static() {
-        return {};
-    },
-    load(target) {
-        for (const [k, v] of $base_object._slots.entries()) {
-            v?.load && v.load(target);
-        }
-    },
-    components() {
-        return [];
-    },
-    proto() {
-        return this._slots;
-    },
-    descended(target) {
-        return target === this;
-    }
-};
-
 Object.prototype.eq = function(other) {
     return this === other;
 }
@@ -156,21 +79,9 @@ function nameSlots(obj) {
 
 const $class = {
     init() {
-        this._vars = [];
-        this._methods = [];
-        this._subclasses = [];
-        this._idctr = 0;
         this._proto = Object.create($class);
         this._proto._class = this;
-        // this.defaultInitSlot('slots', {});
-        // this.defaultInitSlot('static', {});
-        // this.defaultInitSlot('implements', []);
         this.defaultInitSlot('components', []);
-        // this.defaultInitSlot('default_superclass', $base_object);
-        // nameSlots(this.slots());
-        // nameSlots(this.static());
-
-        // this.implements().map(iface => iface.satisfies(this));
         this.load(this.proto());
         if (__._mod) {
             __._mod.def(this);
@@ -180,40 +91,16 @@ const $class = {
     },
     load(target) {
         for (const v of this.components()) {
-            // console.log('class loader')
             v.load(target);
         }
-        // for (const [k, v] of this.slots().entries()) {
-        //     // console.log(`loadslot ${k} from ${this.name()} onto ${target.name()}`);
-
-        //     // if (k in target.proto() && !v.overrides(target.proto())) {
-        //     //     throw new Error(`attempt to define already bound slot ${k} with ${$.debug.formatArgs(v)}`);
-        //     // }
-        //     v?.load && v.load(target.proto());
-        //     if (v && v.class && v.class() === $var) {
-        //         this._vars.push(v);
-        //     }
-        // }
     },
     new(props = {}) {
         // console.log('class new ' + props.name);
         const obj = Object.create(this.proto());
         parametize(props, obj);
-        if (!obj._intid) {
-            obj._intid = this.nextid();
-        }
         obj.init(this);
         this.validate(obj);
         return obj;
-    },
-    default_superclass(c) {
-        if (c) {
-            // $.debug.log('set default superclass', this, c);
-            this._default_superclass = c;
-            return this;
-        } else {
-            return this._default_superclass || $base_object;
-        }
     },
     validate(obj) {
         for (const v of this.vars()) {
@@ -340,8 +227,7 @@ var $var = $class.new({
                 return function(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
-                        this.debug(`set ${this.short_description()}.${self.name()} = ${assign.short_description()}`);
-                        ('update' in this) && this.update({ changed: self.name() });
+                        ('update' in this) && this.update({ changed: self.name() }); // best there is?
                         return this;
                     }
                     if (!(pk in this)) {
@@ -368,9 +254,6 @@ var $var = $class.new({
                 parent[this.name()] = immutableAccess(this);
             }
         },
-        function overrides(_proto) {
-            return this._override;
-        }
     ]
 });
 
@@ -402,9 +285,6 @@ const $method = $class.new({
             }
             this.do()._method = this;
             target[this.name()] = this.do();
-            if (target.methods instanceof Function) {
-                target.methods().push(this);
-            }
         },
         function overrides(_proto) {
             return this._override;
