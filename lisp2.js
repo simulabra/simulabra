@@ -40,12 +40,13 @@ import { prettyPrint, types } from 'recast';
 const b = types.builders;
 
 $.class.new({
-  name: $s('stream'),
-  slots: {
-    pos: $.var.default(0),
-    value: $.var.new(),
-    next: $.method.new({
-      do() {
+  name: 'stream'.s,
+  components: [
+    $.var.new({ name: 'pos'.s, default: 0 }),
+    $.var.new({ name: 'value'.s }),
+    $.method.new({
+      name: 'next'.s,
+      do: function() {
         if (this.pos() < this.value().length) {
           const res = this.value()[this.pos()];
           this._pos++;
@@ -54,38 +55,40 @@ $.class.new({
         return null;
       }
     }),
-    peek: $.method.new({
-      do() {
+    $.method.new({
+      name: 'peek'.s,
+      do: function() {
         if (this.pos() < this.value().length) {
           return this.value()[this.pos()];
         }
         return null;
       }
     }),
-    ended: $.method.new({
-      do() {
+    $.method.new({
+      name: 'ended'.s,
+      do: function() {
         return this.pos() >= this.value().length;
       }
     }),
-  }
+  ]
 });
 
 $.class.new({
-  name: $s('readtable'),
-  static: {
-    standard: $.var.new(),
-  },
-  slots: {
-    table: $.var.default({}),
-    add(macro) {
+  name: 'readtable'.s,
+  // static: {
+  //   $.var.new({ name: 'standard'.s }),
+  // },
+  components: [
+    $.var.new({ name: 'table'.s, default: {} }),
+    function add(macro) {
       // $.debug.log(`rt add ${macro.char()} ${macro.name()}`);
       this.table()[macro.char()] = macro;
     },
-    get(char) {
+    function get(char) {
       // $.debug.log(`rt get ${char} ${this.table()[char]}`);
       return this.table()[char];
     },
-    has_char(char) {
+    function has_char(char) {
       // $.debug.log(char)
       if (char in this.table()) {
         // $.debug.log(this.table()[char]);
@@ -93,49 +96,49 @@ $.class.new({
       }
       return false;
     },
-  }
+  ]
 });
 
 $.readtable.standard($.readtable.new());
 
 $.class.new({
-  name: $s('reader-macro'),
-  slots: {
-    quote() {
+  name: 'reader-macro'.s,
+  components: [
+    function quote() {
       return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
         this.vars().map(v => {
           return b.property('init', b.identifier(v.v().name()), v.state().quote());
         })
       )])
     },
-    expand() {
+    function expand() {
       return this;
     },
-    char() {
+    function char() {
       return this.class().char();
     }
-  }
+  ],
 })
 
 $.class.new({
-  name: $s('reader-macro-class'),
+  name: 'reader-macro-class'.s,
   components: [
     $.class,
     $.after.new({
       name: 'init',
-      do() {
+      do: function() {
         $.debug.log('add to readtable', this, this.char());
         $.readtable.standard().add(this);
       }
     })
   ],
-  slots: {
-    char: $.var.new(),
-  }
+  components: [
+    $.var.new({ name: 'char'.s }),
+  ],
 });
 
 $.reader_macro_class.new({
-  name: $s('symbol'),
+  name: 'symbol'.s,
   char: ':',
   static: {
     of(value) {
@@ -146,42 +149,42 @@ $.reader_macro_class.new({
       return this.new({ value: reader.symbol() });
     },
   },
-  slots: {
-    value: $.var.new(),
-    estree() {
+  components: [
+    $.var.new({ name: 'value'.s }),
+    function estree() {
       return b.callExpression(b.identifier('$s'), [b.stringLiteral(this.value())]);
     },
-    description() {
+    function description() {
       return ':' + this.value();
     }
-  }
+  ],
 });
 
 $.debug.log('symbol super', _.classes()['_symbol'], $.symbol, $.reader_macro_class.default_superclass())
 
 $.primitive.for_type('object').extend($.method.new({
-  name: $s('quote'),
-  do() {
+  name: 'quote'.s,
+  do: function() {
     return b.literal(this);
-  }
+  },
 }));
 
 $.primitive.for_type('array').extend($.method.new({
-  name: $s('quote'),
-  do() {
+  name: 'quote'.s,
+  do: function() {
     return b.arrayExpression(this.map(e => e.quote()));
   },
 }))
 
 $.primitive.for_type('string').extend($.method.new({
-  name: $s('quote'),
-  do() {
+  name: 'quote'.s,
+  do: function() {
     return b.stringLiteral(this);
-  }
+  },
 }));
 
 $.reader_macro_class.new({
-  name: $s('this'),
+  name: 'this'.s,
   char: '.',
   static: {
     parse(reader) {
@@ -189,21 +192,21 @@ $.reader_macro_class.new({
       return this.new();
     }
   },
-  slots: {
-    print() {
+  components: [
+    function print() {
       return '.';
     },
-    estree() {
+    function estree() {
       return b.thisExpression();
     },
-    quote() {
+    function quote() {
       return b.identifier('$' + this.class().name());
     }
-  }
+  ],
 });
 
 $.reader_macro_class.new({
-  name: $s('cons'),
+  name: 'cons'.s,
   char: '(',
   super: $.reader_macro,
   static: {
@@ -223,20 +226,20 @@ $.reader_macro_class.new({
       return this.new({ receiver, message, args });
     }
   },
-  slots: {
-    receiver: $.var.new(),
-    message: $.var.new(),
-    args: $.var.default([]),
-    vau() {
+  components: [
+    $.var.new({ name: 'receiver'.s }),
+    $.var.new({ name: 'message'.s }),
+    $.var.new({ name: 'args'.s, default: [] }),
+    function vau() {
       return this.receiver() === $.invoke.inst();
     },
-    print() {
+    function print() {
       return `(${this.receiver().print()} ${this.message().print()} ${this.args().map(c => c.print()).join(' ')})`;
     },
-    estree() {
+    function estree() {
       return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.message())), this.args().map(a => a.estree()));
     },
-    expand() {
+    function expand() {
       if (this.vau()) {
         $.debug.log('INVOKE!!', this.message());
         // find macro
@@ -252,25 +255,25 @@ $.reader_macro_class.new({
         });
       }
     }
-  },
+  ],
 });
 
 $.class.new({
-  name: $s('property'),
-  slots: {
-    name: $.var.new(),
-    value: $.var.new(),
-    print() {
+  name: 'property'.s,
+  components: [
+    $.var.new({ name: 'name'.s }),
+    $.var.new({ name: 'value'.s }),
+    function print() {
       return `${this.name().print()} ${this.value().print()}`;
     },
-    estree() {
+    function estree() {
       return b.property('init', this.name().estree(), this.value().estree());
     }
-  }
+  ],
 })
 
 $.reader_macro_class.new({
-  name: $s('map'),
+  name: 'map'.s,
   char: '{',
   super: $.reader_macro,
   static: {
@@ -289,19 +292,19 @@ $.reader_macro_class.new({
       return this.new({ properties });
     }
   },
-  slots: {
-    properties: $.var.new(),
-    print() {
+  components: [
+    $.var.new({ name: 'properties'.s }),
+    function print() {
       return `{ ${this.properties().map(prop => prop.print()).join('\n')}}`;
     },
-    estree() {
+    function estree() {
       return b.objectExpression(this.properties().map(p => p.estree()))
     }
-  }
+  ],
 })
 
 $.reader_macro_class.new({
-  name: $s('quote'),
+  name: 'quote'.s,
   super: $.reader_macro,
   char: '\'',
   static: {
@@ -312,22 +315,22 @@ $.reader_macro_class.new({
       });
     },
   },
-  slots: {
-    value: $.var.new(),
-    print() {
+  components: [
+    $.var.new({ name: 'value'.s }),
+    function print() {
       return `'${this.value().print()}`;
     },
-    macroexpand() {
+    function macroexpand() {
       return this.value().quote();
     },
-    estree() {
+    function estree() {
       return this.value().quote();
     }
-  }
+  ],
 });
 
 $.reader_macro_class.new({
-  name: $s('invoke'),
+  name: 'invoke'.s,
   char: '$',
   static: {
     inst() {
@@ -341,18 +344,18 @@ $.reader_macro_class.new({
       return this.inst();
     }
   },
-  slots: {
-    print() {
+  components: [
+    function print() {
       return '$';
     },
-    estree() {
+    function estree() {
       return b.identifier('__macros');
     }
-  }
+  ],
 });
 
 $.class.new({
-  name: $s('ref-reader-macro'),
+  name: 'ref-reader-macro'.s,
   super: $.reader_macro,
   static: {
     parse(reader) {
@@ -360,35 +363,35 @@ $.class.new({
       return this.new({ symbol: reader.read() })
     }
   },
-  slots: {
-    symbol: $.var.new(),
-    print() {
+  components: [
+    $.var.new({ name: 'symbol'.s }),
+    function print() {
       $.debug.log('ref-m print', this);
       return `${this.char()}${this.symbol().print()}`;
     },
-  }
+  ],
 })
 
 $.reader_macro_class.new({
-  name: $s('argref'),
+  name: 'argref'.s,
   super: $.ref_reader_macro,
   char: '%',
-  slots: {
-    estree() {
+  components: [
+    function estree() {
       return b.identifier(`_${this.symbol()}`);
     },
-  }
+  ],
 });
 
 $.reader_macro_class.new({
-  name: $s('classref'),
+  name: 'classref'.s,
   super: $.ref_reader_macro,
   char: '~',
-  slots: {
-    estree() {
+  components: [
+    function estree() {
       return b.memberExpression(b.identifier('$'), b.identifier(`${this.symbol()}`));
     },
-  }
+  ],
 });
 
 
@@ -404,40 +407,41 @@ $.reader_macro_class.new({
 // exist, or just be subsumed into a component system. remember, inheritance is a minefield!
 // and I am freer to maneuver now than evermore.
 $.class.new({
-  name: $s('macro'),
-  slots: {
-    name: $.var.new(),
-  }
+  name: 'macro'.s,
+  components: [
+    $.var.new({ name: 'name'.s }),
+  ],
 })
 
 $.class.new({
-  name: $s('macro-class'),
+  name: 'macro-class'.s,
   super: $.class,
-  slots: {
-    super: $.var.default($.macro),
-    init: $.after.new({
-      do() {
+  components: [
+    $.var.new({ name: 'super'.s, default: $.macro }),
+    $.after.new({
+      name: 'init'.s,
+      do: function() {
         // _.defmacro(this);
       }
     }),
-  }
+  ],
 })
 
 $.macro_class.new({
-  name: $s('lambda'),
+  name: 'lambda'.s,
   super: $.macro,
-  slots: {
-    args: $.var.new(),
-    body: $.var.new(),
-    estree() {
+  components: [
+    $.var.new({ name: 'args'.s }),
+    $.var.new({ name: 'body'.s }),
+    function estree() {
       $.debug.log(this.args());
       return b.arrowFunctionExpression(this.args().map(a => b.identifier(a)), this.body().estree());
     }
-  }
+  ],
 });
 
 $.macro_class.new({
-  name: $s('do'),
+  name: 'do'.s,
   super: $.macro,
   expand(body) {
     $.debug.log('do expand');
@@ -445,106 +449,106 @@ $.macro_class.new({
       args: ['it'],
       body,
     })
-  }
+  },
 });
 
 $.class.new({
-  name: $s('program'),
-  slots: {
-    forms: $.var.new(),
-    print() {
+  name: 'program'.s,
+  components: [
+    $.var.new({ name: 'forms'.s }),
+    function print() {
       return this.forms().map(f => f.print()).join('\n');
     },
-    estree() {
+    function estree() {
       return b.program(this.forms().map(f => b.expressionStatement(f.estree())));
     },
-    expand() {
+    function expand() {
       return $.program.new({ forms: this.forms().map(f => f.expand()) });
     }
-  }
+  ],
 });
 
 $.class.new({
-  name: $s('identifier'),
-  slots: {
-    value: $.var.new(),
-    print() {
+  name: 'identifier'.s,
+  components: [
+    $.var.new({ name: 'value'.s }),
+    function print() {
       return this.value();
     },
-    estree() {
+    function estree() {
       return b.identifier(this.value());
     },
-    expand() {
+    function expand() {
       return this;
     }
-  }
+  ],
 })
 
 $.class.new({
-  name: $s('reader'),
+  name: 'reader'.s,
   doc: 'read source into forms',
-  slots: {
-    stream: $.var.new(),
-    readtable: $.var.default($.readtable.standard()),
-    peek() {
+  components: [
+    $.var.new({ name: 'stream'.s }),
+    $.var.new({ name: 'readtable'.s, default: $.readtable.standard() }),
+    function peek() {
       return this.stream().peek();
     },
-    next() {
+    function next() {
       return this.stream().next();
     },
-    in(chars) {
+    function inc(chars) {
       return chars.includes(this.peek());
     },
-    test(re) {
+    function test(re) {
       return re.test(this.peek());
     },
-    advance(n) {
+    function advance(n) {
       if (!this[n]()) {
         throw new Error(`expected ${n} at ${this.peek()}`);
       }
       return this.next();
     },
-    whitespace() {
-      return this.in(' \n');
+    function whitespace() {
+      return this.inc(' \n');
     },
-    alpha() {
+    function alpha() {
       return this.test(/[A-Za-z]/);
     },
-    digit() {
+    function digit() {
       return this.test(/[0-9]/);
     },
-    delimiter() {
-      return this.in('(){}[]');
+    function delimiter() {
+      return this.inc('(){}[]');
     },
-    term() {
+    function term() {
       return this.delimiter() || this.whitespace();
     },
-    number() {
+    function number() {
       let n = '';
       while (this.digit() || this.peek() === '.') {
         n += this.next();
       }
       return new Number(n);
     },
-    symbol() {
+    function symbol() {
       let s = '';
       while (!this.term()) {
         s += this.next();
       }
       return $.identifier.new({ value: s });
     },
-    strip() {
+    function strip() {
       while (this.whitespace()) {
         this.stream().next();
       }
     },
-    car() {
+    function car() {
       const s = this.read();
       this.next();
       const m = this.symbol();
       return $.car.new({ receiver: s, message: m });
     },
-    read() {
+    function read() {
       this.strip();
       if (this.readtable().has_char(this.peek())) {
         return this.readtable().get(this.peek()).parse(this);
@@ -567,7 +571,7 @@ $.class.new({
       }
       throw new Error(`unhandled: ${this.peek()} at ${this.stream().pos()}`);
     },
-    program() {
+    function program() {
       const ps = [];
       while (!this.stream().ended()) {
         const p = this.read();
@@ -578,17 +582,17 @@ $.class.new({
       }
       return $.program.new({ forms: ps });
     }
-  }
+  ],
 });
 
 $.class.new({
-  name: $s('macroenv'),
-  slots: {
-    macros: $.var.new(),
-    expand(cons) {
+  name: 'macroenv'.s,
+  components: [
+    $.var.new({ name: 'macros'.s }),
+    function expand(cons) {
 
     }
-  }
+  ],
 });
 
 const ex = `(%l map ($ do (. add (42 pow 2))))
