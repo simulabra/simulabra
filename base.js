@@ -50,7 +50,7 @@ Function.prototype.load = function(parent) {
     // console.log('fnload', this.name, parent._class._name)
     parent[this.name] = this;
 };
-Function.prototype.short_description = function() {
+Function.prototype.description = function() {
     return `Native Function ${this.name}`;
 }
 Function.prototype.overrides = function() {
@@ -67,14 +67,6 @@ function parametize(props, obj) {
         }
     }
     return obj;
-}
-
-function nameSlots(obj) {
-    for (const [k, v] of obj.entries()) {
-        if (v && typeof v.name === 'function' && !v.name()) {
-            v.name(k);
-        }
-    }
 }
 
 const $class = {
@@ -100,15 +92,7 @@ const $class = {
         const obj = Object.create(this.proto());
         parametize(props, obj);
         obj.init(this);
-        this.validate(obj);
         return obj;
-    },
-    validate(obj) {
-        for (const v of this.vars()) {
-            if (v.required() && !('_' + v.name() in obj)) {
-                throw new Error(`var ${v.name()} required in ${obj.description()}`);
-            }
-        }
     },
     defaultInitSlot(slot, dval) {
         const pk = '_' + slot;
@@ -122,32 +106,11 @@ const $class = {
     eq(other) {
         return this.name().eq(other.name());
     },
-    nextid() {
-        return ++this._idctr;
-    },
     class() {
         return this._class;
     },
-    subclasses() {
-        return this._subclasses;
-    },
-    implements() {
-        return this._implements;
-    },
     proto() {
         return this._proto;
-    },
-    vars() {
-        return this._vars || [];
-    },
-    methods() {
-        return this._methods;
-    },
-    mixins() {
-        return this._mixins;
-    },
-    slots() {
-        return this._slots;
     },
     components() {
         return this._components;
@@ -161,15 +124,11 @@ const $class = {
     description() {
         return `~${this.name()}`;
     },
-    short_description() {
-        return `~${this.name()}`;
-    },
     descended(target) {
         return this === target || !!this.components().find(c => c === target);
     }
 };
 
-$class._idctr = 0;
 $class._name = 'class'.s;
 $class._class = $class;
 $class._proto = $class;
@@ -466,8 +425,7 @@ $class.new({
             $.debug.log('primitive init', this);
         },
         function extend(method) {
-            this.slots()[method.name().deskewer()] = method;
-            this._js_prototype[method.name().deskewer()] = method.do();
+            method.load(this.js_prototype()); // wee-woo!
         }
     ]
 });
@@ -486,39 +444,33 @@ $.primitive.new({
     name: 'string-primitive'.s,
     super: $.primitive,
     js_prototype: String.prototype,
-    slots: {
-        html() {
+    components: [
+        $method.new({
+            name: 'class'.s,
+            do() {
+                return $.string_primitive;
+            },
+        }),
+        function description() {
             return this;
         },
-        class() {
-            return $.string_primitive;
-        },
-        short_description() {
-            return this;
-        },
-        js() {
-            return this;
-        },
-        className() {
-            return 'string';
-        }
-    }
+    ]
 });
 
 $.primitive.new({
     name: 'boolean-primitive'.s,
     js_prototype: Boolean.prototype,
-    slots: {
-        html() {
-            return this;
-        },
-        class() {
-            return $.boolean_primitive;
-        },
-        short_description() {
+    components: [
+        $method.new({
+            name: 'class'.s,
+            do() {
+                return $.boolean_primitive;
+            },
+        }),
+        function description() {
             return this.toString();
         }
-    }
+    ]
 });
 
 $.primitive.new({
@@ -558,32 +510,27 @@ $.primitive.new({
 $.primitive.new({
     name: 'array-primitive'.s,
     js_prototype: Array.prototype,
-    slots: {
-        intoObject() {
+    components: [
+        function intoObject() {
             const res = {};
             for (const it of this) {
                 res[it.name()] = it;
             }
             return res;
         },
-        class() {
-            return $.array_primitive;
-        },
-        short_description() {
-            return `[${this.map(a => a.short_description()).join(' ')}]`;
-        },
-        description() {
+        $method.new({
+            name: 'class'.s,
+            do() {
+                return $.boolean_primitive;
+            },
+        }),
+        function description() {
             return `[${this.map(a => a.description()).join(' ')}]`;
         },
-    }
+    ]
 });
 
 $.primitive.new({
     name: 'function-primitive'.s,
     js_prototype: Function.prototype,
-    slots: {
-        overrides(_proto) {
-            return true;
-        }
-    },
 });

@@ -9,7 +9,7 @@ _class get what ~class I'm an instance of
 
 ~class
 #new create object instances
-inherits methods and vars from _components
+_components classes, vars, and methods
 
 ~symbol
 idk if we need it, just a wrapper over string
