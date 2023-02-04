@@ -75,10 +75,8 @@ $.class.new({
 
 $.class.new({
   name: 'readtable'.s,
-  // static: {
-  //   $.var.new({ name: 'standard'.s }),
-  // },
   components: [
+    $.var.new({ static: true, name: 'standard'.s }),
     $.var.new({ name: 'table'.s, default: {} }),
     function add(macro) {
       // $.debug.log(`rt add ${macro.char()} ${macro.name()}`);

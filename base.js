@@ -71,7 +71,7 @@ function parametize(props, obj) {
 
 const $class = {
     init() {
-        this._proto = Object.create($class);
+        this._proto = Object.create(this.class());
         this._proto._class = this;
         this.defaultInitSlot('components', []);
         this.load(this.proto());
@@ -132,7 +132,6 @@ const $class = {
 $class._name = 'class'.s;
 $class._class = $class;
 $class._proto = $class;
-$class.init();
 
 const defaultFn = {
     load(target) {
