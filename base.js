@@ -57,6 +57,28 @@ Function.prototype.overrides = function() {
     return true;
 }
 
+function bvar(name, desc) {
+    const key = '_' + name;
+    return {
+        name() {
+            return name;
+        },
+        load(target) {
+            if (desc.static) {
+                target = target._class;
+            }
+            target[name] = function(assign) {
+                if (assign !== undefined) {
+                    this[key] = assign;
+                } else if (this[key] === undefined && desc.default !== undefined) {
+                    this[key] = typeof desc.default === 'function' ? desc.default() : desc.default;
+                }
+                return this[key];
+            }
+        }
+    }
+}
+
 
 function parametize(props, obj) {
     for (const [k, v] of Object.entries(props)) {
@@ -69,9 +91,19 @@ function parametize(props, obj) {
     return obj;
 }
 
+const $base_proto = {
+    init() {},
+    class() {
+        return this._class;
+    },
+    description() {
+        return `{${this.class().description()} ${this._name || '???'}}`;
+    }
+}
+
 const $class = {
     init() {
-        this._proto = Object.create(this.class());
+        this._proto = Object.create($base_proto);
         this._proto._class = this;
         this.defaultInitSlot('components', []);
         this.load(this.proto());
@@ -150,38 +182,22 @@ defaultFn.name = 'default';
 
 var $var = $class.new({
     name: 'var'.s,
-    static: {
-        default(val) {
-            return this.new({ default: val });
-        },
-    },
     components: [
         defaultFn,
-        function name(assign) {
-            if (assign) {
-                this._name = assign;
-            }
-            return this._name;
-        },
-        function mutable() {
-            if ('_mutable' in this) {
-                return this._mutable;
-            } else {
-                return true;
-            }
-        },
-        function debug() {
-            return this._debug;
-        },
+        bvar('name', {}),
+        bvar('mutable', { default: true }),
+        bvar('debug', {}),
+        bvar('required', {}),
+        bvar('static', {}),
         function should_debug() {
             return this._debug || $debug.debug();
         },
-        function required() {
-            return this._required || false;
-        },
-        function load(parent) {
+        function load(target) {
             // console.log('var load', this.name());
             const pk = '_' + this.name();
+            if (this.static()) {
+                target = target._class;
+            }
             function mutableAccess(self) {
                 return function(assign) {
                     if (assign !== undefined) {
@@ -208,9 +224,9 @@ var $var = $class.new({
                 }
             }
             if (this.mutable()) {
-                parent[this.name()] = mutableAccess(this);
+                target[this.name()] = mutableAccess(this);
             } else {
-                parent[this.name()] = immutableAccess(this);
+                target[this.name()] = immutableAccess(this);
             }
         },
     ]
@@ -258,14 +274,14 @@ var $debug = $class.new({
             name: 'log',
             static: true,
             do: function log(...args) {
-                console.log(...this.formatArgs(...args));
+                console.log(...this.format(...args));
                 return this;
             }
         }),
         $method.new({
-            name: 'formatArgs',
+            name: 'format',
             static: true,
-            do: function formatArgs(...args) {
+            do: function format(...args) {
                 return args.map(a => a ? a.description() : '' + a)
             }
         }),
@@ -342,6 +358,11 @@ const $module = $class.new({
     components: [
         $var.new({ name: 'name'.s }),
         $var.new({
+            name: 'env'.s,
+            default: () => ({}),
+            debug: false,
+        }),
+        $var.new({
             name: 'classes'.s,
             desc: 'locally defined classes',
             default: {},
@@ -358,14 +379,33 @@ const $module = $class.new({
             desc: 'the other modules available within this one',
             default: [],
         }),
-        function find_class(name) {
-            // totally dies to recursion!
-            return this.classes()['_' + name] || this.imports().reduce((prev, cur) => prev ? prev : cur.find_class(name), undefined);
+        function key(name) {
+            return '$' + name.deskewer();
         },
-        function class_proxy() {
+        function repo(className) {
+            return this.env()[this.key(className)] || {};
+        },
+        function find(className, name) {
+            // totally dies to recursion!
+            $debug.log(className, this, this.repo(className))
+            const v = this.repo(className)[this.key(name)];
+            if (v) {
+                return v;
+            } else {
+                for (const imp of this.imports()) {
+                    const iv = imp.find(className, name);
+                    if (iv) {
+                        return iv;
+                    }
+                }
+            }
+            throw new Error('fail to find ' + className + '/' + name);
+        },
+        function proxy(className) {
             return new Proxy(this, {
                 get(target, p) {
-                    return target.find_class(p);
+                    $debug.log('proxy', className, p, target, target.find(className, p))
+                    return target.find(className, p);
                 }
             })
         },
@@ -373,11 +413,14 @@ const $module = $class.new({
             return '_' + sym.deskewer();
         },
         function def(obj) {
-            if (obj.class().descended($class)) {
-                console.log(obj.name());
-                $debug.log(obj)
-                this.classes()['_' + obj.name().deskewer()] = obj;
+            const className = this.key(obj.class().name());
+            const name = this.key(obj.name());
+            if (this.env()[className] === undefined) {
+                $debug.log('env init for class', className);
+                this.env()[className] = {};
             }
+            $debug.log('def', className, name)
+            this.env()[className][name] = obj;
         },
         function defmacro(macro) {
             $.debug.log('defmacro', macro.name().deskewer());
@@ -398,6 +441,8 @@ __.mod = function mod(name) {
     __._mod = m;
     return m;
 }
+const $ = _.proxy('class');
+__.$base = $;
 
 _.def($class);
 _.def($var);
@@ -407,10 +452,10 @@ _.def($var_state);
 _.def($virtual);
 _.def($before);
 _.def($after);
+_.def($module);
 
-const $ = _.class_proxy();
 
-$class.new({
+$.class.new({
     name: 'primitive'.s,
     components: [
         $var.new({ name: 'components'.s, default: [] }),
@@ -421,6 +466,7 @@ $class.new({
             for (let c of this.components()) {
                 c.load(this._js_prototype);
             }
+            _.def(this);
             $.debug.log('primitive init', this);
         },
         function extend(method) {
@@ -435,9 +481,9 @@ $.primitive.new({
     js_prototype: Object.prototype,
 });
 
-Object.prototype.class = function() {
-    return $.object_primitive;
-}
+// Object.prototype.class = function() {
+//     return $.object_primitive;
+// }
 
 $.primitive.new({
     name: 'string-primitive'.s,

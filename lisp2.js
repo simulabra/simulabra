@@ -34,8 +34,12 @@
 
 import { $s } from './base.js';
 const __ = globalThis.SIMULABRA;
-const _ = __.mod('lisp2');
-const $ = _.class_proxy();
+const _ = __.$base.module.new({
+  name: 'lisp2',
+  imports: [__._base],
+});
+const $ = _.proxy('class');
+const $primitive = _.proxy('primitive');
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
 
@@ -98,6 +102,7 @@ $.class.new({
 });
 
 $.readtable.standard($.readtable.new());
+$.debug.log('readtable class', $.readtable.new().class())
 
 $.class.new({
   name: 'reader-macro'.s,
@@ -158,23 +163,21 @@ $.reader_macro_class.new({
   ],
 });
 
-$.debug.log('symbol super', _.classes()['_symbol'], $.symbol, $.reader_macro_class.default_superclass())
-
-$.primitive.for_type('object').extend($.method.new({
+$primitive.object_primitive.extend($.method.new({
   name: 'quote'.s,
   do: function() {
     return b.literal(this);
   },
 }));
 
-$.primitive.for_type('array').extend($.method.new({
+$primitive.array_primitive.extend($.method.new({
   name: 'quote'.s,
   do: function() {
     return b.arrayExpression(this.map(e => e.quote()));
   },
 }))
 
-$.primitive.for_type('string').extend($.method.new({
+$primitive.string_primitive.extend($.method.new({
   name: 'quote'.s,
   do: function() {
     return b.stringLiteral(this);
