@@ -101,7 +101,7 @@ const $base_proto = {
     }
 }
 
-const $class = {
+const $classSlots = {
     init() {
         this._proto = Object.create($base_proto);
         this._proto._class = this;
@@ -114,6 +114,7 @@ const $class = {
         $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init ' + this.name());
     },
     load(target) {
+            $debug ? $debug.log('component load', this) : '';
         for (const v of this.components()) {
             $debug ? $debug.log('component load', this, v) : '';
             v.load(target);
@@ -144,9 +145,6 @@ const $class = {
     proto() {
         return this._proto;
     },
-    components() {
-        return this._components;
-    },
     static() {
         return this._static;
     },
@@ -160,6 +158,12 @@ const $class = {
         return this === target || !!this.components().find(c => c === target);
     }
 };
+
+bvar('components', {
+    default: [],
+}).load($classSlots);
+
+const $class = Object.create($classSlots);
 
 $class._name = 'class'.s;
 $class._class = $class;
@@ -256,6 +260,7 @@ const $method = $class.new({
         $var.new({ name: 'static', default: false }),
         function load(target) {
             if (this.static()) {
+                $debug && $debug.log('load static method', this.name(), target._class);
                 target = target._class;
             }
             this.do()._method = this;
