@@ -243,17 +243,22 @@ $.class.new({
       return `(${this.receiver().print()} ${this.message().print()} ${this.args().map(c => c.print()).join(' ')})`;
     },
     function estree() {
-      return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.message())), this.args().map(a => a.estree()));
+      return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
     },
     function expand() {
       if (this.vau()) {
-        $.debug.log('INVOKE!!', this.message());
+        $.debug.log('INVOKE!!', this.message().value());
         // find macro
-        const m = _.macro(this.message());
+        const m = _.find('macro', this.message().value());
+        $.debug.log('m', m);
         // apply macro
-        return m.expand()(...this.args());
+        try {
+          return m.expand(...this.args());
+        } catch(e) {
+          $.debug.log('error in macro expansion', this, m);
+          throw e;
+        }
       } else {
-        $.debug.log(this.receiver());
         return $.cons.new({
           receiver: this.receiver().expand(),
           message: this.message(),
@@ -295,6 +300,7 @@ $.class.new({
           const name = reader.symbol();
           reader.strip();
           const value = reader.read();
+          $.debug.log('prop', name, value);
           properties.push($.property.new({ name, value }))
           reader.strip();
         }
@@ -397,7 +403,7 @@ $.class.new({
     $.ref_reader_macro,
     $.var.new({ name: 'char', default: '%' }),
     function estree() {
-      return b.identifier(`_${this.symbol()}`);
+      return b.identifier(`_${this.symbol().value()}`);
     },
   ],
 });
@@ -409,7 +415,7 @@ $.class.new({
     $.ref_reader_macro,
     $.var.new({ name: 'char', default: '~' }),
     function estree() {
-      return b.memberExpression(b.identifier('$'), b.identifier(`${this.symbol()}`));
+      return b.memberExpression(b.identifier('$'), this.symbol().estree());
     },
   ],
 });
@@ -431,34 +437,40 @@ $.class.new({
   name: 'macro'.s,
   components: [
     $.var.new({ name: 'name'.s }),
+    $.var.new({ name: 'expand-fn'.s }),
+    function expand(...args) {
+      $.debug.log('macro expand', this)
+      return this.expand_fn().apply(this, args);
+    },
+    $.after.new({
+      name: 'init'.s,
+      do() {
+        _.def(this);
+      }
+    })
   ],
 })
 
 $.class.new({
   name: 'lambda'.s,
   components: [
-    $.macro,
     $.var.new({ name: 'args'.s }),
     $.var.new({ name: 'body'.s }),
     function estree() {
-      $.debug.log(this.args());
       return b.arrowFunctionExpression(this.args().map(a => b.identifier(a)), this.body().estree());
     }
   ],
 });
 
-$.class.new({
+$.macro.new({
   name: 'do'.s,
-  components: [
-    $.macro,
-    function expand(body) {
-      $.debug.log('do expand');
-      return $.lambda.new({
-        args: ['it'],
-        body,
-      })
-    },
-  ]
+  expand_fn(body) {
+    $.debug.log('do expand');
+    return $.lambda.new({
+      args: ['it'],
+      body,
+    })
+  },
 });
 
 $.class.new({
@@ -589,7 +601,6 @@ $.class.new({
       const ps = [];
       while (!this.stream().ended()) {
         const p = this.read();
-        $.debug.log('read', p);
         if (p) {
           ps.push(p);
         }
@@ -611,10 +622,12 @@ $.class.new({
 
 const ex = `(%l map ($ do (. add (42 pow 2))))
 (~class new {
-  name :point
+  name point
   slots {x (~var new) y (~var new)}
-})`
+})`;
+
 const program = $.reader.new({ stream: $.stream.new({ value: ex })}).program();
+
 $.debug.log(program.print());
 $.debug.log('expand', program.expand().print());
 $.debug.log(prettyPrint(program.expand().estree()).code);
