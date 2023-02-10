@@ -725,21 +725,24 @@ $.class.new({
   ],
 });
 
-// (a 1 | b 2) => ((a 1) b 2)
-
 const ex = `
 (~class new {
   name :point
   components [
-    (~var new {name :x})
-    (~var new {name :y})
+    (~var new {
+      name :x
+      default 0
+    })
+    (~var new {
+      name :y
+      default 0
+    })
     (~method new {
       name :dist
       do ($ do ^(. x | sub (%it x) | pow 2 | add (. y | sub (%it y) | pow 2) | sqrt))
     })
   ]
 })
-(~debug log (3 add 4 | sqrt | sub 2 | pow 3))
 (~debug log (~point new {x 3 y 4} | dist (~point new)))
 `;
 
