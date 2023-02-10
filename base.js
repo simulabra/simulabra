@@ -489,7 +489,6 @@ $.class.new({
         $var.new({ name: 'methods'.s, default: {} }),
         $var.new({ name: 'name'.s }),
         function init() {
-            $.debug.log(this.components());
             for (let c of this.components()) {
                 c.load(this._js_prototype);
             }
@@ -519,7 +518,7 @@ $.primitive.new({
         $method.new({
             name: 'class'.s,
             do() {
-                return $.string_primitive;
+                return _.proxy('primitive').string_primitive;
             },
         }),
         function description() {
@@ -535,7 +534,7 @@ $.primitive.new({
         $method.new({
             name: 'class'.s,
             do() {
-                return $.boolean_primitive;
+                return _.proxy('primitive').boolean_primitive;
             },
         }),
         function description() {
@@ -560,7 +559,7 @@ $.primitive.new({
         $method.new({
             name: 'class'.s,
             do() {
-                return $.number_primitive;
+                return _.proxy('primitive').number_primitive;
             },
         }),
         function description() {
@@ -592,7 +591,7 @@ $.primitive.new({
         $method.new({
             name: 'class'.s,
             do() {
-                return $.boolean_primitive;
+                return _.proxy('primitive').array_primitive;
             },
         }),
         function description() {
@@ -604,4 +603,12 @@ $.primitive.new({
 $.primitive.new({
     name: 'function-primitive'.s,
     js_prototype: Function.prototype,
+    components: [
+        // $method.new({
+        //     name: 'class'.s,
+        //     do() {
+        //         return _.proxy('primitive').function_primitive;
+        //     },
+        // }),
+    ]
 });
