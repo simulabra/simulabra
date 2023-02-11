@@ -102,7 +102,6 @@ $.class.new({
 });
 
 $.readtable.standard($.readtable.new());
-$.debug.log('readtable class', $.readtable.new().class())
 
 $.class.new({
   name: 'reader-macro',
@@ -111,8 +110,6 @@ $.class.new({
       return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
         this.class().vars().map(v => {
           const k = v.name().deskewer();
-          $.debug.log(k, this[k]());
-
           return b.property('init', b.identifier(k), this[k]().quote());
         })
       )])
@@ -131,7 +128,7 @@ $.class.new({
     $.after.new({
       name: 'init',
       do: function() {
-        $.debug.log('add to readtable', this, this.char());
+        this.log('add to readtable', this, this.char());
         $.readtable.standard().add(this);
       }
     })
@@ -225,7 +222,7 @@ $.class.new({
 $.readtable.standard().add($.this, '.');
 
 $.class.new({
-  name: 'cons',
+  name: 'message',
   components: [
     $.reader_macro,
     $.method.new({
@@ -268,11 +265,11 @@ $.class.new({
       return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
     },
     function expand() {
-      $.debug.log('expand invoke', this.receiver().class().name());
+      this.log('expand invoke', this.receiver().class().name());
       if (this.vau()) {
         // find macro
         const m = _.find('macro', this.message().value());
-        $.debug.log('invoke', this.message().value(), m);
+        this.log('invoke', this.message().value(), m);
         // apply macro
         try {
           return m.expand(...this.args());
@@ -281,7 +278,7 @@ $.class.new({
           throw e;
         }
       } else {
-        return $.cons.new({
+        return $.message.new({
           receiver: this.receiver().expand(),
           message: this.message(),
           args: this.args().map(a => a.expand()),
@@ -290,7 +287,7 @@ $.class.new({
     }
   ],
 });
-$.readtable.standard().add($.cons, '(');
+$.readtable.standard().add($.message, '(');
 
 $.class.new({
   name: 'property',
@@ -298,14 +295,13 @@ $.class.new({
     $.var.new({ name: 'name' }),
     $.var.new({ name: 'value' }),
     function print() {
-      $.debug.log(this);
       return `${this.name().print()} ${this.value().print()}`;
     },
     function estree() {
       return b.property('init', this.name().estree(), this.value().estree());
     },
     function expand() {
-      $.debug.log('expand property', this.name(), this.value())
+      this.log('expand property', this.name(), this.value())
       return this.class().new({ name: this.name(), value: this.value().expand() });
     }
   ],
@@ -363,7 +359,6 @@ $.class.new({
           const name = reader.symbol();
           reader.strip();
           const value = reader.read();
-          $.debug.log('prop', name, value);
           properties.push($.property.new({ name, value }))
           reader.strip();
         }
@@ -457,7 +452,6 @@ $.class.new({
       }
     }),
     function print() {
-      $.debug.log('ref-m print', this);
       return `${this.char()}${this.symbol().print()}`;
     },
   ],
@@ -505,7 +499,6 @@ $.class.new({
     $.var.new({ name: 'name' }),
     $.var.new({ name: 'expand-fn' }),
     function expand(...args) {
-      $.debug.log('macro expand', this)
       return this.expand_fn().apply(this, args);
     },
     $.after.new({
@@ -555,7 +548,6 @@ $.class.new({
 $.macro.new({
   name: 'do',
   expand_fn(...forms) {
-    $.debug.log('do expand');
     return $.lambda.new({
       args: ['it'],
       body: $.body.new({ forms }),
@@ -667,12 +659,6 @@ $.class.new({
     function test(re) {
       return re.test(this.peek());
     },
-    function advance(n) {
-      if (!this[n]()) {
-        throw new Error(`expected ${n} at ${this.peek()}`);
-      }
-      return this.next();
-    },
     function whitespace() {
       return this.inc(' \n');
     },
@@ -707,12 +693,6 @@ $.class.new({
         this.stream().next();
       }
     },
-    function car() {
-      const s = this.read();
-      this.next();
-      const m = this.symbol();
-      return $.car.new({ receiver: s, message: m });
-    },
     function read() {
       this.strip();
       if (this.peek() === null) {
@@ -722,11 +702,11 @@ $.class.new({
         try {
           return this.readtable().get(this.peek()).parse(this);
         } catch (e) {
-          $.debug.log(this.peek(), this.readtable().get(this.peek()));
+          $.debug.log('failed readtable', this.peek(), this.readtable().get(this.peek()));
           throw e;
         }
       } else {
-        $.debug.log('not in readtable:', this.peek());
+        this.log('not in readtable:', this.peek());
       }
       if (this.peek() === '-') {
         this.next();
@@ -767,7 +747,7 @@ $.class.new({
     $.method.new({
       name: 'load',
       do() {
-        const program = $.reader.new({ stream: $.stream.new({ value: ex }) }).program();
+        const program = $.reader.new({ stream: $.stream.new({ value: this.source() }) }).program();
         const code = prettyPrint(program.expand().estree()).code;
         const head = `
 var __ = globalThis.SIMULABRA;

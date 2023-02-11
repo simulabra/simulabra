@@ -118,6 +118,11 @@ const $base_proto = {
     description() {
         const vs = this.class().vars().map(v => v.debug() ? `${v.name()} ${this[v.name().deskewer()]()?.description()}` : null).filter(s => s !== null).join(' ');
         return `{${this.class().description()}${vs.length > 0 ? ' ' : ''}${vs}}`;
+    },
+    log(...args) {
+        if (this.class().debug()) {
+            $debug.log(...args);
+        }
     }
 }
 
@@ -129,14 +134,11 @@ const $class_components = [
         this.load(this.proto());
         if (__.mod) {
             __.mod().def(this);
-            $debug.log('def', this.name())
         }
-        $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init ' + this.name());
+        // $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init ' + this.name());
     },
     function load(target) {
-            $debug ? $debug.log('component load', this) : '';
         for (const v of this.components()) {
-            $debug ? $debug.log('component load', this, v) : '';
             v.load(target);
         }
     },
@@ -177,6 +179,9 @@ const $class_components = [
     },
     bvar('components', {
         default: [],
+    }),
+    bvar('debug', {
+        default: false,
     })
 ];
 
@@ -305,7 +310,7 @@ const $method = $class.new({
         $var.new({ name: 'static', default: false }),
         function load(target) {
             if (this.static()) {
-                $debug && $debug.log('load static method', this.name(), target._class);
+                $debug && this.log('load static method', this.name(), target._class);
                 target = target._class;
             }
             this.do()._method = this;
@@ -363,7 +368,7 @@ const $after = $class.new({
         $var.new({ name: 'name' }),
         $var.new({ name: 'do' }),
         function load(parent) {
-            $debug.log('after load', this, parent.class());
+            this.log('after load', this, parent.class());
             const self = this;
             const orig = parent[this.name()];
             if (!orig) {
@@ -371,7 +376,7 @@ const $after = $class.new({
             }
             parent[this.name()] = function(...args) {
                 const ret = orig.apply(this, args);
-                $debug.log('after do', this, self, parent._class);
+                this.log('after do', this, self, parent._class);
                 self.do().apply(this, args);
                 return ret;
             }
@@ -385,7 +390,7 @@ const $virtual = $class.new({
     components: [
         $var.new({ name: 'name' }),
         function load(parent) {
-            $debug.log('virtual load', this);
+            this.log('virtual load', this);
             parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
             parent[this.name()].virtual = true;
         },
@@ -426,7 +431,7 @@ const $module = $class.new({
                 return v;
             } else {
                 for (const imp of this.imports()) {
-                    $debug.log('find', className, name, imp);
+                    this.log('find', className, name, imp);
                     const iv = imp.find(className, name);
                     if (iv) {
                         return iv;
@@ -438,7 +443,6 @@ const $module = $class.new({
         function proxy(className) {
             return new Proxy(this, {
                 get(target, p) {
-                    // $debug.log('proxy', className, p, target, target.find(className, p))
                     return target.find(className, p);
                 }
             })
@@ -447,11 +451,11 @@ const $module = $class.new({
             return '_' + sym.deskewer();
         },
         function def(obj) {
-            $debug.log('def', obj);
+            this.log('def', obj);
             const className = this.key(obj.class().name());
             const name = this.key(obj.name());
             if (this.env()[className] === undefined) {
-                $debug.log('env init for class', className);
+                this.log('env init for class', className);
                 this.env()[className] = {};
             }
             this.env()[className][name] = obj;
@@ -502,7 +506,7 @@ $.class.new({
                 c.load(this._js_prototype);
             }
             _.def(this);
-            $.debug.log('primitive init', this);
+            this.log('primitive init', this);
         },
         function extend(method) {
             method.load(this.js_prototype()); // wee-woo!
