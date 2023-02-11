@@ -106,6 +106,18 @@ $.readtable.standard($.readtable.new());
 $.class.new({
   name: 'reader-macro',
   components: [
+    $.after.new({
+      name: 'init',
+      static: true,
+      do() {
+        $.debug.log('init reader-macro', this)
+        $.readtable.standard().add(this, this.char());
+      }
+    }),
+    $.var.new({
+      name: 'char',
+      static: true,
+    }),
     function quote() {
       return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
         this.class().vars().map(v => {
@@ -337,7 +349,7 @@ $.class.new({
       return this.class().new({ items: this.items().map(it => it.expand()) });
     },
     function map(fn) {
-      return this.items().map(fn);
+      return this.class().new({ items: this.items().map(fn) });
     }
   ]
 });
@@ -367,7 +379,7 @@ $.class.new({
       }
     }),
     function print() {
-      return `{ ${this.properties().map(prop => prop.print()).join('\n')}}`;
+      return `{${this.properties().map(prop => prop.print()).join('\n')}}`;
     },
     function estree() {
       return b.objectExpression(this.properties().map(p => p.estree()))
@@ -406,6 +418,49 @@ $.class.new({
   ],
 });
 $.readtable.standard().add($.quote, '\'');
+
+$.class.new({
+  name: 'quasiquote',
+  components: [
+    $.reader_macro,
+    $.var.new({ name: 'value' }),
+    $.method.new({
+      name: 'parse',
+      static: true,
+      do: function parse(reader) {
+        reader.next(); // `
+        const quoted = reader.read();
+        return quoted.map(e => e.quote())
+      }
+    }),
+    function print() {
+      return `'${this.value().print()}`;
+    },
+    function expand() {
+      return this.value().quote();
+    },
+    function estree() {
+      return this.value().quote();
+    }
+  ],
+});
+$.readtable.standard().add($.quasiquote, '`');
+
+$.class.new({
+  name: 'unquote',
+  components: [
+    $.method.new({
+      name: 'parse',
+      static: true,
+      do: function parse(reader) {
+        reader.next(); // ,
+        return this.new({ value: reader.read() });
+      }
+    }),
+    $.var.new({ name: 'value' }),
+  ]
+});
+$.readtable.standard().add($.unquote, ',');
 
 $.class.new({
   name: 'invoke',
@@ -497,7 +552,7 @@ $.class.new({
   name: 'macro',
   components: [
     $.var.new({ name: 'name' }),
-    $.var.new({ name: 'expand-fn' }),
+    $.var.new({ name: 'expand-fn', debug: false }),
     function expand(...args) {
       return this.expand_fn().apply(this, args);
     },
@@ -702,7 +757,7 @@ $.class.new({
         try {
           return this.readtable().get(this.peek()).parse(this);
         } catch (e) {
-          $.debug.log('failed readtable', this.peek(), this.readtable().get(this.peek()));
+          this.log('failed readtable', this.peek(), this.readtable().get(this.peek()));
           throw e;
         }
       } else {
@@ -739,6 +794,7 @@ $.class.new({
 
 $.class.new({
   name: 'source-module',
+  debug: true,
   components: [
     $.module,
     $.var.new({
@@ -749,6 +805,7 @@ $.class.new({
       do() {
         const program = $.reader.new({ stream: $.stream.new({ value: this.source() }) }).program();
         const code = prettyPrint(program.expand().estree()).code;
+        tihs.log('code', code);
         const head = `
 var __ = globalThis.SIMULABRA;
 const _ = __.mod().find('class', 'module').new({
@@ -765,6 +822,13 @@ var $ = _.proxy('class');
 })
 
 const ex = `
+($ macro quickmeth [name args @forms]
+  \`(~method new {
+      name :,%name
+      do ($ lambda ,%args ,%forms)
+    })
+)
+
 (~class new {
   name :point
   components [
@@ -780,9 +844,14 @@ const ex = `
       name :dist
       do ($ do ^(. x | sub (%it x) | pow 2 | add (. y | sub (%it y) | pow 2) | sqrt))
     })
+    ($ quickmeth translate [other]
+      (. x (. x | add (%other x)))
+      (. y (. y | add (%other y)))
+    )
   ]
 })
 (~debug log (~point new {x 3 y 4} | dist (~point new)))
+
 `;
 
 $.source_module.new({

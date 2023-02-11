@@ -115,13 +115,16 @@ const $base_proto = {
     class() {
         return this._class;
     },
+    name() {
+        return '?';
+    },
     description() {
         const vs = this.class().vars().map(v => v.debug() ? `${v.name()} ${this[v.name().deskewer()]()?.description()}` : null).filter(s => s !== null).join(' ');
         return `{${this.class().description()}${vs.length > 0 ? ' ' : ''}${vs}}`;
     },
     log(...args) {
-        if (this.class().debug()) {
-            $debug.log(...args);
+        if ($debug && this.class().debug()) {
+            $debug.log(this.class().name() + '/' + this.name(), ...args);
         }
     }
 }
@@ -135,7 +138,7 @@ const $class_components = [
         if (__.mod) {
             __.mod().def(this);
         }
-        // $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init ' + this.name());
+        this.log('class init', this.name(), this.class());
     },
     function load(target) {
         for (const v of this.components()) {
@@ -185,17 +188,17 @@ const $class_components = [
     })
 ];
 
-const $class_slots = {
-    new(props = {}) {
-        // console.log('class new ' + props.name);
-        const obj = Object.create(this.proto());
-        parametize(props, obj);
-        obj.init(this);
-        return obj;
-    },
-    class() {
-        return this._class;
-    },
+const $class_slots = Object.create($base_proto);
+
+$class_slots.new = function (props = {}) {
+    // console.log('class new ' + props.name);
+    const obj = Object.create(this.proto());
+    parametize(props, obj);
+    obj.init(this);
+    return obj;
+};
+$class_slots.class = function () {
+    return this._class;
 };
 
 for (const c of $class_components) {
@@ -203,6 +206,7 @@ for (const c of $class_components) {
 }
 
 const $class = Object.create($class_slots);
+$class.debug(true);
 
 $class._name = 'class';
 $class._class = $class;
@@ -310,7 +314,6 @@ const $method = $class.new({
         $var.new({ name: 'static', default: false }),
         function load(target) {
             if (this.static()) {
-                $debug && this.log('load static method', this.name(), target._class);
                 target = target._class;
             }
             this.do()._method = this;
@@ -348,13 +351,17 @@ const $before = $class.new({
     components: [
         $var.new({ name: 'name' }),
         $var.new({ name: 'do' }),
-        function load(parent) {
+        $var.new({ name: 'static', default: false }),
+        function load(target) {
+            if (this.static()) {
+                target = target._class;
+            }
             const self = this;
-            const orig = parent[this.name()];
+            const orig = target[this.name()];
             if (!orig) {
                 throw new Error('before loaded on missing method ' + this.description());
             }
-            parent[this.name()] = function(...args) {
+            target[this.name()] = function(...args) {
                 self.do.apply(this, args);
                 return orig.apply(this, args);
             }
@@ -364,19 +371,24 @@ const $before = $class.new({
 
 const $after = $class.new({
     name: 'after',
+    debug: true,
     components: [
         $var.new({ name: 'name' }),
-        $var.new({ name: 'do' }),
-        function load(parent) {
-            this.log('after load', this, parent.class());
-            const self = this;
-            const orig = parent[this.name()];
-            if (!orig) {
-                throw new Error('before loaded on missing method ' + this.description());
+        $var.new({ name: 'do', debug: false }),
+        $var.new({ name: 'static', default: false }),
+        function load(target) {
+            if (this.static()) {
+                target = target.class();
             }
-            parent[this.name()] = function(...args) {
+            this.log('load', this, target);
+            const self = this;
+            const orig = target[this.name()];
+            if (!orig) {
+                throw new Error('after loaded on missing method ' + this.description());
+            }
+            target[this.name()] = function(...args) {
                 const ret = orig.apply(this, args);
-                this.log('after do', this, self, parent._class);
+                self.log('do', self, this);
                 self.do().apply(this, args);
                 return ret;
             }
@@ -406,6 +418,7 @@ String.prototype.description = function() {
 
 const $module = $class.new({
     name: 'module',
+    // debug: true,
     components: [
         $var.new({ name: 'name' }),
         $var.new({
