@@ -1,6 +1,5 @@
 console.log('bootstrap');
-globalThis.SIMULABRA = {}; // glory be
-const __ = globalThis.SIMULABRA;
+var __ = {};
 
 let symbolTable = {};
 export function $s(value) {
@@ -128,8 +127,8 @@ const $class_components = [
         this._proto._class = this;
         this.defaultInitSlot('components', []);
         this.load(this.proto());
-        if (__._mod) {
-            __._mod.def(this);
+        if (__.mod) {
+            __.mod().def(this);
             $debug.log('def', this.name())
         }
         $debug ? $debug.log('class init', this.name(), this.class()) : console.log('class init ' + this.name());
@@ -200,7 +199,7 @@ for (const c of $class_components) {
 
 const $class = Object.create($class_slots);
 
-$class._name = 'class'.s;
+$class._name = 'class';
 $class._class = $class;
 $class._proto = $class;
 
@@ -220,7 +219,7 @@ const defaultFn = {
 defaultFn.name = 'default';
 
 var $var = $class.new({
-    name: 'var'.s,
+    name: 'var',
     components: [
         bvar('name', {}),
         bvar('mutable', { default: true }),
@@ -282,14 +281,14 @@ String.prototype.deskewer = function() {
     return this.replace(/-/g, '_');
 };
 
-$class._name = 'class'.s;
-$var._name = 'var'.s;
+$class._name = 'class';
+$var._name = 'var';
 
 const $var_state = $class.new({
-    name: 'var-state'.s,
+    name: 'var-state',
     components: [
-        $var.new({ name: 'v'.s }),
-        $var.new({ name: 'state'.s }),
+        $var.new({ name: 'v' }),
+        $var.new({ name: 'state' }),
         function description(d) {
             // console.log(this.v().name());
             return `${this.v().name()}:${this.state().description()}`;
@@ -298,7 +297,7 @@ const $var_state = $class.new({
 });
 
 const $method = $class.new({
-    name: 'method'.s,
+    name: 'method',
     components: [
         $var.new({ name: 'do' }), // fn, meat and taters
         $var.new({ name: 'message' }),
@@ -319,7 +318,7 @@ const $method = $class.new({
 });
 
 var $debug = $class.new({
-    name: 'debug'.s,
+    name: 'debug',
     components: [
         $method.new({
             name: 'log',
@@ -340,10 +339,10 @@ var $debug = $class.new({
 });
 
 const $before = $class.new({
-    name: 'before'.s,
+    name: 'before',
     components: [
-        $var.new({ name: 'name'.s }),
-        $var.new({ name: 'do'.s }),
+        $var.new({ name: 'name' }),
+        $var.new({ name: 'do' }),
         function load(parent) {
             const self = this;
             const orig = parent[this.name()];
@@ -359,10 +358,10 @@ const $before = $class.new({
 });
 
 const $after = $class.new({
-    name: 'after'.s,
+    name: 'after',
     components: [
-        $var.new({ name: 'name'.s }),
-        $var.new({ name: 'do'.s }),
+        $var.new({ name: 'name' }),
+        $var.new({ name: 'do' }),
         function load(parent) {
             $debug.log('after load', this, parent.class());
             const self = this;
@@ -382,9 +381,9 @@ const $after = $class.new({
 
 
 const $virtual = $class.new({
-    name: 'virtual'.s,
+    name: 'virtual',
     components: [
-        $var.new({ name: 'name'.s }),
+        $var.new({ name: 'name' }),
         function load(parent) {
             $debug.log('virtual load', this);
             parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
@@ -401,16 +400,16 @@ String.prototype.description = function() {
 };
 
 const $module = $class.new({
-    name: 'module'.s,
+    name: 'module',
     components: [
-        $var.new({ name: 'name'.s }),
+        $var.new({ name: 'name' }),
         $var.new({
-            name: 'env'.s,
+            name: 'env',
             default: () => ({}),
             debug: false,
         }),
         $var.new({
-            name: 'imports'.s,
+            name: 'imports',
             desc: 'the other modules available within this one',
             default: [],
         }),
@@ -427,6 +426,7 @@ const $module = $class.new({
                 return v;
             } else {
                 for (const imp of this.imports()) {
+                    $debug.log('find', className, name, imp);
                     const iv = imp.find(className, name);
                     if (iv) {
                         return iv;
@@ -456,19 +456,17 @@ const $module = $class.new({
             }
             this.env()[className][name] = obj;
         },
+        function child(moddef) {
+            return $.module.new({
+                imports: [this, ...moddef.imports],
+                ...moddef
+            })
+        }
     ]
 });
 
-__._base = $module.new({ name: 'base'.s });
-var _ = __._base;
-__._mod = _;
-__.mod = function mod(name) {
-    const m = $module.new({ name })
-    __._mod = m;
-    return m;
-}
-const $ = _.proxy('class');
-__.$base = $;
+var _ = $module.new({ name: 'base' });
+var $ = _.proxy('class');
 
 _.def($class);
 _.def($var);
@@ -480,14 +478,25 @@ _.def($before);
 _.def($after);
 _.def($module);
 
+_.def($.class.new({
+    name: 'simulabra',
+    components: [
+        $.var.new({ name: 'mod' }),
+    ]
+}));
+
+__ = $.simulabra.new({
+    mod: _,
+});
+
 
 $.class.new({
-    name: 'primitive'.s,
+    name: 'primitive',
     components: [
-        $var.new({ name: 'components'.s, default: [] }),
-        $var.new({ name: 'js_prototype'.s }),
-        $var.new({ name: 'methods'.s, default: {} }),
-        $var.new({ name: 'name'.s }),
+        $.var.new({ name: 'components', default: [] }),
+        $.var.new({ name: 'js_prototype' }),
+        $.var.new({ name: 'methods', default: {} }),
+        $.var.new({ name: 'name' }),
         function init() {
             for (let c of this.components()) {
                 c.load(this._js_prototype);
@@ -503,7 +512,7 @@ $.class.new({
 
 
 $.primitive.new({
-    name: 'object-primitive'.s,
+    name: 'object-primitive',
     js_prototype: Object.prototype,
 });
 
@@ -512,11 +521,11 @@ $.primitive.new({
 // }
 
 $.primitive.new({
-    name: 'string-primitive'.s,
+    name: 'string-primitive',
     js_prototype: String.prototype,
     components: [
-        $method.new({
-            name: 'class'.s,
+        $.method.new({
+            name: 'class',
             do() {
                 return _.proxy('primitive').string_primitive;
             },
@@ -528,11 +537,11 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'boolean-primitive'.s,
+    name: 'boolean-primitive',
     js_prototype: Boolean.prototype,
     components: [
         $method.new({
-            name: 'class'.s,
+            name: 'class',
             do() {
                 return _.proxy('primitive').boolean_primitive;
             },
@@ -544,7 +553,7 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'number-primitive'.s,
+    name: 'number-primitive',
     js_prototype: Number.prototype,
     components: [
         function js() {
@@ -557,7 +566,7 @@ $.primitive.new({
             return this ** 2;
         },
         $method.new({
-            name: 'class'.s,
+            name: 'class',
             do() {
                 return _.proxy('primitive').number_primitive;
             },
@@ -578,7 +587,7 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'array-primitive'.s,
+    name: 'array-primitive',
     js_prototype: Array.prototype,
     components: [
         function intoObject() {
@@ -589,7 +598,7 @@ $.primitive.new({
             return res;
         },
         $method.new({
-            name: 'class'.s,
+            name: 'class',
             do() {
                 return _.proxy('primitive').array_primitive;
             },
@@ -601,14 +610,16 @@ $.primitive.new({
 });
 
 $.primitive.new({
-    name: 'function-primitive'.s,
+    name: 'function-primitive',
     js_prototype: Function.prototype,
     components: [
         // $method.new({
-        //     name: 'class'.s,
+        //     name: 'class',
         //     do() {
         //         return _.proxy('primitive').function_primitive;
         //     },
         // }),
     ]
 });
+
+globalThis.SIMULABRA = __;

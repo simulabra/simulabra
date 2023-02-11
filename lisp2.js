@@ -34,9 +34,9 @@
 
 import { $s } from './base.js';
 const __ = globalThis.SIMULABRA;
-const _ = __.$base.module.new({
+const _ = __.mod().find('class', 'module').new({
   name: 'lisp2',
-  imports: [__._base],
+  imports: [__.mod()],
 });
 const $ = _.proxy('class');
 const $primitive = _.proxy('primitive');
@@ -339,6 +339,9 @@ $.class.new({
     },
     function expand() {
       return this.class().new({ items: this.items().map(it => it.expand()) });
+    },
+    function map(fn) {
+      return this.items().map(fn);
     }
   ]
 });
@@ -508,11 +511,11 @@ $.class.new({
     $.after.new({
       name: 'init',
       do() {
-        _.def(this);
+        __._mod.def(this);
       }
     })
   ],
-})
+});
 
 $.class.new({
   name: 'lambda',
@@ -524,6 +527,13 @@ $.class.new({
     }
   ],
 });
+
+$.macro.new({
+  name: 'lambda',
+  expand_fn(args, body) {
+    return $.lambda.new({ args, body });
+  }
+})
 
 $.class.new({
   name: 'body',
@@ -614,8 +624,30 @@ $.class.new({
     }
   ]
 });
-
 $.readtable.standard().add($.return, '^');
+
+$.class.new({
+  name: 'restarg',
+  components: [
+    $.reader_macro,
+    $.var.new({ name: 'arg' }),
+    $.method.new({
+      name: 'parse',
+      static: true,
+      do: function parse(reader) {
+        reader.next(); // @
+        return this.new({ arg: reader.read() });
+      }
+    }),
+    function print() {
+      return `@${this.arg().print()}`;
+    },
+    function estree() {
+      return b.restElement(this.arg().estree());
+    }
+  ]
+});
+$.readtable.standard().add($.restarg, '@');
 
 $.class.new({
   name: 'reader',
@@ -725,6 +757,33 @@ $.class.new({
   ],
 });
 
+$.class.new({
+  name: 'source-module',
+  components: [
+    $.module,
+    $.var.new({
+      name: 'source',
+    }),
+    $.method.new({
+      name: 'load',
+      do() {
+        const program = $.reader.new({ stream: $.stream.new({ value: ex }) }).program();
+        const code = prettyPrint(program.expand().estree()).code;
+        const head = `
+var __ = globalThis.SIMULABRA;
+const _ = __.mod().find('class', 'module').new({
+  name: '${this.name()}',
+  imports: [__.mod()],
+});
+__.mod(_);
+var $ = _.proxy('class');
+`
+        eval(head + code);
+      }
+    })
+  ]
+})
+
 const ex = `
 (~class new {
   name :point
@@ -746,16 +805,7 @@ const ex = `
 (~debug log (~point new {x 3 y 4} | dist (~point new)))
 `;
 
-const program = $.reader.new({ stream: $.stream.new({ value: ex })}).program();
-
-$.debug.log(program.print());
-$.debug.log('expand', program.expand().print());
-const code = prettyPrint(program.expand().estree()).code;
-$.debug.log(code);
-const head = `
-var __ = globalThis.SIMULABRA;
-var _ = __._mod;
-var $ = _.proxy('class');
-var $$ = _.proxy('macro');
-`
-eval(head + code);
+$.source_module.new({
+  name: 'test',
+  source: ex,
+}).load();
