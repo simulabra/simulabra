@@ -409,11 +409,14 @@ $.class.new({
     function print() {
       return `'${this.value().print()}`;
     },
-    function macroexpand() {
-      return this.value().quote();
-    },
     function estree() {
-      return this.value().quote();
+      const it = this.value();
+      return b.callExpression(b.memberExpression(b.identifier('$' + it.class().name()), b.identifier('new')), [b.objectExpression(
+        it.class().vars().map(v => {
+          const k = v.name().deskewer();
+          return b.property('init', b.identifier(k), it[k]().quote());
+        })
+      )])
     }
   ],
 });
@@ -428,9 +431,9 @@ $.class.new({
       name: 'parse',
       static: true,
       do: function parse(reader) {
+        // convert all forms to quoted except unquotes
         reader.next(); // `
-        const quoted = reader.read();
-        return quoted.map(e => e.quote())
+        return reader.read().quote();
       }
     }),
     function print() {
@@ -455,6 +458,12 @@ $.class.new({
       do: function parse(reader) {
         reader.next(); // ,
         return this.new({ value: reader.read() });
+      }
+    }),
+    $.method.new({
+      name: 'quote',
+      do: function quote() {
+        return this.value();
       }
     }),
     $.var.new({ name: 'value' }),
