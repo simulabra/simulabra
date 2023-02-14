@@ -104,8 +104,36 @@ $.class.new({
 $.readtable.standard($.readtable.new());
 
 $.class.new({
+  name: 'node',
+  components: [
+    function quote() {
+      const props = {};
+      for (const v of this.class().vars()) {
+        const k = v.name().deskewer();
+        props[k] = this[k]().quote();
+      }
+      return $.message.new({
+        receiver: $.classref.new({ symbol: $.symbol.new({ value: this.class().name() }) }),
+        message: $.symbol.new({ value: 'new' }),
+        args: [props]
+      });
+      // return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
+      //   this.class().vars().map(v => {
+      //     const k = v.name().deskewer();
+      //     return b.property('init', b.identifier(k), this[k]().quote());
+      //   })
+      // )])
+    },
+    function expand() {
+      return this;
+    },
+  ]
+})
+
+$.class.new({
   name: 'reader-macro',
   components: [
+    $.node,
     $.after.new({
       name: 'init',
       static: true,
@@ -118,34 +146,8 @@ $.class.new({
       name: 'char',
       static: true,
     }),
-    function quote() {
-      return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
-        this.class().vars().map(v => {
-          const k = v.name().deskewer();
-          return b.property('init', b.identifier(k), this[k]().quote());
-        })
-      )])
-    },
-    function expand() {
-      return this;
-    },
   ],
 })
-
-$.class.new({
-  name: 'reader-macro-class',
-  components: [
-    $.class,
-    $.var.new({ name: 'char' }),
-    $.after.new({
-      name: 'init',
-      do: function() {
-        this.log('add to readtable', this, this.char());
-        $.readtable.standard().add(this);
-      }
-    })
-  ],
-});
 
 $.class.new({
   name: 'symbol',
@@ -173,20 +175,10 @@ $.class.new({
     function description() {
       return ':' + this.value();
     },
-    function quote() {
-      return b.stringLiteral(this.value());
-    }
   ],
 });
 
 $.readtable.standard().add($.symbol, ':');
-
-$primitive.object_primitive.extend($.method.new({
-  name: 'quote',
-  do: function() {
-    return b.literal(this);
-  },
-}));
 
 $primitive.object_primitive.extend($.method.new({
   name: 'expand',
@@ -198,7 +190,9 @@ $primitive.object_primitive.extend($.method.new({
 $primitive.array_primitive.extend($.method.new({
   name: 'quote',
   do: function() {
-    return b.arrayExpression(this.map(e => e.quote()));
+    return this.map(e => {
+      return e.quote();
+    });
   },
 }))
 
@@ -226,9 +220,6 @@ $.class.new({
     function estree() {
       return b.thisExpression();
     },
-    function quote() {
-      return b.identifier('$' + this.class().name());
-    }
   ],
 });
 $.readtable.standard().add($.this, '.');
@@ -304,12 +295,14 @@ $.readtable.standard().add($.message, '(');
 $.class.new({
   name: 'property',
   components: [
+    $.node,
     $.var.new({ name: 'name' }),
     $.var.new({ name: 'value' }),
     function print() {
       return `${this.name().print()} ${this.value().print()}`;
     },
     function estree() {
+      $.debug.log(this);
       return b.property('init', this.name().estree(), this.value().estree());
     },
     function expand() {
@@ -414,7 +407,7 @@ $.class.new({
       return b.callExpression(b.memberExpression(b.identifier('$' + it.class().name()), b.identifier('new')), [b.objectExpression(
         it.class().vars().map(v => {
           const k = v.name().deskewer();
-          return b.property('init', b.identifier(k), it[k]().quote());
+          return b.property('init', b.identifier(k), it[k]().quote().estree());
         })
       )])
     }
@@ -440,11 +433,7 @@ $.class.new({
       return `'${this.value().print()}`;
     },
     function expand() {
-      return this.value().quote();
     },
-    function estree() {
-      return this.value().quote();
-    }
   ],
 });
 $.readtable.standard().add($.quasiquote, '`');
@@ -474,6 +463,7 @@ $.readtable.standard().add($.unquote, ',');
 $.class.new({
   name: 'invoke',
   components: [
+    $.node,
     $.method.new({
       name: 'parse',
       static: true,
@@ -525,7 +515,9 @@ $.class.new({
   name: 'argref',
   components: [
     $.ref_reader_macro,
-    $.var.new({ name: 'char', default: '%' }),
+    function char() {
+      return '%';
+    },
     function estree() {
       return b.identifier(`_${this.symbol().value()}`);
     },
@@ -537,7 +529,9 @@ $.class.new({
   name: 'classref',
   components: [
     $.ref_reader_macro,
-    $.var.new({ name: 'char', default: '~' }),
+    function char() {
+      return '~';
+    },
     function estree() {
       return b.memberExpression(b.identifier('$'), this.symbol().estree());
     },
@@ -612,9 +606,10 @@ $.class.new({
 $.macro.new({
   name: 'do',
   expand_fn(...forms) {
+    $.debug.log('do', forms)
     return $.lambda.new({
       args: ['it'],
-      body: $.body.new({ forms }),
+      body: $.body.new({ forms: forms.map(f => f.expand()) }),
     })
   },
 });
@@ -833,7 +828,7 @@ var $ = _.proxy('class');
 const ex = `
 ($ macro quickmeth [name args @forms]
   \`(~method new {
-      name :,%name
+      name ,%name
       do ($ lambda ,%args ,%forms)
     })
 )

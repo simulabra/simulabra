@@ -73,8 +73,10 @@ function bvar(name, desc = {}) {
             if (desc.static) {
                 target = target._class;
             }
+            // console.log('bvar load', name, key, target);
             target[name] = function(assign) {
                 if (assign !== undefined) {
+                    // console.log('bvar set', name, key);
                     this[key] = assign;
                 } else if (this[key] === undefined && desc.default !== undefined) {
                     this[key] = typeof desc.default === 'function' ? desc.default() : desc.default;
@@ -89,7 +91,7 @@ function bvar(name, desc = {}) {
                 },
                 descended(ancestor) {
                     return ancestor === $var;
-                }
+                },
             }
         },
         debug() {
@@ -110,30 +112,45 @@ function parametize(props, obj) {
     return obj;
 }
 
-const $base_proto = {
-    init() {},
-    class() {
-        return this._class;
-    },
-    name() {
-        return '?';
-    },
-    description() {
-        const vs = this.class().vars().map(v => v.debug() ? `${v.name()} ${this[v.name().deskewer()]()?.description()}` : null).filter(s => s !== null).join(' ');
+function manload(components, slots) {
+    for (const c of components) {
+        c.load(slots);
+    }
+}
+
+const $base_components = [
+    function init() {},
+    function description() {
+        const vs = this.class().vars().map(v => {
+            if (v.debug()) {
+                $debug.log(v.name(), v.name().deskewer())
+               return `${v.name()} ${this[v.name().deskewer()]()?.description()}`;
+            } else {
+                return null;
+            }
+        }).filter(s => s !== null).join(' ');
         return `{${this.class().description()}${vs.length > 0 ? ' ' : ''}${vs}}`;
     },
-    log(...args) {
+    function log(...args) {
         if ($debug && this.class().debug()) {
             $debug.log(this.class().name() + '/' + this.name(), ...args);
         }
-    }
+    },
+    bvar('class'),
+    bvar('name', { default: '?' }),
+];
+
+const $base_proto = {};
+manload($base_components, $base_proto);
+
+Array.prototype.load = function(target) {
+    this.forEach(it => it.load(target));
 }
 
 const $class_components = [
     function init() {
         this._proto = Object.create($base_proto);
         this._proto._class = this;
-        this.defaultInitSlot('components', []);
         this.load(this.proto());
         if (__.mod) {
             __.mod().def(this);
@@ -141,7 +158,9 @@ const $class_components = [
         this.log('class init', this.name(), this.class());
     },
     function load(target) {
-        for (const v of this.components()) {
+        const chain = this.components().slice();
+        chain.reverse();
+        for (const v of chain) {
             v.load(target);
         }
     },
@@ -150,18 +169,6 @@ const $class_components = [
         if (!(pk in this)) {
             this[pk] = dval;
         }
-    },
-    function name() {
-        return this._name;
-    },
-    function eq(other) {
-        return this.name().eq(other.name());
-    },
-    function proto() {
-        return this._proto;
-    },
-    function abstract() {
-        return this._abstract || false;
     },
     function description() {
         return `~${this.name()}`;
@@ -180,6 +187,8 @@ const $class_components = [
         }
         return vars;
     },
+    bvar('name'),
+    bvar('proto'),
     bvar('components', {
         default: [],
     }),
@@ -188,29 +197,23 @@ const $class_components = [
     })
 ];
 
-const $class_slots = Object.create($base_proto);
-
-$class_slots.new = function (props = {}) {
-    // console.log('class new ' + props.name);
-    const obj = Object.create(this.proto());
-    parametize(props, obj);
-    obj.init(this);
-    return obj;
-};
-$class_slots.class = function () {
-    return this._class;
+const $class_slots = {
+    new(props = {}) {
+        // console.log('class new ' + props.name);
+        const obj = Object.create(this.proto());
+        parametize(props, obj);
+        obj.init(this);
+        return obj;
+    },
 };
 
-for (const c of $class_components) {
-    c.load($class_slots);
-}
+manload($base_components, $class_slots);
+manload($class_components, $class_slots);
+var $class = Object.create($class_slots);
 
-const $class = Object.create($class_slots);
-$class.debug(true);
-
-$class._name = 'class';
-$class._class = $class;
-$class._proto = $class;
+$class.name('class');
+$class.class($class);
+$class.proto($class);
 
 const defaultFn = {
     load(target) {
@@ -244,7 +247,7 @@ var $var = $class.new({
             }
         },
         function should_debug() {
-            return this._debug || $debug.debug();
+            return this.debug() || $debug.debug();
         },
         function load(target) {
             // console.log('var load', this.name());
@@ -290,9 +293,6 @@ String.prototype.deskewer = function() {
     return this.replace(/-/g, '_');
 };
 
-$class._name = 'class';
-$var._name = 'var';
-
 const $var_state = $class.new({
     name: 'var-state',
     components: [
@@ -307,6 +307,7 @@ const $var_state = $class.new({
 
 const $method = $class.new({
     name: 'method',
+    debug: true,
     components: [
         $var.new({ name: 'do' }), // fn, meat and taters
         $var.new({ name: 'message' }),
@@ -319,9 +320,6 @@ const $method = $class.new({
             this.do()._method = this;
             target[this.name()] = this.do();
         },
-        function overrides(_proto) {
-            return this._override;
-        }
     ]
 });
 
@@ -464,7 +462,7 @@ const $module = $class.new({
             return '_' + sym.deskewer();
         },
         function def(obj) {
-            this.log('def', obj);
+            this.log('def', obj, obj.class());
             const className = this.key(obj.class().name());
             const name = this.key(obj.name());
             if (this.env()[className] === undefined) {
