@@ -2,7 +2,7 @@ console.log('bootstrap');
 var __ = {};
 
 let symbolTable = {};
-export function $s(value) {
+function $s(value) {
     if (!symbolTable[value]) {
         symbolTable[value] = value;
     }
@@ -122,8 +122,9 @@ const $base_components = [
     function init() {},
     function description() {
         const vs = this.class().vars().map(v => {
-            if (v.debug()) {
-                $debug.log(v.name(), v.name().deskewer())
+            const k = v.name().deskewer();
+            if (v.debug() && this[k]) {
+                // $debug.log(v.name(), v.name().deskewer())
                return `${v.name()} ${this[v.name().deskewer()]()?.description()}`;
             } else {
                 return null;
@@ -158,9 +159,7 @@ const $class_components = [
         this.log('class init', this.name(), this.class());
     },
     function load(target) {
-        const chain = this.components().slice();
-        chain.reverse();
-        for (const v of chain) {
+        for (const v of this.components()) {
             v.load(target);
         }
     },
@@ -241,9 +240,9 @@ var $var = $class.new({
         bvar('static', {}),
         function defval(ctx) {
             if (this.default() instanceof Function) {
-                return this._default.apply(ctx);
+                return this.default().apply(ctx);
             } else {
-                return this._default;
+                return this.default();
             }
         },
         function should_debug() {
@@ -369,7 +368,6 @@ const $before = $class.new({
 
 const $after = $class.new({
     name: 'after',
-    debug: true,
     components: [
         $var.new({ name: 'name' }),
         $var.new({ name: 'do', debug: false }),
@@ -619,7 +617,9 @@ $.primitive.new({
             },
         }),
         function description() {
-            return `[${this.map(a => a.description()).join(' ')}]`;
+            return `[
+${this.map(a => a ? a.description() : '???').map(e => '  ' + e).join('\n')}
+]`;
         },
     ]
 });

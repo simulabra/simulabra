@@ -32,7 +32,7 @@
  * Literal
  */
 
-import { $s } from './base.js';
+import './base.js';
 const __ = globalThis.SIMULABRA;
 const _ = __.mod().find('class', 'module').new({
   name: 'lisp2',
@@ -302,7 +302,6 @@ $.class.new({
       return `${this.name().print()} ${this.value().print()}`;
     },
     function estree() {
-      $.debug.log(this);
       return b.property('init', this.name().estree(), this.value().estree());
     },
     function expand() {
@@ -314,6 +313,7 @@ $.class.new({
 
 $.class.new({
   name: 'list',
+  debug: true,
   components: [
     $.reader_macro,
     $.var.new({ name: 'items' }),
@@ -336,7 +336,17 @@ $.class.new({
       return `[${this.items().map(it => it.print()).join(' ')}]`;
     },
     function estree() {
-      return b.arrayExpression(this.items().map(it => it.estree()));
+      $.debug.log(this, this.items());
+      console.log('oh')
+      this.log(this.items());
+      return b.arrayExpression(this.items().map((it, idx) => {
+        try {
+          it.estree()
+        } catch (e) {
+          $.debug.log(this.items(), it, idx);
+          throw e;
+        }
+      }));
     },
     function expand() {
       return this.class().new({ items: this.items().map(it => it.expand()) });
@@ -570,11 +580,13 @@ $.class.new({
 
 $.class.new({
   name: 'lambda',
+  debug: true,
   components: [
     $.var.new({ name: 'args' }),
     $.var.new({ name: 'body' }),
     function estree() {
-      return b.functionExpression(null, this.args().map(a => b.identifier('_' + a)), this.body().estree());
+      this.log(this.args())
+      return b.functionExpression(null, this.args().items().map(a => b.identifier('_' + a)), this.body().estree());
     }
   ],
 });
@@ -583,6 +595,24 @@ $.macro.new({
   name: 'lambda',
   expand_fn(args, body) {
     return $.lambda.new({ args, body });
+  }
+})
+
+$.macro.new({
+  name: 'macro',
+  expand_fn(name, args, ...forms) {
+    // compile body!
+    const fn = $.lambda.new({
+      args,
+      body: $.body.new({ forms }),
+    });
+    const fn_comp = prettyPrint(fn.estree()).code;
+    return $.macro.new({
+      name: name.value(),
+      expand_fn() {
+
+      }
+    })
   }
 })
 
@@ -606,9 +636,8 @@ $.class.new({
 $.macro.new({
   name: 'do',
   expand_fn(...forms) {
-    $.debug.log('do', forms)
     return $.lambda.new({
-      args: ['it'],
+      args: $.list.new({ items: [$.identifier.new({ value: 'it' })] }),
       body: $.body.new({ forms: forms.map(f => f.expand()) }),
     })
   },
