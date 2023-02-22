@@ -226,6 +226,7 @@ $.readtable.standard().add($.this, '.');
 
 $.class.new({
   name: 'message',
+  debug: true,
   components: [
     $.reader_macro,
     $.method.new({
@@ -274,11 +275,9 @@ $.class.new({
         const m = _.find('macro', this.message().value());
         this.log('invoke', this.message().value(), m);
         // apply macro
-        try {
-          return m.expand(...this.args());
-        } catch(e) {
-          $.debug.log('error in macro expansion', this, m);
-          throw e;
+        let v = m.expand(...this.args());
+        if (v == undefined) {
+          throw new Error(`macro expansion failed for ${m.description()} in ${this.description()}`);
         }
       } else {
         return $.message.new({
@@ -434,15 +433,20 @@ $.class.new({
       name: 'parse',
       static: true,
       do: function parse(reader) {
-        // convert all forms to quoted except unquotes
         reader.next(); // `
-        return reader.read().quote();
+        let value = reader.read();
+        return this.new({
+          value
+        });
       }
     }),
     function print() {
       return `'${this.value().print()}`;
     },
     function expand() {
+        // convert all forms to quoted except unquotes
+      // this.value().map(it =>                                                )
+      $.debug.log('quasiquote expand', this.value());
     },
   ],
 });
@@ -497,7 +501,7 @@ $.class.new({
     },
     function estree() {
       return b.identifier('$$');
-    }
+    },
   ],
 });
 $.readtable.standard().add($.invoke, '$');

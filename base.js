@@ -9,11 +9,40 @@ function $s(value) {
     return symbolTable[value];
 }
 
-Object.defineProperty(String.prototype, 's', {
-    get() {
-        return $s(this);
+function MethodImpl(name) {
+    this.name = name;
+    this.primary = null;
+    this.befores = [];
+    this.afters = [];
+}
+
+MethodImpl.prototype.reify = function(proto) {
+    const self = this;
+    proto[this.name] = function(...args) {
+        __.pushframe(self); // uhh
+        self.befores.forEach(b => b.apply(this, args));
+        let res = self.primary.apply(this, args);
+        self.afters.forEach(a => a.apply(this, args)); // res too?
+        return res;
     }
-});
+}
+
+function ClassPrototype() {
+    this._impls = {};
+}
+
+ClassPrototype.prototype._reify = function reify() {
+    for (const impl of Object.values(this._impls)) {
+        impl.reify(this);
+    }
+}
+
+ClassPrototype.prototype._add = function add(name, op) {
+    if (!(name in this._impls)) {
+        this._impls[name] = new MethodImpl(name);
+    }
+    op.load(this._impls[name]);
+}
 
 Object.prototype.eq = function(other) {
     return this === other;
@@ -156,7 +185,6 @@ const $class_components = [
         if (__.mod) {
             __.mod().def(this);
         }
-        this.log('class init', this.name(), this.class());
     },
     function load(target) {
         for (const v of this.components()) {
@@ -306,7 +334,6 @@ const $var_state = $class.new({
 
 const $method = $class.new({
     name: 'method',
-    debug: true,
     components: [
         $var.new({ name: 'do' }), // fn, meat and taters
         $var.new({ name: 'message' }),
@@ -329,6 +356,7 @@ var $debug = $class.new({
             name: 'log',
             static: true,
             do: function log(...args) {
+                // console.trace();
                 console.log(...this.format(...args));
                 return this;
             }

@@ -1,7 +1,10 @@
-import { $s } from '../base.js';
+import '../base.js';
 const __ = globalThis.SIMULABRA;
-const _ = __.mod('test-classes');
-const $ = _.class_proxy();
+const _ = __.mod().find('class', 'module').new({
+  name: 'test-classes',
+  imports: [__.mod()],
+});
+const $ = _.proxy('class');
 
 function ASSERT() {
 
@@ -10,17 +13,17 @@ function ASSERT() {
 $.class.new({
   name: 'color',
   components: [
-    $.var.new({ name: 'r'.s }),
-    $.var.new({ name: 'g'.s }),
-    $.var.new({ name: 'b'.s }),
+    $.var.new({ name: 'r' }),
+    $.var.new({ name: 'g' }),
+    $.var.new({ name: 'b' }),
   ]
 });
 
 $.class.new({
   name: 'point',
   components: [
-    $.var.new({ name: 'x'.s }),
-    $.var.new({ name: 'y'.s }),
+    $.var.new({ name: 'x' }),
+    $.var.new({ name: 'y' }),
     function dist() {
       return (this.x().pow(2) + this.y().pow(2)).sqrt();
     }
