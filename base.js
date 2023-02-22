@@ -41,7 +41,7 @@ ClassPrototype.prototype._add = function add(name, op) {
     if (!(name in this._impls)) {
         this._impls[name] = new MethodImpl(name);
     }
-    op.load(this._impls[name]);
+    op.combine(this._impls[name]);
 }
 
 Object.prototype.eq = function(other) {
@@ -74,9 +74,9 @@ Object.prototype.estree = function() {
         value: this,
     };
 }
-Function.prototype.load = function(parent) {
-    // console.log('fnload', this.name, parent._class._name)
-    parent[this.name] = this;
+Function.prototype.load = function(proto) {
+    console.log('fnload', this.name, proto);
+    proto._add(this.name, this);
 };
 Function.prototype.description = function() {
     return `Native Function ${this.name}`;
@@ -141,9 +141,9 @@ function parametize(props, obj) {
     return obj;
 }
 
-function manload(components, slots) {
+function manload(components, proto) {
     for (const c of components) {
-        c.load(slots);
+        c.load(proto);
     }
 }
 
@@ -170,8 +170,8 @@ const $base_components = [
     bvar('name', { default: '?' }),
 ];
 
-const $base_proto = {};
-manload($base_components, $base_proto);
+// const $base_proto = {};
+// manload($base_components, $base_proto);
 
 Array.prototype.load = function(target) {
     this.forEach(it => it.load(target));
@@ -179,7 +179,8 @@ Array.prototype.load = function(target) {
 
 const $class_components = [
     function init() {
-        this._proto = Object.create($base_proto);
+        this.proto(new ClassPrototype());
+        $base_components.load(this.proto());
         this._proto._class = this;
         this.load(this.proto());
         if (__.mod) {
@@ -224,14 +225,14 @@ const $class_components = [
     })
 ];
 
-const $class_slots = {
-    new(props = {}) {
-        // console.log('class new ' + props.name);
-        const obj = Object.create(this.proto());
-        parametize(props, obj);
-        obj.init(this);
-        return obj;
-    },
+
+const $class_slots = new ClassPrototype();
+$class_slots.new = function(props = {}) {
+    // console.log('class new ' + props.name);
+    const obj = Object.create(this.proto());
+    parametize(props, obj);
+    obj.init(this);
+    return obj;
 };
 
 manload($base_components, $class_slots);
