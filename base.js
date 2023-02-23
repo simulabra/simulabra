@@ -1,5 +1,7 @@
 console.log('bootstrap');
-var __ = {};
+var __ = {
+    pushframe(f) {}
+};
 
 let symbolTable = {};
 function $s(value) {
@@ -18,6 +20,7 @@ function MethodImpl(name) {
 
 MethodImpl.prototype.reify = function(proto) {
     const self = this;
+    // console.log('reify', this.name)
     proto[this.name] = function(...args) {
         __.pushframe(self); // uhh
         self.befores.forEach(b => b.apply(this, args));
@@ -75,8 +78,11 @@ Object.prototype.estree = function() {
     };
 }
 Function.prototype.load = function(proto) {
-    console.log('fnload', this.name, proto);
+    // console.log('fnload', this.name, proto);
     proto._add(this.name, this);
+};
+Function.prototype.combine = function(impl) {
+    impl.primary = this;
 };
 Function.prototype.description = function() {
     return `Native Function ${this.name}`;
@@ -166,6 +172,9 @@ const $base_components = [
             $debug.log(this.class().name() + '/' + this.name(), ...args);
         }
     },
+    function load(proto) {
+        proto._add(this.name(), this);
+    },
     bvar('class'),
     bvar('name', { default: '?' }),
 ];
@@ -183,6 +192,7 @@ const $class_components = [
         $base_components.load(this.proto());
         this._proto._class = this;
         this.load(this.proto());
+        this.proto()._reify();
         if (__.mod) {
             __.mod().def(this);
         }
@@ -237,6 +247,7 @@ $class_slots.new = function(props = {}) {
 
 manload($base_components, $class_slots);
 manload($class_components, $class_slots);
+$class_slots._reify();
 var $class = Object.create($class_slots);
 
 $class.name('class');
@@ -277,41 +288,34 @@ var $var = $class.new({
         function should_debug() {
             return this.debug() || $debug.debug();
         },
-        function load(target) {
-            // console.log('var load', this.name());
-            const pk = '_' + this.name().deskewer();
-            if (this.static()) {
-                target = target._class;
-            }
-            function mutableAccess(self) {
-                return function(assign) {
-                    if (assign !== undefined) {
-                        this[pk] = assign;
-                        ('update' in this) && this.update({ changed: self.name() }); // best there is?
-                        return this;
-                    }
-                    if (!(pk in this)) {
-                        this[pk] = self.defval(this);
-                    }
-                    return this[pk];
-                }
-            };
-            function immutableAccess(self) {
-                return function(assign) {
-                    if (assign !== undefined) {
-                        throw new Error(`Attempt to set immutable variable ${self.name()} ${pk}`);
-                    }
-                    if (!(pk in this)) {
-                        // should this not be set?
-                        this[pk] = self.defval(this);
-                    }
-                    return this[pk];
-                }
-            }
+        function combine(impl) {
             if (this.mutable()) {
-                target[this.name().deskewer()] = mutableAccess(this);
+                impl.primary = function mutableAccess(self) {
+                    return function (assign) {
+                        if (assign !== undefined) {
+                            this[pk] = assign;
+                            ('update' in this) && this.update({ changed: self.name() }); // best there is?
+                            return this;
+                        }
+                        if (!(pk in this)) {
+                            this[pk] = self.defval(this);
+                        }
+                        return this[pk];
+                    }
+                };
             } else {
-                target[this.name().deskewer()] = immutableAccess(this);
+                impl.primary = function immutableAccess(self) {
+                    return function (assign) {
+                        if (assign !== undefined) {
+                            throw new Error(`Attempt to set immutable variable ${self.name()} ${pk}`);
+                        }
+                        if (!(pk in this)) {
+                            // should this not be set?
+                            this[pk] = self.defval(this);
+                        }
+                        return this[pk];
+                    }
+                };
             }
         },
     ]
@@ -340,12 +344,8 @@ const $method = $class.new({
         $var.new({ name: 'message' }),
         $var.new({ name: 'name' }),
         $var.new({ name: 'static', default: false }),
-        function load(target) {
-            if (this.static()) {
-                target = target._class;
-            }
-            this.do()._method = this;
-            target[this.name()] = this.do();
+        function combine(impl) {
+            impl.primary = this.do();
         },
     ]
 });
@@ -443,7 +443,7 @@ String.prototype.description = function() {
 
 const $module = $class.new({
     name: 'module',
-    // debug: true,
+    debug: true,
     components: [
         $var.new({ name: 'name' }),
         $var.new({
@@ -492,11 +492,12 @@ const $module = $class.new({
             this.log('def', obj, obj.class());
             const className = this.key(obj.class().name());
             const name = this.key(obj.name());
-            if (this.env()[className] === undefined) {
+            const env = this.env();
+            if (!env.hasOwnProperty(className)) {
                 this.log('env init for class', className);
-                this.env()[className] = {};
+                env[className] = {};
             }
-            this.env()[className][name] = obj;
+            env[className][name] = obj;
         },
         function child(moddef) {
             return $.module.new({
