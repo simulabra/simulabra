@@ -1,6 +1,9 @@
 console.log('bootstrap');
 var __ = {
-    pushframe(f) {}
+    pushframe(f) {},
+    mod() {
+        return this._mod;
+    },
 };
 
 let symbolTable = {};
@@ -20,24 +23,30 @@ function MethodImpl(name) {
 
 MethodImpl.prototype.reify = function(proto) {
     const self = this;
-    // console.log('reify', this.name)
+    // console.log('reify', this.name, this.primary)
     proto[this.name] = function(...args) {
         __.pushframe(self); // uhh
         self.befores.forEach(b => b.apply(this, args));
         let res = self.primary.apply(this, args);
+        // console.log('in reified', self.name, self.primary, res)
         self.afters.forEach(a => a.apply(this, args)); // res too?
         return res;
     }
 }
 
-function ClassPrototype() {
+function ClassPrototype(parent) {
     this._impls = {};
+    this._parent = parent;
 }
 
 ClassPrototype.prototype._reify = function reify() {
     for (const impl of Object.values(this._impls)) {
         impl.reify(this);
     }
+}
+
+Object.prototype._add = function add(name, op) {
+    this[name] = op;
 }
 
 ClassPrototype.prototype._add = function add(name, op) {
@@ -188,12 +197,13 @@ Array.prototype.load = function(target) {
 
 const $class_components = [
     function init() {
-        this.proto(new ClassPrototype());
+        this.proto(new ClassPrototype(this));
         $base_components.load(this.proto());
         this._proto._class = this;
         this.load(this.proto());
         this.proto()._reify();
-        if (__.mod) {
+        if (__._mod) {
+            // console.log('deffin', this.name());
             __.mod().def(this);
         }
     },
@@ -236,7 +246,7 @@ const $class_components = [
 ];
 
 
-const $class_slots = new ClassPrototype();
+const $class_slots = new ClassPrototype(null);
 $class_slots.new = function(props = {}) {
     // console.log('class new ' + props.name);
     const obj = Object.create(this.proto());
@@ -244,6 +254,8 @@ $class_slots.new = function(props = {}) {
     obj.init(this);
     return obj;
 };
+
+$class_slots._parent = $class_slots;
 
 manload($base_components, $class_slots);
 manload($class_components, $class_slots);
@@ -279,7 +291,9 @@ var $var = $class.new({
         bvar('required', {}),
         bvar('static', {}),
         function defval(ctx) {
+            console.log('defval', typeof this.default())
             if (this.default() instanceof Function) {
+                console.log('fn default')
                 return this.default().apply(ctx);
             } else {
                 return this.default();
@@ -289,19 +303,19 @@ var $var = $class.new({
             return this.debug() || $debug.debug();
         },
         function combine(impl) {
+            const pk = '_' + this.name().deskewer();
+            var self = this;
             if (this.mutable()) {
-                impl.primary = function mutableAccess(self) {
-                    return function (assign) {
-                        if (assign !== undefined) {
-                            this[pk] = assign;
-                            ('update' in this) && this.update({ changed: self.name() }); // best there is?
-                            return this;
-                        }
-                        if (!(pk in this)) {
-                            this[pk] = self.defval(this);
-                        }
-                        return this[pk];
+                impl.primary = function mutableAccess(assign) {
+                    if (assign !== undefined) {
+                        this[pk] = assign;
+                        ('update' in this) && this.update({ changed: self.name() }); // best there is?
+                        return this;
                     }
+                    if (!(pk in this)) {
+                        this[pk] = self.defval(this);
+                    }
+                    return this[pk];
                 };
             } else {
                 impl.primary = function immutableAccess(self) {
@@ -343,28 +357,35 @@ const $method = $class.new({
         $var.new({ name: 'do' }), // fn, meat and taters
         $var.new({ name: 'message' }),
         $var.new({ name: 'name' }),
-        $var.new({ name: 'static', default: false }),
         function combine(impl) {
             impl.primary = this.do();
         },
     ]
 });
 
+const $static = $class.new({
+    name: 'static',
+    components: [
+        $var.new({ name: 'do' }),
+        function load(proto) {
+            proto[this.name().deskewer()] = this.do();
+        }
+    ]
+})
+
 var $debug = $class.new({
     name: 'debug',
     components: [
-        $method.new({
+        $static.new({
             name: 'log',
-            static: true,
             do: function log(...args) {
                 // console.trace();
                 console.log(...this.format(...args));
                 return this;
             }
         }),
-        $method.new({
+        $static.new({
             name: 'format',
-            static: true,
             do: function format(...args) {
                 return args.map(a => a ? a.description() : '' + a)
             }
@@ -379,9 +400,6 @@ const $before = $class.new({
         $var.new({ name: 'do' }),
         $var.new({ name: 'static', default: false }),
         function load(target) {
-            if (this.static()) {
-                target = target._class;
-            }
             const self = this;
             const orig = target[this.name()];
             if (!orig) {
@@ -402,9 +420,6 @@ const $after = $class.new({
         $var.new({ name: 'do', debug: false }),
         $var.new({ name: 'static', default: false }),
         function load(target) {
-            if (this.static()) {
-                target = target.class();
-            }
             this.log('load', this, target);
             const self = this;
             const orig = target[this.name()];
@@ -468,6 +483,7 @@ const $module = $class.new({
             if (v) {
                 return v;
             } else {
+                $debug.log('imports', this.imports());
                 for (const imp of this.imports()) {
                     this.log('find', className, name, imp);
                     const iv = imp.find(className, name);
@@ -510,6 +526,7 @@ const $module = $class.new({
 
 var _ = $module.new({ name: 'base' });
 var $ = _.proxy('class');
+__._mod = _;
 
 _.def($class);
 _.def($var);
@@ -521,16 +538,17 @@ _.def($before);
 _.def($after);
 _.def($module);
 
-_.def($.class.new({
-    name: 'simulabra',
-    components: [
-        $.var.new({ name: 'mod' }),
-    ]
-}));
+// _.def($.class.new({
+//     name: 'simulabra',
+//     components: [
+//         $.var.new({ name: 'mod' }),
+//         function pushframe() {}
+//     ]
+// }));
 
-__ = $.simulabra.new({
-    mod: _,
-});
+// __ = $.simulabra.new({
+//     mod: _,
+// });
 
 
 $.class.new({
