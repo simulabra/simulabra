@@ -289,11 +289,8 @@ var $var = $class.new({
         bvar('debug', { default: true }),
         bvar('default'),
         bvar('required', {}),
-        bvar('static', {}),
         function defval(ctx) {
-            console.log('defval', typeof this.default())
             if (this.default() instanceof Function) {
-                console.log('fn default')
                 return this.default().apply(ctx);
             } else {
                 return this.default();
@@ -368,7 +365,7 @@ const $static = $class.new({
     components: [
         $var.new({ name: 'do' }),
         function load(proto) {
-            proto[this.name().deskewer()] = this.do();
+            proto._parent[this.name().deskewer()] = this.do();
         }
     ]
 })
@@ -458,7 +455,7 @@ String.prototype.description = function() {
 
 const $module = $class.new({
     name: 'module',
-    debug: true,
+    // debug: true,
     components: [
         $var.new({ name: 'name' }),
         $var.new({
@@ -483,7 +480,7 @@ const $module = $class.new({
             if (v) {
                 return v;
             } else {
-                $debug.log('imports', this.imports());
+                this.log('imports', this.imports());
                 for (const imp of this.imports()) {
                     this.log('find', className, name, imp);
                     const iv = imp.find(className, name);
