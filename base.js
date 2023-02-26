@@ -6,14 +6,6 @@ var __ = {
     },
 };
 
-let symbolTable = {};
-function $s(value) {
-    if (!symbolTable[value]) {
-        symbolTable[value] = value;
-    }
-    return symbolTable[value];
-}
-
 function MethodImpl(name) {
     this.name = name;
     this.primary = null;
@@ -58,18 +50,6 @@ ClassPrototype.prototype._add = function add(name, op) {
 
 Object.prototype.eq = function(other) {
     return this === other;
-}
-Object.prototype.className = function() {
-    return this.class()?.name() || typeof this;
-}
-Object.prototype.entries = function() {
-    return Object.entries(this);
-}
-Object.prototype.values = function() {
-    return Object.values(this);
-}
-Object.prototype.displayName = function() {
-    return typeof this;
 }
 Object.prototype.description = function() {
     return `Native Object (${typeof this})`;
