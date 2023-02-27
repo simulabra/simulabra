@@ -152,6 +152,7 @@ $.class.new({
 $.class.new({
   name: 'symbol',
   components: [
+    $.node,
     $.var.new({ name: 'value' }),
     $.static.new({
       name: 'parse',
@@ -356,10 +357,10 @@ $.class.new({
         const properties = [];
         while (reader.peek() !== '}') {
           reader.strip();
-          const name = reader.symbol();
+          const key = reader.symbol();
           reader.strip();
           const value = reader.read();
-          properties.push($.property.new({ name, value }))
+          properties.push($.property.new({ key, value }))
           reader.strip();
         }
         reader.next(); // }

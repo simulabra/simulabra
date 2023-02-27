@@ -25,12 +25,17 @@ MethodImpl.prototype.reify = function(proto) {
     // console.log('reify', this.name, this.primary)
     proto[this.name.deskewer()] = function(...args) {
         __.pushframe(self, this, args); // uhh
-        self.befores.forEach(b => b.apply(this, args));
-        let res = self.primary.apply(this, args);
-        // console.log('in reified', self.name, self.primary, res)
-        self.afters.forEach(a => a.apply(this, args)); // res too?
-        __.popframe();
-        return res;
+        try {
+            self.befores.forEach(b => b.apply(this, args));
+            let res = self.primary.apply(this, args);
+            // console.log('in reified', self.name, self.primary, res)
+            self.afters.forEach(a => a.apply(this, args)); // res too?
+            __.popframe();
+            return res;
+        } catch (e) {
+            this.log('failed message', self.name);
+            throw e;
+        }
     }
 }
 
@@ -63,9 +68,9 @@ ClassPrototype.prototype._get_impl = function get_impl(name) {
 Object.prototype.eq = function(other) {
     return this === other;
 }
-Object.prototype.description = function() {
-    return `Native Object (${typeof this})`;
-}
+// Object.prototype.description = function() {
+//     return `Native Object (${typeof this})`;
+// }
 Object.prototype.contains = function(i) {
     return i in this;
 }
@@ -376,7 +381,7 @@ var $debug = $class.new({
         $static.new({
             name: 'format',
             do: function format(...args) {
-                return args.map(a => a ? a.description() : '' + a)
+                return args.map(a => a && a.description ? a.description() : typeof a);
             }
         }),
     ]
