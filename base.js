@@ -42,10 +42,14 @@ Object.prototype._add = function add(name, op) {
 }
 
 ClassPrototype.prototype._add = function add(name, op) {
+    op.combine(this._get_impl(name));
+}
+
+ClassPrototype.prototype._get_impl = function get_impl(name) {
     if (!(name in this._impls)) {
         this._impls[name] = new MethodImpl(name);
     }
-    op.combine(this._impls[name]);
+    return this._impls[name];
 }
 
 Object.prototype.eq = function(other) {
@@ -93,12 +97,8 @@ function bvar(name, desc = {}) {
         name() {
             return name;
         },
-        load(target) {
-            if (desc.static) {
-                target = target._class;
-            }
-            // console.log('bvar load', name, key, target);
-            target[name] = function(assign) {
+        load(proto) {
+            proto._add(name, function(assign) {
                 if (assign !== undefined) {
                     // console.log('bvar set', name, key);
                     this[key] = assign;
@@ -106,7 +106,7 @@ function bvar(name, desc = {}) {
                     this[key] = typeof desc.default === 'function' ? desc.default() : desc.default;
                 }
                 return this[key];
-            }
+            });
         },
         class() {
             return {
@@ -392,23 +392,13 @@ const $before = $class.new({
 
 const $after = $class.new({
     name: 'after',
+    debug: true,
     components: [
         $var.new({ name: 'name' }),
         $var.new({ name: 'do', debug: false }),
-        $var.new({ name: 'static', default: false }),
         function load(target) {
             this.log('load', this, target);
-            const self = this;
-            const orig = target[this.name()];
-            if (!orig) {
-                throw new Error('after loaded on missing method ' + this.description());
-            }
-            target[this.name()] = function(...args) {
-                const ret = orig.apply(this, args);
-                self.log('do', self, this);
-                self.do().apply(this, args);
-                return ret;
-            }
+            target._get_impl(this.name()).afters.push(this.do());
         }
     ]
 });
@@ -508,6 +498,7 @@ __._mod = _;
 _.def($class);
 _.def($var);
 _.def($method);
+_.def($static);
 _.def($debug);
 _.def($var_state);
 _.def($virtual);
