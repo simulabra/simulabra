@@ -271,6 +271,7 @@ $.class.new({
           throw new Error(`macro expansion failed for ${m.description()} in ${this.description()}`);
         }
       } else {
+        this.receiver().log('receiver');
         return $.message.new({
           receiver: this.receiver().expand(),
           message: this.message(),
@@ -285,17 +286,17 @@ $.class.new({
   name: 'property',
   components: [
     $.node,
-    $.var.new({ name: 'name' }),
+    $.var.new({ name: 'key' }),
     $.var.new({ name: 'value' }),
     function print() {
       return `${this.name().print()} ${this.value().print()}`;
     },
     function estree() {
-      return b.property('init', this.name().estree(), this.value().estree());
+      return b.property('init', this.key().estree(), this.value().estree());
     },
     function expand() {
-      this.log('expand property', this.name(), this.value())
-      return this.class().new({ name: this.name(), value: this.value().expand() });
+      this.log('expand property', this.key(), this.value())
+      return this.class().new({ key: this.key(), value: this.value().expand() });
     }
   ],
 })
@@ -496,6 +497,9 @@ $.class.new({
     function print() {
       return `${this.char()}${this.symbol().print()}`;
     },
+    function expand() {
+      return this;
+    }
   ],
 })
 
@@ -539,11 +543,12 @@ $.class.new({
 // and I am freer to maneuver now than evermore.
 $.class.new({
   name: 'macro',
+  debug: true,
   components: [
     $.var.new({ name: 'name' }),
     $.var.new({ name: 'expand-fn', debug: false }),
     function expand(...args) {
-      $.debug.log(this);
+      this.log('expand');
       return this.expand_fn().apply(this, args);
     },
     $.after.new({

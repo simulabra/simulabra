@@ -1,6 +1,13 @@
 console.log('bootstrap');
 var __ = {
-    pushframe(f) {},
+    _frames: [],
+    pushframe(f) {
+        // console.log('pushframe', f.name);
+        this._frames.push()
+    },
+    popframe() {
+
+    },
     mod() {
         return this._mod;
     },
@@ -16,12 +23,13 @@ function MethodImpl(name) {
 MethodImpl.prototype.reify = function(proto) {
     const self = this;
     // console.log('reify', this.name, this.primary)
-    proto[this.name] = function(...args) {
-        __.pushframe(self); // uhh
+    proto[this.name.deskewer()] = function(...args) {
+        __.pushframe(self, this, args); // uhh
         self.befores.forEach(b => b.apply(this, args));
         let res = self.primary.apply(this, args);
         // console.log('in reified', self.name, self.primary, res)
         self.afters.forEach(a => a.apply(this, args)); // res too?
+        __.popframe();
         return res;
     }
 }
@@ -38,7 +46,7 @@ ClassPrototype.prototype._reify = function reify() {
 }
 
 Object.prototype._add = function add(name, op) {
-    this[name] = op;
+    this[name.deskewer()] = op;
 }
 
 ClassPrototype.prototype._add = function add(name, op) {
@@ -89,7 +97,11 @@ Function.prototype.class = function() {
             return false;
         }
     }
-}
+};
+
+String.prototype.deskewer = function() {
+    return this.replace(/-/g, '_');
+};
 
 function bvar(name, desc = {}) {
     const key = '_' + name;
@@ -145,6 +157,7 @@ function manload(components, proto) {
 const $base_components = [
     function init() {},
     function description() {
+        console.log('base description')
         const vs = this.class().vars().map(v => {
             const k = v.name().deskewer();
             if (v.debug() && this[k]) {
@@ -157,8 +170,11 @@ const $base_components = [
         return `{${this.class().description()}${vs.length > 0 ? ' ' : ''}${vs}}`;
     },
     function log(...args) {
+        $debug.log(this.class().name() + '/' + this.name(), ...args);
+    },
+    function dlog(...args) {
         if ($debug && this.class().debug()) {
-            $debug.log(this.class().name() + '/' + this.name(), ...args);
+            this.log(...args);
         }
     },
     function load(proto) {
@@ -312,10 +328,6 @@ var $var = $class.new({
     ]
 });
 
-String.prototype.deskewer = function() {
-    return this.replace(/-/g, '_');
-};
-
 const $var_state = $class.new({
     name: 'var-state',
     components: [
@@ -375,7 +387,6 @@ const $before = $class.new({
     components: [
         $var.new({ name: 'name' }),
         $var.new({ name: 'do' }),
-        $var.new({ name: 'static', default: false }),
         function load(target) {
             const self = this;
             const orig = target[this.name()];
@@ -397,7 +408,7 @@ const $after = $class.new({
         $var.new({ name: 'name' }),
         $var.new({ name: 'do', debug: false }),
         function load(target) {
-            this.log('load', this, target);
+            this.dlog('load', this, target);
             target._get_impl(this.name()).afters.push(this.do());
         }
     ]
@@ -409,7 +420,7 @@ const $virtual = $class.new({
     components: [
         $var.new({ name: 'name' }),
         function load(parent) {
-            this.log('virtual load', this);
+            this.dlog('virtual load', this);
             parent[this.name()] = function() { throw new Error(`not implemented: ${this.name()}`); };
             parent[this.name()].virtual = true;
         },
@@ -450,9 +461,9 @@ const $module = $class.new({
             if (v) {
                 return v;
             } else {
-                this.log('imports', this.imports());
+                this.dlog('imports', this.imports());
                 for (const imp of this.imports()) {
-                    this.log('find', className, name, imp);
+                    this.dlog('find', className, name, imp);
                     const iv = imp.find(className, name);
                     if (iv) {
                         return iv;
@@ -472,12 +483,12 @@ const $module = $class.new({
             return '_' + sym.deskewer();
         },
         function def(obj) {
-            this.log('def', obj, obj.class());
+            this.dlog('def', obj, obj.class());
             const className = this.key(obj.class().name());
             const name = this.key(obj.name());
             const env = this.env();
             if (!env.hasOwnProperty(className)) {
-                this.log('env init for class', className);
+                this.dlog('env init for class', className);
                 env[className] = {};
             }
             env[className][name] = obj;
@@ -531,7 +542,7 @@ $.class.new({
                 c.load(this._js_prototype);
             }
             _.def(this);
-            this.log('primitive init', this);
+            this.dlog('primitive init', this);
         },
         function extend(method) {
             method.load(this.js_prototype()); // wee-woo!
