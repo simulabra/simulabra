@@ -13,58 +13,61 @@ var __ = {
     },
 };
 
-function MethodImpl(name) {
-    this.name = name;
-    this.primary = null;
-    this.befores = [];
-    this.afters = [];
-}
-
-MethodImpl.prototype.reify = function(proto) {
-    const self = this;
-    // console.log('reify', this.name, this.primary)
-    proto[this.name.deskewer()] = function(...args) {
-        __.pushframe(self, this, args); // uhh
-        try {
-            self.befores.forEach(b => b.apply(this, args));
-            let res = self.primary.apply(this, args);
-            // console.log('in reified', self.name, self.primary, res)
-            self.afters.forEach(a => a.apply(this, args)); // res too?
-            __.popframe();
-            return res;
-        } catch (e) {
-            this.log('failed message', self.name);
-            throw e;
+class MethodImpl {
+    constructor(name) {
+        this._name = name;
+        this._primary = null;
+        this._befores = [];
+        this._afters = [];
+    }
+    reify(proto) {
+        const self = this;
+        // console.log('reify', this.name, this.primary)
+        proto[this._name.deskewer()] = function (...args) {
+            __.pushframe(self, this, args); // uhh
+            try {
+                self._befores.forEach(b => b.apply(this, args));
+                let res = self._primary.apply(this, args);
+                // console.log('in reified', self.name, self.primary, res)
+                self._afters.forEach(a => a.apply(this, args)); // res too?
+                __.popframe();
+                return res;
+            } catch (e) {
+                $debug.log('failed message: call', self._name, 'on', this, 'with', args);
+                throw e;
+            }
         }
     }
 }
 
-function ClassPrototype(parent) {
-    this._impls = {};
-    this._parent = parent;
-}
+class ClassPrototype {
+    constructor(parent) {
+        this._impls = {};
+        this._parent = parent;
+    }
 
-ClassPrototype.prototype._reify = function reify() {
-    for (const impl of Object.values(this._impls)) {
-        impl.reify(this);
+    _reify() {
+        for (const impl of Object.values(this._impls)) {
+            impl.reify(this);
+        }
+    }
+
+    _add(name, op) {
+        op.combine(this._get_impl(name));
+    }
+
+    _get_impl(name) {
+        if (!(name in this._impls)) {
+            this._impls[name] = new MethodImpl(name);
+        }
+        return this._impls[name];
     }
 }
+
 
 Object.prototype._add = function add(name, op) {
     this[name.deskewer()] = op;
 }
-
-ClassPrototype.prototype._add = function add(name, op) {
-    op.combine(this._get_impl(name));
-}
-
-ClassPrototype.prototype._get_impl = function get_impl(name) {
-    if (!(name in this._impls)) {
-        this._impls[name] = new MethodImpl(name);
-    }
-    return this._impls[name];
-}
-
 Object.prototype.eq = function(other) {
     return this === other;
 }
@@ -88,7 +91,7 @@ Function.prototype.load = function(proto) {
     proto._add(this.name, this);
 };
 Function.prototype.combine = function(impl) {
-    impl.primary = this;
+    impl._primary = this;
 };
 Function.prototype.description = function() {
     return `Native Function ${this.name}`;
@@ -162,7 +165,6 @@ function manload(components, proto) {
 const $base_components = [
     function init() {},
     function description() {
-        console.log('base description')
         const vs = this.class().vars().map(v => {
             const k = v.name().deskewer();
             if (v.debug() && this[k]) {
@@ -304,7 +306,7 @@ var $var = $class.new({
             const pk = '_' + this.name().deskewer();
             var self = this;
             if (this.mutable()) {
-                impl.primary = function mutableAccess(assign) {
+                impl._primary = function mutableAccess(assign) {
                     if (assign !== undefined) {
                         this[pk] = assign;
                         ('update' in this) && this.update({ changed: self.name() }); // best there is?
@@ -316,7 +318,7 @@ var $var = $class.new({
                     return this[pk];
                 };
             } else {
-                impl.primary = function immutableAccess(self) {
+                impl._primary = function immutableAccess(self) {
                     return function (assign) {
                         if (assign !== undefined) {
                             throw new Error(`Attempt to set immutable variable ${self.name()} ${pk}`);
@@ -352,7 +354,7 @@ const $method = $class.new({
         $var.new({ name: 'message' }),
         $var.new({ name: 'name' }),
         function combine(impl) {
-            impl.primary = this.do();
+            impl._primary = this.do();
         },
     ]
 });
@@ -393,15 +395,8 @@ const $before = $class.new({
         $var.new({ name: 'name' }),
         $var.new({ name: 'do' }),
         function load(target) {
-            const self = this;
-            const orig = target[this.name()];
-            if (!orig) {
-                throw new Error('before loaded on missing method ' + this.description());
-            }
-            target[this.name()] = function(...args) {
-                self.do.apply(this, args);
-                return orig.apply(this, args);
-            }
+            this.dlog('load', this, target);
+            target._get_impl(this.name())._befores.push(this.do());
         }
     ]
 });
@@ -414,7 +409,7 @@ const $after = $class.new({
         $var.new({ name: 'do', debug: false }),
         function load(target) {
             this.dlog('load', this, target);
-            target._get_impl(this.name()).afters.push(this.do());
+            target._get_impl(this.name())._afters.push(this.do());
         }
     ]
 });
@@ -649,9 +644,7 @@ $.primitive.new({
             },
         }),
         function description() {
-            return `[
-${this.map(a => a ? a.description() : '???').map(e => '  ' + e).join('\n')}
-]`;
+            return `[${$.debug.format(...this).join(' ')}]`;
         },
     ]
 });

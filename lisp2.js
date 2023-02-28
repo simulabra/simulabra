@@ -368,7 +368,7 @@ $.class.new({
       }
     }),
     function print() {
-      return `{${this.properties().map(prop => prop.print()).join('\n')}}`;
+      return `{${this.properties().map(prop => prop.print()).join(' ')}}`;
     },
     function estree() {
       return b.objectExpression(this.properties().map(p => p.estree()))
@@ -631,7 +631,7 @@ $.class.new({
   components: [
     $.var.new({ name: 'forms' }),
     function print() {
-      return this.forms().map(f => f.print()).join('\n');
+      return this.forms().map(f => f.print()).join(' ');
     },
     function estree() {
       return b.program(this.forms().map(f => {
@@ -808,13 +808,15 @@ $.class.new({
     $.module,
     $.var.new({
       name: 'source',
+      debug: false,
     }),
     $.method.new({
       name: 'load',
       do() {
         const program = $.reader.new({ stream: $.stream.new({ value: this.source() }) }).program();
         const code = prettyPrint(program.expand().estree()).code;
-        tihs.log('code', code);
+        console.log(code);
+        this.log('code', code, typeof code);
         const head = `
 var __ = globalThis.SIMULABRA;
 const _ = __.mod().find('class', 'module').new({
