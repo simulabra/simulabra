@@ -80,12 +80,12 @@ Object.prototype.contains = function(i) {
 Object.prototype.print = function() {
     return this.toString();
 }
-Object.prototype.estree = function() {
-    return {
-        type: 'Literal',
-        value: this,
-    };
-}
+// Object.prototype.estree = function() {
+//     return {
+//         type: 'Literal',
+//         value: this,
+//     };
+// }
 Function.prototype.load = function(proto) {
     // console.log('fnload', this.name, proto);
     proto._add(this.name, this);
@@ -539,7 +539,7 @@ $.class.new({
         $.var.new({ name: 'name' }),
         function init() {
             for (let c of this.components()) {
-                c.load(this._js_prototype);
+                c.load(this.js_prototype());
             }
             _.def(this);
             this.dlog('primitive init', this);
@@ -611,6 +611,9 @@ $.primitive.new({
                 return _.proxy('primitive').number_primitive;
             },
         }),
+        function expand() {
+            return this;
+        },
         function description() {
             return this.toString();
         },

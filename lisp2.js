@@ -296,7 +296,7 @@ $.class.new({
       return b.property('init', this.key().estree(), this.value().estree());
     },
     function expand() {
-      this.log('expand property', this.key(), this.value())
+      this.dlog('expand property', this.key(), this.value())
       return this.class().new({ key: this.key(), value: this.value().expand() });
     }
   ],
@@ -568,7 +568,7 @@ $.class.new({
     $.var.new({ name: 'args' }),
     $.var.new({ name: 'body' }),
     function estree() {
-      this.log(this.args())
+      this.log('estree');
       return b.functionExpression(null, this.args().items().map(a => b.identifier('_' + a)), this.body().estree());
     }
   ],
@@ -589,13 +589,13 @@ $.macro.new({
       args,
       body: $.body.new({ forms }),
     });
+    $.debug.log(fn);
+    console.log('estree', fn.estree());
     const fn_comp = prettyPrint(fn.estree()).code;
     return $.macro.new({
       name: name.value(),
-      expand_fn() {
-
-      }
-    })
+      expand_fn: new Function(fn_comp),
+    });
   }
 })
 
@@ -668,6 +668,7 @@ $.class.new({
 $.class.new({
   name: 'return',
   components: [
+    $.node,
     $.var.new({ name: 'value' }),
     $.static.new({
       name: 'parse',
@@ -770,7 +771,7 @@ $.class.new({
           throw e;
         }
       } else {
-        this.log('not in readtable:', this.peek());
+        this.dlog('not in readtable:', this.peek());
       }
       if (this.peek() === '-') {
         this.next();
