@@ -550,7 +550,7 @@ $.class.new({
     $.var.new({ name: 'expand-fn', debug: false }),
     function expand(...args) {
       this.log('expand');
-      return this.expand_fn().apply(this, args);
+      return this.expand_fn().apply(this, args.map(a => a.expand()));
     },
     $.after.new({
       name: 'init',
@@ -612,6 +612,9 @@ $.class.new({
           return b.expressionStatement(ftree);
         }
       }));
+    },
+    function expand() {
+      return this.class().new({ forms: this.forms().map(f => f.expand()) });
     },
   ]
 })
@@ -689,6 +692,7 @@ $.class.new({
 $.class.new({
   name: 'restarg',
   components: [
+    $.node,
     $.var.new({ name: 'arg' }),
     $.static.new({
       name: 'parse',

@@ -14,13 +14,18 @@ var __ = {
 };
 
 class MethodImpl {
-    constructor(name) {
+    constructor(name, direct = false) {
         this._name = name;
         this._primary = null;
         this._befores = [];
         this._afters = [];
+        this._direct = direct;
     }
     reify(proto) {
+        if (this._direct && this._befores.length === 0 && this._afters.length === 0) {
+            proto[this._name.deskewer()] = this._primary;
+            return;
+        }
         const self = this;
         // console.log('reify', this.name, this.primary)
         proto[this._name.deskewer()] = function (...args) {
@@ -331,6 +336,7 @@ var $var = $class.new({
                     }
                 };
             }
+            impl._direct = true;
         },
     ]
 });
@@ -353,8 +359,12 @@ const $method = $class.new({
         $var.new({ name: 'do' }), // fn, meat and taters
         $var.new({ name: 'message' }),
         $var.new({ name: 'name' }),
+        $var.new({ name: 'direct' }),
         function combine(impl) {
             impl._primary = this.do();
+            if (this.direct()) {
+                impl._direct = this.direct();
+            }
         },
     ]
 });

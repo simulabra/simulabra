@@ -1,5 +1,5 @@
 import { run, bench } from 'mitata';
-import { $class, $var, $method } from './base.js';
+import './base.js';
 
 class Basic {
   _n = 0;
@@ -25,10 +25,8 @@ const p2 = {
   }
 };
 
-const ps = [p1, p2];
-
 const direct = {
-  n: 0,
+  _n: 0,
   a(n) {
     this._n += n;
   },
@@ -90,39 +88,52 @@ function sweat(p) {
   }
 }
 
-const _ = globalThis.SIMULABRA;
-const $p = $class.new({
+const __ = globalThis.SIMULABRA;
+const _ = __.mod().find('class', 'module').new({
+  name: 'protobench',
+  imports: [__.mod()],
+});
+const $ = _.proxy('class');
+$.class.new({
   name: 'p',
-  slots: {
-    n: $var.new(),
-    a: $method.new({
+  components: [
+    $.var.new({ name: 'n' }),
+    $.method.new({
+      name: 'a',
+      direct: true,
       do(n) {
         this.n(this.n() + n);
       }
     }),
-    b: $method.new({
+    $.method.new({
+      name: 'b',
+      direct: true,
       do(n) {
         this.n(this.n() - (n / 2));
       }
     }),
-  }
+  ]
 });
 
-const $popt = $class.new({
+$.class.new({
   name: 'popt',
-  slots: {
-    n: $var.new(),
-    a: $method.new({
+  components: [
+    $.var.new({ name: 'n' }),
+    $.method.new({
+      name: 'a',
+      direct: true,
       do(n) {
         this._n = (this._n + n); // optimization for as long as the var is basic?
       }
     }),
-    b: $method.new({
+    $.method.new({
+      name: 'b',
+      direct: true,
       do(n) {
         this._n = (this._n - (n / 2));
       }
     }),
-  }
+  ]
 });
 
 bench('native', () => sweat(new Basic));
@@ -130,7 +141,7 @@ bench('single', () => sweat(sdo()));
 bench('multiple', () => sweat(mdo()));
 bench('direct', () => sweat(direct));
 bench('directproto', () => sweat(directProto()));
-bench('simulabra', () => sweat($p.new()));
-bench('simulabra-opt', () => sweat($popt.new()));
+bench('simulabra', () => sweat($.p.new()));
+bench('simulabra-opt', () => sweat($.popt.new()));
 
 await run();
