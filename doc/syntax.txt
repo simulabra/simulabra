@@ -1,0 +1,14 @@
+~class
+!type
+%arg
+.
+.(method p1 p2)
+~class(new {x 1 y 2})
+%it(pow 2 | * ~math(pi))
+$(lambda [x y] ^%x(%y))
+$(macro quickmeth [name args body]
+  `~method(new {
+    name ,%name
+    do $(lambda ,%args ,%body)
+  })
+)

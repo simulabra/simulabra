@@ -181,6 +181,9 @@ const $base_components = [
         }).filter(s => s !== null).join(' ');
         return `{${this.class().description()}${vs.length > 0 ? ' ' : ''}${vs}}`;
     },
+    function vars() {
+        return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
+    },
     function log(...args) {
         $debug.log(this.class().name() + '/' + this.name(), ...args);
     },
@@ -344,11 +347,11 @@ var $var = $class.new({
 const $var_state = $class.new({
     name: 'var-state',
     components: [
-        $var.new({ name: 'v' }),
-        $var.new({ name: 'state' }),
+        $var.new({ name: 'var-ref' }),
+        $var.new({ name: 'value' }),
         function description(d) {
             // console.log(this.v().name());
-            return `${this.v().name()}:${this.state().description()}`;
+            return `${this.var_ref().description()}=${this.value().description()}`;
         }
     ]
 });

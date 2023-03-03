@@ -136,16 +136,22 @@ $.class.new({
         message: $.symbol.new({ value: 'new' }),
         args: [props]
       });
-      // return b.callExpression(b.memberExpression(b.identifier('$' + this.class().name()), b.identifier('new')), [b.objectExpression(
-      //   this.class().vars().map(v => {
-      //     const k = v.name().deskewer();
-      //     return b.property('init', b.identifier(k), this[k]().quote());
-      //   })
-      // )])
+    },
+    function children() {
+      return this.vars().filter(vs => vs.value().class().descended($.node));
+    },
+    function visit(fn, args = []) {
+      const newmap = {};
+      for (const it of this.children()) {
+        fn.apply(it, args);
+      }
     },
     function expand() {
       return this;
     },
+    function quasiexpand() {
+      return $.quote.new({ value: this });
+    }
   ]
 })
 
@@ -410,25 +416,20 @@ $.class.new({
 $.class.new({
   name: 'quasiquote',
   components: [
-    $.var.new({ name: 'value' }),
     $.static.new({
       name: 'parse',
       do: function parse(reader) {
         reader.next(); // `
         let value = reader.read();
-        return this.new({
-          value
-        });
+        value.map(it => {
+          if (it.class() == $.unquote) {
+            return it.value();
+          } else {
+
+          }
+        })
       }
     }),
-    function print() {
-      return `'${this.value().print()}`;
-    },
-    function expand() {
-        // convert all forms to quoted except unquotes
-      // this.value().map(it =>                                                )
-      $.debug.log('quasiquote expand', this.value());
-    },
   ],
 });
 
@@ -442,13 +443,16 @@ $.class.new({
         return this.new({ value: reader.read() });
       }
     }),
-    $.method.new({
-      name: 'quote',
-      do: function quote() {
-        return this.value();
-      }
-    }),
+    function quasiexpand() {
+      return this.value();
+    },
     $.var.new({ name: 'value' }),
+  ]
+});
+
+$.class.new({
+  name: 'unquote-lst',
+  components: [
   ]
 });
 
@@ -604,6 +608,7 @@ $.class.new({
   components: [
     $.var.new({ name: 'forms' }),
     function estree() {
+      this.log('vars', this.vars());
       return b.blockStatement(this.forms().map(f => {
         const ftree = f.estree();
         if (ftree.type.includes('Statement')) {
@@ -838,35 +843,39 @@ var $ = _.proxy('class');
 })
 
 const ex = `
-($ macro quickmeth [name args @forms]
-  \`(~method new {
+$(macro quickmeth [name args @forms]
+  \`~method(new {
       name ,%name
-      do ($ lambda ,%args ,%forms)
+      do $(lambda ,%args ,%forms)
     })
 )
 
-(~class new {
+~class(new {
   name :point
   components [
-    (~var new {
+    ~var(new {
       name :x
+      type !number
       default 0
     })
-    (~var new {
+    ~var(new {
       name :y
+      type !number
       default 0
     })
-    (~method new {
+    ~method(new {
       name :dist
-      do ($ do ^(. x | sub (%it x) | pow 2 | add (. y | sub (%it y) | pow 2) | sqrt))
+      args [!self]
+      ret !number
+      do $(do ^.(x)(sub %it(x))(pow 2 | add .(y | sub %it(y) | pow 2) | sqrt))
     })
-    ($ quickmeth translate [other]
-      (. x (. x | add (%other x)))
-      (. y (. y | add (%other y)))
+    $(quickmeth translate [other]
+      .(x .(x | add %other(x)))
+      .(y .(y | add %other(y)))
     )
   ]
 })
-(~debug log (~point new {x 3 y 4} | dist (~point new)))
+~debug(log ~point(new {x 3 y 4} | dist ~point(new)))
 
 `;
 
