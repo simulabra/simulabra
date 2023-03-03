@@ -1,7 +1,7 @@
 console.log('bootstrap');
 var __ = {
     _frames: [],
-    pushframe(f) {
+    pushframe(impl, receiver, args) {
         // console.log('pushframe', f.name);
         this._frames.push()
     },
@@ -29,6 +29,7 @@ class MethodImpl {
         const self = this;
         // console.log('reify', this.name, this.primary)
         proto[this._name.deskewer()] = function (...args) {
+            // console.trace('call', self._name);
             __.pushframe(self, this, args); // uhh
             try {
                 self._befores.forEach(b => b.apply(this, args));
@@ -38,7 +39,7 @@ class MethodImpl {
                 __.popframe();
                 return res;
             } catch (e) {
-                $debug.log('failed message: call', self._name, 'on', this, 'with', args);
+                // $debug.log('failed message: call', self._name, 'on', this, 'with', args);
                 throw e;
             }
         }
@@ -388,7 +389,7 @@ var $debug = $class.new({
         $static.new({
             name: 'log',
             do: function log(...args) {
-                // console.trace();
+                console.trace();
                 console.log(...this.format(...args));
                 return this;
             }
