@@ -141,10 +141,8 @@ $.class.new({
       return this.vars().filter(vs => vs.value().class().descended($.node));
     },
     function visit(fn, args = []) {
-      const newmap = {};
-      for (const it of this.children()) {
-        fn.apply(it, args);
-      }
+      const newmap = Object.fromEntries(this.children().map(it => [it.var_ref().name(), fn.apply(it, args)]));
+      return this.class().new(newmap);
     },
     function expand() {
       return this;
@@ -421,13 +419,8 @@ $.class.new({
       do: function parse(reader) {
         reader.next(); // `
         let value = reader.read();
-        value.map(it => {
-          if (it.class() == $.unquote) {
-            return it.value();
-          } else {
-
-          }
-        })
+        this.log(value);
+        return value.visit(it => it.quasiexpand());
       }
     }),
   ],
@@ -491,6 +484,7 @@ $.class.new({
 $.class.new({
   name: 'ref-reader-macro',
   components: [
+    $.node,
     $.var.new({ name: 'symbol' }),
     $.static.new({
       name: 'parse',
@@ -769,20 +763,23 @@ $.class.new({
     },
     function read() {
       this.strip();
-      if (this.peek() === null) {
+      let c = this.peek();
+      if (c === null) {
         return;
       }
-      if (this.readtable().has_char(this.peek())) {
+      if (this.readtable().has_char(c)) {
         try {
-          return this.readtable().get(this.peek()).parse(this);
+          return this.readtable().get(c).parse(this);
         } catch (e) {
-          $.debug.log('failed readtable', this.peek(), this.readtable().get(this.peek()));
-          throw e;
+          $.debug.log('failed readtable', c, this.readtable().get(c));
+          console.trace();
+          console.error(e);
+          process.exit(1); // really die
         }
       } else {
-        this.dlog('not in readtable:', this.peek());
+        this.dlog('not in readtable:', c);
       }
-      if (this.peek() === '-') {
+      if (c === '-') {
         this.next();
         if (this.digit()) {
           return -this.number();
@@ -796,7 +793,7 @@ $.class.new({
       if (this.alpha()) {
         return this.symbol();
       }
-      throw new Error(`unhandled: ${this.peek()} at ${this.stream().pos()}`);
+      throw new Error(`unhandled: ${c} at ${this.stream().pos()}`);
     },
     function program() {
       const ps = [];
@@ -879,7 +876,12 @@ $(macro quickmeth [name args @forms]
 
 `;
 
-$.source_module.new({
-  name: 'test',
-  source: ex,
-}).load();
+try {
+  $.source_module.new({
+    name: 'test',
+    source: ex,
+  }).load();
+} catch (e) {
+  console.error(e);
+  process.exit(1);
+}
