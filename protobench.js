@@ -100,14 +100,12 @@ $.class.new({
     $.var.new({ name: 'n' }),
     $.method.new({
       name: 'a',
-      direct: true,
       do(n) {
         this.n(this.n() + n);
       }
     }),
     $.method.new({
       name: 'b',
-      direct: true,
       do(n) {
         this.n(this.n() - (n / 2));
       }

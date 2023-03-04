@@ -1,17 +1,50 @@
 console.log('bootstrap');
 var __ = {
-    _frames: [],
-    pushframe(impl, receiver, args) {
-        // console.log('pushframe', f.name);
-        this._frames.push()
-    },
-    popframe() {
-
-    },
     mod() {
         return this._mod;
     },
 };
+
+class Frame {
+    constructor(receiver, method_impl, args) {
+        this._receiver = receiver;
+        this._method_impl = method_impl;
+        this._args = args;
+    }
+    description() {
+        return `${this._receiver._parent.description()}(${this._method_impl._name}${this._args.map(a => ' ' + a.description()).join('')})`
+    }
+}
+
+class FrameStack {
+    constructor() {
+        this._frames = new Array(1000);
+        this._frame_idx = -1;
+    }
+    push(frame) {
+        // console.log('pushframe', f.name);
+        this._frame_idx++;
+        this._frames[this._frame_idx] = frame;
+        return this;
+    }
+    pop() {
+        this.clear();
+        this._frame_idx--;
+    }
+    frame() {
+        return this._frames[this._frame_idx];
+    }
+    clear() {
+        delete this._frames[this._frame_idx];
+    }
+    trace() {
+        for (let i = this._frame_idx; i >= 0; i--) {
+            $debug.log('stack frame', i, this.frame());
+        }
+    }
+}
+
+__._stack = new FrameStack();
 
 class MethodImpl {
     constructor(name, direct = false) {
@@ -30,16 +63,17 @@ class MethodImpl {
         // console.log('reify', this.name, this.primary)
         proto[this._name.deskewer()] = function (...args) {
             // console.trace('call', self._name);
-            __.pushframe(self, this, args); // uhh
+            __._stack.push(new Frame(this, self, args)); // uhh
             try {
                 self._befores.forEach(b => b.apply(this, args));
                 let res = self._primary.apply(this, args);
                 // console.log('in reified', self.name, self.primary, res)
                 self._afters.forEach(a => a.apply(this, args)); // res too?
-                __.popframe();
+                __._stack.pop();
                 return res;
             } catch (e) {
-                // $debug.log('failed message: call', self._name, 'on', this, 'with', args);
+                $debug.log('failed message: call', self._name, 'on', this._parent, 'with', args);
+                __._stack.trace();
                 throw e;
             }
         }
@@ -389,7 +423,6 @@ var $debug = $class.new({
         $static.new({
             name: 'log',
             do: function log(...args) {
-                console.trace();
                 console.log(...this.format(...args));
                 return this;
             }
