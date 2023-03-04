@@ -96,6 +96,7 @@ $.class.new({
             '$': $.invoke,
             '%': $.argref,
             '~': $.classref,
+            '!': $.typeref,
             '^': $.return,
             '@': $.restarg,
           },
@@ -231,14 +232,12 @@ $.class.new({
       do: function parse(reader) {
         reader.next(); // (
         reader.strip();
-
-        let receiver = reader.read();
         let message = reader.read();
         let args = [];
         while (reader.peek() !== ')') {
           reader.strip();
           if (reader.peek() === '|') {
-            receiver = this.new({ receiver, message, args });
+            receiver = this.new({ message, args });
             reader.next();
             reader.strip();
             message = reader.read();
@@ -249,7 +248,7 @@ $.class.new({
           reader.strip();
         }
         reader.next(); // )
-        return this.new({ receiver, message, args });
+        return this.new({ message, args });
       }
     }),
     $.var.new({ name: 'receiver' }),
@@ -524,6 +523,19 @@ $.class.new({
     },
     function estree() {
       return b.memberExpression(b.identifier('$'), this.symbol().estree());
+    },
+  ],
+});
+
+$.class.new({
+  name: 'typeref',
+  components: [
+    $.ref_reader_macro,
+    function char() {
+      return '!';
+    },
+    function estree() {
+      return this.quote();
     },
   ],
 });
