@@ -88,7 +88,6 @@ $.class.new({
             ':': $.symbol,
             '.': $.this,
             '[': $.list,
-            '(': $.message,
             '{': $.map,
             '\'': $.quote,
             '`': $.quasiquote,
@@ -139,7 +138,7 @@ $.class.new({
       });
     },
     function children() {
-      return this.vars().filter(vs => vs.value().class().descended($.node));
+      return this.vars().filter(vs => this.log(vs) || vs.value().class().descended($.node));
     },
     function visit(fn, args = []) {
       const newmap = Object.fromEntries(this.children().map(it => [it.var_ref().name(), fn.apply(it, args)]));
@@ -227,9 +226,10 @@ $.class.new({
   name: 'message',
   debug: true,
   components: [
+    $.node,
     $.static.new({
       name: 'parse',
-      do: function parse(reader) {
+      do: function parse(reader, receiver) {
         reader.next(); // (
         reader.strip();
         let message = reader.read();
@@ -237,7 +237,7 @@ $.class.new({
         while (reader.peek() !== ')') {
           reader.strip();
           if (reader.peek() === '|') {
-            receiver = this.new({ message, args });
+            receiver = this.new({ receiver, message, args });
             reader.next();
             reader.strip();
             message = reader.read();
@@ -248,7 +248,7 @@ $.class.new({
           reader.strip();
         }
         reader.next(); // )
-        return this.new({ message, args });
+        return this.new({ receiver, message, args });
       }
     }),
     $.var.new({ name: 'receiver' }),
@@ -780,14 +780,13 @@ $.class.new({
         return;
       }
       if (this.readtable().has_char(c)) {
-        try {
-          return this.readtable().get(c).parse(this);
-        } catch (e) {
-          $.debug.log('failed readtable', c, this.readtable().get(c));
-          console.trace();
-          console.error(e);
-          process.exit(1); // really die
-        }
+          let res = this.readtable().get(c).parse(this);
+          console.log(c);
+          if (this.peek() === '(') {
+            return $.message.parse(this, res);
+          } else {
+            return res;
+          }
       } else {
         this.dlog('not in readtable:', c);
       }

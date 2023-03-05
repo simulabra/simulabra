@@ -12,7 +12,7 @@ class Frame {
         this._args = args;
     }
     description() {
-        return `${this._receiver._parent.description()}(${this._method_impl._name}${this._args.map(a => ' ' + a.description()).join('')})`
+        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => a?.description ? ' ' + console.log(a) + a.description() : ' ' + a).join('')})`
     }
 }
 
@@ -38,8 +38,8 @@ class FrameStack {
         delete this._frames[this._frame_idx];
     }
     trace() {
-        for (let i = this._frame_idx; i >= 0; i--) {
-            $debug.log('stack frame', i, this.frame());
+        for (let i = 0; i <= this._frame_idx; i++) {
+            $debug.log('stack frame', i, this._frames[i]);
         }
     }
 }
@@ -72,8 +72,11 @@ class MethodImpl {
                 __._stack.pop();
                 return res;
             } catch (e) {
-                $debug.log('failed message: call', self._name, 'on', this._parent, 'with', args);
-                __._stack.trace();
+                if (!e._logged) {
+                    $debug.log('failed message: call', self._name, 'on', this._parent, 'with', args);
+                    __._stack.trace();
+                    e._logged = true;
+                }
                 throw e;
             }
         }
@@ -146,6 +149,9 @@ Function.prototype.class = function() {
         }
     }
 };
+Number.prototype.description = function() {
+    return this.toString();
+}
 
 String.prototype.deskewer = function() {
     return this.replace(/-/g, '_');
@@ -202,25 +208,25 @@ function manload(components, proto) {
     }
 }
 
+const classDef = {
+    class() {
+        return this._parent;
+    }
+}
+
 const $base_components = [
     function init() {},
     function description() {
-        const vs = this.class().vars().map(v => {
-            const k = v.name().deskewer();
-            if (v.debug() && this[k]) {
-                // $debug.log(v.name(), v.name().deskewer())
-               return `${v.name()} ${this[v.name().deskewer()]()?.description()}`;
-            } else {
-                return null;
-            }
-        }).filter(s => s !== null).join(' ');
-        return `{${this.class().description()}${vs.length > 0 ? ' ' : ''}${vs}}`;
+        return `{${this.class().description()}${this.vars().map(vs => ' ' + vs.description().join(''))}`;
     },
     function vars() {
         return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
     },
+    function title() {
+        return this.class().description() + '/' + this.name();
+    },
     function log(...args) {
-        $debug.log(this.class().name() + '/' + this.name(), ...args);
+        $debug.log(this.title(), ...args);
     },
     function dlog(...args) {
         if ($debug && this.class().debug()) {
@@ -230,7 +236,7 @@ const $base_components = [
     function load(proto) {
         proto._add(this.name(), this);
     },
-    bvar('class'),
+    classDef.class,
     bvar('name', { default: '?' }),
 ];
 
@@ -301,15 +307,13 @@ $class_slots.new = function(props = {}) {
     return obj;
 };
 
-$class_slots._parent = $class_slots;
-
 manload($base_components, $class_slots);
 manload($class_components, $class_slots);
 $class_slots._reify();
 var $class = Object.create($class_slots);
+$class._parent = $class;
 
 $class.name('class');
-$class.class($class);
 $class.proto($class);
 
 const defaultFn = {
@@ -386,7 +390,8 @@ const $var_state = $class.new({
         $var.new({ name: 'value' }),
         function description(d) {
             // console.log(this.v().name());
-            return `${this.var_ref().description()}=${this.value().description()}`;
+            console.log(this.var_ref())
+            return `${this.var_ref().title()}=${this.value().description()}`;
         }
     ]
 });
@@ -430,7 +435,7 @@ var $debug = $class.new({
         $static.new({
             name: 'format',
             do: function format(...args) {
-                return args.map(a => a && a.description ? a.description() : typeof a);
+                return args.map(a => a?.description ? a.description() : typeof a);
             }
         }),
     ]
@@ -580,20 +585,23 @@ _.def($module);
 $.class.new({
     name: 'primitive',
     components: [
+        $.class,
         $.var.new({ name: 'components', default: [] }),
         $.var.new({ name: 'js_prototype' }),
         $.var.new({ name: 'methods', default: {} }),
         $.var.new({ name: 'name' }),
         function init() {
             for (let c of this.components()) {
-                c.load(this.js_prototype());
             }
             _.def(this);
             this.dlog('primitive init', this);
         },
         function extend(method) {
             method.load(this.js_prototype()); // wee-woo!
-        }
+        },
+        function description() {
+            return `primitive ${this.name()}`;
+        },
     ]
 });
 
