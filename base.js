@@ -74,7 +74,6 @@ class MethodImpl {
             } catch (e) {
                 if (!e._logged) {
                     $debug.log('failed message: call', self._name, 'on', this._parent, 'with', args);
-                    console.error('err', e);
                     __._stack.trace();
                     e._logged = true;
                 }
@@ -221,7 +220,7 @@ const classDef = {
 const $base_components = [
     function init() {},
     function description() {
-        return `{${this.class().description()}${this.vars().map(vs => ' ' + vs.description()).join('')}`;
+        return `{${this.class().description()}${this.vars().map(vs => ' ' + vs.description()).join('')}}`;
     },
     function vars() {
         return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
@@ -433,7 +432,7 @@ var $debug = $class.new({
             name: 'log',
             do: function log(...args) {
                 const stack = (new Error).stack;
-                const source = stack.split('\n')[1];
+                const source = stack.split('\n')[2];
 
                 console.log(source, ...this.format(...args));
                 return this;
@@ -575,18 +574,18 @@ _.def($before);
 _.def($after);
 _.def($module);
 
-// _.def($.class.new({
-//     name: 'simulabra',
-//     components: [
-//         $.var.new({ name: 'mod' }),
-//         function pushframe() {}
-//     ]
-// }));
+$.class.new({
+    name: 'simulabra-global',
+    components: [
+        $.var.new({ name: 'mod' }),
+        $.var.new({ name: 'stack' }),
+    ]
+});
 
-// __ = $.simulabra.new({
-//     mod: _,
-// });
-
+__ = $.simulabra_global.new({
+    mod: _,
+    stack: new FrameStack(),
+});
 
 $.class.new({
     name: 'primitive',
@@ -598,6 +597,7 @@ $.class.new({
         $.var.new({ name: 'name' }),
         function init() {
             for (let c of this.components()) {
+                c.load(this.js_prototype());
             }
             _.def(this);
             this.dlog('primitive init', this);
@@ -727,3 +727,4 @@ $.primitive.new({
 });
 
 globalThis.SIMULABRA = __;
+export default _;

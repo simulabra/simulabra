@@ -141,7 +141,7 @@ $.class.new({
       return this.vars().filter(vs => this.log(vs) || vs.value().class().descended($.node));
     },
     function visit(fn, args = []) {
-      const newmap = Object.fromEntries(this.children().map(it => [it.var_ref().name(), fn.apply(it, args)]));
+      const newmap = Object.fromEntries(this.vars().map(it => [it.var_ref().name(), fn.apply(it.value(), args)]));
       return this.class().new(newmap);
     },
     function expand() {
@@ -233,7 +233,7 @@ $.class.new({
         reader.next(); // (
         reader.strip();
         let message = reader.read();
-        let args = [];
+        let args = $.list.new();
         while (reader.peek() !== ')') {
           reader.strip();
           if (reader.peek() === '|') {
@@ -241,7 +241,7 @@ $.class.new({
             reader.next();
             reader.strip();
             message = reader.read();
-            args = [];
+            args = $.list.new();
           } else {
             args.push(reader.read());
           }
@@ -310,7 +310,7 @@ $.class.new({
   name: 'list',
   debug: true,
   components: [
-    $.var.new({ name: 'items' }),
+    $.var.new({ name: 'items', default: [] }),
     $.static.new({
       name: 'parse',
       do: function parse(reader) {
@@ -329,14 +329,14 @@ $.class.new({
       return `[${this.items().map(it => it.print()).join(' ')}]`;
     },
     function estree() {
-      $.debug.log(this, this.items());
-      console.log('oh')
-      this.log(this.items());
+      // $.debug.log(this, this.items());
+      // console.log('oh')
+      // this.log(this.items());
       return b.arrayExpression(this.items().map((it, idx) => {
         try {
           it.estree()
         } catch (e) {
-          $.debug.log(this.items(), it, idx);
+          // $.debug.log(this.items(), it, idx);
           throw e;
         }
       }));
@@ -346,6 +346,10 @@ $.class.new({
     },
     function map(fn) {
       return this.class().new({ items: this.items().map(fn) });
+    },
+    function push(it) {
+      this.items().push(it);
+      return this;
     }
   ]
 });
@@ -419,8 +423,11 @@ $.class.new({
       do: function parse(reader) {
         reader.next(); // `
         let value = reader.read();
-        this.log(value);
-        return value.visit(it => it.quasiexpand());
+        // this.log(value);
+        return value.visit(function() {
+          // $.debug.log('visit for quasiexpand', this);
+          this.quasiexpand();
+        });
       }
     }),
   ],
@@ -667,6 +674,7 @@ $.class.new({
 $.class.new({
   name: 'identifier',
   components: [
+    $.node,
     $.var.new({ name: 'value' }),
     function print() {
       return this.value();
@@ -674,9 +682,6 @@ $.class.new({
     function estree() {
       return b.identifier(this.value());
     },
-    function expand() {
-      return this;
-    }
   ],
 });
 

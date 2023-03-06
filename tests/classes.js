@@ -1,8 +1,9 @@
-import '../base.js';
+import base_mod from '../base.js';
+import test_mod from '../test.js';
 const __ = globalThis.SIMULABRA;
 const _ = __.mod().find('class', 'module').new({
   name: 'test-classes',
-  imports: [__.mod()],
+  imports: [base_mod, test_mod],
 });
 const $ = _.proxy('class');
 
