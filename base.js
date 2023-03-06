@@ -74,6 +74,7 @@ class MethodImpl {
             } catch (e) {
                 if (!e._logged) {
                     $debug.log('failed message: call', self._name, 'on', this._parent, 'with', args);
+                    console.error('err', e);
                     __._stack.trace();
                     e._logged = true;
                 }
@@ -151,6 +152,9 @@ Function.prototype.class = function() {
 };
 Number.prototype.description = function() {
     return this.toString();
+};
+Array.prototype.description = function() {
+    return `[${this.map(e => e.description()).join(' ')}]`;
 }
 
 String.prototype.deskewer = function() {
@@ -217,7 +221,7 @@ const classDef = {
 const $base_components = [
     function init() {},
     function description() {
-        return `{${this.class().description()}${this.vars().map(vs => ' ' + vs.description().join(''))}`;
+        return `{${this.class().description()}${this.vars().map(vs => ' ' + vs.description()).join('')}`;
     },
     function vars() {
         return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
@@ -390,7 +394,7 @@ const $var_state = $class.new({
         $var.new({ name: 'value' }),
         function description(d) {
             // console.log(this.v().name());
-            console.log(this.var_ref())
+            // console.log(this.var_ref(), JSON.stringify(this.value()));
             return `${this.var_ref().title()}=${this.value().description()}`;
         }
     ]
@@ -428,7 +432,10 @@ var $debug = $class.new({
         $static.new({
             name: 'log',
             do: function log(...args) {
-                console.log(...this.format(...args));
+                const stack = (new Error).stack;
+                const source = stack.split('\n')[1];
+
+                console.log(source, ...this.format(...args));
                 return this;
             }
         }),
@@ -460,7 +467,6 @@ const $after = $class.new({
         $var.new({ name: 'name' }),
         $var.new({ name: 'do', debug: false }),
         function load(target) {
-            this.dlog('load', this, target);
             target._get_impl(this.name())._afters.push(this.do());
         }
     ]

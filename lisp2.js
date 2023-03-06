@@ -274,6 +274,7 @@ $.class.new({
         if (v == undefined) {
           throw new Error(`macro expansion failed for ${m.description()} in ${this.description()}`);
         }
+        return v;
       } else {
         this.receiver().log('receiver');
         return $.message.new({
