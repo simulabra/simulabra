@@ -7,9 +7,17 @@ const _ = __.mod().find('class', 'module').new({
 });
 const $ = _.proxy('class');
 
-function ASSERT() {
-
-}
+$.case.new({
+  name: 'test-class-def',
+  do() {
+    $.class.new({
+      name: 'basic',
+      components: []
+    });
+    const b = $.basic.new();
+    this.assert_eq(b.class(), $.basic);
+  }
+});
 
 $.class.new({
   name: 'color',
