@@ -12,7 +12,7 @@ class Frame {
         this._args = args;
     }
     description() {
-        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => a?.description ? ' ' + console.log(a) + a.description() : ' ' + a).join('')})`
+        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => a?.description ? ' ' + a.description() : ' ' + a).join('')})`
     }
 }
 
@@ -431,10 +431,9 @@ var $debug = $class.new({
         $static.new({
             name: 'log',
             do: function log(...args) {
-                const stack = (new Error).stack;
-                const source = stack.split('\n')[2];
-
-                console.log(source, ...this.format(...args));
+                // const stack = (new Error).stack;
+                // const source = stack.split('\n')[2];
+                console.log(...this.format(...args));
                 return this;
             }
         }),

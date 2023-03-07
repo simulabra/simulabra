@@ -13,9 +13,18 @@ $.class.new({
       name: 'init',
       do() {
         this.do().apply(this);
+        this.log('passed');
       }
     }),
     $.var.new({ name: 'do' }),
+    $.method.new({
+      name: 'assert-eq',
+      do(a, b) {
+        if (a !== b) {
+          throw new Error(`assertion failed: ${a.description()} !== ${b.description()}`);
+        }
+      }
+    })
   ]
 });
 
