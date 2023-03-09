@@ -1,7 +1,11 @@
-import base_mod from '../base.js';
-import test_mod from '../test.js';
-const __ = globalThis.SIMULABRA;
-const _ = __.mod().find('class', 'module').new({
+import bootstrap from '../base.js';
+import testmod from '../test.js';
+
+var __ = bootstrap();
+let base_mod = __.mod();
+let test_mod = testmod();
+
+var _ = __.mod().find('class', 'module').new({
   name: 'test-classes',
   imports: [base_mod, test_mod],
 });
@@ -13,7 +17,7 @@ $.class.new({
 });
 
 $.case.new({
-  name: 'test-class-def',
+  name: 'class-def',
   do() {
     const b = $.basic.new();
     this.assert_eq(b.class(), $.basic);
@@ -32,7 +36,7 @@ $.class.new({
 });
 
 $.case.new({
-  name: 'test-class-def-var',
+  name: 'class-def-var',
   do() {
     const p = $.point.new({ x: 2 });
     this.assert_eq(p.x(), 2);
@@ -40,7 +44,7 @@ $.case.new({
 });
 
 $.case.new({
-  name: 'test-class-set-var',
+  name: 'class-set-var',
   do() {
     const p = $.point.new({ x: 2 });
     p.x(3);
@@ -63,7 +67,15 @@ $.class.new({
 });
 
 $.case.new({
-  name: 'test-class-inheritance-phi',
+  name: 'class-name',
+  do() {
+    this.assert_eq($.point.name(), 'point');
+    this.assert_eq($.point_extended.name(), 'point-extended');
+  }
+});
+
+$.case.new({
+  name: 'class-inheritance-phi',
   do() {
     const pe = $.point_extended.new({ x: 3, y: 4, phi: Math.PI });
     this.assert_eq(pe.phi_shift(), 5);
@@ -91,7 +103,7 @@ $.class.new({
 });
 
 $.case.new({
-  name: 'test-class-multiple-inheritance-override',
+  name: 'class-multiple-inheritance-override',
   do() {
     const cp = $.color_point.new({ r: 33, g: 55, b: 44, x: 3, y: 4 });
     this.assert_eq(cp.dist(), 5);
@@ -99,4 +111,3 @@ $.case.new({
     this.assert_eq(cp.r(), 33);
   }
 });
-
