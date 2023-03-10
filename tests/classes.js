@@ -111,3 +111,125 @@ $.case.new({
     this.assert_eq(cp.r(), 33);
   }
 });
+
+$.case.new({
+  name: 'before-basic',
+  do() {
+    $.class.new({
+      name: 'before-basic',
+      components: [
+        $.var.new({ name: 'x', default: 0 }),
+        $.method.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 2);
+          }
+        }),
+        $.before.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 1);
+          }
+        })
+      ]
+    });
+
+    const ab = $.before_basic.new();
+    ab.bump();
+    this.assert_eq(ab.x(), 3);
+  }
+});
+
+$.case.new({
+  name: 'after-basic',
+  do() {
+    $.class.new({
+      name: 'after-basic',
+      components: [
+        $.var.new({ name: 'x', default: 0 }),
+        $.method.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 2);
+          }
+        }),
+        $.after.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 1);
+          }
+        })
+      ]
+    });
+
+    const ab = $.after_basic.new();
+    ab.bump();
+    this.assert_eq(ab.x(), 3);
+  }
+});
+
+$.case.new({
+  name: 'after-before-combined',
+  do() {
+    $.class.new({
+      name: 'after-before-combined',
+      components: [
+        $.before_basic,
+        $.after.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() * 2);
+          }
+        })
+      ]
+    });
+
+    const ab = $.after_before_combined.new();
+    ab.bump();
+    this.assert_eq(ab.x(), 6);
+  }
+});
+
+$.case.new({
+  name: 'after-before-combined-method',
+  do() {
+    $.class.new({
+      name: 'after-before-combined-method',
+      components: [
+        $.after_before_combined,
+        $.method.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 3);
+          }
+        })
+      ]
+    });
+
+    const abc = $.after_before_combined_method.new();
+    abc.bump();
+    this.assert_eq(abc.x(), 8);
+  }
+});
+
+$.case.new({
+  name: 'after-multiple',
+  do() {
+    $.class.new({
+      name: 'after-multiple',
+      components: [
+        $.after_basic,
+        $.after.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 1);
+          }
+        })
+      ]
+    });
+
+    const am = $.after_multiple.new();
+    am.bump();
+    this.assert_eq(am.x(), 4);
+  }
+});
