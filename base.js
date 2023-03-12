@@ -519,6 +519,7 @@ function bootstrap() {
                 desc: 'the other modules available within this one',
                 default: [],
             }),
+            $var.new({ name: 'load' }),
             function key(name) {
                 return '$' + name.deskewer();
             },
@@ -596,6 +597,10 @@ function bootstrap() {
             }),
             function $() {
                 return this.mod().proxy('class');
+            },
+            function new_module(moddef) {
+                const m = $module.new(moddef);
+                m.load().apply(m, [m, m.proxy('class')]);
             }
         ]
     });

@@ -17,7 +17,7 @@ export default function() {
             this.do().apply(this);
           } catch (e) {
             this.log('failed!!!');
-            console.error(e);
+            throw e;
           }
           this.log('passed');
         }
