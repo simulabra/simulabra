@@ -116,9 +116,12 @@ class ClassPrototype {
 
 
 function bootstrap() {
-    console.log('bootstrap');
     var __ = globalThis.SIMULABRA;
+    if (__._bootstrapped) {
+        return __;
+    }
 
+    console.log('bootstrap');
     __._stack = new FrameStack();
 
     Object.prototype._add = function add(name, op) {
@@ -608,6 +611,7 @@ function bootstrap() {
     __ = $.simulabra_global.new({
         stack: new FrameStack(),
         mod: _,
+        bootstrapped: true,
     });
     globalThis.SIMULABRA = __;
 
@@ -752,5 +756,7 @@ function bootstrap() {
 
     return __;
 }
+
+bootstrap();
 
 export default bootstrap;

@@ -1,16 +1,7 @@
 import bootstrap from '../base.js';
-import testmod from '../test.js';
-
 var __ = bootstrap();
+import test_mod from '../test.js';
 let base_mod = __.mod();
-let test_mod = testmod();
-
-var _ = __.mod().find('class', 'module').new({
-  name: 'test-classes',
-  imports: [base_mod, test_mod],
-});
-const $ = _.proxy('class');
-
 __.new_module({
   name: 'test-classes',
   imports: [base_mod, test_mod],
