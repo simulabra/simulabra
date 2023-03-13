@@ -522,7 +522,7 @@ function bootstrap() {
                 desc: 'the other modules available within this one',
                 default: [],
             }),
-            $var.new({ name: 'load' }),
+            $var.new({ name: 'on-load' }),
             function key(name) {
                 return '$' + name.deskewer();
             },
@@ -572,6 +572,9 @@ function bootstrap() {
                     imports: [this, ...moddef.imports],
                     ...moddef
                 })
+            },
+            function load() {
+                this.on_load().apply(this, [this, this.proxy('class')]);
             }
         ]
     });
@@ -603,7 +606,7 @@ function bootstrap() {
             },
             function new_module(moddef) {
                 const m = $module.new(moddef);
-                m.load().apply(m, [m, m.proxy('class')]);
+                m.load();
             }
         ]
     });

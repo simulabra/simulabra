@@ -5,7 +5,7 @@ let base_mod = __.mod();
 __.new_module({
   name: 'test-classes',
   imports: [base_mod, test_mod],
-  load(_, $) {
+  on_load(_, $) {
     $.class.new({
       name: 'basic',
       components: []

@@ -4,7 +4,7 @@ let base_mod = __.mod();
 export default __.new_module({
   name: 'test',
   imports: [base_mod],
-  load(_, $) {
+  on_load(_, $) {
     $.class.new({
       name: 'case',
       components: [
