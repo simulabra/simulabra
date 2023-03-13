@@ -575,6 +575,9 @@ function bootstrap() {
             },
             function load() {
                 this.on_load().apply(this, [this, this.proxy('class')]);
+            },
+            function $() {
+                return this.proxy('class');
             }
         ]
     });
@@ -607,6 +610,7 @@ function bootstrap() {
             function new_module(moddef) {
                 const m = $module.new(moddef);
                 m.load();
+                return m;
             }
         ]
     });
