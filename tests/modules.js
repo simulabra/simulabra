@@ -2,7 +2,7 @@ import bootstrap from '../base.js';
 var __ = bootstrap();
 import test_mod from '../test.js';
 let base_mod = __.mod();
-__.new_module({
+export default __.new_module({
   name: 'test-classes',
   imports: [base_mod, test_mod],
   on_load(_, $) {

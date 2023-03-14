@@ -5,7 +5,7 @@ import bootstrap from './base.js';
 var __ = bootstrap();
 import test_mod from './test.js';
 let base_mod = __.mod();
-__.new_module({
+export default __.new_module({
   name: 'runner',
   imports: [base_mod, test_mod],
   on_load(_, $) {
@@ -17,15 +17,14 @@ __.new_module({
           async do(path) {
             const files = await readdir(path);
 
-            const modules = await Promise.all(
-              files.map(async (file) => {
-                const filePath = join(path, file);
-                const module = await import('./' + filePath);
-                return module.default;
-              })
-            );
-
-            this.log(`ran tests for ${modules.length} modules`);
+            for (const file of files) {
+              const filePath = join(path, file);
+              this.log('load ' + filePath);
+              const esm = await import('./' + filePath);
+              const mod = esm.default;
+              mod.log('case', mod.$case);
+              this.log('cases', mod)
+            }
           }
         })
       ]

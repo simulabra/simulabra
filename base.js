@@ -4,12 +4,20 @@ globalThis.SIMULABRA = {
     },
 };
 
+Object.prototype.simulabra_string = function() {
+    if (typeof this.description === 'function') {
+        return this.description();
+    } else {
+        return '{' + Object.entries(this).map(([k, v]) => k + ' ' + v.simulabra_string()).join(' ') + '}';
+    }
+}
+
 function debug(...args) {
     let __ = globalThis.SIMULABRA;
     if (typeof __.$ === 'function') {
         __.$().debug.log(...args);
     } else {
-        console.log(...args.map(a => a.description ? a.description() : a));
+        console.log(...args.map(a => a.simulabra_string()));
     }
 }
 
@@ -20,7 +28,7 @@ class Frame {
         this._args = args;
     }
     description() {
-        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => a?.description ? ' ' + a.description() : ' ' + a).join('')})`
+        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => ' ' + a.simulabra_string()).join('')})`
     }
 }
 
@@ -408,10 +416,8 @@ function bootstrap() {
         components: [
             $var.new({ name: 'var-ref' }),
             $var.new({ name: 'value' }),
-            function description(d) {
-                // console.log(this.v().name());
-                // console.log(this.var_ref(), JSON.stringify(this.value()));
-                return `${this.var_ref().title()}=${this.value().description()}`;
+            function description() {
+                return `${this.var_ref().title()}=${this.var_ref().debug() ? this.value().simulabra_string() : 'hidden'}`;
             }
         ]
     });
@@ -457,7 +463,7 @@ function bootstrap() {
             $static.new({
                 name: 'format',
                 do: function format(...args) {
-                    return args.map(a => a?.description ? a.description() : typeof a);
+                    return args.map(a => a?.simulabra_string());
                 }
             }),
         ]
@@ -513,21 +519,17 @@ function bootstrap() {
         components: [
             $var.new({ name: 'name' }),
             $var.new({
-                name: 'env',
-                default: () => ({}),
-                debug: false,
-            }),
-            $var.new({
                 name: 'imports',
                 desc: 'the other modules available within this one',
                 default: [],
+                debug: false,
             }),
             $var.new({ name: 'on-load' }),
             function key(name) {
                 return '$' + name.deskewer();
             },
             function repo(className) {
-                return this.env()[this.key(className)] || {};
+                return this[this.key(className)] || {};
             },
             function find(className, name) {
                 // totally dies to recursion!
@@ -557,15 +559,15 @@ function bootstrap() {
                 return '_' + sym.deskewer();
             },
             function def(obj) {
-                this.dlog('def', obj, obj.class());
                 const className = this.key(obj.class().name());
                 const name = this.key(obj.name());
-                const env = this.env();
-                if (!env.hasOwnProperty(className)) {
-                    this.dlog('env init for class', className);
-                    env[className] = {};
+                this.log('def', className, name);
+                if (!this.hasOwnProperty(className)) {
+                    this.log('env init for class', className);
+                    this[className] = {};
                 }
-                env[className][name] = obj;
+                this[className][name] = obj;
+                this.dlog('env val', this[className]);
             },
             function child(moddef) {
                 return $.module.new({
@@ -610,6 +612,7 @@ function bootstrap() {
             function new_module(moddef) {
                 const m = $module.new(moddef);
                 m.load();
+                this.mod(m);
                 return m;
             }
         ]
@@ -623,9 +626,24 @@ function bootstrap() {
     globalThis.SIMULABRA = __;
 
     $.class.new({
+        name: 'deffed',
+        components: [
+            $.after.new({
+                name: 'init',
+                do() {
+                    // this.log('deffin');
+                    // __.mod().log('deffo')
+                    __.mod().def(this);
+                }
+            })
+        ]
+    });
+
+    $.class.new({
         name: 'primitive',
         components: [
             $.class,
+            $.deffed,
             $.var.new({ name: 'components', default: [] }),
             $.var.new({ name: 'js_prototype' }),
             $.var.new({ name: 'methods', default: {} }),
@@ -634,7 +652,6 @@ function bootstrap() {
                 for (let c of this.components()) {
                     c.load(this.js_prototype());
                 }
-                _.def(this);
                 this.dlog('primitive init', this);
             },
             function extend(method) {

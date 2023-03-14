@@ -8,8 +8,9 @@ export default __.new_module({
     $.class.new({
       name: 'case',
       components: [
-        $.after.new({
-          name: 'init',
+        $.deffed,
+        $.method.new({
+          name: 'run',
           do() {
             try {
               this.do().apply(this);
