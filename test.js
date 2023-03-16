@@ -1,9 +1,9 @@
 import bootstrap from './base.js';
 var __ = bootstrap();
-let base_mod = __.mod();
+let base_mod = __._base_mod;
 export default __.new_module({
   name: 'test',
-  imports: [],
+  imports: [base_mod],
   on_load(_, $) {
     $.class.new({
       name: 'case',

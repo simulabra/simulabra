@@ -6,7 +6,9 @@ globalThis.SIMULABRA = {
 
 function simulabra_string(obj) {
     // console.log('simulabra_string', obj?._name)
-    if (Object.getPrototypeOf(obj) === ClassPrototype) {
+    if (obj === undefined || obj === null) {
+        return '' + obj;
+    } else if (Object.getPrototypeOf(obj) === ClassPrototype) {
         return '#proto ' + obj._name || '?';
     } else if (typeof obj.description === 'function') {
         return obj.description();
@@ -40,7 +42,6 @@ class Frame {
         this._args = args;
     }
     description() {
-        // console.log('frame description', this)
         return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => ' ' + simulabra_string(a)).join('')})`
     }
 }
@@ -70,6 +71,9 @@ class FrameStack {
         for (let i = 0; i <= this._frame_idx; i++) {
             debug('stack frame', i, this._frames[i]);
         }
+    }
+    description() {
+        return 'FrameStack';
     }
 }
 
@@ -101,6 +105,7 @@ class MethodImpl {
             } catch (e) {
                 if (!e._logged) {
                     e._logged = true;
+                    console.log(e);
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
                 }
@@ -148,7 +153,6 @@ class BVar {
     load(proto) {
         const key = '_' + this.name();
         const self = this;
-        console.log(self);
         proto._add(self.name(), function (assign) {
             if (assign !== undefined) {
                 // console.log('bvar set', name, key);
@@ -433,7 +437,7 @@ function bootstrap() {
             $var.new({ name: 'var-ref' }),
             $var.new({ name: 'value' }),
             function description() {
-                this.log('description!!', this.var_ref().name(), this.value());
+                // this.log('description!!', this.var_ref().name(), this.value());
                 return `${this.var_ref().title()}=${this.var_ref().debug() ? simulabra_string(this.value()) : 'hidden'}`;
             }
         ]
@@ -501,7 +505,6 @@ function bootstrap() {
 
     const $after = $class.new({
         name: 'after',
-        debug: true,
         components: [
             $var.new({ name: 'name' }),
             $var.new({ name: 'do', debug: false }),
@@ -559,8 +562,8 @@ function bootstrap() {
                             return iv;
                         }
                     }
+                    return null;
                 }
-                throw new Error('fail to find ' + className + '/' + name);
             },
             function proxy(className) {
                 return new Proxy(this, {
@@ -575,9 +578,9 @@ function bootstrap() {
             function def(obj) {
                 const className = this.key(obj.class().name());
                 const name = this.key(obj.name());
-                this.log('def', className, name);
+                // this.log('def', className, name);
                 if (!this.hasOwnProperty(className)) {
-                    this.log('env init for class', className);
+                    this.dlog('env init for class', className);
                     this[className] = {};
                 }
                 this[className][name] = obj;
@@ -590,10 +593,13 @@ function bootstrap() {
                 })
             },
             function load() {
-                const om = __.mod();
-                __.mod(this);
-                this.on_load().apply(this, [this, this.proxy('class')]);
-                __.mod(om);
+                this.dlog('load');
+                if (this.on_load()) {
+                    const om = __.mod();
+                    __.mod(this);
+                    this.on_load().apply(this, [this, this.proxy('class')]);
+                    __.mod(om);
+                }
             },
             function $() {
                 return this.proxy('class');
@@ -628,7 +634,9 @@ function bootstrap() {
                 return this.mod().proxy('class');
             },
             function new_module(moddef) {
-                moddef.imports = [this._base_mod, ...moddef.imports];
+                for (const i of moddef.imports) {
+                    i.load();
+                }
                 const m = $module.new(moddef);
                 m.load();
                 return m;
