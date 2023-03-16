@@ -10,6 +10,7 @@ export default __.new_module({
     $.case.new({
       name: 'quasiquotes',
       do() {
+        return;
         const ex = `
 $(macro quickmeth [name args @forms]
   \`~method(new {

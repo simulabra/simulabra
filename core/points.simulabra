@@ -1,46 +1,65 @@
-$(def ~class(new {
-  name :point
-  desc "2d point"
-  slots {
-    x ~var(new { default 0 })
-    y ~var(new { default 0 })
-    dist ~method(new {
+the following is some sample simulabra code, which is an object-oriented descendant of lisp where the receiver object preceding the s-expression (in the case of macros like `cond` it is a `$`).
+write a simulabra brainfuck interpreter, with lots of comments about what is happening.
+
+```
+; basic syntax
+~class ~point ~hash-trie ; class reference
+34 "hi there" :my-name ; primitives
+%it ; argument/variable reference
+5(sqrt) ; message send
+%p(x 5) ; message send with arg
+~point(new) ; basic constructor
+5(+ 7) ;(12) arithmetic
+4(* 3 | * 2) ;(24) chaining with |
+[1 2 %three 16(sqrt)] ; list
+{ prop-one :value prop-two [1 2] } ; object literal
+~point(new { x 3 y 4 }) ; constructor with props
+.(x 5) ; set this x to 5
+.(x * .(y)) ; multiply this x by this y
+$(let { v %it(pow 2 | - 1) } .(log "remaining" %v))
+
+~class(new { ; call def macro on a new class
+  name :point ; named 'point'
+  desc "2d point" ; describe it
+  components [ ; give it a list of components
+    ~var(new { name :x default 0 }) ; a variable x, default 0
+    ~var(new { name :y default 0 })
+    ~method(new { ; a method
+      name :cartesian-dist ; named 'cartesian-dist'
       desc "cartesian distance to other point"
-      do $(fn [other]
-        ^.(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt)
+      do $(fn [other] ; which is an fn with an argument %other
+        ^.(x | sub %other(x) | pow 2 | add .(y | sub %other(y) | pow 2) | sqrt) ; which returns the result of the message expression
       )
     })
-  }
-}))
+  ]
+})
 
-$(def ~class(new {
+~class(new {
   name :color
-  slots {
-    color ~var(new)
-  }
-}))
+  components [
+    ~var(new { name :r default 0 })
+    ~var(new { name :g default 0 })
+    ~var(new { name :b default 0 })
+    ~method(new {
+      name :hex
+      do $(fn []
+        ^[.(r) .(g) .(b)](map $(do %it(hex-string 2)) | join "")
+      )})
+  ]
+})
 
-$(def ~class(new {
+~class(new {
   name :color-point
   components [~point ~color]
-}))
+})
 
-$(defn test []
-  $(let p ~point(new))
-  $(let q ~color-point(new { color :blue }))
-  %p(x 3)
-  %q(y 4)
-  ~botherer(new | ps "SAYS:" | announce %q(color) %p(dist %q))
-)
-
-
-$(def ~class(new {
-  name :botherer
-  slots {
-    ps ~var(default "~")
-    announce ~method(new {
-      desc "HEAR YE HEAR YE"
-      do $(fn [@args] %args(map $(do ~debug(log .(ps) %it))))
-    })
-  }
-}))
+~case(new {
+  name :basic-point-test
+  do $(fn []
+    $(let p ~point(new))
+    $(let q ~color-point(new { x 3 y 2 r 53 g 124 b 37 }))
+    %q(y 4)
+    .(assert-eq %q(cartesian-dist(%p)))
+  )
+})
+```
