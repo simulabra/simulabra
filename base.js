@@ -4,20 +4,32 @@ globalThis.SIMULABRA = {
     },
 };
 
-Object.prototype.simulabra_string = function() {
-    if (typeof this.description === 'function') {
-        return this.description();
+function simulabra_string(obj) {
+    // console.log('simulabra_string', obj?._name)
+    if (Object.getPrototypeOf(obj) === ClassPrototype) {
+        return '#proto ' + obj._name || '?';
+    } else if (typeof obj.description === 'function') {
+        return obj.description();
+    } else if (typeof obj === 'object') {
+        const ps = [];
+        for (const [k, v] of Object.entries(obj)) {
+            // console.log('ss recur', k)
+            ps.push(`${k}=${simulabra_string(v)}`)
+        }
+        return '{' + ps.join(' ') + '}';
     } else {
-        return '{' + Object.entries(this).map(([k, v]) => k + ' ' + v.simulabra_string()).join(' ') + '}';
+        // console.log('ss was', obj);
+        return obj.toString();
     }
 }
 
+var $$debug_class = null;
 function debug(...args) {
     let __ = globalThis.SIMULABRA;
-    if (typeof __.$ === 'function') {
-        __.$().debug.log(...args);
+    if ($$debug_class) {
+        $$debug_class.log(...args);
     } else {
-        console.log(...args.map(a => a.simulabra_string()));
+        console.log(...args.map(a => simulabra_string(a)));
     }
 }
 
@@ -28,7 +40,8 @@ class Frame {
         this._args = args;
     }
     description() {
-        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => ' ' + a.simulabra_string()).join('')})`
+        // console.log('frame description', this)
+        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => ' ' + simulabra_string(a)).join('')})`
     }
 }
 
@@ -77,7 +90,6 @@ class MethodImpl {
         // console.log('reify', this.name, this.primary)
         proto[this._name.deskewer()] = function (...args) {
             var __ = globalThis.SIMULABRA;
-            // console.trace('call', self._name);
             __._stack.push(new Frame(this, self, args)); // uhh
             try {
                 self._befores.forEach(b => b.apply(this, args));
@@ -88,9 +100,9 @@ class MethodImpl {
                 return res;
             } catch (e) {
                 if (!e._logged) {
+                    e._logged = true;
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
-                    e._logged = true;
                 }
                 throw e;
             }
@@ -122,6 +134,41 @@ class ClassPrototype {
     }
 }
 
+class BVar {
+    constructor({ name, ...desc }) {
+        this._name = name;
+        this._desc = desc;
+    }
+    static new(args) {
+        return new this(args);
+    }
+    name() {
+        return this._name;
+    }
+    load(proto) {
+        const key = '_' + this.name();
+        const self = this;
+        console.log(self);
+        proto._add(self.name(), function (assign) {
+            if (assign !== undefined) {
+                // console.log('bvar set', name, key);
+                this[key] = assign;
+            } else if (this[key] === undefined && self._desc.default !== undefined) {
+                this[key] = typeof self._desc.default === 'function' ? self._desc.default() : self._desc.default;
+            }
+            return this[key];
+        });
+    }
+    class() {
+        return BVar;
+    }
+    debug() {
+        return this._desc.debug || false;
+    }
+    description() {
+        return `{~#bvar ${this.name()}}`
+    }
+}
 
 function bootstrap() {
     var __ = globalThis.SIMULABRA;
@@ -184,39 +231,6 @@ function bootstrap() {
         return this.replace(/-/g, '_');
     };
 
-    function bvar(name, desc = {}) {
-        const key = '_' + name;
-        return {
-            name() {
-                return name;
-            },
-            load(proto) {
-                proto._add(name, function (assign) {
-                    if (assign !== undefined) {
-                        // console.log('bvar set', name, key);
-                        this[key] = assign;
-                    } else if (this[key] === undefined && desc.default !== undefined) {
-                        this[key] = typeof desc.default === 'function' ? desc.default() : desc.default;
-                    }
-                    return this[key];
-                });
-            },
-            class() {
-                return {
-                    name() {
-                        return 'bvar';
-                    },
-                    descended(ancestor) {
-                        return ancestor === $var;
-                    },
-                }
-            },
-            debug() {
-                return desc.debug || false;
-            }
-        }
-    }
-
 
     function parametize(props, obj) {
         for (const [k, v] of Object.entries(props)) {
@@ -264,7 +278,7 @@ function bootstrap() {
             proto._add(this.name(), this);
         },
         classDef.class,
-        bvar('name', { default: '?' }),
+        BVar.new({ name: 'name', default: '?' }),
     ];
 
     // const $base_proto = {};
@@ -314,12 +328,14 @@ function bootstrap() {
             }
             return vars;
         },
-        bvar('name'),
-        bvar('proto'),
-        bvar('components', {
+        BVar.new({ name: 'name' }),
+        BVar.new({ name: 'proto' }),
+        BVar.new({
+            name: 'components',
             default: [],
         }),
-        bvar('debug', {
+        BVar.new({
+            name: 'debug',
             default: false,
         })
     ];
@@ -340,7 +356,7 @@ function bootstrap() {
     var $class = Object.create($class_slots);
     $class._parent = $class;
 
-    $class.name('class');
+    $class._name = 'class';
     $class.proto($class);
 
     const defaultFn = {
@@ -361,12 +377,12 @@ function bootstrap() {
     var $var = $class.new({
         name: 'var',
         components: [
-            bvar('name', {}),
-            bvar('mutable', { default: true }),
-            bvar('debug', { default: true }),
-            bvar('default'),
-            bvar('default-init'),
-            bvar('required', {}),
+            BVar.new({ name: 'name', }),
+            BVar.new({ name: 'mutable', default: true }),
+            BVar.new({ name: 'debug', default: true }),
+            BVar.new({ name: 'default', }),
+            BVar.new({ name: 'default-init', }),
+            BVar.new({ name: 'required', }),
             function defval(ctx) {
                 if (this.default() instanceof Function) {
                     return this.default().apply(ctx);
@@ -417,7 +433,8 @@ function bootstrap() {
             $var.new({ name: 'var-ref' }),
             $var.new({ name: 'value' }),
             function description() {
-                return `${this.var_ref().title()}=${this.var_ref().debug() ? this.value().simulabra_string() : 'hidden'}`;
+                this.log('description!!', this.var_ref().name(), this.value());
+                return `${this.var_ref().title()}=${this.var_ref().debug() ? simulabra_string(this.value()) : 'hidden'}`;
             }
         ]
     });
@@ -463,11 +480,12 @@ function bootstrap() {
             $static.new({
                 name: 'format',
                 do: function format(...args) {
-                    return args.map(a => a?.simulabra_string());
+                    return args.map(a => simulabra_string(a));
                 }
             }),
         ]
     });
+    $$debug_class = $debug;
 
     const $before = $class.new({
         name: 'before',
@@ -508,10 +526,6 @@ function bootstrap() {
             },
         ]
     });
-
-    String.prototype.description = function () {
-        return this;
-    };
 
     const $module = $class.new({
         name: 'module',
@@ -567,7 +581,7 @@ function bootstrap() {
                     this[className] = {};
                 }
                 this[className][name] = obj;
-                this.dlog('env val', this[className]);
+                // this.dlog('env val', this[className]);
             },
             function child(moddef) {
                 return $.module.new({
@@ -576,7 +590,10 @@ function bootstrap() {
                 })
             },
             function load() {
+                const om = __.mod();
+                __.mod(this);
                 this.on_load().apply(this, [this, this.proxy('class')]);
+                __.mod(om);
             },
             function $() {
                 return this.proxy('class');
@@ -605,14 +622,15 @@ function bootstrap() {
             $.var.new({ name: 'mod' }),
             $.var.new({
                 name: 'stack',
+                debug: false,
             }),
             function $() {
                 return this.mod().proxy('class');
             },
             function new_module(moddef) {
+                moddef.imports = [this._base_mod, ...moddef.imports];
                 const m = $module.new(moddef);
                 m.load();
-                this.mod(m);
                 return m;
             }
         ]
@@ -621,6 +639,7 @@ function bootstrap() {
     __ = $.simulabra_global.new({
         stack: new FrameStack(),
         mod: _,
+        base_mod: _,
         bootstrapped: true,
     });
     globalThis.SIMULABRA = __;

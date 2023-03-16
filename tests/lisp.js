@@ -7,6 +7,8 @@ export default __.new_module({
   name: 'test-classes',
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
+    _.log(lisp_mod.$class)
+    _.log(test_mod.$class)
     $.case.new({
       name: 'quasiquotes',
       do() {

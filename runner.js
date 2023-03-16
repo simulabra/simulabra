@@ -4,10 +4,9 @@ import { join } from 'path';
 import bootstrap from './base.js';
 var __ = bootstrap();
 import test_mod from './test.js';
-let base_mod = __.mod();
 export default __.new_module({
   name: 'runner',
-  imports: [base_mod, test_mod],
+  imports: [test_mod],
   on_load(_, $) {
     $.class.new({
       name: 'test-runner',
@@ -22,8 +21,9 @@ export default __.new_module({
               this.log('load ' + filePath);
               const esm = await import('./' + filePath);
               const mod = esm.default;
-              mod.log('case', mod.$case);
-              this.log('cases', mod)
+              for (const test_case of Object.values(mod.$case)) {
+                test_case.log('tested');
+              }
             }
           }
         })

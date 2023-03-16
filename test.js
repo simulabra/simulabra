@@ -3,7 +3,7 @@ var __ = bootstrap();
 let base_mod = __.mod();
 export default __.new_module({
   name: 'test',
-  imports: [base_mod],
+  imports: [],
   on_load(_, $) {
     $.class.new({
       name: 'case',
