@@ -1,0 +1,76 @@
+; sample Simulabra code
+```
+; basic syntax
+~class ~point ~hash-trie ; class reference
+34 "hi there" :my-name ; primitives (:my-name === 'my_name')
+%it ; argument/variable reference
+5.sqrt ; message send
+%p.x(5) ; message send with arg
+~point.new ; basic constructor is `new` message on class
+5.+(7) ;(=12) arithmetic
+4.*(3).*(2) ;(=24) chaining with |
+[] [1 2 %three 16.sqrt] ; list
+{ :prop-one :value :prop-two [1 2] } ; object literal with keys `prop-one` and `prop-two`
+~point.new({ :x 3 :y 4 }) ; constructor with props `x` and `y`
+.x(5) ; set this' x to 5
+.x.*(.y) ; multiply this' x by this' y
+$(let v 4.*(8)) ; lexical binding
+.log("v is" %v) ; 32
+
+~class.new({ ; define a new class
+  :name :point ; name it 'point'
+  :desc "2d point" ; describe it
+  :components [ ; give it a list of components
+    ~var.new({ :name :x :default 0 }) ; a variable x, default 0
+    ~var.new({ :name :y :default 0 })
+    ~method.new({ ; a method
+      :name :cartesian-dist ; named 'cartesian-dist'
+      :desc "cartesian distance to other point"
+      :do $do( ; do macro with one implicit argument %it
+        $(let
+          dx .x.-(%it.x).pow(2)
+          dy .y.-(%it.y).pow(2))
+          ^%dx.+(%dy).sqrt
+      )
+    })
+    ~method.new({ ; a method
+      :name :triangle-perimeter
+      :do $fn([a b] ; fn with two args, %a and %b
+        ^.dist(%a).+(.dist(%b)).+(%a.dist(%b))
+      )
+    })
+  ]
+})
+
+~class.new({
+  :name :color
+  :components [
+    ~var.new({ :name :r :default 0 })
+    ~var.new({ :name :g :default 0 })
+    ~var.new({ :name :b :default 0 })
+    ~method.new({
+      :name :hex
+      :do $do(
+        ^[.r .g .b].map($do(%it.hex-string(2))).join("")
+      )
+    })
+  ]
+})
+
+~class.new({
+  :name :color-point
+  :components [~point ~color]
+})
+
+~case.new({
+  :name :basic-point-test
+  :do $do(
+    $let(p ~point.new)
+    $let(q ~color-point.new({ :x 3 :y 2 :r 53 :g 124 :b 37 }))
+    %q.y(4)
+    .assert-eq(%q.cartesian-dist(%p) 5)
+  )
+})
+```
+
+Write a parser for Simulabra in Javascript.

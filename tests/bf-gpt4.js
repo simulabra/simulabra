@@ -6,7 +6,7 @@ export default __.new_module({
   imports: [test_mod],
   on_load(_, $) {
     $.class.new({
-      name: 'brainfuck_interpreter',
+      name: 'brainfuck-interpreter',
       components: [
         $.var.new({ name: 'code', default: '' }),
         $.var.new({ name: 'input', default: '' }),
@@ -107,6 +107,18 @@ export default __.new_module({
         const bf = $.brainfuck_interpreter.new({ code: ',+.', input: String.fromCharCode(2) });
         bf.execute();
         this.assert_eq(bf.output(), String.fromCharCode(3));
+      }
+    });
+
+    // Test: Hello World!
+    $.case.new({
+      name: 'interpreter-hello-world',
+      do() {
+        const bf = $.brainfuck_interpreter.new({
+          code: '++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.',
+        });
+        bf.execute();
+        this.assert_eq(bf.output(), "Hello World!\n");
       }
     });
   }

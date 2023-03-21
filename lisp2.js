@@ -74,6 +74,20 @@ export default __.new_module({
             return this.pos() >= this.value().length;
           }
         }),
+        $.method.new({
+          name: 'window',
+          do(n = 10) {
+            let start = this.value().slice(Math.max(this.pos() - n, 0), this.pos());
+            let cur = this.peek();
+            let end = this.value().slice(this.pos() + 1, Math.min(this.pos() + n, this.value().length - 1));
+            return `${start} >>>${cur}<<< ${end}`;
+          },
+        }),
+        $.method.new({
+          name: 'line',
+          do() {
+          }
+        })
       ]
     });
 
@@ -161,7 +175,7 @@ export default __.new_module({
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // :
+            reader.expect(':');
             return this.new({ value: reader.symbol().value() });
           }
         }),
@@ -230,30 +244,23 @@ export default __.new_module({
         $.static.new({
           name: 'parse',
           do: function parse(reader, receiver) {
-            reader.next(); // (
-            reader.strip();
-            let message = reader.read();
+            reader.expect('.'); // .
+            let message = reader.symbol();
             let args = $.list.new();
-            while (reader.peek() !== ')') {
-              reader.strip();
-              if (reader.peek() === '|') {
-                receiver = this.new({ receiver, message, args });
-                reader.next();
+            if (reader.peek() === '(') {
+              reader.expect('('); // (
+              while (reader.peek() !== ')') {
                 reader.strip();
-                message = reader.read();
-                args = $.list.new();
-              } else {
                 args.push(reader.read());
+                reader.strip();
               }
-              reader.strip();
+              reader.expect(')');
             }
-            reader.next(); // )
-            return this.new({ receiver, message, args });
+            return this.new({ message, args });
           }
         }),
-        $.var.new({ name: 'receiver' }),
         $.var.new({ name: 'message' }),
-        $.var.new({ name: 'args', default: [] }),
+        $.var.new({ name: 'args' }),
         function vau() {
           return this.receiver().class().name() === 'invoke';
         },
@@ -285,6 +292,31 @@ export default __.new_module({
           }
         }
       ],
+    });
+
+    $.class.new({
+      name: 'call',
+      components: [
+        $.node,
+        $.static.new({
+          name: 'finish-parsing',
+          do(reader, receiver) {
+            let call = this.new({ receiver });
+            while (reader.peek() === '.') {
+              call.add_message($.message.parse(reader));
+            }
+            return call;
+          }
+        }),
+        $.var.new({ name: 'receiver' }),
+        $.var.new({ name: 'messages', default: [] }),
+        $.method.new({
+          name: 'add-message',
+          do(message) {
+            this.messages().push(message);
+          }
+        }),
+      ]
     });
 
     $.class.new({
@@ -463,13 +495,13 @@ export default __.new_module({
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next();
+            reader.expect('$');
             return this.inst();
           }
         }),
         $.static.new({
           name: 'inst',
-          do: function inst(reader) {
+          do: function inst() {
             if (!this._inst) {
               this._inst = this.new();
             }
@@ -731,13 +763,19 @@ export default __.new_module({
       name: 'reader',
       doc: 'read source into forms',
       components: [
-        $.var.new({ name: 'stream' }),
-        $.var.new({ name: 'readtable', default: $.readtable.standard() }),
+        $.var.new({ name: 'stream', debug: false }),
+        $.var.new({ name: 'readtable', default: $.readtable.standard(), debug: false, }),
         function peek() {
           return this.stream().peek();
         },
         function next() {
           return this.stream().next();
+        },
+        function expect(c) {
+          const sc = this.stream().next();
+          if (sc !== c) {
+            throw new Error(`expected ${c} got ${sc}`);
+          }
         },
         function inc(chars) {
           return chars.includes(this.peek());
@@ -755,7 +793,7 @@ export default __.new_module({
           return this.test(/[0-9]/);
         },
         function delimiter() {
-          return this.inc('(){}[]');
+          return this.inc('(){}[].');
         },
         function term() {
           return this.delimiter() || this.whitespace();
@@ -787,9 +825,9 @@ export default __.new_module({
           }
           if (this.readtable().has_char(c)) {
             let res = this.readtable().get(c).parse(this);
-            console.log(c);
-            if (this.peek() === '(') {
-              return $.message.parse(this, res);
+            this.log(c, this.peek());
+            if (this.peek() === '.') {
+              return $.call.finish_parsing(this, res);
             } else {
               return res;
             }
@@ -814,25 +852,38 @@ export default __.new_module({
         },
         function program() {
           const ps = [];
-          while (!this.stream().ended()) {
-            const p = this.read();
-            if (p) {
-              ps.push(p);
+          try {
+            while (!this.stream().ended()) {
+              const p = this.read();
+              if (p) {
+                ps.push(p);
+              } else {
+                this.log('read returned nothing?');
+              }
             }
+            return $.program.new({ forms: ps });
+          } catch (e) {
+            this.log(ps);
+            this.log(this.stream().window());
+            throw e;
           }
-          return $.program.new({ forms: ps });
         }
       ],
     });
 
     $.class.new({
       name: 'source-module',
-      debug: true,
       components: [
         $.module,
         $.var.new({
           name: 'source',
           debug: false,
+        }),
+        $.static.new({
+          name: 'run',
+          do(name, source) {
+            this.new({ name, source }).load();
+          }
         }),
         $.method.new({
           name: 'load',

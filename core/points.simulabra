@@ -1,5 +1,5 @@
 the following is some sample simulabra code, which is an object-oriented descendant of lisp where the receiver object preceding the s-expression (in the case of macros like `cond` it is a `$`).
-write a simulabra brainfuck interpreter, with lots of comments about what is happening.
+Write a todo list application, with lots of comments about what is happening.
 
 ```
 ; basic syntax
@@ -8,18 +8,18 @@ write a simulabra brainfuck interpreter, with lots of comments about what is hap
 %it ; argument/variable reference
 5(sqrt) ; message send
 %p(x 5) ; message send with arg
-~point(new) ; basic constructor
-5(+ 7) ;(12) arithmetic
-4(* 3 | * 2) ;(24) chaining with |
+~point(new) ; basic constructor is `new` message on class
+5(+ 7) ;(=12) arithmetic
+4(* 3 | * 2) ;(=24) chaining with |
 [1 2 %three 16(sqrt)] ; list
-{ prop-one :value prop-two [1 2] } ; object literal
-~point(new { x 3 y 4 }) ; constructor with props
-.(x 5) ; set this x to 5
-.(x * .(y)) ; multiply this x by this y
-$(let { v %it(pow 2 | - 1) } .(log "remaining" %v))
+{ prop-one :value prop-two [1 2] } ; object literal with keys `prop-one` and `prop-two`
+~point(new { x 3 y 4 }) ; constructor with props `x` and `y`
+.(x 5) ; set this' x to 5
+.(x | * .(y)) ; multiply this' x by this' y
+$(let { v %it(pow 2 | - 1) } .(log "remaining" %v)) ; binding let as a macro with `$` receiver
 
-~class(new { ; call def macro on a new class
-  name :point ; named 'point'
+~class(new { ; define a new class
+  name :point ; name it 'point'
   desc "2d point" ; describe it
   components [ ; give it a list of components
     ~var(new { name :x default 0 }) ; a variable x, default 0

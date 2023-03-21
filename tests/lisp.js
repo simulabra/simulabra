@@ -8,7 +8,31 @@ export default __.new_module({
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
     $.case.new({
-      name: 'quasiquotes',
+      name: 'lisp-basic',
+      do() {
+        const counter_mod = $.source_module.run(
+          'basic',
+          `
+~class.new({
+  :name :counter
+  :components [
+    ~var.new({ :name :count :default 0 })
+    ~method.new({
+      :name :inc
+      :do $(do .count(.count.+(1)))
+    })
+  ]
+})
+`
+        );
+        const c = counter_mod.$().counter.new();
+        c.inc();
+        c.inc();
+        this.assert_eq(c.count(), 2);
+      }
+    })
+    $.case.new({
+      name: 'lisp-quasiquotes',
       do() {
         return;
         const ex = `
@@ -47,17 +71,7 @@ $(macro quickmeth [name args @forms]
 ~debug(log ~point(new {x 3 y 4} | dist ~point(new)))
 
 `;
-
-        try {
-          $.source_module.new({
-            name: 'test',
-            source: ex,
-          }).load();
-        } catch (e) {
-          console.error(e);
-          process.exit(1);
-        }
-
+        $.source_module.run('quasiquote', ex);
       }
     })
   },

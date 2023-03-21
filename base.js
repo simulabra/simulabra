@@ -105,7 +105,6 @@ class MethodImpl {
             } catch (e) {
                 if (!e._logged) {
                     e._logged = true;
-                    console.log(e);
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
                 }
@@ -464,7 +463,9 @@ function bootstrap() {
         components: [
             $var.new({ name: 'do' }),
             function load(proto) {
-                proto._parent[this.name().deskewer()] = this.do();
+                const impl = new MethodImpl(this.name());
+                impl._primary = this.do();
+                impl.reify(proto._parent);
             }
         ]
     })
