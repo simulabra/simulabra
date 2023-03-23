@@ -1,6 +1,7 @@
-; sample Simulabra code
 ```
-; basic syntax
+; sample Simulabra code
+
+; basic syntax (; is comment)
 ~class ~point ~hash-trie ; class reference
 34 "hi there" :my-name ; primitives (:my-name === 'my_name')
 %it ; argument/variable reference
@@ -16,6 +17,15 @@
 .x.*(.y) ; multiply this' x by this' y
 $(let v 4.*(8)) ; lexical binding
 .log("v is" %v) ; 32
+$if(.x.<(10) .x(.x.+(1)))
+$fn(^%it.x) ; it => it.x
+$fn([x y]
+  $let{ ; let
+    :dx .x.-(%x).pow(2) ; dx = (this.x - x).pow(2)
+    :dy .y.-(%y).pow(2)
+  }
+  ^%dx.+(%dy).sqrt ; return (dx + dy).sqrt();
+)
 
 ~class.new({ ; define a new class
   :name :point ; name it 'point'
@@ -26,11 +36,12 @@ $(let v 4.*(8)) ; lexical binding
     ~method.new({ ; a method
       :name :cartesian-dist ; named 'cartesian-dist'
       :desc "cartesian distance to other point"
-      :do $do( ; do macro with one implicit argument %it
-        $(let
-          dx .x.-(%it.x).pow(2)
-          dy .y.-(%it.y).pow(2))
-          ^%dx.+(%dy).sqrt
+      :do $fn( ; fn macro with implicit argument %it
+        $let{
+          :dx .x.-(%it.x).pow(2) ; dx = (this.x - it.x).pow(2)
+          :dy .y.-(%it.y).pow(2))
+        }
+        ^%dx.+(%dy).sqrt
       )
     })
     ~method.new({ ; a method
@@ -50,8 +61,8 @@ $(let v 4.*(8)) ; lexical binding
     ~var.new({ :name :b :default 0 })
     ~method.new({
       :name :hex
-      :do $do(
-        ^[.r .g .b].map($do(%it.hex-string(2))).join("")
+      :do $fn(
+        ^[.r .g .b].map($fn(%it.hex-string(2))).join("")
       )
     })
   ]
@@ -64,13 +75,15 @@ $(let v 4.*(8)) ; lexical binding
 
 ~case.new({
   :name :basic-point-test
-  :do $do(
-    $let(p ~point.new)
-    $let(q ~color-point.new({ :x 3 :y 2 :r 53 :g 124 :b 37 }))
+  :do $fn(
+    $let{
+      :p ~point.new
+      :q ~color-point.new({ :x 3 :y 2 :r 53 :g 124 :b 37 })
+    }
     %q.y(4)
     .assert-eq(%q.cartesian-dist(%p) 5)
   )
 })
 ```
 
-Write a parser for Simulabra in Javascript.
+Write a basic Game of Life in Simulabra, assuming canvas libraries are available.

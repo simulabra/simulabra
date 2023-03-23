@@ -105,6 +105,7 @@ class MethodImpl {
             } catch (e) {
                 if (!e._logged) {
                     e._logged = true;
+                    console.error(e);
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
                 }
@@ -261,7 +262,9 @@ function bootstrap() {
     const $base_components = [
         function init() {},
         function description() {
-            return `{${this.class().description()}${this.vars().map(vs => ' ' + vs.description()).join('')}}`;
+            console.log(this.class());
+            this.log(this.class());
+            return `{${this.class().description()}${this.vars().map(vs => ' ' + vs?.description()).join('')}}`;
         },
         function vars() {
             return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
@@ -547,6 +550,7 @@ function bootstrap() {
                 return '$' + name.deskewer();
             },
             function repo(className) {
+                this.log('repo', className);
                 return this[this.key(className)] || {};
             },
             function find(className, name) {
@@ -788,7 +792,7 @@ function bootstrap() {
                 },
             }),
             function description() {
-                return `[${$.debug.format(...this).join(' ')}]`;
+                return `[${this.map(it => it.description()).join(' ')}]`;
             },
         ]
     });

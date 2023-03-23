@@ -19,7 +19,7 @@ export default __.new_module({
     ~var.new({ :name :count :default 0 })
     ~method.new({
       :name :inc
-      :do $(do .count(.count.+(1)))
+      :do &/.count(/.count.+(1))
     })
   ]
 })
@@ -38,8 +38,8 @@ export default __.new_module({
         const ex = `
 $(macro quickmeth [name args @forms]
   \`~method(new {
-      name ,%name
-      do $(lambda ,%args ,%forms)
+      :name ,%name
+      :do $(fn ,%args ,%forms)
     })
 )
 
@@ -47,28 +47,28 @@ $(macro quickmeth [name args @forms]
   name :point
   components [
     ~var(new {
-      name :x
-      type !number
-      default 0
+      :name :x
+      :type !number
+      :default 0
     })
     ~var(new {
-      name :y
-      type !number
-      default 0
+      :name :y
+      :type !number
+      :default 0
     })
     ~method(new {
-      name :dist
-      args [!self]
-      ret !number
-      do $(do ^.(x)(sub %it(x))(pow 2 | add .(y | sub %it(y) | pow 2) | sqrt))
+      :name :dist
+      :args [!self]
+      :ret !number
+      :do &^.x.-(%it.x).pow(2).+(y.-(%it.y).pow(2)).sqrt
     })
     $(quickmeth translate [other]
-      .(x .(x | add %other(x)))
-      .(y .(y | add %other(y)))
+      .x(.x.add(%other.x))
+      .y(.y.add(%other.y))
     )
   ]
 })
-~debug(log ~point(new {x 3 y 4} | dist ~point(new)))
+~debug.log(~point.new({x 3 y 4}).dist(~point.new))
 
 `;
         $.source_module.run('quasiquote', ex);

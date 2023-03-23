@@ -75,19 +75,22 @@ export default __.new_module({
           }
         }),
         $.method.new({
-          name: 'window',
-          do(n = 10) {
-            let start = this.value().slice(Math.max(this.pos() - n, 0), this.pos());
-            let cur = this.peek();
-            let end = this.value().slice(this.pos() + 1, Math.min(this.pos() + n, this.value().length - 1));
-            return `${start} >>>${cur}<<< ${end}`;
-          },
-        }),
-        $.method.new({
-          name: 'line',
-          do() {
+          name: 'line-info',
+          do: function () {
+            let line = 1;
+            let lineStart = 0;
+            for (let i = 0; i < this.pos(); i++) {
+              if (this.value()[i] === '\n') {
+                line++;
+                lineStart = i + 1;
+              }
+            }
+            const lineContent = this.value().substring(lineStart, this.value().indexOf('\n', lineStart));
+            const currentChar = this.value()[this.pos()];
+            const lineWithBracket = lineContent.slice(0, this.pos() - lineStart) + ' >>>' + currentChar + '<<< ' + lineContent.slice(this.pos() - lineStart + 1);
+            return `[line ${line}] ${lineWithBracket.trim()}`;
           }
-        })
+        }),
       ]
     });
 
@@ -100,7 +103,7 @@ export default __.new_module({
             return this.new({
               table: {
                 ':': $.symbol,
-                '.': $.this,
+                '/': $.this,
                 '[': $.list,
                 '{': $.map,
                 '\'': $.quote,
@@ -110,6 +113,7 @@ export default __.new_module({
                 '%': $.argref,
                 '~': $.classref,
                 '!': $.typeref,
+                '&': $.do,
                 '^': $.return,
                 '@': $.restarg,
               },
@@ -389,6 +393,7 @@ export default __.new_module({
     $.class.new({
       name: 'map',
       components: [
+        $.node,
         $.var.new({ name: 'properties' }),
         $.static.new({
           name: 'parse',
@@ -492,11 +497,20 @@ export default __.new_module({
       name: 'invoke',
       components: [
         $.node,
+        $.var.new({ name: 'macro' }),
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
             reader.expect('$');
-            return this.inst();
+            let macro_message = $.message.parse(reader);
+            return this.new({
+              message: macro_message,
+            })
+            let call = this.new({ receiver });
+            while (reader.peek() === '.') {
+              call.add_message($.message.parse(reader));
+            }
+            return call;
           }
         }),
         $.static.new({
@@ -689,6 +703,7 @@ export default __.new_module({
         },
         function estree() {
           return b.program(this.forms().map(f => {
+            this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
@@ -716,6 +731,21 @@ export default __.new_module({
         },
       ],
     });
+
+    $.class.new({
+      name: 'do',
+      components: [
+        $.node,
+        $.var.new({ name: 'value' }),
+        $.static.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('&');
+            return this.new({ value: reader.read() });
+          }
+        }),
+      ]
+    })
 
     $.class.new({
       name: 'return',
@@ -863,8 +893,7 @@ export default __.new_module({
             }
             return $.program.new({ forms: ps });
           } catch (e) {
-            this.log(ps);
-            this.log(this.stream().window());
+            this.log('reading program failed at', this.stream().line_info());
             throw e;
           }
         }
