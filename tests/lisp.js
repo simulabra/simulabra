@@ -19,7 +19,7 @@ export default __.new_module({
     ~var.new({ :name :count :default 0 })
     ~method.new({
       :name :inc
-      :do $fn(.count(.count.+(1)))
+      :do $.fn(.count(.count.+(1)))
     })
   ]
 })
@@ -39,7 +39,7 @@ export default __.new_module({
 $(macro quickmeth [name args @forms]
   \`~method(new {
       :name ,%name
-      :do $fn(,%args ,%forms)
+      :do $.fn(,%args ,%forms)
     })
 )
 
@@ -60,7 +60,7 @@ $(macro quickmeth [name args @forms]
       :name :dist
       :args [!self]
       :ret !number
-      :do $fn(^.x.-(%it.x).pow(2).+(y.-(%it.y).pow(2)).sqrt)
+      :do $.fn(^.x.-(%it.x).pow(2).+(y.-(%it.y).pow(2)).sqrt)
     })
     $(quickmeth translate [other]
       .x(.x.add(%other.x))

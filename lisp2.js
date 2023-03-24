@@ -109,6 +109,7 @@ export default __.new_module({
                 '\'': $.quote,
                 '`': $.quasiquote,
                 ',': $.unquote,
+                '.': $.message,
                 '$': $.invoke,
                 '%': $.argref,
                 '~': $.classref,
@@ -224,13 +225,7 @@ export default __.new_module({
     $.class.new({
       name: 'this',
       components: [
-        $.static.new({
-          name: 'parse',
-          do: function parse(reader) {
-            reader.next();
-            return this.new();
-          }
-        }),
+        $.node,
         function print() {
           return '.';
         },
@@ -248,6 +243,9 @@ export default __.new_module({
         $.static.new({
           name: 'parse',
           do: function parse(reader, receiver) {
+            if (!receiver) {
+              receiver = $.this.new();
+            }
             reader.expect('.'); // .
             let message = reader.symbol();
             let args = $.list.new();
@@ -260,7 +258,7 @@ export default __.new_module({
               }
               reader.expect(')');
             }
-            return this.new({ message, args });
+            return $.call.new({ receiver, message: this.new({ message, args }) });
           }
         }),
         $.var.new({ name: 'message' }),
@@ -502,11 +500,7 @@ export default __.new_module({
           name: 'parse',
           do: function parse(reader) {
             reader.expect('$');
-            let macro_message = $.message.parse(reader);
-            return this.new({
-              message: macro_message,
-            })
-            let call = this.new({ receiver });
+            let call = $.call.new({ receiver: this.inst() });
             while (reader.peek() === '.') {
               call.add_message($.message.parse(reader));
             }
@@ -857,7 +851,7 @@ export default __.new_module({
             let res = this.readtable().get(c).parse(this);
             this.log(c, this.peek());
             if (this.peek() === '.') {
-              return $.call.finish_parsing(this, res);
+              return $.message.parse(this, res);
             } else {
               return res;
             }

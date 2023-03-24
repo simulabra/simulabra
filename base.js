@@ -28,8 +28,8 @@ function simulabra_string(obj) {
 var $$debug_class = null;
 function debug(...args) {
     let __ = globalThis.SIMULABRA;
-    if ($$debug_class) {
-        $$debug_class.log(...args);
+    if (__.$$debug_class) {
+        __.$$debug_class.log(...args);
     } else {
         console.log(...args.map(a => simulabra_string(a)));
     }
@@ -262,6 +262,7 @@ function bootstrap() {
     const $base_components = [
         function init() {},
         function description() {
+            console.log('base desc', this._class._name)
             this.log(this.class());
             return `{${this.class().description()}${this.vars().map(vs => ' ' + vs?.description()).join('')}}`;
         },
@@ -655,6 +656,7 @@ function bootstrap() {
         bootstrapped: true,
     });
     globalThis.SIMULABRA = __;
+    __.$$debug_class = $debug;
 
     $.class.new({
         name: 'deffed',
