@@ -106,6 +106,7 @@ class MethodImpl {
                 if (!e._logged) {
                     e._logged = true;
                     console.error(e);
+                    process.exit(1);
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
                 }
@@ -227,8 +228,8 @@ function bootstrap() {
     Number.prototype.description = function () {
         return this.toString();
     };
-    Array.prototype.description = function () {
-        return `[${this.map(e => e.description()).join(' ')}]`;
+    Array.prototype.description = function (seen = {}) {
+        return `[${this.map(e => e.description(seen)).join(' ')}]`;
     }
 
     String.prototype.deskewer = function () {
@@ -261,10 +262,14 @@ function bootstrap() {
 
     const $base_components = [
         function init() {},
-        function description() {
-            console.log('base desc', this._class._name)
-            this.log(this.class());
-            return `{${this.class().description()}${this.vars().map(vs => ' ' + vs?.description()).join('')}}`;
+        function description(seen = {}) {
+            if (seen[this]) {
+                return '*circ*';
+            } else {
+                seen[this] = true;
+            }
+            this.log('base desc', this._class._name)
+            return `{${this.class().description(seen)}${this.vars().map(vs => ' ' + vs?.description(seen)).join('')}}`;
         },
         function vars() {
             return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
@@ -550,7 +555,7 @@ function bootstrap() {
                 return '$' + name.deskewer();
             },
             function repo(className) {
-                this.log('repo', className);
+                this.dlog('repo', className);
                 return this[this.key(className)] || {};
             },
             function find(className, name) {
@@ -792,8 +797,8 @@ function bootstrap() {
                     return _.proxy('primitive').array_primitive;
                 },
             }),
-            function description() {
-                return `[${this.map(it => it.description()).join(' ')}]`;
+            function description(seen = {}) {
+                return `[${this.map(it => it.description(seen)).join(' ')}]`;
             },
         ]
     });

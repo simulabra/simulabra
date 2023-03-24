@@ -10,6 +10,7 @@ export default __.new_module({
     $.case.new({
       name: 'lisp-basic',
       do() {
+        this.log($.this.new())
         const counter_mod = $.source_module.run(
           'basic',
           `

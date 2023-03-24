@@ -242,10 +242,7 @@ export default __.new_module({
         $.node,
         $.static.new({
           name: 'parse',
-          do: function parse(reader, receiver) {
-            if (!receiver) {
-              receiver = $.this.new();
-            }
+          do: function parse(reader) {
             reader.expect('.'); // .
             let message = reader.symbol();
             let args = $.list.new();
@@ -258,14 +255,11 @@ export default __.new_module({
               }
               reader.expect(')');
             }
-            return $.call.new({ receiver, message: this.new({ message, args }) });
+            return this.new({ message, args });
           }
         }),
         $.var.new({ name: 'message' }),
         $.var.new({ name: 'args' }),
-        function vau() {
-          return this.receiver().class().name() === 'invoke';
-        },
         function print() {
           return `(${this.receiver().print()} ${this.message().print()} ${this.args().map(c => c.print()).join(' ')})`;
         },
@@ -273,6 +267,7 @@ export default __.new_module({
           return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
         },
         function expand() {
+          return this;
           this.log('expand invoke', this.receiver().class().name());
           if (this.vau()) {
             // find macro

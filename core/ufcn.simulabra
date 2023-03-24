@@ -42,7 +42,7 @@ $.do(^.out.*(#dumb-factor))
     })
     ~method.new({ ; a method
       :name :triangle-perimeter
-      :do $.fn([a b] ; fn with two args, %a and %b
+      :do $.fn([a b] ; fn with 2 args, %a and %b
         ^.dist(%a).+(.dist(%b)).+(%a.dist(%b))
       )
     })
@@ -82,4 +82,4 @@ $.do(^.out.*(#dumb-factor))
 })
 ```
 
-Write a todo list application in Simulabra.
+Write a wrapper for the OpenAI API in Simulabra.
