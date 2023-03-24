@@ -262,7 +262,6 @@ function bootstrap() {
     const $base_components = [
         function init() {},
         function description() {
-            console.log(this.class());
             this.log(this.class());
             return `{${this.class().description()}${this.vars().map(vs => ' ' + vs?.description()).join('')}}`;
         },

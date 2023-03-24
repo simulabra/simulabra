@@ -1,31 +1,27 @@
 ```
-; sample Simulabra code
-
-; basic syntax (; is comment)
+; Simulabra basic syntax (; is comment)
 ~class ~point ~hash-trie ; class reference
-34 "hi there" :my-name ; primitives (:my-name === 'my_name')
+34 "hi there" :my-name ; primitives (:my-name is symbol form of 'my_name')
 %it ; argument/variable reference
 5.sqrt ; message send
 %p.x(5) ; message send with arg
 ~point.new ; basic constructor is `new` message on class
-5.+(7) ;(=12) arithmetic
-4.*(3).*(2) ;(=24) chaining with |
-[] [1 2 %three 16.sqrt] ; list
-{ :prop-one :value :prop-two [1 2] } ; object literal with keys `prop-one` and `prop-two`
-~point.new({ :x 3 :y 4 }) ; constructor with props `x` and `y`
-.x(5) ; set this' x to 5
-.x.*(.y) ; multiply this' x by this' y
-$(let v 4.*(8)) ; lexical binding
+5.+(7) ; 5 + 7
+4.*(3).*(2) ; (4 * 3) * 2
+[] [1 2 %three 16.sqrt] ; [] [1, 2, three, 16.sqrt()]
+{ :prop-one :value :prop-two [1 2] } ; { prop_one: 'value', prop_two: [1, 2] }
+~point.new({ :x 3 :y 4 }) ; $class.point.new({ x: 3, y: 4 })
+.x(5) ; this.x(5)
+.x.*(.y) ; this.x * this.y
+$.let{ :v 4.*(8) } ; let v = 4 * 8
 .log("v is" %v) ; 32
-$if(.x.<(10) .x(.x.+(1)))
-$fn(^%it.x) ; it => it.x
-$fn([x y]
-  $let{ ; let
-    :dx .x.-(%x).pow(2) ; dx = (this.x - x).pow(2)
-    :dy .y.-(%y).pow(2)
-  }
-  ^%dx.+(%dy).sqrt ; return (dx + dy).sqrt();
-)
+$.if(.x.<(10) .x(.x.+(1)) .x(.x./(2))) ; thix.x < 10 ? this.x(this.x + 1) : this.x(this.x / 2)
+$.fn(^%it.x) ; it => { return it.x }
+~const.new({
+  :name :dumb-factor
+  :value 10
+})
+$.do(^.out.*(#dumb-factor))
 
 ~class.new({ ; define a new class
   :name :point ; name it 'point'
@@ -36,17 +32,17 @@ $fn([x y]
     ~method.new({ ; a method
       :name :cartesian-dist ; named 'cartesian-dist'
       :desc "cartesian distance to other point"
-      :do $fn( ; fn macro with implicit argument %it
-        $let{
+      :do $.fn( ; fn macro with implicit argument %it
+        $.let{
           :dx .x.-(%it.x).pow(2) ; dx = (this.x - it.x).pow(2)
           :dy .y.-(%it.y).pow(2))
         }
-        ^%dx.+(%dy).sqrt
+        ^%dx.+(%dy).sqrt ; return (dx + dy).sqrt()
       )
     })
     ~method.new({ ; a method
       :name :triangle-perimeter
-      :do $fn([a b] ; fn with two args, %a and %b
+      :do $.fn([a b] ; fn with two args, %a and %b
         ^.dist(%a).+(.dist(%b)).+(%a.dist(%b))
       )
     })
@@ -61,8 +57,8 @@ $fn([x y]
     ~var.new({ :name :b :default 0 })
     ~method.new({
       :name :hex
-      :do $fn(
-        ^[.r .g .b].map($fn(%it.hex-string(2))).join("")
+      :do $.fn(
+        ^[.r .g .b].map($.fn(%it.hex-string(2))).join("")
       )
     })
   ]
@@ -75,8 +71,8 @@ $fn([x y]
 
 ~case.new({
   :name :basic-point-test
-  :do $fn(
-    $let{
+  :do $.fn(
+    $.let{
       :p ~point.new
       :q ~color-point.new({ :x 3 :y 2 :r 53 :g 124 :b 37 })
     }
@@ -86,4 +82,4 @@ $fn([x y]
 })
 ```
 
-Write a basic Game of Life in Simulabra, assuming canvas libraries are available.
+Write a todo list application in Simulabra.
