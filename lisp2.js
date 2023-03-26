@@ -243,51 +243,31 @@ export default __.new_module({
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.expect('.'); // .
-            let message = reader.symbol();
-            let args = $.list.new();
-            if (reader.peek() === '(') {
-              reader.expect('('); // (
-              while (reader.peek() !== ')') {
-                reader.strip();
-                args.push(reader.read());
-                reader.strip();
-              }
-              reader.expect(')');
-            }
-            return this.new({ message, args });
+            reader.expect('.');
+            let selector = reader.symbol();
+            let args = reader.read();
+            // let args = $.list.new();
+            // if (reader.peek() === '(') {
+            //   reader.expect('('); // (
+            //   while (reader.peek() !== ')') {
+            //     reader.strip();
+            //     args.push(reader.read());
+            //     reader.strip();
+            //   }
+            //   reader.expect(')');
+            // }
+            return this.new({ selector, args });
           }
         }),
-        $.var.new({ name: 'message' }),
+        $.var.new({ name: 'selector' }),
         $.var.new({ name: 'args' }),
         function print() {
-          return `(${this.receiver().print()} ${this.message().print()} ${this.args().map(c => c.print()).join(' ')})`;
+          this.log('print')
+          return `.${this.selector().print()}${this.args().print()}`;
         },
-        function estree() {
-          return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
-        },
-        function expand() {
-          return this;
-          this.log('expand invoke', this.receiver().class().name());
-          if (this.vau()) {
-            // find macro
-            const m = _.find('macro', this.message().value());
-            this.log('invoke', this.message().value(), m);
-            // apply macro
-            let v = m.expand(...this.args());
-            if (v == undefined) {
-              throw new Error(`macro expansion failed for ${m.description()} in ${this.description()}`);
-            }
-            return v;
-          } else {
-            this.receiver().log('receiver');
-            return $.message.new({
-              receiver: this.receiver().expand(),
-              message: this.message(),
-              args: this.args().map(a => a.expand()),
-            });
-          }
-        }
+        // function estree() {
+        //   return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
+        // },
       ],
     });
 
@@ -307,6 +287,9 @@ export default __.new_module({
         }),
         $.var.new({ name: 'receiver' }),
         $.var.new({ name: 'messages', default: [] }),
+        function print() {
+          return `${this.receiver().print()}${this.messages().map(m => m.print()).join('')}`;
+        },
         $.method.new({
           name: 'add-message',
           do(message) {
@@ -323,7 +306,8 @@ export default __.new_module({
         $.var.new({ name: 'key' }),
         $.var.new({ name: 'value' }),
         function print() {
-          return `${this.name().print()} ${this.value().print()}`;
+          this.log(this.value());
+          return `${this.key().print()} ${this.value().print()}`;
         },
         function estree() {
           return b.property('init', this.key().estree(), this.value().estree());
@@ -406,7 +390,7 @@ export default __.new_module({
           }
         }),
         function print() {
-          return `{${this.properties().map(prop => prop.print()).join(' ')}}`;
+          return `{ ${this.properties().map(prop => prop.print()).join(' ')} }`;
         },
         function estree() {
           return b.objectExpression(this.properties().map(p => p.estree()))
@@ -692,7 +676,6 @@ export default __.new_module({
         },
         function estree() {
           return b.program(this.forms().map(f => {
-            this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
@@ -784,6 +767,14 @@ export default __.new_module({
       components: [
         $.var.new({ name: 'stream', debug: false }),
         $.var.new({ name: 'readtable', default: $.readtable.standard(), debug: false, }),
+        $.static.new({
+          name: 'from-source',
+          do(source) {
+            return this.new({
+              stream: $.stream.new({ value: source }),
+            });
+          }
+        }),
         function peek() {
           return this.stream().peek();
         },
@@ -844,9 +835,9 @@ export default __.new_module({
           }
           if (this.readtable().has_char(c)) {
             let res = this.readtable().get(c).parse(this);
-            this.log(c, this.peek());
+            // this.log(c, this.peek());
             if (this.peek() === '.') {
-              return $.message.parse(this, res);
+              return $.call.finish_parsing(this, res);
             } else {
               return res;
             }
@@ -906,9 +897,9 @@ export default __.new_module({
         $.method.new({
           name: 'load',
           do() {
-            const program = $.reader.new({ stream: $.stream.new({ value: this.source() }) }).program();
+            const program = $.reader.from_source(this.source()).program();
+            this.log(program.print());
             const code = prettyPrint(program.expand().estree()).code;
-            console.log(code);
             this.log('code', code, typeof code);
             const head = `
 var __ = globalThis.SIMULABRA;

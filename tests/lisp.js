@@ -8,7 +8,16 @@ export default __.new_module({
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
     $.case.new({
-      name: 'lisp-basic',
+      name: 'lisp-basic-parse',
+      do() {
+        const source = '~point.new{ :x 3 :y 4 }';
+        const reader = $.reader.from_source(source);
+        let f = reader.read();
+        this.assert_eq(source, f.print());
+      }
+    })
+    $.case.new({
+      name: 'lisp-basic-run',
       do() {
         this.log($.this.new())
         const counter_mod = $.source_module.run(
@@ -17,11 +26,11 @@ export default __.new_module({
 ~class.new({
   :name :counter
   :components [
-    ~var.new({ :name :count :default 0 })
-    ~method.new({
+    ~var.new{ :name :count :default 0 }
+    ~method.new{
       :name :inc
       :do $.fn(.count(.count.+(1)))
-    })
+    }
   ]
 })
 `

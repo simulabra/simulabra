@@ -106,7 +106,6 @@ class MethodImpl {
                 if (!e._logged) {
                     e._logged = true;
                     console.error(e);
-                    process.exit(1);
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
                 }
@@ -196,9 +195,6 @@ function bootstrap() {
     Object.prototype.contains = function (i) {
         return i in this;
     }
-    Object.prototype.print = function () {
-        return this.toString();
-    }
     // Object.prototype.estree = function() {
     //     return {
     //         type: 'Literal',
@@ -268,7 +264,7 @@ function bootstrap() {
             } else {
                 seen[this] = true;
             }
-            this.log('base desc', this._class._name)
+            // this.log('base desc', this._class._name)
             return `{${this.class().description(seen)}${this.vars().map(vs => ' ' + vs?.description(seen)).join('')}}`;
         },
         function vars() {
@@ -755,6 +751,9 @@ function bootstrap() {
             },
             function square() {
                 return this ** 2;
+            },
+            function print() {
+                return this.toString();
             },
             $method.new({
                 name: 'class',
