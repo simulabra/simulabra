@@ -244,18 +244,8 @@ export default __.new_module({
           name: 'parse',
           do: function parse(reader) {
             reader.expect('.');
-            let selector = reader.symbol();
-            let args = reader.read();
-            // let args = $.list.new();
-            // if (reader.peek() === '(') {
-            //   reader.expect('('); // (
-            //   while (reader.peek() !== ')') {
-            //     reader.strip();
-            //     args.push(reader.read());
-            //     reader.strip();
-            //   }
-            //   reader.expect(')');
-            // }
+            const selector = reader.symbol();
+            const args = reader.read();
             return this.new({ selector, args });
           }
         }),
@@ -321,7 +311,6 @@ export default __.new_module({
 
     $.class.new({
       name: 'list',
-      debug: true,
       components: [
         $.var.new({ name: 'items', default: [] }),
         $.static.new({
@@ -479,11 +468,7 @@ export default __.new_module({
           name: 'parse',
           do: function parse(reader) {
             reader.expect('$');
-            let call = $.call.new({ receiver: this.inst() });
-            while (reader.peek() === '.') {
-              call.add_message($.message.parse(reader));
-            }
-            return call;
+            return this.new();
           }
         }),
         $.static.new({
@@ -834,7 +819,8 @@ export default __.new_module({
             return;
           }
           if (this.readtable().has_char(c)) {
-            let res = this.readtable().get(c).parse(this);
+            const res = this.readtable().get(c).parse(this);
+            this.log('from readtable', res);
             // this.log(c, this.peek());
             if (this.peek() === '.') {
               return $.call.finish_parsing(this, res);

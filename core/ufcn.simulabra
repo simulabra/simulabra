@@ -1,5 +1,5 @@
 ```
-; Simulabra basic syntax (; is comment)
+; Simulabra basic syntax (; is comment with JS equivalent)
 ~class ~point ~hash-trie ; class reference
 34 "hi there" :my-name ; primitives (:my-name is symbol form of 'my_name')
 %it ; argument/variable reference

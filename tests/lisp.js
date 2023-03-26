@@ -23,7 +23,7 @@ export default __.new_module({
         const counter_mod = $.source_module.run(
           'basic',
           `
-~class.new({
+~class.new{
   :name :counter
   :components [
     ~var.new{ :name :count :default 0 }
@@ -32,7 +32,7 @@ export default __.new_module({
       :do $.fn(.count(.count.+(1)))
     }
   ]
-})
+}
 `
         );
         const c = counter_mod.$().counter.new();
