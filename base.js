@@ -265,13 +265,13 @@ function bootstrap() {
                 seen[this] = true;
             }
             // this.log('base desc', this._class._name)
-            return `{${this.class().description(seen)}${this.vars().map(vs => ' ' + vs?.description(seen)).join('')}}`;
+            return `${this.class().description(seen)}.new{${this.vars().map(vs => ' ' + vs?.description(seen)).join('') }}`;
         },
         function vars() {
             return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
         },
         function title() {
-            return this.class().description() + '/' + this.name();
+            return `${this.class().description()}:${this.name()}`;
         },
         function log(...args) {
             $debug.log(this.title(), ...args);

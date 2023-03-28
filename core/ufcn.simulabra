@@ -8,78 +8,83 @@
 ~point.new ; basic constructor is `new` message on class
 5.+(7) ; 5 + 7
 4.*(3).*(2) ; (4 * 3) * 2
-[] [1 2 %three 16.sqrt] ; [] [1, 2, three, 16.sqrt()]
-{ :prop-one :value :prop-two [1 2] } ; { prop_one: 'value', prop_two: [1, 2] }
-~point.new({ :x 3 :y 4 }) ; $class.point.new({ x: 3, y: 4 })
+() (1 2 %three 16.sqrt) ; [] [1, 2, three, 16.sqrt()]
+{ :prop-one :value :prop-two (1 2) } ; { prop_one: 'value', prop_two: [1, 2] }
+~point.new{ :x 3 :y 4 } ; new point{ x: 3, y: 4 }
 .x(5) ; this.x(5)
 .x.*(.y) ; this.x * this.y
-$.let{ :v 4.*(8) } ; let v = 4 * 8
+$let{ :v 4.*(8) } ; let v = 4 * 8
 .log("v is" %v) ; 32
-$.if(.x.<(10) .x(.x.+(1)) .x(.x./(2))) ; thix.x < 10 ? this.x(this.x + 1) : this.x(this.x / 2)
-$.fn(^%it.x) ; it => { return it.x }
-~const.new({
+$if(.x.<(10) ; thix.x < 10 ?
+  .x(.x.+(1)) ; this.x(this.x + 1) :
+  .x(.x./(2))) ; this.x(this.x / 2)
+[^%it.x] ; it => { return it.x }
+~const.new{
   :name :dumb-factor
   :value 10
-})
-$.do(^.out.*(#dumb-factor))
+}
+[(%x %y) ^%x.+(%y).*(#dumb-factor)] ; (x, y) => { return (x + y) * DUMB_FACTOR; }
 
-~class.new({ ; define a new class
+~macro.new{
+  :name dist1
+  :do [^`.,%it.-(%it.,%it).pow(2)]
+}
+
+~class.new{ ; define a new class
   :name :point ; name it 'point'
   :desc "2d point" ; describe it
-  :components [ ; give it a list of components
-    ~var.new({ :name :x :default 0 }) ; a variable x, default 0
-    ~var.new({ :name :y :default 0 })
-    ~method.new({ ; a method
+  :components ( ; give it a list of components
+    ~var.new{ :name :x :default 0 } ; a variable x, default 0
+    ~var.new{ :name :y :default 0 }
+    ~method.new{ ; a method
       :name :cartesian-dist ; named 'cartesian-dist'
       :desc "cartesian distance to other point"
-      :do $.fn( ; fn macro with implicit argument %it
-        $.let{
-          :dx .x.-(%it.x).pow(2) ; dx = (this.x - it.x).pow(2)
-          :dy .y.-(%it.y).pow(2))
+      :do [ ; it => {
+        $let{
+          %dx $dist1(x)
+          %dy $dist1(y)
         }
         ^%dx.+(%dy).sqrt ; return (dx + dy).sqrt()
-      )
-    })
-    ~method.new({ ; a method
+      ]
+    }
+    ~method.new{ ; a method
       :name :triangle-perimeter
-      :do $.fn([a b] ; fn with 2 args, %a and %b
+      :do [(%a %b) ; fn with 2 args, %a and %b
         ^.dist(%a).+(.dist(%b)).+(%a.dist(%b))
-      )
-    })
+      ]
+    }
   ]
-})
+}
 
-~class.new({
+~class.new{
   :name :color
-  :components [
-    ~var.new({ :name :r :default 0 })
-    ~var.new({ :name :g :default 0 })
-    ~var.new({ :name :b :default 0 })
-    ~method.new({
+  :components (
+    ~var.new{ :name :r :default 0 }
+    ~var.new{ :name :g :default 0 }
+    ~var.new{ :name :b :default 0 }
+    ~method.new{
       :name :hex
-      :do $.fn(
-        ^[.r .g .b].map($.fn(%it.hex-string(2))).join("")
-      )
-    })
-  ]
-})
+      :do [^(.r .g .b).map([%it.hex-string(2)]).join("")]
+    }
+  )
+}
 
-~class.new({
+~class.new{
   :name :color-point
-  :components [~point ~color]
-})
+  :components (~point ~color)
+}
 
-~case.new({
+~case.new{
   :name :basic-point-test
-  :do $.fn(
+  :do [
     $.let{
-      :p ~point.new
-      :q ~color-point.new({ :x 3 :y 2 :r 53 :g 124 :b 37 })
+      %p ~point.new
+      %q ~color-point.new{ :x 3 :y 2 :r 53 :g 124 :b 37 }
     }
     %q.y(4)
     .assert-eq(%q.cartesian-dist(%p) 5)
-  )
-})
+  ]
+}
 ```
 
-Write a wrapper for the OpenAI API in Simulabra.
+Write an a-star path finding implementation in Simulabra.
