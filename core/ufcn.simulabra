@@ -10,81 +10,82 @@
 4.*(3).*(2) ; (4 * 3) * 2
 () (1 2 %three 16.sqrt) ; [] [1, 2, three, 16.sqrt()]
 { :prop-one :value :prop-two (1 2) } ; { prop_one: 'value', prop_two: [1, 2] }
-~point.new{ :x 3 :y 4 } ; new point{ x: 3, y: 4 }
+~point.new({ :x 3 :y 4 }) ; new point{ x: 3, y: 4 }
 .x(5) ; this.x(5)
 .x.*(.y) ; this.x * this.y
-$let{ :v 4.*(8) } ; let v = 4 * 8
-.log("v is" %v) ; 32
+$let(%v 4.*(8)) ; let v = 4 * 8
+.log("v is" %v) ; this.log("v is", v)
 $if(.x.<(10) ; thix.x < 10 ?
   .x(.x.+(1)) ; this.x(this.x + 1) :
   .x(.x./(2))) ; this.x(this.x / 2)
 [^%it.x] ; it => { return it.x }
-~const.new{
+~const.new({
   :name :dumb-factor
   :value 10
-}
+})
 [(%x %y) ^%x.+(%y).*(#dumb-factor)] ; (x, y) => { return (x + y) * DUMB_FACTOR; }
+1.range(5).map([^%it.*(2)]).reduce([(%prev %cur) %prev.+(%cur)] 0) ; 30
 
-~macro.new{
+~macro.new({
   :name dist1
   :do [^`.,%it.-(%it.,%it).pow(2)]
-}
+})
 
-~class.new{ ; define a new class
+~class.new({ ; define a new class
   :name :point ; name it 'point'
   :desc "2d point" ; describe it
   :components ( ; give it a list of components
-    ~var.new{ :name :x :default 0 } ; a variable x, default 0
-    ~var.new{ :name :y :default 0 }
-    ~method.new{ ; a method
+    ~var.new({ :name :x :default 0 }) ; a variable x, default 0
+    ~var.new({ :name :y :default 0 })
+    ~method.new({ ; a method
       :name :cartesian-dist ; named 'cartesian-dist'
       :desc "cartesian distance to other point"
       :do [ ; it => {
-        $let{
-          %dx $dist1(x)
-          %dy $dist1(y)
-        }
+        $let({ ; let
+          %dx $dist1(:x) ; dx = (this.x - it.x).pow(2)
+          %dy $dist1(:y)
+        })
         ^%dx.+(%dy).sqrt ; return (dx + dy).sqrt()
       ]
-    }
-    ~method.new{ ; a method
+    })
+    ~method.new({ ; a method
       :name :triangle-perimeter
       :do [(%a %b) ; fn with 2 args, %a and %b
         ^.dist(%a).+(.dist(%b)).+(%a.dist(%b))
       ]
-    }
+    })
   ]
-}
+})
 
-~class.new{
+~class.new({
   :name :color
   :components (
-    ~var.new{ :name :r :default 0 }
-    ~var.new{ :name :g :default 0 }
-    ~var.new{ :name :b :default 0 }
-    ~method.new{
+    ~var.new({ :name :r :default 0 })
+    ~var.new({ :name :g :default 0 })
+    ~var.new({ :name :b :default 0 })
+    ~method.new({
       :name :hex
       :do [^(.r .g .b).map([%it.hex-string(2)]).join("")]
-    }
+    })
   )
-}
+})
 
-~class.new{
+~class.new({
   :name :color-point
   :components (~point ~color)
-}
+})
 
-~case.new{
+~case.new({
   :name :basic-point-test
   :do [
-    $.let{
+    $let({
       %p ~point.new
-      %q ~color-point.new{ :x 3 :y 2 :r 53 :g 124 :b 37 }
-    }
+      %q ~color-point.new({ :x 3 :y 2 :r 53 :g 124 :b 37 })
+    })
     %q.y(4)
     .assert-eq(%q.cartesian-dist(%p) 5)
   ]
-}
+})
 ```
 
-Write an a-star path finding implementation in Simulabra.
+Write a flappy bird clone in Simulabra.

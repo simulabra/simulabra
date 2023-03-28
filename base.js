@@ -25,7 +25,6 @@ function simulabra_string(obj) {
     }
 }
 
-var $$debug_class = null;
 function debug(...args) {
     let __ = globalThis.SIMULABRA;
     if (__.$$debug_class) {
@@ -42,7 +41,7 @@ class Frame {
         this._args = args;
     }
     description() {
-        return `${this._receiver.title()}(${this._method_impl._name}${this._args.map(a => ' ' + simulabra_string(a)).join('')})`
+        return `${this._receiver.title()}.${this._method_impl._name}(${this._args.map(a => simulabra_string(a)).join(' ')})`
     }
 }
 
@@ -105,7 +104,6 @@ class MethodImpl {
             } catch (e) {
                 if (!e._logged) {
                     e._logged = true;
-                    console.error(e);
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
                 }
@@ -494,7 +492,6 @@ function bootstrap() {
             }),
         ]
     });
-    $$debug_class = $debug;
 
     const $before = $class.new({
         name: 'before',

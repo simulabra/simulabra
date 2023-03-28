@@ -104,8 +104,9 @@ export default __.new_module({
               table: {
                 ':': $.symbol,
                 '/': $.this,
-                '[': $.list,
+                '(': $.list,
                 '{': $.map,
+                '[': $.lambda,
                 '\'': $.quote,
                 '`': $.quasiquote,
                 ',': $.unquote,
@@ -168,7 +169,8 @@ export default __.new_module({
         },
         function quasiexpand() {
           return $.quote.new({ value: this });
-        }
+        },
+
       ]
     })
 
@@ -193,7 +195,7 @@ export default __.new_module({
         function estree() {
           return b.stringLiteral(this.value());
         },
-        function description() {
+        function print() {
           return ':' + this.value();
         },
       ],
@@ -296,7 +298,7 @@ export default __.new_module({
         $.var.new({ name: 'key' }),
         $.var.new({ name: 'value' }),
         function print() {
-          this.log(this.value());
+          this.log(this.value().print());
           return `${this.key().print()} ${this.value().print()}`;
         },
         function estree() {
@@ -316,14 +318,14 @@ export default __.new_module({
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // [
+            reader.expect('(');
             const items = [];
-            while (reader.peek() !== ']') {
+            while (reader.peek() !== ')') {
               reader.strip();
               items.push(reader.read());
               reader.strip();
             }
-            reader.next(); // ]
+            reader.expect(')');
             return this.new({ items });
           },
         }),
@@ -354,6 +356,40 @@ export default __.new_module({
           return this;
         }
       ]
+    });
+
+    $.class.new({
+      name: 'lambda',
+      debug: true,
+      components: [
+        $.var.new({ name: 'args' }),
+        $.var.new({ name: 'body' }),
+        $.static.new({
+          name: 'parse',
+          do(reader) {
+            reader.expect('[');
+            reader.strip();
+            const args = reader.peek() === '(' ? $.list.parse(reader) : $.list.new({
+              items: [$.argref.new({  })]
+            })
+            const body = [];
+            while (reader.peek() !== ']') {
+              reader.strip();
+              body.push(reader.read());
+              reader.strip();
+            }
+            reader.expect(']');
+            return this.new({ args, body });
+          }
+        }),
+        function print() {
+          return `[${this.args}]`
+        },
+        function estree() {
+          this.log('estree');
+          return b.functionExpression(null, this.args().items().map(a => b.identifier('_' + a)), this.body().estree());
+        }
+      ],
     });
 
     $.class.new({
@@ -580,19 +616,6 @@ export default __.new_module({
             __._mod.def(this);
           }
         })
-      ],
-    });
-
-    $.class.new({
-      name: 'lambda',
-      debug: true,
-      components: [
-        $.var.new({ name: 'args' }),
-        $.var.new({ name: 'body' }),
-        function estree() {
-          this.log('estree');
-          return b.functionExpression(null, this.args().items().map(a => b.identifier('_' + a)), this.body().estree());
-        }
       ],
     });
 
