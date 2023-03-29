@@ -10,7 +10,7 @@ export default __.new_module({
     $.case.new({
       name: 'lisp-basic-parse',
       do() {
-        const source = '~point.new{ :x 3 :y 4 }';
+        const source = '~point.new({ :x 3 :y 4 })';
         const reader = $.reader.from_source(source);
         let f = reader.read();
         this.assert_eq(source, f.print());
@@ -23,16 +23,16 @@ export default __.new_module({
         const counter_mod = $.source_module.run(
           'basic',
           `
-~class.new{
+~class.new({
   :name :counter
   :components [
-    ~var.new{ :name :count :default 0 }
-    ~method.new{
+    ~var.new({ :name :count :default 0 })
+    ~method.new({
       :name :inc
       :do [.count(.count.+(1))]
-    }
+    })
   ]
-}
+})
 `
         );
         const c = counter_mod.$().counter.new();

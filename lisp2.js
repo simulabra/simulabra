@@ -244,52 +244,58 @@ export default __.new_module({
         $.node,
         $.static.new({
           name: 'parse',
-          do: function parse(reader) {
+          do: function parse(reader, receiver = null) {
+            if (!receiver) {
+              receiver = $.this.new();
+            }
             reader.expect('.');
             const selector = reader.symbol();
-            const args = reader.read();
-            return this.new({ selector, args });
-          }
-        }),
-        $.var.new({ name: 'selector' }),
-        $.var.new({ name: 'args' }),
-        function print() {
-          this.log('print')
-          return `.${this.selector().print()}${this.args().print()}`;
-        },
-        // function estree() {
-        //   return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
-        // },
-      ],
-    });
-
-    $.class.new({
-      name: 'call',
-      components: [
-        $.node,
-        $.static.new({
-          name: 'finish-parsing',
-          do(reader, receiver) {
-            let call = this.new({ receiver });
-            while (reader.peek() === '.') {
-              call.add_message($.message.parse(reader));
+            let args;
+            if (reader.peek() === '(') {
+              args = $.list.parse(reader);
             }
-            return call;
+            return this.new({ receiver, selector, args });
           }
         }),
         $.var.new({ name: 'receiver' }),
-        $.var.new({ name: 'messages', default: [] }),
+        $.var.new({ name: 'selector' }),
+        $.var.new({ name: 'args' }),
         function print() {
-          return `${this.receiver().print()}${this.messages().map(m => m.print()).join('')}`;
+          return `${this.receiver().print()}.${this.selector().print()}${this.args()?.print()}`;
         },
-        $.method.new({
-          name: 'add-message',
-          do(message) {
-            this.messages().push(message);
-          }
-        }),
-      ]
+      ],
     });
+
+    // $.class.new({
+    //   name: 'call',
+    //   components: [
+    //     $.node,
+    //     $.static.new({
+    //       name: 'finish-parsing',
+    //       do(reader, receiver) {
+    //         let call = this.new({ receiver });
+    //         while (reader.peek() === '.') {
+    //           call.add_message($.message.parse(reader));
+    //         }
+    //         return call;
+    //       }
+    //     }),
+    //     $.var.new({ name: 'receiver' }),
+    //     $.var.new({ name: 'messages', default: [] }),
+    //     function print() {
+    //       return `${this.receiver().print()}${this.messages().map(m => m.print()).join('')}`;
+    //     },
+    //     $.method.new({
+    //       name: 'add-message',
+    //       do(message) {
+    //         this.messages().push(message);
+    //       }
+    //     }),
+    //     function estree() {
+    //       return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
+    //     },
+    //   ]
+    // });
 
     $.class.new({
       name: 'property',
@@ -330,7 +336,7 @@ export default __.new_module({
           },
         }),
         function print() {
-          return `[${this.items().map(it => it.print()).join(' ')}]`;
+          return `(${this.items().map(it => it.print()).join(' ')})`;
         },
         function estree() {
           // $.debug.log(this, this.items());
@@ -536,8 +542,8 @@ export default __.new_module({
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // %
-            return this.new({ symbol: reader.read() })
+            reader.expect(this.char()); // %
+            return this.new({ symbol: reader.symbol() })
           }
         }),
         function print() {
@@ -553,6 +559,12 @@ export default __.new_module({
       name: 'argref',
       components: [
         $.ref_reader_macro,
+        $.static.new({
+          name: 'char',
+          do() {
+            return '%';
+          }
+        }),
         function char() {
           return '%';
         },
@@ -566,6 +578,12 @@ export default __.new_module({
       name: 'classref',
       components: [
         $.ref_reader_macro,
+        $.static.new({
+          name: 'char',
+          do() {
+            return '~';
+          }
+        }),
         function char() {
           return '~';
         },
@@ -684,6 +702,7 @@ export default __.new_module({
         },
         function estree() {
           return b.program(this.forms().map(f => {
+            this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
@@ -846,7 +865,7 @@ export default __.new_module({
             this.log('from readtable', res);
             // this.log(c, this.peek());
             if (this.peek() === '.') {
-              return $.call.finish_parsing(this, res);
+              return $.message.parse(this, res);
             } else {
               return res;
             }

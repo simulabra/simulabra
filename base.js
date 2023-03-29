@@ -803,6 +803,9 @@ function bootstrap() {
         name: 'function-primitive',
         js_prototype: Function.prototype,
         components: [
+            function description(seen = {}) {
+                return `<function-primitive ${this.name}>`;
+            },
             // $method.new({
             //     name: 'class',
             //     do() {
