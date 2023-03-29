@@ -183,7 +183,7 @@ export default __.new_module({
           name: 'parse',
           do: function parse(reader) {
             reader.expect(':');
-            return this.new({ value: reader.symbol().value() });
+            return this.new({ value: reader.identifier() });
           }
         }),
         $.static.new({
@@ -249,10 +249,12 @@ export default __.new_module({
               receiver = $.this.new();
             }
             reader.expect('.');
-            const selector = reader.symbol();
+            const selector = reader.identifier();
             let args;
             if (reader.peek() === '(') {
               args = $.list.parse(reader);
+            } else {
+              args = $.list.new();
             }
             return this.new({ receiver, selector, args });
           }
@@ -262,6 +264,9 @@ export default __.new_module({
         $.var.new({ name: 'args' }),
         function print() {
           return `${this.receiver().print()}.${this.selector().print()}${this.args()?.print()}`;
+        },
+        function estree() {
+          return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), this.args().items().map(a => a.estree()));
         },
       ],
     });
@@ -304,7 +309,6 @@ export default __.new_module({
         $.var.new({ name: 'key' }),
         $.var.new({ name: 'value' }),
         function print() {
-          this.log(this.value().print());
           return `${this.key().print()} ${this.value().print()}`;
         },
         function estree() {
@@ -378,14 +382,14 @@ export default __.new_module({
             const args = reader.peek() === '(' ? $.list.parse(reader) : $.list.new({
               items: [$.argref.new({  })]
             })
-            const body = [];
+            const forms = [];
             while (reader.peek() !== ']') {
               reader.strip();
-              body.push(reader.read());
+              forms.push(reader.read());
               reader.strip();
             }
             reader.expect(']');
-            return this.new({ args, body });
+            return this.new({ args, body: $.body.new({ forms }) });
           }
         }),
         function print() {
@@ -410,7 +414,7 @@ export default __.new_module({
             const properties = [];
             while (reader.peek() !== '}') {
               reader.strip();
-              const key = reader.symbol();
+              const key = $.symbol.parse(reader);
               reader.strip();
               const value = reader.read();
               properties.push($.property.new({ key, value }))
@@ -525,29 +529,54 @@ export default __.new_module({
         function print() {
           return '$';
         },
-        function estree() {
-          return b.identifier('$$');
-        },
-        function expand() {
-
-        }
       ],
+    });
+
+    $.class.new({
+      name: 'number-literal',
+      components: [
+        $.node,
+        $.var.new({ name: 'value' }),
+        $.static.new({
+          name: 'parse',
+          do: function parse(reader) {
+            let n = '';
+            if (reader.peek() === '-') {
+              n += '-';
+              reader.next();
+            }
+            while (reader.digit() || reader.peek() === '.') {
+              n += reader.next();
+            }
+            const num = new Number(n);
+            return this.new({
+              value: num
+            });
+          }
+        }),
+        function print() {
+          return this.value().toString();
+        },
+        function estree() {
+          return b.literal(this.value());
+        }
+      ]
     });
 
     $.class.new({
       name: 'ref-reader-macro',
       components: [
         $.node,
-        $.var.new({ name: 'symbol' }),
+        $.var.new({ name: 'identifier' }),
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
             reader.expect(this.char()); // %
-            return this.new({ symbol: reader.symbol() })
+            return this.new({ identifier: reader.identifier() })
           }
         }),
         function print() {
-          return `${this.char()}${this.symbol().print()}`;
+          return `${this.char()}${this.identifier().print()}`;
         },
         function expand() {
           return this;
@@ -569,7 +598,7 @@ export default __.new_module({
           return '%';
         },
         function estree() {
-          return b.identifier(`_${this.symbol().value()}`);
+          return b.identifier(`_${this.identifier().value()}`);
         },
       ],
     });
@@ -588,7 +617,7 @@ export default __.new_module({
           return '~';
         },
         function estree() {
-          return b.memberExpression(b.identifier('$'), this.symbol().estree());
+          return b.memberExpression(b.identifier('$'), this.identifier().estree());
         },
       ],
     });
@@ -667,7 +696,7 @@ export default __.new_module({
       components: [
         $.var.new({ name: 'forms' }),
         function estree() {
-          this.log('vars', this.vars());
+          // this.log('vars', this.vars());
           return b.blockStatement(this.forms().map(f => {
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
@@ -714,20 +743,6 @@ export default __.new_module({
         function expand() {
           return $.program.new({ forms: this.forms().map(f => f.expand()) });
         }
-      ],
-    });
-
-    $.class.new({
-      name: 'identifier',
-      components: [
-        $.node,
-        $.var.new({ name: 'value' }),
-        function print() {
-          return this.value();
-        },
-        function estree() {
-          return b.identifier(this.value());
-        },
       ],
     });
 
@@ -835,19 +850,12 @@ export default __.new_module({
         function term() {
           return this.delimiter() || this.whitespace();
         },
-        function number() {
-          let n = '';
-          while (this.digit() || this.peek() === '.') {
-            n += this.next();
-          }
-          return new Number(n);
-        },
-        function symbol() {
+        function identifier() {
           let s = '';
           while (!this.term()) {
             s += this.next();
           }
-          return $.identifier.new({ value: s });
+          return s;
         },
         function strip() {
           while (this.whitespace()) {
@@ -872,16 +880,8 @@ export default __.new_module({
           } else {
             this.dlog('not in readtable:', c);
           }
-          if (c === '-') {
-            this.next();
-            if (this.digit()) {
-              return -this.number();
-            } else {
-              return $.symbol.of('-');
-            }
-          }
-          if (this.digit()) {
-            return this.number();
+          if (this.digit() || c === '-') {
+            return $.number_literal.parse(this);
           }
           if (this.alpha()) {
             return this.symbol();
