@@ -282,6 +282,9 @@ function bootstrap() {
         function load(proto) {
             proto._add(this.name(), this);
         },
+        function isa(cls) {
+            return this.class().descended(cls);
+        },
         classDef.class,
         BVar.new({ name: 'name', default: '?' }),
     ];

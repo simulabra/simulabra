@@ -1,9 +1,10 @@
 import bootstrap from './base.js';
 var __ = bootstrap();
+import lisp_mod from './lisp2.js';
 let base_mod = __._base_mod;
 export default __.new_module({
   name: 'test',
-  imports: [base_mod],
+  imports: [base_mod, lisp_mod],
   on_load(_, $) {
     $.class.new({
       name: 'case',
@@ -32,5 +33,18 @@ export default __.new_module({
         })
       ]
     });
+
+    $.class.new({
+      name: 'test-module',
+      components: [
+        $.source_module,
+        $.method.new({
+          name: 'run-tests',
+          do: function run_tests() {
+
+          }
+        })
+      ]
+    })
   },
 });

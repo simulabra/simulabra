@@ -20,8 +20,7 @@ export default __.new_module({
     $.case.new({
       name: 'lisp-basic-run',
       do() {
-        this.log($.this.new())
-        const counter_mod = $.source_module.run(
+        const counter_mod = $.test_module.run(
           'basic',
           `
 ~class.new({
@@ -34,12 +33,16 @@ export default __.new_module({
     })
   )
 })
+
+$.test(:test-counter [
+  $.let(%c ~counter.new)
+  %c.inc
+  %c.inc
+  .assert-eq(%c.count 2)
+])
 `
         );
-        const c = counter_mod.$().counter.new();
-        c.inc();
-        c.inc();
-        this.assert_eq(c.count(), 2);
+        counter_mod.run_tests();
       }
     })
     $.case.new({

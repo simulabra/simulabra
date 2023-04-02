@@ -165,6 +165,7 @@ export default __.new_module({
           return this.class().new(newmap);
         },
         function expand() {
+          this.log('expand');
           return this;
         },
         function quasiexpand() {
@@ -269,9 +270,17 @@ export default __.new_module({
           if (this.selector() === '+') {
             return b.binaryExpression('+', this.receiver().estree(), this.args().items()[0].estree());
           } else {
+            this.log(this.receiver());
             return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), this.args().items().map(a => a.estree()));
           }
         },
+        function expand() {
+          if (this.receiver().isa($.invoke)) {
+
+          } else {
+            return;
+          }
+        }
       ],
     });
 
@@ -475,21 +484,11 @@ export default __.new_module({
       name: 'invoke',
       components: [
         $.node,
-        $.var.new({ name: 'macro' }),
         $.static.new({
           name: 'parse',
           do: function parse(reader) {
             reader.expect('$');
             return this.new();
-          }
-        }),
-        $.static.new({
-          name: 'inst',
-          do: function inst() {
-            if (!this._inst) {
-              this._inst = this.new();
-            }
-            return this._inst;
           }
         }),
         function print() {
@@ -876,12 +875,59 @@ export default __.new_module({
     });
 
     $.class.new({
+      name: 'module-cache',
+      components: [
+        $.module,
+        $.var.new({
+          name: 'cache',
+          default: () => new Map(),
+        }),
+        $.method.new({
+          name: 'run',
+          async: true,
+          async do(code) {
+            // Check if the code is already in the cache
+            if (this.cache().has(code)) {
+              return this.cache().get(code);
+            }
+
+            // Create a new context to run the code in a separate environment
+            const context = vm.createContext({
+              __dirname: path.dirname(process.argv[1]),
+              require,
+            });
+
+            // Create a new script to run the code
+            const script = new vm.Script(code, {
+              filename: 'dynamic-module.js',
+              importModuleDynamically: async (specifier) => {
+                return import(specifier);
+              },
+            });
+
+            // Run the script in the new context
+            const result = await script.runInNewContext(context);
+
+            // Cache the result
+            this.cache().set(code, result);
+
+            // Return the result
+            return result;
+          },
+        }),
+      ],
+    });
+
+    $.class.new({
       name: 'source-module',
       components: [
         $.module,
         $.var.new({
           name: 'source',
           debug: false,
+        }),
+        $.var.new({
+          name: 'module',
         }),
         $.static.new({
           name: 'run',
@@ -891,21 +937,11 @@ export default __.new_module({
         }),
         $.method.new({
           name: 'load',
-          do() {
+          async: true,
+          async do() {
             const program = $.reader.from_source(this.source()).program();
-            this.log(program.print());
             const code = prettyPrint(program.expand().estree()).code;
-            this.log('code', code, typeof code);
-            const head = `
-var __ = globalThis.SIMULABRA;
-const _ = __.mod().find('class', 'module').new({
-  name: '${this.name()}',
-  imports: [__.mod()],
-});
-__.mod(_);
-var $ = _.proxy('class');
-`;
-            const other = `
+            const prelude = `
 import bootstrap from '../base.js';
 var __ = bootstrap();
 import test_mod from '../test.js';
@@ -916,7 +952,9 @@ export default __.new_module({
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
 `; // file cache + dynamic imports?
-            eval(head + code);
+            const mod = await this.module_cache().run(prelude + code);
+            this.module(mod);
+            return mod;
           }
         })
       ]
