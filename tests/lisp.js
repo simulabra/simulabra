@@ -1,8 +1,9 @@
 import bootstrap from '../base.js';
-var __ = bootstrap();
+const __ = bootstrap();
 import test_mod from '../test.js';
 import lisp_mod from '../lisp2.js';
-let base_mod = __.mod();
+const base_mod = __.mod();
+
 export default __.new_module({
   name: 'test-classes',
   imports: [base_mod, test_mod, lisp_mod],
@@ -25,13 +26,13 @@ export default __.new_module({
           `
 ~class.new({
   :name :counter
-  :components [
+  :components (
     ~var.new({ :name :count :default 0 })
     ~method.new({
       :name :inc
       :do [.count(.count.+(1))]
     })
-  ]
+  )
 })
 `
         );

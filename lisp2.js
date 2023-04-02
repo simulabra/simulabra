@@ -263,44 +263,17 @@ export default __.new_module({
         $.var.new({ name: 'selector' }),
         $.var.new({ name: 'args' }),
         function print() {
-          return `${this.receiver().print()}.${this.selector().print()}${this.args()?.print()}`;
+          return `${this.receiver().print()}.${this.selector()}${this.args()?.print()}`;
         },
         function estree() {
-          return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), this.args().items().map(a => a.estree()));
+          if (this.selector() === '+') {
+            return b.binaryExpression('+', this.receiver().estree(), this.args().items()[0].estree());
+          } else {
+            return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), this.args().items().map(a => a.estree()));
+          }
         },
       ],
     });
-
-    // $.class.new({
-    //   name: 'call',
-    //   components: [
-    //     $.node,
-    //     $.static.new({
-    //       name: 'finish-parsing',
-    //       do(reader, receiver) {
-    //         let call = this.new({ receiver });
-    //         while (reader.peek() === '.') {
-    //           call.add_message($.message.parse(reader));
-    //         }
-    //         return call;
-    //       }
-    //     }),
-    //     $.var.new({ name: 'receiver' }),
-    //     $.var.new({ name: 'messages', default: [] }),
-    //     function print() {
-    //       return `${this.receiver().print()}${this.messages().map(m => m.print()).join('')}`;
-    //     },
-    //     $.method.new({
-    //       name: 'add-message',
-    //       do(message) {
-    //         this.messages().push(message);
-    //       }
-    //     }),
-    //     function estree() {
-    //       return b.callExpression(b.memberExpression(this.receiver().estree(), this.message().estree()), this.args().map(a => a.estree()));
-    //     },
-    //   ]
-    // });
 
     $.class.new({
       name: 'property',
@@ -345,15 +318,8 @@ export default __.new_module({
         function estree() {
           // $.debug.log(this, this.items());
           // console.log('oh')
-          // this.log(this.items());
-          return b.arrayExpression(this.items().map((it, idx) => {
-            try {
-              it.estree()
-            } catch (e) {
-              // $.debug.log(this.items(), it, idx);
-              throw e;
-            }
-          }));
+          this.log(this.items());
+          return b.arrayExpression(this.items().map(it => it.estree()));
         },
         function expand() {
           return this.class().new({ items: this.items().map(it => it.expand()) });
@@ -380,8 +346,8 @@ export default __.new_module({
             reader.expect('[');
             reader.strip();
             const args = reader.peek() === '(' ? $.list.parse(reader) : $.list.new({
-              items: [$.argref.new({  })]
-            })
+              items: [$.argref.new({ identifier: 'it' })]
+            });
             const forms = [];
             while (reader.peek() !== ']') {
               reader.strip();
@@ -397,7 +363,7 @@ export default __.new_module({
         },
         function estree() {
           this.log('estree');
-          return b.functionExpression(null, this.args().items().map(a => b.identifier('_' + a)), this.body().estree());
+          return b.functionExpression(null, this.args().items().map(a => a.estree()), this.body().estree());
         }
       ],
     });
@@ -576,7 +542,7 @@ export default __.new_module({
           }
         }),
         function print() {
-          return `${this.char()}${this.identifier().print()}`;
+          return `${this.char()}${this.identifier()}`;
         },
         function expand() {
           return this;
@@ -598,7 +564,8 @@ export default __.new_module({
           return '%';
         },
         function estree() {
-          return b.identifier(`_${this.identifier().value()}`);
+          this.log('argref estree', this.identifier());
+          return b.identifier(`_${this.identifier()}`);
         },
       ],
     });
@@ -617,7 +584,7 @@ export default __.new_module({
           return '~';
         },
         function estree() {
-          return b.memberExpression(b.identifier('$'), this.identifier().estree());
+          return b.memberExpression(b.identifier('$'), b.identifier(this.identifier()));
         },
       ],
     });
@@ -731,7 +698,7 @@ export default __.new_module({
         },
         function estree() {
           return b.program(this.forms().map(f => {
-            this.log(f);
+            // this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
@@ -870,7 +837,7 @@ export default __.new_module({
           }
           if (this.readtable().has_char(c)) {
             const res = this.readtable().get(c).parse(this);
-            this.log('from readtable', res);
+            // this.log('from readtable', res);
             // this.log(c, this.peek());
             if (this.peek() === '.') {
               return $.message.parse(this, res);
@@ -937,7 +904,18 @@ const _ = __.mod().find('class', 'module').new({
 });
 __.mod(_);
 var $ = _.proxy('class');
-`
+`;
+            const other = `
+import bootstrap from '../base.js';
+var __ = bootstrap();
+import test_mod from '../test.js';
+import lisp_mod from '../lisp2.js';
+let base_mod = __.mod();
+export default __.new_module({
+  name: 'test-classes',
+  imports: [base_mod, test_mod, lisp_mod],
+  on_load(_, $) {
+`; // file cache + dynamic imports?
             eval(head + code);
           }
         })
