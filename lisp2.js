@@ -278,7 +278,7 @@ export default __.new_module({
           if (this.receiver().isa($.invoke)) {
 
           } else {
-            return;
+            return this;
           }
         }
       ],
@@ -697,7 +697,6 @@ export default __.new_module({
         },
         function estree() {
           return b.program(this.forms().map(f => {
-            // this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
@@ -707,7 +706,9 @@ export default __.new_module({
           }));
         },
         function expand() {
-          return $.program.new({ forms: this.forms().map(f => f.expand()) });
+          this.log(this.forms())
+          let res = $.program.new({ forms: this.forms().map(f => f.expand()) });
+          return res;
         }
       ],
     });

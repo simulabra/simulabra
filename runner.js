@@ -22,7 +22,11 @@ export default __.new_module({
               const esm = await import('./' + filePath);
               const mod = esm.default;
               for (const test_case of Object.values(mod.$case)) {
-                test_case.run();
+                try {
+                  test_case.run();
+                } catch(e) {
+                  console.log(e);
+                }
               }
             }
           }

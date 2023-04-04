@@ -13,20 +13,7 @@ class Basic {
   }
 }
 
-const p1 = {
-  a(n) {
-    this._n += n;
-  }
-};
-
-const p2 = {
-  b(n) {
-    this._n -= n / 2;
-  }
-};
-
 const direct = {
-  _n: 0,
   a(n) {
     this._n += n;
   },
@@ -48,6 +35,17 @@ function sd(...protos) {
   }
   return p;
 }
+
+const p1 = {
+  a(n) {
+    this._n += n;
+  }
+};
+const p2 = {
+  b(n) {
+    this._n -= n / 2;
+  }
+};
 
 const sdp = sd(p1, p2);
 
@@ -114,19 +112,40 @@ $.class.new({
 });
 
 $.class.new({
+  name: 'p-no-debug',
+  components: [
+    $.var.new({ name: 'n' }),
+    $.method.new({
+      name: 'a',
+      debug: false,
+      do(n) {
+        this.n(this.n() + n);
+      }
+    }),
+    $.method.new({
+      name: 'b',
+      debug: false,
+      do(n) {
+        this.n(this.n() - (n / 2));
+      }
+    }),
+  ]
+});
+
+$.class.new({
   name: 'popt',
   components: [
     $.var.new({ name: 'n' }),
     $.method.new({
       name: 'a',
-      direct: true,
+      debug: false,
       do(n) {
         this._n = (this._n + n); // optimization for as long as the var is basic?
       }
     }),
     $.method.new({
       name: 'b',
-      direct: true,
+      debug: false,
       do(n) {
         this._n = (this._n - (n / 2));
       }
@@ -140,6 +159,7 @@ bench('multiple', () => sweat(mdo()));
 bench('direct', () => sweat(direct));
 bench('directproto', () => sweat(directProto()));
 bench('simulabra', () => sweat($.p.new()));
+bench('simulabra-no-debug', () => sweat($.p_no_debug.new()));
 bench('simulabra-opt', () => sweat($.popt.new()));
 
 await run();

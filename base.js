@@ -41,33 +41,39 @@ class Frame {
         this._args = args;
     }
     description() {
-        return `${this._receiver.title()}.${this._method_impl._name}(${this._args.map(a => simulabra_string(a)).join(' ')})`
+        return `${pry(this._receiver)}.${this._method_impl._name}/${this._args.length}`;
+    }
+}
+
+function pry(obj) {
+    if (typeof obj === 'object' && obj._class !== undefined) {
+        return `~${obj._class._name}/${obj._name || '?'}`;
+    } else {
+        return `#native/${typeof obj}`;
     }
 }
 
 class FrameStack {
     constructor() {
-        this._frames = new Array(1000);
-        this._frame_idx = -1;
+        this._frames = [];
     }
     push(frame) {
-        // console.log('pushframe', f.name);
-        this._frame_idx++;
-        this._frames[this._frame_idx] = frame;
+        console.log(frame.description())
+        this._frames.push(frame);
         return this;
     }
     pop() {
-        this.clear();
-        this._frame_idx--;
+        const frame = this._frames.pop();
+        return frame;
+    }
+    idx() {
+        return this._frames.length - 1;
     }
     frame() {
-        return this._frames[this._frame_idx];
-    }
-    clear() {
-        delete this._frames[this._frame_idx];
+        return this._frames[this.idx()];
     }
     trace() {
-        for (let i = 0; i <= this._frame_idx; i++) {
+        for (let i = 0; i <= this._frames.length; i++) {
             debug('stack frame', i, this._frames[i]);
         }
     }
@@ -77,32 +83,40 @@ class FrameStack {
 }
 
 class MethodImpl {
-    constructor(name, direct = false) {
-        this._name = name;
-        this._primary = null;
-        this._befores = [];
-        this._afters = [];
-        this._direct = direct;
+    constructor(props) {
+        const defaults = {
+            _name: '',
+            _primary: null,
+            _befores: [],
+            _afters: [],
+            _debug: true,
+        };
+        Object.assign(this, defaults);
+        Object.assign(this, props);
     }
     reify(proto) {
-        if (this._direct && this._befores.length === 0 && this._afters.length === 0) {
+        if (!this._debug && this._befores.length === 0 && this._afters.length === 0) {
             proto[this._name.deskewer()] = this._primary;
             return;
         }
         const self = this;
         // console.log('reify', this.name, this.primary)
         proto[this._name.deskewer()] = function (...args) {
-            var __ = globalThis.SIMULABRA;
-            __._stack.push(new Frame(this, self, args)); // uhh
+            const __ = globalThis.SIMULABRA;
+            if (self._debug) {
+                __._stack.push(new Frame(this, self, args)); // uhh
+            }
             try {
                 self._befores.forEach(b => b.apply(this, args));
                 let res = self._primary.apply(this, args);
                 // console.log('in reified', self.name, self.primary, res)
                 self._afters.forEach(a => a.apply(this, args)); // res too?
-                __._stack.pop();
+                if (self._debug) {
+                    __._stack.pop();
+                }
                 return res;
             } catch (e) {
-                if (!e._logged) {
+                if (!e._logged && self._debug) {
                     e._logged = true;
                     debug('failed message: call', self._name, 'on', this._parent, 'with', args);
                     __._stack.trace();
@@ -131,7 +145,7 @@ class ClassPrototype {
 
     _get_impl(name) {
         if (!(name in this._impls)) {
-            this._impls[name] = new MethodImpl(name);
+            this._impls[name] = new MethodImpl({ _name: name });
         }
         return this._impls[name];
     }
@@ -453,12 +467,13 @@ function bootstrap() {
             $var.new({ name: 'do' }), // fn, meat and taters
             $var.new({ name: 'message' }),
             $var.new({ name: 'name' }),
-            $var.new({ name: 'direct' }),
+            $var.new({ name: 'debug', default: true }),
             function combine(impl) {
-                impl._primary = this.do();
-                if (this.direct()) {
-                    impl._direct = this.direct();
+                if (impl._name !== this.name()) {
+                    throw new Error('tried to combine method on non-same named impl');
                 }
+                impl._primary = this.do();
+                impl._debug = this.debug();
             },
         ]
     });
@@ -468,7 +483,7 @@ function bootstrap() {
         components: [
             $var.new({ name: 'do' }),
             function load(proto) {
-                const impl = new MethodImpl(this.name());
+                const impl = new MethodImpl({ _name: this.name() });
                 impl._primary = this.do();
                 impl.reify(proto._parent);
             }
@@ -501,9 +516,8 @@ function bootstrap() {
         components: [
             $var.new({ name: 'name' }),
             $var.new({ name: 'do' }),
-            function load(target) {
-                this.dlog('load', this, target);
-                target._get_impl(this.name())._befores.push(this.do());
+            function combine(impl) {
+                impl._befores.push(this.do());
             }
         ]
     });
@@ -513,8 +527,8 @@ function bootstrap() {
         components: [
             $var.new({ name: 'name' }),
             $var.new({ name: 'do', debug: false }),
-            function load(target) {
-                target._get_impl(this.name())._afters.push(this.do());
+            function combine(impl) {
+                impl._afters.push(this.do());
             }
         ]
     });
