@@ -117,14 +117,12 @@ $.class.new({
     $.var.new({ name: 'n' }),
     $.method.new({
       name: 'a',
-      debug: false,
       do(n) {
         this.n(this.n() + n);
       }
     }),
     $.method.new({
       name: 'b',
-      debug: false,
       do(n) {
         this.n(this.n() - (n / 2));
       }
@@ -133,7 +131,7 @@ $.class.new({
 });
 
 $.class.new({
-  name: 'popt',
+  name: 'p-direct-no-debug',
   components: [
     $.var.new({ name: 'n' }),
     $.method.new({
@@ -159,7 +157,7 @@ bench('multiple', () => sweat(mdo()));
 bench('direct', () => sweat(direct));
 bench('directproto', () => sweat(directProto()));
 bench('simulabra', () => sweat($.p.new()));
-bench('simulabra-no-debug', () => sweat($.p_no_debug.new()));
-bench('simulabra-opt', () => sweat($.popt.new()));
+bench('simulabra no debug', () => sweat($.p_no_debug.new()));
+bench('simulabra direct no debug', () => sweat($.p_direct_no_debug.new()));
 
 await run();

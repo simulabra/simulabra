@@ -1,6 +1,12 @@
 globalThis.SIMULABRA = {
+    debug() {
+        return false;
+    },
     mod() {
         return this._mod;
+    },
+    trace() {
+        return false;
     },
 };
 
@@ -53,12 +59,18 @@ function pry(obj) {
     }
 }
 
+function $$() {
+    return globalThis.SIMULABRA;
+}
+
 class FrameStack {
     constructor() {
         this._frames = [];
     }
     push(frame) {
-        console.log(frame.description())
+        if ($$().trace()) {
+            console.log(frame.description())
+        }
         this._frames.push(frame);
         return this;
     }
@@ -89,13 +101,12 @@ class MethodImpl {
             _primary: null,
             _befores: [],
             _afters: [],
-            _debug: true,
         };
         Object.assign(this, defaults);
         Object.assign(this, props);
     }
     reify(proto) {
-        if (!this._debug && this._befores.length === 0 && this._afters.length === 0) {
+        if (!$$().debug() && this._befores.length === 0 && this._afters.length === 0) {
             proto[this._name.deskewer()] = this._primary;
             return;
         }
@@ -649,6 +660,14 @@ function bootstrap() {
             $.var.new({
                 name: 'stack',
                 debug: false,
+            }),
+            $.var.new({
+                name: 'debug',
+                default: false, // now only, how to change while running?
+            }),
+            $.var.new({
+                name: 'trace',
+                default: false,
             }),
             function $() {
                 return this.mod().proxy('class');

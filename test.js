@@ -17,7 +17,8 @@ export default __.new_module({
               this.do().apply(this);
             } catch (e) {
               this.log('failed!!!');
-              throw e;
+              console.error(e);
+              return;
             }
             this.log('passed');
           }
