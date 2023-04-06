@@ -136,14 +136,12 @@ $.class.new({
     $.var.new({ name: 'n' }),
     $.method.new({
       name: 'a',
-      debug: false,
       do(n) {
         this._n = (this._n + n); // optimization for as long as the var is basic?
       }
     }),
     $.method.new({
       name: 'b',
-      debug: false,
       do(n) {
         this._n = (this._n - (n / 2));
       }

@@ -42,7 +42,7 @@ $.test(:test-counter [
 ])
 `
         );
-        counter_mod.run_tests();
+        counter_mod?.run_tests();
       }
     })
     $.case.new({

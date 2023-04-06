@@ -278,7 +278,7 @@ export default __.new_module({
           if (this.receiver().isa($.invoke)) {
 
           } else {
-            return this;
+            return this.visit(function () { this.log('subexpand'); return this.expand(); });
           }
         }
       ],
