@@ -33,6 +33,10 @@
  */
 
 import bootstrap from './base.js';
+import vm from 'vm';
+import { createHash } from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
 import { prettyPrint, types } from 'recast';
 var __ = bootstrap();
 let base_mod = __.mod();
@@ -895,6 +899,10 @@ export default __.new_module({
       ],
     });
 
+    function createHashFromString(data) {
+      return createHash('md5').update(data).digest('hex').substring(0, 8);
+    }
+
     $.class.new({
       name: 'module-cache',
       components: [
@@ -907,33 +915,26 @@ export default __.new_module({
           name: 'run',
           async: true,
           async do(code) {
-            // Check if the code is already in the cache
-            if (this.cache().has(code)) {
-              return this.cache().get(code);
+            const hash = createHashFromString(code);
+
+            if (!this.cache().has(hash)) {
+              const modulePath = path.join('out', `${hash}.js`);
+
+              try {
+                await fs.access(modulePath);
+              } catch (err) {
+                if (err.code === 'ENOENT') {
+                  await fs.writeFile(modulePath, code);
+                } else {
+                  throw err;
+                }
+              }
+
+              const importedModule = await import(`./out/${hash}.js`);
+              this.cache().set(hash, importedModule);
             }
 
-            // Create a new context to run the code in a separate environment
-            const context = vm.createContext({
-              __dirname: path.dirname(process.argv[1]),
-              require,
-            });
-
-            // Create a new script to run the code
-            const script = new vm.Script(code, {
-              filename: 'dynamic-module.js',
-              importModuleDynamically: async (specifier) => {
-                return import(specifier);
-              },
-            });
-
-            // Run the script in the new context
-            const result = await script.runInNewContext(context);
-
-            // Cache the result
-            this.cache().set(code, result);
-
-            // Return the result
-            return result;
+            return this.cache().get(hash);
           },
         }),
       ],
@@ -949,6 +950,10 @@ export default __.new_module({
         }),
         $.var.new({
           name: 'module',
+        }),
+        $.var.new({
+          name: 'module-cache',
+          default: () => $.module_cache.new(),
         }),
         $.static.new({
           name: 'run',
@@ -973,7 +978,8 @@ export default __.new_module({
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
 `; // file cache + dynamic imports?
-            const mod = await this.module_cache().run(prelude + code);
+            const hat = '}});';
+            const mod = await this.module_cache().run(prelude + code + hat);
             this.module(mod);
             return mod;
           }
