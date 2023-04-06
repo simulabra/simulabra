@@ -721,8 +721,8 @@ function bootstrap() {
                 }
                 this.dlog('primitive init', this);
             },
-            function extend(method) {
-                method.load(this.js_prototype()); // wee-woo!
+            function extend(methods) {
+                methods.map(m => m.load(this.js_prototype())); // wee-woo!
             },
             function description() {
                 return `primitive ${this.name()}`;

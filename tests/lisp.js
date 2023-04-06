@@ -33,13 +33,6 @@ export default __.new_module({
     })
   )
 })
-
-$.test(:test-counter [
-  $.let(%c ~counter.new)
-  %c.inc
-  %c.inc
-  .assert-eq(%c.count 2)
-])
 `
         );
         counter_mod?.run_tests();

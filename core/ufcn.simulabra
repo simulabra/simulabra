@@ -46,7 +46,7 @@ $if(.x.<(10) ; thix.x < 10 ?
           %dy $dist1(:y)
         })
         ^%dx.+(%dy).sqrt ; return (dx + dy).sqrt()
-      ]
+      ] ; }
     })
     ~method.new({ ; a method
       :name :triangle-perimeter

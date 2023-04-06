@@ -164,8 +164,13 @@ export default __.new_module({
           const newmap = Object.fromEntries(this.vars().map(it => [it.var_ref().name(), fn.apply(it.value(), args)]));
           return this.class().new(newmap);
         },
+        $.before.new({
+          name: 'expand',
+          do() {
+            this.log('expand');
+          }
+        }),
         function expand() {
-          this.log('expand');
           return this;
         },
         function quasiexpand() {
@@ -173,7 +178,7 @@ export default __.new_module({
         },
 
       ]
-    })
+    });
 
     $.class.new({
       name: 'symbol',
@@ -209,21 +214,27 @@ export default __.new_module({
     //   },
     // }));
 
-    $primitive.array_primitive.extend($.method.new({
-      name: 'quote',
-      do: function () {
+    _.find('primitive', 'array-primitive').extend([
+      function quote() {
         return this.map(e => {
           return e.quote();
         });
       },
-    }))
+      function expand() {
+        return this.map(e => {
+          return e.expand();
+        });
+      }
+    ]);
 
-    $primitive.string_primitive.extend($.method.new({
-      name: 'quote',
-      do: function () {
+    _.find('primitive', 'string-primitive').extend([
+      function quote() {
         return b.stringLiteral(this);
       },
-    }));
+      function expand() {
+        return this;
+      }
+    ]);
 
     $.class.new({
       name: 'this',
@@ -270,15 +281,20 @@ export default __.new_module({
           if (this.selector() === '+') {
             return b.binaryExpression('+', this.receiver().estree(), this.args().items()[0].estree());
           } else {
-            this.log(this.receiver());
             return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), this.args().items().map(a => a.estree()));
           }
         },
         function expand() {
           if (this.receiver().isa($.invoke)) {
-
+            this.log('find macro', this.selector());
+            const macro = _.find('macro', this.selector());
+            const v = macro.expand(...this.args());
+            if (v === undefined) {
+              throw new Error(`macro expansion failed for ${macro.title()} in ${this.title()}`)
+            }
+            return v;
           } else {
-            return this.visit(function () { this.log('subexpand'); return this.expand(); });
+            return this.visit(function () { $.debug.log('subexpand', this); return this.expand(); });
           }
         }
       ],
@@ -306,6 +322,7 @@ export default __.new_module({
     $.class.new({
       name: 'list',
       components: [
+        $.node,
         $.var.new({ name: 'items', default: [] }),
         $.static.new({
           name: 'parse',
@@ -325,9 +342,6 @@ export default __.new_module({
           return `(${this.items().map(it => it.print()).join(' ')})`;
         },
         function estree() {
-          // $.debug.log(this, this.items());
-          // console.log('oh')
-          this.log(this.items());
           return b.arrayExpression(this.items().map(it => it.estree()));
         },
         function expand() {
@@ -347,6 +361,7 @@ export default __.new_module({
       name: 'lambda',
       debug: true,
       components: [
+        $.node,
         $.var.new({ name: 'args' }),
         $.var.new({ name: 'body' }),
         $.static.new({
@@ -371,7 +386,6 @@ export default __.new_module({
           return `[${this.args}]`
         },
         function estree() {
-          this.log('estree');
           return b.functionExpression(null, this.args().items().map(a => a.estree()), this.body().estree());
         }
       ],
@@ -447,9 +461,7 @@ export default __.new_module({
           do: function parse(reader) {
             reader.next(); // `
             let value = reader.read();
-            // this.log(value);
             return value.visit(function () {
-              // $.debug.log('visit for quasiexpand', this);
               this.quasiexpand();
             });
           }
@@ -688,6 +700,13 @@ export default __.new_module({
       },
     });
 
+    $.macro.new({
+      name: 'test',
+      expand_fn(_name, _do) {
+        return
+      },
+    });
+
     $.class.new({
       name: 'program',
       components: [
@@ -697,6 +716,7 @@ export default __.new_module({
         },
         function estree() {
           return b.program(this.forms().map(f => {
+            this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
