@@ -1,8 +1,9 @@
 import bootstrap from '../base.js';
 var __ = bootstrap();
 import test_mod from '../test.js';
-let base_mod = __.mod();
-export default __.new_module({
+let base_mod = __.base();
+
+export default await base_mod.find('class', 'module').new({
   name: 'test-modules',
   imports: [base_mod, test_mod],
   async on_load(_, $) {
@@ -58,4 +59,4 @@ export default __.new_module({
       }
     });
   }
-});
+}).load();

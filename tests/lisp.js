@@ -2,9 +2,9 @@ import bootstrap from '../base.js';
 const __ = bootstrap();
 import test_mod from '../test.js';
 import lisp_mod from '../lisp2.js';
-const base_mod = __.mod();
+const base_mod = __.base();
 
-export default base_mod.find('class', 'module').new({
+export default await base_mod.find('class', 'module').new({
   name: 'test-lisp',
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
@@ -91,4 +91,4 @@ $(macro quickmeth [name args @forms]
       }
     })
   },
-});
+}).load();

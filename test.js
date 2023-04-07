@@ -2,7 +2,8 @@ import bootstrap from './base.js';
 var __ = bootstrap();
 import lisp_mod from './lisp2.js';
 let base_mod = __._base_mod;
-export default __.new_module({
+
+export default base_mod.find('class', 'module').new({
   name: 'test',
   imports: [base_mod, lisp_mod],
   on_load(_, $) {

@@ -572,6 +572,7 @@ function bootstrap() {
                 debug: false,
             }),
             $var.new({ name: 'on-load' }),
+            $var.new({ name: 'loaded', default: false }),
             function key(name) {
                 return '$' + name.deskewer();
             },
@@ -622,13 +623,19 @@ function bootstrap() {
                 })
             },
             async function load() {
-                this.dlog('load');
-                if (this.on_load()) {
+                if (!this.loaded() && this.on_load()) {
+                    // this.log('loading...');
+                    this.loaded(true);
+                    for (const imp of this.imports()) {
+                        await imp.load();
+                    }
                     const om = __.mod();
                     __.mod(this);
                     await this.on_load().apply(this, [this, this.proxy('class')]);
                     __.mod(om);
+                    // this.log('loaded');
                 }
+                return this;
             },
             function $() {
                 return this.proxy('class');
@@ -670,6 +677,9 @@ function bootstrap() {
             function $() {
                 return this.mod().proxy('class');
             },
+            function base() {
+                return _;
+            }
         ]
     });
 

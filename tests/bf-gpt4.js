@@ -1,7 +1,9 @@
 import bootstrap from '../base.js';
 var __ = bootstrap();
 import test_mod from '../test.js';
-export default __.new_module({
+let base_mod = __._base_mod;
+
+export default await base_mod.find('class', 'module').new({
   name: 'brainfuck-interpreter',
   imports: [test_mod],
   on_load(_, $) {
@@ -122,4 +124,4 @@ export default __.new_module({
       }
     });
   }
-});
+}).load();

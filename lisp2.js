@@ -39,8 +39,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { prettyPrint, types } from 'recast';
 var __ = bootstrap();
-let base_mod = __.mod();
-export default __.new_module({
+let base_mod = __.base();
+export default base_mod.find('class', 'module').new({
   name: 'lisp',
   imports: [base_mod],
   on_load(_, $) {
@@ -171,7 +171,7 @@ export default __.new_module({
         $.before.new({
           name: 'expand',
           do() {
-            this.log('expand');
+            // this.log('expand');
           }
         }),
         function expand() {
@@ -298,7 +298,7 @@ export default __.new_module({
             }
             return v;
           } else {
-            return this.visit(function () { $.debug.log('subexpand', this); return this.expand(); });
+            return this.visit(function () { return this.expand(); });
           }
         }
       ],
@@ -720,7 +720,7 @@ export default __.new_module({
         },
         function estree() {
           return b.program(this.forms().map(f => {
-            this.log(f);
+            // this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
@@ -730,7 +730,6 @@ export default __.new_module({
           }));
         },
         function expand() {
-          this.log(this.forms())
           let res = $.program.new({ forms: this.forms().map(f => f.expand()) });
           return res;
         }
@@ -920,7 +919,7 @@ export default __.new_module({
             const hash = this.hash(code);
 
             if (!this.cache().has(hash)) {
-              const modulePath = path.join('out', `${hash}.js`);
+              const modulePath = path.join('out', `${hash}.mjs`);
 
               try {
                 await fs.access(modulePath);
@@ -932,7 +931,7 @@ export default __.new_module({
                 }
               }
 
-              const importedModule = await import(`./out/${hash}.js`);
+              const importedModule = await import(`./out/${hash}.mjs`);
               this.cache().set(hash, importedModule);
             }
 
@@ -974,13 +973,13 @@ import bootstrap from '../base.js';
 var __ = bootstrap();
 import test_mod from '../test.js';
 import lisp_mod from '../lisp2.js';
-let base_mod = __.mod();
-export default __.new_module({
-  name: 'test-classes',
+const base_mod = __._base_mod;
+export default await base_mod.find('class', 'module').new({
+  name: '${this.name()}',
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
 `; // file cache + dynamic imports?
-            const hat = '}});';
+            const hat = '}}).load();';
             const mod = await this.module_cache().run(prelude + code + hat);
             this.module(mod);
             return mod;

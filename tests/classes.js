@@ -1,7 +1,9 @@
 import bootstrap from '../base.js';
 var __ = bootstrap();
 import test_mod from '../test.js';
-export default __.new_module({
+let base_mod = __.base();
+
+export default await base_mod.find('class', 'module').new({
   name: 'test-classes',
   imports: [test_mod],
   on_load(_, $) {
@@ -106,121 +108,122 @@ export default __.new_module({
       }
     });
 
+    $.class.new({
+      name: 'before-basic',
+      components: [
+        $.var.new({ name: 'x', default: 0 }),
+        $.method.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 2);
+          }
+        }),
+        $.before.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 1);
+          }
+        })
+      ]
+    });
+
     $.case.new({
       name: 'before-basic',
       do() {
-        $.class.new({
-          name: 'before-basic',
-          components: [
-            $.var.new({ name: 'x', default: 0 }),
-            $.method.new({
-              name: 'bump',
-              do() {
-                return this.x(this.x() + 2);
-              }
-            }),
-            $.before.new({
-              name: 'bump',
-              do() {
-                return this.x(this.x() + 1);
-              }
-            })
-          ]
-        });
-
         const ab = $.before_basic.new();
         ab.bump();
         this.assert_eq(ab.x(), 3);
       }
     });
 
+    $.class.new({
+      name: 'after-basic',
+      components: [
+        $.var.new({ name: 'x', default: 0 }),
+        $.method.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 2);
+          }
+        }),
+        $.after.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 1);
+          }
+        })
+      ]
+    });
+
+
     $.case.new({
       name: 'after-basic',
       do() {
-        $.class.new({
-          name: 'after-basic',
-          components: [
-            $.var.new({ name: 'x', default: 0 }),
-            $.method.new({
-              name: 'bump',
-              do() {
-                return this.x(this.x() + 2);
-              }
-            }),
-            $.after.new({
-              name: 'bump',
-              do() {
-                return this.x(this.x() + 1);
-              }
-            })
-          ]
-        });
-
         const ab = $.after_basic.new();
         ab.bump();
         this.assert_eq(ab.x(), 3);
       }
     });
 
+    $.class.new({
+      name: 'after-before-combined',
+      components: [
+        $.before_basic,
+        $.after.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() * 2);
+          }
+        })
+      ]
+    });
+
     $.case.new({
       name: 'after-before-combined',
       do() {
-        $.class.new({
-          name: 'after-before-combined',
-          components: [
-            $.before_basic,
-            $.after.new({
-              name: 'bump',
-              do() {
-                return this.x(this.x() * 2);
-              }
-            })
-          ]
-        });
-
         const ab = $.after_before_combined.new();
         ab.bump();
         this.assert_eq(ab.x(), 6);
       }
     });
 
+    $.class.new({
+      name: 'after-before-combined-method',
+      components: [
+        $.after_before_combined,
+        $.method.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 3);
+          }
+        })
+      ]
+    });
+
     $.case.new({
       name: 'after-before-combined-method',
       do() {
-        $.class.new({
-          name: 'after-before-combined-method',
-          components: [
-            $.after_before_combined,
-            $.method.new({
-              name: 'bump',
-              do() {
-                return this.x(this.x() + 3);
-              }
-            })
-          ]
-        });
-
         const abc = $.after_before_combined_method.new();
         abc.bump();
         this.assert_eq(abc.x(), 8);
       }
     });
+    $.class.new({
+      name: 'after-multiple',
+      components: [
+        $.after_basic,
+        $.after.new({
+          name: 'bump',
+          do() {
+            return this.x(this.x() + 1);
+          }
+        })
+      ]
+    });
 
     $.case.new({
       name: 'after-multiple',
       do() {
-        $.class.new({
-          name: 'after-multiple',
-          components: [
-            $.after_basic,
-            $.after.new({
-              name: 'bump',
-              do() {
-                return this.x(this.x() + 1);
-              }
-            })
-          ]
-        });
 
         const am = $.after_multiple.new();
         am.bump();
@@ -228,4 +231,4 @@ export default __.new_module({
       }
     });
   }
-})
+}).load();

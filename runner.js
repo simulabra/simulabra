@@ -4,7 +4,9 @@ import { join } from 'path';
 import bootstrap from './base.js';
 var __ = bootstrap();
 import test_mod from './test.js';
-export default __.new_module({
+let base_mod = __._base_mod;
+
+export default await base_mod.find('class', 'module').new({
   name: 'runner',
   imports: [test_mod],
   async on_load(_, $) {
@@ -21,8 +23,8 @@ export default __.new_module({
               this.log('load ' + filePath);
               const esm = await import('./' + filePath);
               const mod = esm.default;
-              await mod.load();
               if (mod.$case === undefined) {
+                this.log(filePath, mod);
                 throw new Error(`no cases in module ${mod.description()}`);
               }
               for (const test_case of Object.values(mod.$case)) {
@@ -40,4 +42,4 @@ export default __.new_module({
 
     await $.test_runner.new().run('tests');
   }
-});
+}).load();
