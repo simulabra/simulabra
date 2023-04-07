@@ -4,7 +4,7 @@ import test_mod from '../test.js';
 import lisp_mod from '../lisp2.js';
 const base_mod = __.mod();
 
-export default __.new_module({
+export default base_mod.find('class', 'module').new({
   name: 'test-lisp',
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
@@ -40,7 +40,8 @@ export default __.new_module({
             const c = $.counter.new();
             c.inc();
             c.inc();
-            self.assert_eq(c, 2);
+            this.log('in basic module?')
+            self.assert_eq(c, 3);
           }
         });
         await counter_mod.load();

@@ -585,9 +585,7 @@ function bootstrap() {
                 if (v) {
                     return v;
                 } else {
-                    this.dlog('imports', this.imports());
                     for (const imp of this.imports()) {
-                        this.dlog('find', className, name, imp);
                         const iv = imp.find(className, name);
                         if (iv) {
                             return iv;
@@ -672,14 +670,6 @@ function bootstrap() {
             function $() {
                 return this.mod().proxy('class');
             },
-            function new_module(moddef) {
-                for (const i of moddef.imports) {
-                    i.load();
-                }
-                const m = $module.new(moddef);
-                m.load();
-                return m;
-            }
         ]
     });
 

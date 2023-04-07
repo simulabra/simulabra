@@ -28,6 +28,7 @@ export default __.new_module({
           name: 'assert-eq',
           do(a, b) {
             if (a !== b) {
+              this.log('neq', a, b)
               throw new Error(`assertion failed: ${a.description()} !== ${b.description()}`);
             }
           }
