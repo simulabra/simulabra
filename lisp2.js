@@ -899,10 +899,6 @@ export default __.new_module({
       ],
     });
 
-    function createHashFromString(data) {
-      return createHash('md5').update(data).digest('hex').substring(0, 8);
-    }
-
     $.class.new({
       name: 'module-cache',
       components: [
@@ -912,10 +908,16 @@ export default __.new_module({
           default: () => new Map(),
         }),
         $.method.new({
+          name: 'hash',
+          do(code) {
+            return createHash('md5').update(code).digest('hex').substring(0, 8);
+          }
+        }),
+        $.method.new({
           name: 'run',
           async: true,
           async do(code) {
-            const hash = createHashFromString(code);
+            const hash = this.hash(code);
 
             if (!this.cache().has(hash)) {
               const modulePath = path.join('out', `${hash}.js`);

@@ -4,8 +4,8 @@ import test_mod from '../test.js';
 let base_mod = __.mod();
 export default __.new_module({
   name: 'test-modules',
-  imports: [test_mod],
-  on_load(_, $) {
+  imports: [base_mod, test_mod],
+  async on_load(_, $) {
     const a_mod = $.module.new({
       name: 'test-a',
       imports: [base_mod],
@@ -27,7 +27,7 @@ export default __.new_module({
         })
       }
     });
-    a_mod.load();
+    await a_mod.load();
     const b_mod = $.module.new({
       name: 'test-b',
       imports: [base_mod, a_mod],
@@ -46,7 +46,7 @@ export default __.new_module({
         })
       }
     });
-    b_mod.load();
+    await b_mod.load();
 
     $.case.new({
       name: 'module-inheritance',

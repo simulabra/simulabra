@@ -5,7 +5,7 @@ import lisp_mod from '../lisp2.js';
 const base_mod = __.mod();
 
 export default __.new_module({
-  name: 'test-classes',
+  name: 'test-lisp',
   imports: [base_mod, test_mod, lisp_mod],
   on_load(_, $) {
     $.case.new({
@@ -19,10 +19,12 @@ export default __.new_module({
     })
     $.case.new({
       name: 'lisp-basic-run',
-      do() {
-        const counter_mod = $.test_module.run(
-          'basic',
-          `
+      async do() {
+        const self = this;
+        const counter_mod = $.source_module.new({
+          name: 'lisp-basic-run--counter',
+          imports: [_],
+          source: `
 ~class.new({
   :name :counter
   :components (
@@ -33,9 +35,15 @@ export default __.new_module({
     })
   )
 })
-`
-        );
-        counter_mod?.run_tests();
+`,
+          on_load(_, $) {
+            const c = $.counter.new();
+            c.inc();
+            c.inc();
+            self.assert_eq(c, 2);
+          }
+        });
+        await counter_mod.load();
       }
     })
     $.case.new({
@@ -75,7 +83,7 @@ $(macro quickmeth [name args @forms]
     ])
   ]
 })
-~debug.log(~point.new({x 3 y 4}).dist(~point.new))
+~debug.log(~point.new({ :x 3 :y 4 }).dist(~point.new))
 
 `;
         $.source_module.run('quasiquote', ex);

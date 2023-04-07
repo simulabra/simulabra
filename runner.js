@@ -7,7 +7,7 @@ import test_mod from './test.js';
 export default __.new_module({
   name: 'runner',
   imports: [test_mod],
-  on_load(_, $) {
+  async on_load(_, $) {
     $.class.new({
       name: 'test-runner',
       components: [
@@ -21,6 +21,10 @@ export default __.new_module({
               this.log('load ' + filePath);
               const esm = await import('./' + filePath);
               const mod = esm.default;
+              await mod.load();
+              if (mod.$case === undefined) {
+                throw new Error(`no cases in module ${mod.description()}`);
+              }
               for (const test_case of Object.values(mod.$case)) {
                 try {
                   test_case.run();
@@ -34,6 +38,6 @@ export default __.new_module({
       ]
     });
 
-    $.test_runner.new().run('tests');
+    await $.test_runner.new().run('tests');
   }
 });

@@ -623,12 +623,12 @@ function bootstrap() {
                     ...moddef
                 })
             },
-            function load() {
+            async function load() {
                 this.dlog('load');
                 if (this.on_load()) {
                     const om = __.mod();
                     __.mod(this);
-                    this.on_load().apply(this, [this, this.proxy('class')]);
+                    await this.on_load().apply(this, [this, this.proxy('class')]);
                     __.mod(om);
                 }
             },
