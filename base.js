@@ -203,7 +203,7 @@ function bootstrap() {
         return __;
     }
 
-    console.log('bootstrap');
+    console.log('----- STARTING SIMULABRA: INFINITE SOFTWARE -----');
     __._stack = new FrameStack();
 
     Object.prototype._add = function add(name, op) {
@@ -624,7 +624,7 @@ function bootstrap() {
             },
             async function load() {
                 if (!this.loaded() && this.on_load()) {
-                    this.log('loading...');
+                    // this.log('loading...');
                     this.loaded(true);
                     for (const imp of this.imports()) {
                         await imp.load();

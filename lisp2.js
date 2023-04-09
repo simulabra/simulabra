@@ -157,7 +157,7 @@ export default base_mod.find('class', 'module').new({
           }
           return $.message_node.new({
             receiver: $.classref_node.new({ symbol: $.symbol_node.new({ value: this.class().name() }) }),
-            message: $.symbol_node.new({ value: 'new' }),
+            selector: 'new',
             args: [props]
           });
         },
@@ -942,6 +942,40 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'transformer',
+      components: [
+        $.var.new({
+          name: 'module-cache',
+          default: () => $.module_cache.new(),
+        }),
+        $.method.new({
+          name: 'transform',
+          do(program) {
+            return program.expand().estree();
+          }
+        }),
+        $.method.new({
+          name: 'run',
+          do(name, source) {
+            const prelude = `
+import bootstrap from '../base.js';
+var __ = bootstrap();
+import test_mod from '../test.js';
+import lisp_mod from '../lisp2.js';
+const base_mod = __._base_mod;
+export default await base_mod.find('class', 'module').new({
+  name: '${name}',
+  imports: [base_mod, test_mod, lisp_mod],
+  on_load(_, $) {
+`; // file cache + dynamic imports?
+            const hat = '}}).load();';
+            return this.module_cache().run(prelude + source + hat);
+          }
+        }),
+      ],
+    });
+
+    $.class.new({
       name: 'script',
       components: [
         $.var.new({
@@ -951,37 +985,22 @@ export default base_mod.find('class', 'module').new({
         $.var.new({
           name: 'module',
         }),
-        $.var.new({
-          name: 'module-cache',
-          default: () => $.module_cache.new(),
-        }),
         $.static.new({
           name: 'run',
-          do(name, source) {
-            this.new({ name, source }).load();
+          do(name, source, transformer) {
+            this.new({ name, source, transformer }).load();
           }
         }),
         $.method.new({
           name: 'run',
-          do() {
+          do(_transformer) {
             const program = $.reader.from_source(this.source()).program();
-            const code = prettyPrint(program.expand().estree()).code;
-            const prelude = `
-import bootstrap from '../base.js';
-var __ = bootstrap();
-import test_mod from '../test.js';
-import lisp_mod from '../lisp2.js';
-const base_mod = __._base_mod;
-export default await base_mod.find('class', 'module').new({
-  name: '${this.name()}',
-  imports: [base_mod, test_mod, lisp_mod],
-  on_load(_, $) {
-`; // file cache + dynamic imports?
-            const hat = '}}).load();';
-            return this.module_cache().run(prelude + code + hat);
+            const transformedCode = _transformer.transform(program);
+            const code = prettyPrint(transformedCode).code;
+            return _transformer.run(this.name(), code);
           }
         })
       ]
-    })
+    });
   }
 });
