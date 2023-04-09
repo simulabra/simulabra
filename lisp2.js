@@ -106,22 +106,22 @@ export default base_mod.find('class', 'module').new({
           do() {
             return this.new({
               table: {
-                ':': $.symbol,
-                '/': $.this,
-                '(': $.list,
-                '{': $.map,
-                '[': $.lambda,
-                '\'': $.quote,
-                '`': $.quasiquote,
-                ',': $.unquote,
-                '.': $.message,
-                '$': $.invoke,
-                '%': $.argref,
-                '~': $.classref,
-                '!': $.typeref,
-                '&': $.do,
-                '^': $.return,
-                '@': $.restarg,
+                ':': $.symbol_node,
+                '/': $.this_node,
+                '(': $.list_node,
+                '{': $.map_node,
+                '[': $.lambda_node,
+                '\'': $.quote_node,
+                '`': $.quasiquote_node,
+                ',': $.unquote_node,
+                '.': $.message_node,
+                '$': $.invoke_node,
+                '%': $.argref_node,
+                '~': $.classref_node,
+                '!': $.typeref_node,
+                '&': $.do_node,
+                '^': $.return_node,
+                '@': $.restarg_node,
               },
             });
           },
@@ -155,9 +155,9 @@ export default base_mod.find('class', 'module').new({
             const k = v.name().deskewer();
             props[k] = this[k]().quote();
           }
-          return $.message.new({
-            receiver: $.classref.new({ symbol: $.symbol.new({ value: this.class().name() }) }),
-            message: $.symbol.new({ value: 'new' }),
+          return $.message_node.new({
+            receiver: $.classref_node.new({ symbol: $.symbol_node.new({ value: this.class().name() }) }),
+            message: $.symbol_node.new({ value: 'new' }),
             args: [props]
           });
         },
@@ -178,14 +178,14 @@ export default base_mod.find('class', 'module').new({
           return this;
         },
         function quasiexpand() {
-          return $.quote.new({ value: this });
+          return $.quote_node.new({ value: this });
         },
 
       ]
     });
 
     $.class.new({
-      name: 'symbol',
+      name: 'symbol-node',
       components: [
         $.node,
         $.var.new({ name: 'value' }),
@@ -241,7 +241,7 @@ export default base_mod.find('class', 'module').new({
     ]);
 
     $.class.new({
-      name: 'this',
+      name: 'this-node',
       components: [
         $.node,
         function print() {
@@ -254,7 +254,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'message',
+      name: 'message-node',
       debug: true,
       components: [
         $.node,
@@ -262,15 +262,15 @@ export default base_mod.find('class', 'module').new({
           name: 'parse',
           do: function parse(reader, receiver = null) {
             if (!receiver) {
-              receiver = $.this.new();
+              receiver = $.this_node.new();
             }
             reader.expect('.');
             const selector = reader.identifier();
             let args;
             if (reader.peek() === '(') {
-              args = $.list.parse(reader);
+              args = $.list_node.parse(reader);
             } else {
-              args = $.list.new();
+              args = $.list_node.new();
             }
             return this.new({ receiver, selector, args });
           }
@@ -289,7 +289,7 @@ export default base_mod.find('class', 'module').new({
           }
         },
         function expand() {
-          if (this.receiver().isa($.invoke)) {
+          if (this.receiver().isa($.invoke_node)) {
             this.log('find macro', this.selector());
             const macro = _.find('macro', this.selector());
             const v = macro.expand(...this.args());
@@ -324,7 +324,7 @@ export default base_mod.find('class', 'module').new({
     })
 
     $.class.new({
-      name: 'list',
+      name: 'list-node',
       components: [
         $.node,
         $.var.new({ name: 'items', default: [] }),
@@ -362,7 +362,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'lambda',
+      name: 'lambda-node',
       debug: true,
       components: [
         $.node,
@@ -373,8 +373,8 @@ export default base_mod.find('class', 'module').new({
           do(reader) {
             reader.expect('[');
             reader.strip();
-            const args = reader.peek() === '(' ? $.list.parse(reader) : $.list.new({
-              items: [$.argref.new({ identifier: 'it' })]
+            const args = reader.peek() === '(' ? $.list_node.parse(reader) : $.list_node.new({
+              items: [$.argref_node.new({ identifier: 'it' })]
             });
             const forms = [];
             while (reader.peek() !== ']') {
@@ -396,7 +396,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'map',
+      name: 'map-node',
       components: [
         $.node,
         $.var.new({ name: 'properties' }),
@@ -407,7 +407,7 @@ export default base_mod.find('class', 'module').new({
             const properties = [];
             while (reader.peek() !== '}') {
               reader.strip();
-              const key = $.symbol.parse(reader);
+              const key = $.symbol_node.parse(reader);
               reader.strip();
               const value = reader.read();
               properties.push($.property.new({ key, value }))
@@ -430,7 +430,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'quote',
+      name: 'quote-node',
       components: [
         $.var.new({ name: 'value' }),
         $.static.new({
@@ -458,7 +458,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'quasiquote',
+      name: 'quasiquote-node',
       components: [
         $.static.new({
           name: 'parse',
@@ -474,7 +474,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'unquote',
+      name: 'unquote-node',
       components: [
         $.static.new({
           name: 'parse',
@@ -497,7 +497,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'invoke',
+      name: 'invoke-node',
       components: [
         $.node,
         $.static.new({
@@ -566,7 +566,7 @@ export default base_mod.find('class', 'module').new({
     })
 
     $.class.new({
-      name: 'argref',
+      name: 'argref-node',
       components: [
         $.ref_reader_macro,
         $.static.new({
@@ -586,7 +586,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'classref',
+      name: 'classref-node',
       components: [
         $.ref_reader_macro,
         $.static.new({
@@ -605,7 +605,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'typeref',
+      name: 'typeref-node',
       components: [
         $.ref_reader_macro,
         function char() {
@@ -649,9 +649,9 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.macro.new({
-      name: 'lambda',
+      name: 'lambda-node',
       expand_fn(args, body) {
-        return $.lambda.new({ args, body });
+        return $.lambda_node.new({ args, body });
       }
     })
 
@@ -659,7 +659,7 @@ export default base_mod.find('class', 'module').new({
       name: 'macro',
       expand_fn(name, args, ...forms) {
         // compile body!
-        const fn = $.lambda.new({
+        const fn = $.lambda_node.new({
           args,
           body: $.body.new({ forms }),
         });
@@ -695,10 +695,10 @@ export default base_mod.find('class', 'module').new({
     })
 
     $.macro.new({
-      name: 'do',
+      name: 'do-node',
       expand_fn(...forms) {
-        return $.lambda.new({
-          args: $.list.new({ items: [$.identifier.new({ value: 'it' })] }),
+        return $.lambda_node.new({
+          args: $.list_node.new({ items: [$.identifier.new({ value: 'it' })] }),
           body: $.body.new({ forms: forms.map(f => f.expand()) }),
         })
       },
@@ -737,7 +737,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'do',
+      name: 'do-node',
       components: [
         $.node,
         $.var.new({ name: 'value' }),
@@ -752,7 +752,7 @@ export default base_mod.find('class', 'module').new({
     })
 
     $.class.new({
-      name: 'return',
+      name: 'return-node',
       components: [
         $.node,
         $.var.new({ name: 'value' }),
@@ -773,7 +773,7 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'restarg',
+      name: 'restarg-node',
       components: [
         $.node,
         $.var.new({ name: 'arg' }),
@@ -863,7 +863,7 @@ export default base_mod.find('class', 'module').new({
             // this.log('from readtable', res);
             // this.log(c, this.peek());
             if (this.peek() === '.') {
-              return $.message.parse(this, res);
+              return $.message_node.parse(this, res);
             } else {
               return res;
             }
