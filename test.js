@@ -36,18 +36,5 @@ export default base_mod.find('class', 'module').new({
         })
       ]
     });
-
-    $.class.new({
-      name: 'test-module',
-      components: [
-        $.source_module,
-        $.method.new({
-          name: 'run-tests',
-          do: function run_tests() {
-
-          }
-        })
-      ]
-    })
   },
 });

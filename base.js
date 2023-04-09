@@ -624,7 +624,7 @@ function bootstrap() {
             },
             async function load() {
                 if (!this.loaded() && this.on_load()) {
-                    // this.log('loading...');
+                    this.log('loading...');
                     this.loaded(true);
                     for (const imp of this.imports()) {
                         await imp.load();

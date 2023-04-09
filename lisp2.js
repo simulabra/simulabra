@@ -932,7 +932,7 @@ export default base_mod.find('class', 'module').new({
               }
 
               const importedModule = await import(`./out/${hash}.mjs`);
-              this.cache().set(hash, importedModule);
+              this.cache().set(hash, importedModule.default);
             }
 
             return this.cache().get(hash);
@@ -942,9 +942,8 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'source-module',
+      name: 'script',
       components: [
-        $.module,
         $.var.new({
           name: 'source',
           debug: false,
@@ -963,9 +962,8 @@ export default base_mod.find('class', 'module').new({
           }
         }),
         $.method.new({
-          name: 'load',
-          async: true,
-          async do() {
+          name: 'run',
+          do() {
             const program = $.reader.from_source(this.source()).program();
             const code = prettyPrint(program.expand().estree()).code;
             const prelude = `
@@ -980,9 +978,7 @@ export default await base_mod.find('class', 'module').new({
   on_load(_, $) {
 `; // file cache + dynamic imports?
             const hat = '}}).load();';
-            const mod = await this.module_cache().run(prelude + code + hat);
-            this.module(mod);
-            return mod;
+            return this.module_cache().run(prelude + code + hat);
           }
         })
       ]

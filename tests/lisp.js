@@ -7,7 +7,7 @@ const base_mod = __.base();
 export default await base_mod.find('class', 'module').new({
   name: 'test-lisp',
   imports: [base_mod, test_mod, lisp_mod],
-  on_load(_, $) {
+  async on_load(_, $) {
     $.case.new({
       name: 'lisp-basic-parse',
       do() {
@@ -17,14 +17,10 @@ export default await base_mod.find('class', 'module').new({
         this.assert_eq(source, f.print());
       }
     })
-    $.case.new({
-      name: 'lisp-basic-run',
-      async do() {
-        const self = this;
-        const counter_mod = $.source_module.new({
-          name: 'lisp-basic-run--counter',
-          imports: [_],
-          source: `
+    const counter_mod = await $.script.new({
+      name: 'lisp-basic-run--counter',
+      imports: [_],
+      source: `
 ~class.new({
   :name :counter
   :components (
@@ -36,15 +32,16 @@ export default await base_mod.find('class', 'module').new({
   )
 })
 `,
-          on_load(_, $) {
-            const c = $.counter.new();
-            c.inc();
-            c.inc();
-            this.log('in basic module?')
-            self.assert_eq(c, 3);
-          }
-        });
-        await counter_mod.load();
+    }).run();
+
+    $.case.new({
+      name: 'lisp-basic-run',
+      async do() {
+        this.log(counter_mod);
+        const c = counter_mod.find('class', 'counter').new();
+        c.inc();
+        c.inc();
+        this.assert_eq(c.count(), 2);
       }
     })
     $.case.new({
@@ -87,7 +84,7 @@ $(macro quickmeth [name args @forms]
 ~debug.log(~point.new({ :x 3 :y 4 }).dist(~point.new))
 
 `;
-        $.source_module.run('quasiquote', ex);
+        $.script.run('quasiquote', ex);
       }
     })
   },
