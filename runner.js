@@ -30,7 +30,7 @@ export default await base_mod.find('class', 'module').new({
                 }
                 for (const test_case of Object.values(mod.$case)) {
                   try {
-                    test_case.run();
+                    await test_case.run();
                   } catch (e) {
                     console.log(e);
                   }

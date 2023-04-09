@@ -13,9 +13,10 @@ export default base_mod.find('class', 'module').new({
         $.deffed,
         $.method.new({
           name: 'run',
-          do() {
+          async: true,
+          async do() {
             try {
-              this.do().apply(this);
+              await this.do().apply(this);
             } catch (e) {
               this.log('failed!!!');
               console.error(e);

@@ -16,11 +16,15 @@ export default await base_mod.find('class', 'module').new({
         let f = reader.read();
         this.assert_eq(source, f.print());
       }
-    })
-    const counter_mod = await $.script.new({
-      name: 'lisp-basic-run--counter',
-      imports: [_],
-      source: `
+    });
+
+    $.case.new({
+      name: 'lisp-basic-run',
+      async do() {
+        const counter_mod = await $.script.new({
+          name: 'lisp-basic-run--counter',
+          imports: [_],
+          source: `
 ~class.new({
   :name :counter
   :components (
@@ -32,60 +36,13 @@ export default await base_mod.find('class', 'module').new({
   )
 })
 `,
-    }).run();
-
-    $.case.new({
-      name: 'lisp-basic-run',
-      async do() {
+        }).run();
         this.log(counter_mod);
         const c = counter_mod.find('class', 'counter').new();
         c.inc();
         c.inc();
         this.assert_eq(c.count(), 2);
       }
-    })
-    $.case.new({
-      name: 'lisp-quasiquotes',
-      do() {
-        return;
-        const ex = `
-$(macro quickmeth [name args @forms]
-  \`~method(new {
-      :name ,%name
-      :do [|%args ,%forms]
-    })
-)
-
-~class(new {
-  name :point
-  components [
-    ~var(new {
-      :name :x
-      :type !number
-      :default 0
-    })
-    ~var(new {
-      :name :y
-      :type !number
-      :default 0
-    })
-    ~method(new {
-      :name :dist
-      :args (!self)
-      :ret !number
-      :do [^.x.-(%it.x).pow(2).+(y.-(%it.y).pow(2)).sqrt]
-    })
-    $(quickmeth translate (other) [
-      .x(.x.add(%other.x))
-      .y(.y.add(%other.y))
-    ])
-  ]
-})
-~debug.log(~point.new({ :x 3 :y 4 }).dist(~point.new))
-
-`;
-        $.script.run('quasiquote', ex);
-      }
-    })
+    });
   },
 }).load();
