@@ -33,20 +33,18 @@
  */
 
 import bootstrap from './base.js';
-import vm from 'vm';
 import { createHash } from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { prettyPrint, types } from 'recast';
+const b = types.builders;
 var __ = bootstrap();
 let base_mod = __.base();
+
 export default base_mod.find('class', 'module').new({
   name: 'lisp',
   imports: [base_mod],
   on_load(_, $) {
-    const $primitive = _.proxy('primitive');
-    const b = types.builders;
-
     $.class.new({
       name: 'stream',
       components: [
@@ -655,13 +653,6 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.macro.new({
-      name: 'lambda-node',
-      expand_fn(args, body) {
-        return $.lambda_node.new({ args, body });
-      }
-    })
-
-    $.macro.new({
       name: 'macro',
       expand_fn(name, args, ...forms) {
         // compile body!
@@ -700,23 +691,6 @@ export default base_mod.find('class', 'module').new({
       ]
     })
 
-    $.macro.new({
-      name: 'do-node',
-      expand_fn(...forms) {
-        return $.lambda_node.new({
-          args: $.list_node.new({ items: [$.identifier.new({ value: 'it' })] }),
-          body: $.body.new({ forms: forms.map(f => f.expand()) }),
-        })
-      },
-    });
-
-    $.macro.new({
-      name: 'test',
-      expand_fn(_name, _do) {
-        return
-      },
-    });
-
     $.class.new({
       name: 'program',
       components: [
@@ -741,22 +715,6 @@ export default base_mod.find('class', 'module').new({
         }
       ],
     });
-
-    $.class.new({
-      name: 'do-node',
-      components: [
-        $.node,
-        $.var.new({ name: 'value' }),
-        $.method.new({
-          name: 'parse',
-          do: function parse(reader) {
-            reader.expect('&');
-            this.value($.block_node.parse(reader));
-            return this;
-          }
-        }),
-      ]
-    })
 
     $.class.new({
       name: 'return-node',
@@ -907,7 +865,8 @@ export default base_mod.find('class', 'module').new({
       ],
     });
 
-    // maybe switch to https://nodejs.org/api/esm.html#customizing-esm-specifier-resolution-algorithm
+    // TODO: custom in-memory loader?
+    // see https://nodejs.org/api/esm.html#customizing-esm-specifier-resolution-algorithm
     $.class.new({
       name: 'module-cache',
       components: [
