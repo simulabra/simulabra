@@ -203,7 +203,8 @@ function bootstrap() {
         return __;
     }
 
-    console.log('----- STARTING SIMULABRA: INFINITE SOFTWARE -----');
+    console.log('~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~');
+    console.log('STARTING SIMULABRA: INFINITE SOFTWARE');
     __._stack = new FrameStack();
 
     Object.prototype._add = function add(name, op) {
@@ -212,20 +213,7 @@ function bootstrap() {
     Object.prototype.eq = function (other) {
         return this === other;
     }
-    // Object.prototype.description = function() {
-    //     return `Native Object (${typeof this})`;
-    // }
-    Object.prototype.contains = function (i) {
-        return i in this;
-    }
-    // Object.prototype.estree = function() {
-    //     return {
-    //         type: 'Literal',
-    //         value: this,
-    //     };
-    // }
     Function.prototype.load = function (proto) {
-        // console.log('fnload', this.name, proto);
         proto._add(this.name, this);
     };
     Function.prototype.combine = function (impl) {

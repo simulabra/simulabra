@@ -579,7 +579,6 @@ export default base_mod.find('class', 'module').new({
           return '%';
         },
         function estree() {
-          this.log('argref estree', this.identifier());
           return b.identifier(`_${this.identifier()}`);
         },
       ],

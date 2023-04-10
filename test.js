@@ -18,7 +18,7 @@ export default base_mod.find('class', 'module').new({
             try {
               await this.do().apply(this);
             } catch (e) {
-              this.log('failed!!!');
+              this.log('!!!!! failed !!!!!');
               console.error(e);
               return;
             }
