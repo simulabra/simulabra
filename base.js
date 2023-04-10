@@ -818,7 +818,7 @@ function bootstrap() {
                 },
             }),
             function description(seen = {}) {
-                return `[${this.map(it => it.description(seen)).join(' ')}]`;
+                return `(${this.map(it => it?.description(seen) ?? '' + it).join(' ')})`;
             },
         ]
     });

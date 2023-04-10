@@ -149,37 +149,49 @@ export default base_mod.find('class', 'module').new({
     $.class.new({
       name: 'node',
       components: [
-        function quote() {
-          const props = {};
-          for (const v of this.class().vars()) {
-            const k = v.name().deskewer();
-            props[k] = this[k]().quote();
-          }
-          return $.message_node.new({
-            receiver: $.classref_node.new({ symbol: $.symbol_node.new({ value: this.class().name() }) }),
-            selector: 'new',
-            args: [props]
-          });
-        },
-        function children() {
-          return this.vars().filter(vs => this.log(vs) || vs.value().class().descended($.node));
-        },
-        function visit(fn, args = []) {
-          const newmap = Object.fromEntries(this.vars().map(it => [it.var_ref().name(), fn.apply(it.value(), args)]));
-          return this.class().new(newmap);
-        },
-        $.before.new({
-          name: 'expand',
+        $.virtual.new({
+          name: 'parse'
+        }),
+        $.method.new({
+          name: 'quote',
           do() {
-            // this.log('expand');
+            const props = {};
+            for (const v of this.class().vars()) {
+              const k = v.name().deskewer();
+              props[k] = this[k]().quote();
+            }
+            return $.message_node.new({
+              receiver: $.classref_node.new({ symbol: $.symbol_node.new({ value: this.class().name() }) }),
+              selector: 'new',
+              args: [props]
+            });
           }
         }),
-        function expand() {
-          return this;
-        },
-        function quasiexpand() {
-          return $.quote_node.new({ value: this });
-        },
+        $.method.new({
+          name: 'children',
+          do() {
+            return this.vars().filter(vs => this.log(vs) || vs.value().class().descended($.node));
+          }
+        }),
+        $.method.new({
+          name: 'visit',
+          do(fn, args = []) {
+            const newmap = Object.fromEntries(this.vars().map(it => [it.var_ref().name(), fn.apply(it.value(), args)]));
+            return this.class().new(newmap);
+          }
+        }),
+        $.method.new({
+          name: 'expand',
+          do() {
+            return this;
+          }
+        }),
+        $.method.new({
+          name: 'quasiexpand',
+          do() {
+            return $.quote_node.new({ value: this });
+          }
+        }),
 
       ]
     });
@@ -189,34 +201,28 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'value' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.expect(':');
-            return this.new({ value: reader.identifier() });
+            this.value(reader.identifier());
+            return this;
           }
         }),
-        $.static.new({
-          name: 'of',
-          do: function of(reader) {
-            return this.new({ value });
+        $.method.new({
+          name: 'estree',
+          do() {
+            return b.stringLiteral(this.value());
           }
         }),
-        function estree() {
-          return b.stringLiteral(this.value());
-        },
-        function print() {
-          return ':' + this.value();
-        },
+        $.method.new({
+          name: 'print',
+          do() {
+            return ':' + this.value();
+          }
+        }),
       ],
     });
-
-    // $primitive.object_primitive.extend($.method.new({
-    //   name: 'expand',
-    //   do: function() {
-    //     return this;
-    //   },
-    // }));
 
     _.find('primitive', 'array-primitive').extend([
       function quote() {
@@ -258,21 +264,17 @@ export default base_mod.find('class', 'module').new({
       debug: true,
       components: [
         $.node,
-        $.static.new({
+        $.method.new({
           name: 'parse',
-          do: function parse(reader, receiver = null) {
-            if (!receiver) {
-              receiver = $.this_node.new();
-            }
+          do: function parse(reader) {
+            this.receiver() ?? this.receiver($.this_node.new());
             reader.expect('.');
-            const selector = reader.identifier();
-            let args;
+            this.selector(reader.identifier());
+            this.args($.list_node.new());
             if (reader.peek() === '(') {
-              args = $.list_node.parse(reader);
-            } else {
-              args = $.list_node.new();
+              this.args().parse(reader);
             }
-            return this.new({ receiver, selector, args });
+            return this;
           }
         }),
         $.var.new({ name: 'receiver' }),
@@ -310,6 +312,15 @@ export default base_mod.find('class', 'module').new({
         $.node,
         $.var.new({ name: 'key' }),
         $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            this.key($.symbol_node.new().parse(reader));
+            reader.strip();
+            this.value(reader.read());
+            return this;
+          }
+        }),
         function print() {
           return `${this.key().print()} ${this.value().print()}`;
         },
@@ -328,18 +339,18 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'items', default: [] }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
+            this.items([]);
             reader.expect('(');
-            const items = [];
             while (reader.peek() !== ')') {
               reader.strip();
-              items.push(reader.read());
+              this.items().push(reader.read());
               reader.strip();
             }
             reader.expect(')');
-            return this.new({ items });
+            return this;
           },
         }),
         function print() {
@@ -368,14 +379,14 @@ export default base_mod.find('class', 'module').new({
         $.node,
         $.var.new({ name: 'args' }),
         $.var.new({ name: 'body' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do(reader) {
             reader.expect('[');
             reader.strip();
-            const args = reader.peek() === '(' ? $.list_node.parse(reader) : $.list_node.new({
-              items: [$.argref_node.new({ identifier: 'it' })]
-            });
+            this.args(reader.peek() === '(' ? $.list_node.parse(reader) : $.list_node.new({
+              items: [$.argref_node.new({ identifier: 'it' })] // TODO: special guy
+            }));
             const forms = [];
             while (reader.peek() !== ']') {
               reader.strip();
@@ -383,7 +394,8 @@ export default base_mod.find('class', 'module').new({
               reader.strip();
             }
             reader.expect(']');
-            return this.new({ args, body: $.body.new({ forms }) });
+            this.body($.body.new({ forms }));
+            return this;
           }
         }),
         function print() {
@@ -400,21 +412,18 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'properties' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.next(); // {
-            const properties = [];
+            this.properties([]);
             while (reader.peek() !== '}') {
               reader.strip();
-              const key = $.symbol_node.parse(reader);
-              reader.strip();
-              const value = reader.read();
-              properties.push($.property.new({ key, value }))
+              this.properties().push($.property.new().parse(reader))
               reader.strip();
             }
             reader.next(); // }
-            return this.new({ properties });
+            return this;
           }
         }),
         function print() {
@@ -433,13 +442,12 @@ export default base_mod.find('class', 'module').new({
       name: 'quote-node',
       components: [
         $.var.new({ name: 'value' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.next(); // '
-            return this.new({
-              value: reader.read(),
-            });
+            this.value(reader.read());
+            return this;
           }
         }),
         function print() {
@@ -460,7 +468,7 @@ export default base_mod.find('class', 'module').new({
     $.class.new({
       name: 'quasiquote-node',
       components: [
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.next(); // `
@@ -476,11 +484,12 @@ export default base_mod.find('class', 'module').new({
     $.class.new({
       name: 'unquote-node',
       components: [
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.next(); // ,
-            return this.new({ value: reader.read() });
+            this.value(reader.read());
+            return this;
           }
         }),
         function quasiexpand() {
@@ -500,11 +509,11 @@ export default base_mod.find('class', 'module').new({
       name: 'invoke-node',
       components: [
         $.node,
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.expect('$');
-            return this.new();
+            reader.expect('$'); // parse message?
+            return this;
           }
         }),
         function print() {
@@ -518,7 +527,7 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'value' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             let n = '';
@@ -529,10 +538,8 @@ export default base_mod.find('class', 'module').new({
             while (reader.digit() || reader.peek() === '.') {
               n += reader.next();
             }
-            const num = new Number(n);
-            return this.new({
-              value: num
-            });
+            this.value(+n);
+            return this;
           }
         }),
         function print() {
@@ -549,11 +556,12 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'identifier' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.expect(this.char()); // %
-            return this.new({ identifier: reader.identifier() })
+            this.identifier(reader.identifier());
+            return this;
           }
         }),
         function print() {
@@ -588,7 +596,7 @@ export default base_mod.find('class', 'module').new({
       name: 'classref-node',
       components: [
         $.ref_reader_macro,
-        $.static.new({
+        $.method.new({
           name: 'char',
           do() {
             return '~';
@@ -635,7 +643,6 @@ export default base_mod.find('class', 'module').new({
         $.var.new({ name: 'name' }),
         $.var.new({ name: 'expand-fn', debug: false }),
         function expand(...args) {
-          this.log('expand');
           return this.expand_fn().apply(this, args.map(a => a.expand()));
         },
         $.after.new({
@@ -740,11 +747,12 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'value' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.expect('&');
-            return this.new({ value: reader.read() });
+            this.value($.block_node.parse(reader));
+            return this;
           }
         }),
       ]
@@ -755,11 +763,12 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'value' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // ^
-            return this.new({ value: reader.read() });
+            reader.expect('^');
+            this.value(reader.read());
+            return this;
           }
         }),
         function print() {
@@ -776,11 +785,12 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'arg' }),
-        $.static.new({
+        $.method.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // @
-            return this.new({ arg: reader.read() });
+            reader.expect('@');
+            this.arg(reader.read());
+            return this;
           }
         }),
         function print() {
@@ -858,11 +868,11 @@ export default base_mod.find('class', 'module').new({
             return;
           }
           if (this.readtable().has_char(c)) {
-            const res = this.readtable().get(c).parse(this);
+            const res = this.readtable().get(c).new().parse(this);
             // this.log('from readtable', res);
             // this.log(c, this.peek());
             if (this.peek() === '.') {
-              return $.message_node.parse(this, res);
+              return $.message_node.new({ receiver: res }).parse(this);
             } else {
               return res;
             }
@@ -870,7 +880,7 @@ export default base_mod.find('class', 'module').new({
             this.dlog('not in readtable:', c);
           }
           if (this.digit() || c === '-') {
-            return $.number_literal.parse(this);
+            return $.number_literal.new().parse(this);
           }
           if (this.alpha()) {
             return this.symbol();
@@ -897,6 +907,7 @@ export default base_mod.find('class', 'module').new({
       ],
     });
 
+    // maybe switch to https://nodejs.org/api/esm.html#customizing-esm-specifier-resolution-algorithm
     $.class.new({
       name: 'module-cache',
       components: [
