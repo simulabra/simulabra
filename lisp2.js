@@ -382,9 +382,18 @@ export default base_mod.find('class', 'module').new({
           do(reader) {
             reader.expect('[');
             reader.strip();
-            this.args(reader.peek() === '(' ? $.list_node.parse(reader) : $.list_node.new({
-              items: [$.argref_node.new({ identifier: 'it' })] // TODO: special guy
-            }));
+            if (reader.peek() === '|') {
+              reader.expect('|');
+              this.args([]);
+              while (reader.peek() !== '|') {
+                reader.strip();
+                this.args().push($.argref_node.new().parse(reader));
+                reader.strip();
+              }
+              reader.expect('|');
+            } else {
+              this.args([$.argref_node.new({ identifier: 'it' })]);
+            }
             const forms = [];
             while (reader.peek() !== ']') {
               reader.strip();
@@ -396,11 +405,14 @@ export default base_mod.find('class', 'module').new({
             return this;
           }
         }),
+        function default_args() {
+          return this.args().length === 1 && this.args()[0].identifier() === 'it';
+        },
         function print() {
-          return `[${this.args}]`
+          return `[${this.default_args() ? '' : '|' + this.args().map(a => a.print()).join(' ') + '|'}${this.body().print()}]`
         },
         function estree() {
-          return b.functionExpression(null, this.args().items().map(a => a.estree()), this.body().estree());
+          return b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
         }
       ],
     });

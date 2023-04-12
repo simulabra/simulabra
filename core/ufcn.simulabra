@@ -23,11 +23,11 @@ $if(.x.<(10) ; thix.x < 10 ?
   :name :dumb-factor
   :value 10
 })
-|%x %y [^%x.+(%y).*(#dumb-factor)] ; (x, y) => { return (x + y) * DUMB_FACTOR; }
-1.range(5).map([^%it.*(2)]).reduce(|%prev %cur [%prev.+(%cur)] 0) ; 30
+[|%x %y| ^%x.+(%y).*(#dumb-factor)] ; (x, y) => { return (x + y) * DUMB_FACTOR; }
+1.range(5).map([^%it.*(2)]).reduce([|%prev %cur| ^%prev.+(%cur)] 0) ; (1).range(5).map(_it => { return _it * 2 }).reduce((_prev, _cur) => { return _prev + _cur }, 0)
 ~macro.new({
   :name dist1
-  :do [^`.,%it.-(%it.,%it).pow(2)]
+  :do [^`.,%it.-(%it.,%it).pow(2)] ; quasiquoting with `
 })
 
 ~class.new({ ; define a new class
@@ -39,18 +39,18 @@ $if(.x.<(10) ; thix.x < 10 ?
     ~method.new({ ; a method
       :name :cartesian-dist ; named 'cartesian-dist'
       :desc "cartesian distance to other point"
-      :do [ ; it => {
+      :do [ ; _it => {
         $let({ ; let
-          %dx $dist1(:x) ; dx = (this.x - it.x).pow(2)
+          %dx $dist1(:x) ; _dx = (this.x - it.x).pow(2)
           %dy $dist1(:y)
         })
-        ^%dx.+(%dy).sqrt ; return (dx + dy).sqrt()
+        ^%dx.+(%dy).sqrt ; return (_dx + _dy).sqrt()
       ] ; }
     })
     ~method.new({ ; a method
       :name :triangle-perimeter
-      :do |%a %b [ ; fn with 2 args, %a and %b
-        ^.dist(%a).+(.dist(%b)).+(%a.dist(%b))
+      :do [|%a %b| ; (_a, _b) => {
+        ^.dist(%a).+(.dist(%b)).+(%a.dist(%b)) ; return this.dist(_a) + this.dist(_b) + _a.dist(_b);
       ]
     })
   ]
@@ -74,7 +74,7 @@ $if(.x.<(10) ; thix.x < 10 ?
   :components (~point ~color)
 })
 
-~case.new({
+~case.new({ ; test case
   :name :basic-point-test
   :do [
     $let({
@@ -87,4 +87,4 @@ $if(.x.<(10) ; thix.x < 10 ?
 })
 ```
 
-Show how a hypothetical Twitter clone could be implemented in Simulabra, making up libraries/APIs where necessary.
+Write a command line RPN calculator in Simulabra.
