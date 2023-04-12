@@ -1,30 +1,34 @@
-(~class new {
-  name :element
-  desc "base class for DOM elements"
-  components [
-    (~method new {
-      name :text
-      do ($ do (. new { inner %it }))
+~class.new({
+  :name :html-element
+  :desc "base class for DOM elements"
+  :components (
+    ~var.new({
+      :name :id
     })
-    (~var new)
-    node (~var new)
-    load $(method [] $(loop .(children) %it(load .)))
-    nameString $(method [] .(name | toString))
-    domNode $(method [] @document(getElementById .(id))
-    render $(method []
-      .(domNode | set 'innerHTML .(html))
-      .(load)
-    )
-    children $(method [] [])
-  ]
-}))
-
-$(def (~interface new {
-  name 'HTML
-  slots {
-    html (~message new)
-  }
-}))
+    ~method.new({
+      :name :dom-node
+      :do [^$js(document).getElementById(.id)]
+    })
+    ~method.new({
+      :name :load
+      :do [.children.map([%it.load])]
+    })
+    ~method.new({
+      :name :render
+      :do [
+        $set(.dom-node :innerHTML .html)
+        .load
+      ]
+    })
+    ~method.new({
+      :name :children
+      :do [^()]
+    })
+    ~method.new({
+      :name :html
+    })
+  )
+})
 
 $(def (~class new {
   name 'list-element

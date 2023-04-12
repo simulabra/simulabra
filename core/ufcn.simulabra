@@ -23,9 +23,8 @@ $if(.x.<(10) ; thix.x < 10 ?
   :name :dumb-factor
   :value 10
 })
-[(%x %y) ^%x.+(%y).*(#dumb-factor)] ; (x, y) => { return (x + y) * DUMB_FACTOR; }
-1.range(5).map([^%it.*(2)]).reduce([(%prev %cur) %prev.+(%cur)] 0) ; 30
-
+|%x %y [^%x.+(%y).*(#dumb-factor)] ; (x, y) => { return (x + y) * DUMB_FACTOR; }
+1.range(5).map([^%it.*(2)]).reduce(|%prev %cur [%prev.+(%cur)] 0) ; 30
 ~macro.new({
   :name dist1
   :do [^`.,%it.-(%it.,%it).pow(2)]
@@ -50,7 +49,7 @@ $if(.x.<(10) ; thix.x < 10 ?
     })
     ~method.new({ ; a method
       :name :triangle-perimeter
-      :do [(%a %b) ; fn with 2 args, %a and %b
+      :do |%a %b [ ; fn with 2 args, %a and %b
         ^.dist(%a).+(.dist(%b)).+(%a.dist(%b))
       ]
     })
@@ -88,4 +87,4 @@ $if(.x.<(10) ; thix.x < 10 ?
 })
 ```
 
-Write a flappy bird clone in Simulabra.
+Show how a hypothetical Twitter clone could be implemented in Simulabra, making up libraries/APIs where necessary.
