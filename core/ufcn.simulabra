@@ -5,30 +5,34 @@
 %it ; argument/variable reference
 5.sqrt ; message send
 %p.x(5) ; message send with arg
+%p.x/5 ; equivalent
 ~point.new ; basic constructor is `new` message on class
-5.+(7) ; 5 + 7
-4.*(3).*(2) ; (4 * 3) * 2
-() (1 2 %three 16.sqrt) ; [] [1, 2, three, 16.sqrt()]
-{ :prop-one :value :prop-two (1 2) } ; { prop_one: 'value', prop_two: [1, 2] }
-~point.new({ :x 3 :y 4 }) ; new point{ x: 3, y: 4 }
-.x(5) ; this.x(5)
-.x.*(.y) ; this.x * this.y
-$let(%v 4.*(8)) ; let v = 4 * 8
+5.add/7 ; 5 + 7
+4.mul/3.sub/2 ; 4 * (3 - 2)
+'() '(1 2 %three 16.sqrt) ; [] [1, 2, three, 16.sqrt()]
+{ :prop-one :value :prop-two '(1 2) } ; { prop_one: 'value', prop_two: [1, 2] }
+~point.new/{ :x 3 :y 4 } ; new point{ x: 3, y: 4 }
+.x/5 ; this.x(5)
+.x.mul/.y ; this.x * this.y
+$let(%v 4.mul/8) ; let v = 4 * 8
 .log("v is" %v) ; this.log("v is", v)
-$if(.x.<(10) ; thix.x < 10 ?
-  .x(.x.+(1)) ; this.x(this.x + 1) :
-  .x(.x./(2))) ; this.x(this.x / 2)
-[^%it.x] ; it => { return it.x }
-~const.new({
+$if(.x.lt/10 ; thix.x < 10 ?
+  .x/.x.add/1 ; this.x(this.x + 1) :
+  .x/.x.div/2) ; this.x(this.x / 2)
+~const.new/{
   :name :dumb-factor
   :value 10
-})
-[|%x %y| ^%x.+(%y).*(#dumb-factor)] ; (x, y) => { return (x + y) * DUMB_FACTOR; }
-1.range(5).map([^%it.*(2)]).reduce([|%prev %cur| ^%prev.+(%cur)] 0) ; (1).range(5).map(_it => { return _it * 2 }).reduce((_prev, _cur) => { return _prev + _cur }, 0)
-~macro.new({
+}
+
+$do/$ret/%it.mul/2 ; _it => { return _it * 2; }
+$fn((%x %y) $ret/%x.add/%y) ; (_x, _y) => { return _x + _y; }
+
+1.range(5).map($do($ret/%it.mul/2)).reduce($fn((%prev %cur) $ret/%prev.add/%cur) 0) ; (1).range(5).map(_it => { return _it * 2 }).reduce((_prev, _cur) => { return _prev + _cur }, 0)
+
+~macro.new/{
   :name dist1
-  :do [^`.,%it.-(%it.,%it).pow(2)] ; quasiquoting with `
-})
+  :do $do/$ret/`.,%it.-(%it.,%it).pow(2)] ; quasiquoting with `
+}
 
 ~class.new({ ; define a new class
   :name :point ; name it 'point'

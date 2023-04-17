@@ -96,6 +96,7 @@ export default base_mod.find('class', 'module').new({
       ]
     });
 
+
     $.class.new({
       name: 'readtable',
       components: [
@@ -106,9 +107,8 @@ export default base_mod.find('class', 'module').new({
               table: {
                 ':': $.symbol_node,
                 '/': $.this_node,
-                '(': $.list_node,
+                '[': $.list_node,
                 '{': $.map_node,
-                '[': $.lambda_node,
                 '\'': $.quote_node,
                 '`': $.quasiquote_node,
                 ',': $.unquote_node,

@@ -26,18 +26,19 @@ export default await base_mod.find('class', 'module').new({
           name: 'lisp-basic-run--counter',
           imports: [_],
           source: `
-~class.new({
+~class.new/{
   :name :counter
-  :components (
-    ~var.new({ :name :count :default 0 })
-    ~method.new({
+  :components [
+    ~var.new/{ :name :count :default 0 }
+    ~method.new/{
       :name :inc
-      :do [.count(.count.+(1))]
-    })
-  )
-})
+      :do $do/.count/.count.add/1
+    }
+  ]
+}
 `,
         }).run(transformer);
+
         const c = counter_mod.find('class', 'counter').new();
         c.inc();
         c.inc();
