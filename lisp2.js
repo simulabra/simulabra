@@ -268,9 +268,13 @@ export default base_mod.find('class', 'module').new({
             this.receiver() ?? this.receiver($.this_node.new());
             reader.expect('.');
             this.selector(reader.identifier());
-            this.args($.list_node.new());
+            this.args();
             if (reader.peek() === '(') {
-              this.args().parse(reader);
+              this.args($.list_node.new().parse(reader));
+            } else if (reader.peek() === '/') {
+              reader.expect('/');
+              this.cut(true);
+              this.args(reader.read());
             }
             return this;
           }
@@ -278,8 +282,9 @@ export default base_mod.find('class', 'module').new({
         $.var.new({ name: 'receiver' }),
         $.var.new({ name: 'selector' }),
         $.var.new({ name: 'args' }),
+        $.var.new({ name: 'cut', default: false }),
         function print() {
-          return `${this.receiver().print()}.${this.selector()}${this.args()?.print()}`;
+          return `${this.receiver().print()}.${this.selector()}${this.cut() ? '/' : ''}${this.args()?.print()}`;
         },
         function estree() {
           if (this.selector() === '+') {
@@ -814,7 +819,7 @@ export default base_mod.find('class', 'module').new({
           return this.test(/[0-9]/);
         },
         function delimiter() {
-          return this.inc('(){}[].');
+          return this.inc('(){}[]./');
         },
         function term() {
           return this.delimiter() || this.whitespace();
