@@ -22,7 +22,7 @@ function simulabra_string(obj) {
         const ps = [];
         for (const [k, v] of Object.entries(obj)) {
             // console.log('ss recur', k)
-            ps.push(`${k}=${simulabra_string(v)}`)
+            ps.push(`${k}: ${simulabra_string(v)}`)
         }
         return '{' + ps.join(' ') + '}';
     } else {

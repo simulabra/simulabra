@@ -107,7 +107,7 @@ export default base_mod.find('class', 'module').new({
               table: {
                 ':': $.symbol_node,
                 '/': $.this_node,
-                '[': $.list_node,
+                '(': $.list_node,
                 '{': $.map_node,
                 '\'': $.quote_node,
                 '`': $.quasiquote_node,
@@ -131,11 +131,15 @@ export default base_mod.find('class', 'module').new({
         },
         function get(char) {
           // $.debug.log(`rt get ${char} ${this.table()[char]}`);
-          return this.table()[char];
+          if (this.has_char(char)) {
+            return this.table()[char];
+          } else {
+            throw new Error(this.format(`doesn't have ${char}`));
+          }
         },
         function has_char(char) {
           // $.debug.log(char)
-          if (char in this.table()) {
+          if (this.table()[char]) {
             // $.debug.log(this.table()[char]);
             return true;
           }
@@ -190,7 +194,13 @@ export default base_mod.find('class', 'module').new({
             return $.quote_node.new({ value: this });
           }
         }),
-
+        $.var.new({ name: 'start' }),
+        $.var.new({ name: 'end' }),
+        $.before.new({
+          name: 'parse',
+          do(reader) {
+          }
+        }),
       ]
     });
 
@@ -275,7 +285,11 @@ export default base_mod.find('class', 'module').new({
               reader.expect('/');
               this.cut(true);
               this.args(reader.read());
+            } else {
+              this.args($.list_node.new());
             }
+            console.log();
+            this.log(this.args());
             return this;
           }
         }),
@@ -290,7 +304,11 @@ export default base_mod.find('class', 'module').new({
           if (this.selector() === '+') {
             return b.binaryExpression('+', this.receiver().estree(), this.args().items()[0].estree());
           } else {
-            return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), this.args().items().map(a => a.estree()));
+            let args = this.args().estree();
+            if (!Array.isArray(args)) {
+              args = [args];
+            }
+            return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), args);
           }
         },
         function expand() {
@@ -303,9 +321,26 @@ export default base_mod.find('class', 'module').new({
             }
             return v;
           } else {
-            return this.visit(function () { return this.expand(); });
+            return this.visit(function () { return this?.expand ? this.expand() : this; });
           }
         }
+      ],
+    });
+
+    $.class.new({
+      name: 'invoke-node',
+      components: [
+        $.node,
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('$'); // parse message?
+            return this;
+          }
+        }),
+        function print() {
+          return '$';
+        },
       ],
     });
 
@@ -427,11 +462,16 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'properties' }),
+        $.var.new({ name: 'space' }),
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.next(); // {
             this.properties([]);
+            if (![' ', '\n'].includes(reader.peek())) {
+              throw new Error(this.format(`invalid map opening whitespace ${reader.peek()}`));
+            }
+            this.space(reader.peek());
             while (reader.peek() !== '}') {
               reader.strip();
               this.properties().push($.property.new().parse(reader))
@@ -442,7 +482,7 @@ export default base_mod.find('class', 'module').new({
           }
         }),
         function print() {
-          return `{ ${this.properties().map(prop => prop.print()).join(' ')} }`;
+          return `{${this.space()}${this.properties().map(prop => prop.print()).join(' ')} }`;
         },
         function estree() {
           return b.objectExpression(this.properties().map(p => p.estree()))
@@ -518,23 +558,6 @@ export default base_mod.find('class', 'module').new({
       name: 'unquote-lst',
       components: [
       ]
-    });
-
-    $.class.new({
-      name: 'invoke-node',
-      components: [
-        $.node,
-        $.method.new({
-          name: 'parse',
-          do: function parse(reader) {
-            reader.expect('$'); // parse message?
-            return this;
-          }
-        }),
-        function print() {
-          return '$';
-        },
-      ],
     });
 
     $.class.new({
@@ -798,10 +821,10 @@ export default base_mod.find('class', 'module').new({
           return this.stream().next();
         },
         function expect(c) {
-          const sc = this.stream().next();
-          if (sc !== c) {
-            throw new Error(`expected ${c} got ${sc}`);
+          if (this.stream().peek() !== c) {
+            throw new Error(`expected ${c} got ${this.stream().peek()}`);
           }
+          return this.stream().next();
         },
         function inc(chars) {
           return chars.includes(this.peek());
@@ -870,7 +893,7 @@ export default base_mod.find('class', 'module').new({
               if (p) {
                 ps.push(p);
               } else {
-                this.log('read returned nothing?');
+                throw new Error('read returned nothing?');
               }
             }
             return $.program.new({ forms: ps });
