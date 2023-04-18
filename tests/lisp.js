@@ -11,11 +11,10 @@ export default await base_mod.find('class', 'module').new({
     $.case.new({
       name: 'lisp-basic-parse',
       do() {
-        const source = `
-~point.new/{
+        const source = `~point.new/{
   :x 3
   :y %wob.frob(1 2)
-  :change $.do(.x/.x.add/.y)
+  :change $.do/.x/.x.add/.y
 }`;
         const reader = $.reader.from_source(source);
         let f = reader.read();

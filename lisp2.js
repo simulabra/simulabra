@@ -259,7 +259,7 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         function print() {
-          return '.';
+          return '';
         },
         function estree() {
           return b.thisExpression();
@@ -284,12 +284,10 @@ export default base_mod.find('class', 'module').new({
             } else if (reader.peek() === '/') {
               reader.expect('/');
               this.cut(true);
-              this.args(reader.read());
+              this.args($.list_node.new({ items: [reader.read()] }));
             } else {
               this.args($.list_node.new());
             }
-            console.log();
-            this.log(this.args());
             return this;
           }
         }),
@@ -298,7 +296,11 @@ export default base_mod.find('class', 'module').new({
         $.var.new({ name: 'args' }),
         $.var.new({ name: 'cut', default: false }),
         function print() {
-          return `${this.receiver().print()}.${this.selector()}${this.cut() ? '/' : ''}${this.args()?.print()}`;
+          if (this.cut()) {
+            return `${this.receiver().print()}.${this.selector()}/${this.args().items()[0].print()}`;
+          } else {
+            return `${this.receiver().print()}.${this.selector()}${this.args()?.empty() ? '' : this.args().print()}`;
+          }
         },
         function estree() {
           if (this.selector() === '+') {
@@ -394,6 +396,9 @@ export default base_mod.find('class', 'module').new({
         function print() {
           return `(${this.items().map(it => it.print()).join(' ')})`;
         },
+        function empty() {
+          return this.items().length === 0;
+        },
         function estree() {
           return b.arrayExpression(this.items().map(it => it.estree()));
         },
@@ -482,7 +487,14 @@ export default base_mod.find('class', 'module').new({
           }
         }),
         function print() {
-          return `{${this.space()}${this.properties().map(prop => prop.print()).join(' ')} }`;
+          const props = this.properties().map(prop => prop.print());
+          if (this.space() === ' ') {
+            return `{ ${props.join(' ')} }`;
+          } else {
+            return `{
+${props.map(prop => '  ' + prop).join('\n')}
+}`
+          }
         },
         function estree() {
           return b.objectExpression(this.properties().map(p => p.estree()))
@@ -863,7 +875,7 @@ export default base_mod.find('class', 'module').new({
           this.strip();
           let c = this.peek();
           if (c === null) {
-            return;
+            return null;
           }
           if (this.readtable().has_char(c)) {
             const res = this.readtable().get(c).new().parse(this);
@@ -892,8 +904,6 @@ export default base_mod.find('class', 'module').new({
               const p = this.read();
               if (p) {
                 ps.push(p);
-              } else {
-                throw new Error('read returned nothing?');
               }
             }
             return $.program.new({ forms: ps });
