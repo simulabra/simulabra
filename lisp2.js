@@ -282,8 +282,7 @@ export default base_mod.find('class', 'module').new({
             this.args();
             if (reader.peek() === '(') {
               this.args($.list_node.new().parse(reader));
-            } else if (reader.peek() === '/') {
-              reader.expect('/');
+            } else if (reader.peek() === '{') {
               this.cut(true);
               this.args($.list_node.new({ items: [reader.read()] }));
             } else {
@@ -298,7 +297,7 @@ export default base_mod.find('class', 'module').new({
         $.var.new({ name: 'cut', default: false }),
         function print() {
           if (this.cut()) {
-            return `${this.receiver().print()}.${this.selector()}/${this.args().items()[0].print()}`;
+            return `${this.receiver().print()}.${this.selector()}${this.args().items()[0].print()}`;
           } else {
             return `${this.receiver().print()}.${this.selector()}${this.args()?.empty() ? '' : this.args().print()}`;
           }
@@ -878,6 +877,8 @@ ${props.map(prop => '  ' + prop).join('\n')}
             // this.log(c, this.peek());
             if (this.peek() === '.') {
               return $.message_node.new({ receiver: res }).parse(this);
+            } else if (this.peek() === ':') {
+              return $.pointer_node.new({ class: res }).parse(this);
             } else {
               return res;
             }

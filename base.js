@@ -285,7 +285,7 @@ function bootstrap() {
             return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
         },
         function title() {
-            return `${this.class().description()}:${this.name()}`;
+            return `${this.class().description()}:${this.name() ?? this.id()}`;
         },
         function log(...args) {
             $debug?.log(this.title(), ...args);
@@ -302,7 +302,8 @@ function bootstrap() {
             return this.class().descended(cls);
         },
         classDef.class,
-        BVar.new({ name: 'name', default: '?' }),
+        BVar.new({ name: 'name' }),
+        BVar.new({ name: 'id' }),
     ];
 
     // const $base_proto = {};
@@ -314,14 +315,13 @@ function bootstrap() {
 
     const $class_components = [
         function init() {
+            this.id_ctr(0);
             this.proto(new ClassPrototype(this));
             $base_components.load(this.proto());
             this._proto._class = this;
             this.load(this.proto());
             this.proto()._reify();
-            if (__._mod) {
-                __._mod.def(this);
-            }
+            __.mod()?.def(this)
         },
         function load(target) {
             for (const v of this.components()) {
@@ -351,8 +351,14 @@ function bootstrap() {
             }
             return vars;
         },
+        function genid() {
+            let id = this.id_ctr();
+            this.id_ctr(id + 1);
+            return id;
+        },
         BVar.new({ name: 'name' }),
         BVar.new({ name: 'proto' }),
+        BVar.new({ name: 'id-ctr' }),
         BVar.new({
             name: 'components',
             default: [],
@@ -369,6 +375,7 @@ function bootstrap() {
         // console.log('class new ' + props.name);
         const obj = Object.create(this.proto());
         parametize(props, obj);
+        obj.id(this.genid());
         obj.init(this);
         return obj;
     };
