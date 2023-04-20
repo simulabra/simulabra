@@ -356,13 +356,13 @@ export default base_mod.find('class', 'module').new({
           name: 'parse',
           do: function parse(reader) {
             this.key($.symbol_node.new().parse(reader));
-            reader.strip();
+            reader.expect('=');
             this.value(reader.read());
             return this;
           }
         }),
         function print() {
-          return `${this.key().print()} ${this.value().print()}`;
+          return `${this.key().print()}=${this.value().print()}`;
         },
         function estree() {
           return b.property('init', this.key().estree(), this.value().estree());
@@ -467,10 +467,11 @@ export default base_mod.find('class', 'module').new({
           do: function parse(reader) {
             reader.next(); // {
             this.properties([]);
-            if (![' ', '\n'].includes(reader.peek())) {
-              throw new Error(this.format(`invalid map opening whitespace ${reader.peek()}`));
+            if (reader.peek() === '\n') {
+              this.space(true);
+            } else {
+              this.space(false);
             }
-            this.space(reader.peek());
             while (reader.peek() !== '}') {
               reader.strip();
               this.properties().push($.property.new().parse(reader))
@@ -482,8 +483,8 @@ export default base_mod.find('class', 'module').new({
         }),
         function print() {
           const props = this.properties().map(prop => prop.print());
-          if (this.space() === ' ') {
-            return `{ ${props.join(' ')} }`;
+          if (!this.space()) {
+            return `{${props.join(' ')}}`;
           } else {
             return `{
 ${props.map(prop => '  ' + prop).join('\n')}
@@ -848,7 +849,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return this.test(/[0-9]/);
         },
         function delimiter() {
-          return this.inc('(){}[]./');
+          return this.inc('(){}[]./:=');
         },
         function term() {
           return this.delimiter() || this.whitespace();
