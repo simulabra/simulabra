@@ -43,8 +43,8 @@ export default await base_mod.find('class', 'module').new({
 `,
         }).run(transformer);
 
-        this.log(counter_mod);
         const c = counter_mod.find('class', 'counter').new();
+
         c.inc();
         c.inc();
 

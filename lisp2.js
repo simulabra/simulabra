@@ -307,7 +307,7 @@ export default base_mod.find('class', 'module').new({
           if (this.selector() === '+') {
             return b.binaryExpression('+', this.receiver().estree(), this.args().items()[0].estree());
           } else {
-            let args = this.args().estree();
+            let args = this.args().items().map(it => it.estree());
             if (!Array.isArray(args)) {
               args = [args];
             }
@@ -318,7 +318,7 @@ export default base_mod.find('class', 'module').new({
           if (this.receiver().isa($.invoke_node)) {
             this.log('find macro', this.selector());
             const macro = _.find('macro', this.selector());
-            const v = macro.expand(...this.args());
+            const v = macro.expand(...this.args().expand());
             if (v === undefined) {
               throw new Error(`macro expansion failed for ${macro.title()} in ${this.title()}`)
             }
@@ -983,6 +983,7 @@ export default await base_mod.find('class', 'module').new({
   on_load(_, $) {
 `; // file cache + dynamic imports?
             const hat = '}}).load();';
+
             return this.module_cache().run(prelude + source + hat);
           }
         }),

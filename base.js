@@ -320,7 +320,6 @@ function bootstrap() {
             this.load(this.proto());
             this.proto()._reify();
             if (__._mod) {
-                // console.log('deffin', this.name());
                 __._mod.def(this);
             }
         },
@@ -566,7 +565,6 @@ function bootstrap() {
             $var.new({ name: 'loaded', default: false }),
             $var.new({ name: 'repos', default: () => ({}) }),
             function repo(className) {
-                this.dlog('repo', className);
                 return this.repos()[className] || {};
             },
             function find(className, name) {
@@ -610,7 +608,6 @@ function bootstrap() {
             },
             async function load() {
                 if (!this.loaded() && this.on_load()) {
-                    // this.log('loading...');
                     this.loaded(true);
                     for (const imp of this.imports()) {
                         await imp.load();
@@ -619,7 +616,6 @@ function bootstrap() {
                     __.mod(this);
                     await this.on_load().apply(this, [this, this.proxy('class')]);
                     __.mod(om);
-                    // this.log('loaded');
                 }
                 return this;
             },
@@ -816,7 +812,7 @@ function bootstrap() {
                 },
             }),
             function description(seen = {}) {
-                return `(${this.map(it => it?.description(seen) ?? '' + it).join(' ')})`;
+                return `(${this.map(it => { debug(it, it.description); return simulabra_string(it) ?? '' + it }).join(' ')})`;
             },
         ]
     });
