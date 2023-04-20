@@ -36,13 +36,14 @@ export default await base_mod.find('class', 'module').new({
     ~var.new/{ :name :count :default 0 }
     ~method.new/{
       :name :inc
-      :do $.do/.count/.count.add/1
+      :do [|.count/.count.add/1]
     }
   )
 }
 `,
         }).run(transformer);
 
+        this.log(counter_mod);
         const c = counter_mod.find('class', 'counter').new();
         c.inc();
         c.inc();

@@ -242,6 +242,9 @@ function bootstrap() {
     String.prototype.deskewer = function () {
         return this.replace(/-/g, '_');
     };
+    String.prototype.skewer = function () {
+        return this.replace(/_/g, '-');
+    };
 
 
     function parametize(props, obj) {
@@ -285,7 +288,7 @@ function bootstrap() {
             return `${this.class().description()}:${this.name()}`;
         },
         function log(...args) {
-            $debug.log(this.title(), ...args);
+            $debug?.log(this.title(), ...args);
         },
         function dlog(...args) {
             if ($debug && this.class().debug()) {
@@ -318,7 +321,7 @@ function bootstrap() {
             this.proto()._reify();
             if (__._mod) {
                 // console.log('deffin', this.name());
-                __.mod().def(this);
+                __._mod.def(this);
             }
         },
         function load(target) {
@@ -561,16 +564,14 @@ function bootstrap() {
             }),
             $var.new({ name: 'on-load' }),
             $var.new({ name: 'loaded', default: false }),
-            function key(name) {
-                return '$' + name.deskewer();
-            },
+            $var.new({ name: 'repos', default: () => ({}) }),
             function repo(className) {
                 this.dlog('repo', className);
-                return this[this.key(className)] || {};
+                return this.repos()[className] || {};
             },
             function find(className, name) {
                 // totally dies to recursion!
-                const v = this.repo(className)[this.key(name)];
+                const v = this.repo(className)[name];
                 if (v) {
                     return v;
                 } else {
@@ -586,7 +587,7 @@ function bootstrap() {
             function proxy(className) {
                 return new Proxy(this, {
                     get(target, p) {
-                        return target.find(className, p);
+                        return target.find(className, p.skewer());
                     }
                 })
             },
@@ -594,15 +595,12 @@ function bootstrap() {
                 return '_' + sym.deskewer();
             },
             function def(obj) {
-                const className = this.key(obj.class().name());
-                const name = this.key(obj.name());
-                // this.log('def', className, name);
-                if (!this.hasOwnProperty(className)) {
-                    this.dlog('env init for class', className);
-                    this[className] = {};
+                const className = obj.class().name();
+                const name = obj.name();
+                if (!this.repos().hasOwnProperty(className)) {
+                    this.repos()[className] = {};
                 }
-                this[className][name] = obj;
-                // this.dlog('env val', this[className]);
+                this.repos()[className][name] = obj;
             },
             function child(moddef) {
                 return $.module.new({

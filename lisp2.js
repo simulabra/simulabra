@@ -108,6 +108,7 @@ export default base_mod.find('class', 'module').new({
                 ':': $.symbol_node,
                 '/': $.this_node,
                 '(': $.list_node,
+                '[': $.lambda_node,
                 '{': $.map_node,
                 '\'': $.quote_node,
                 '`': $.quasiquote_node,
@@ -425,20 +426,14 @@ export default base_mod.find('class', 'module').new({
         $.method.new({
           name: 'parse',
           do(reader) {
+            this.args([]);
             reader.expect('[');
-            reader.strip();
-            if (reader.peek() === '|') {
-              reader.expect('|');
-              this.args([]);
-              while (reader.peek() !== '|') {
-                reader.strip();
-                this.args().push($.argref_node.new().parse(reader));
-                reader.strip();
-              }
-              reader.expect('|');
-            } else {
-              this.args([$.argref_node.new({ identifier: 'it' })]);
+            while (reader.peek() !== '|') {
+              this.args().push(reader.read());
+              reader.strip();
             }
+            reader.expect('|');
+            reader.strip();
             const forms = [];
             while (reader.peek() !== ']') {
               reader.strip();

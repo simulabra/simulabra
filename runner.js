@@ -24,11 +24,12 @@ export default await base_mod.find('class', 'module').new({
               try {
                 const esm = await import('./' + filePath);
                 const mod = esm.default;
-                if (mod.$case === undefined) {
+                const cases = mod.repos().case;
+                if (cases === undefined) {
                   this.log(filePath, mod);
                   throw new Error(`no cases in module ${mod.description()}`);
                 }
-                for (const test_case of Object.values(mod.$case)) {
+                for (const test_case of Object.values(cases)) {
                   try {
                     await test_case.run();
                   } catch (e) {
