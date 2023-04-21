@@ -121,6 +121,7 @@ export default base_mod.find('class', 'module').new({
                 '&': $.do_node,
                 '^': $.return_node,
                 '@': $.restarg_node,
+                '"': $.string_literal_node,
               },
             });
           },
@@ -400,6 +401,7 @@ export default base_mod.find('class', 'module').new({
           return this.items().length === 0;
         },
         function estree() {
+          this.log(this.items());
           return b.arrayExpression(this.items().map(it => it.estree()));
         },
         function expand() {
@@ -430,15 +432,16 @@ export default base_mod.find('class', 'module').new({
             while (reader.peek() !== '|') {
               this.args().push(reader.read());
               reader.strip();
+            this.log(reader.peek());
             }
             reader.expect('|');
             reader.strip();
             const forms = [];
             while (reader.peek() !== ']') {
-              reader.strip();
               forms.push(reader.read());
               reader.strip();
             }
+            this.log(reader.peek());
             reader.expect(']');
             this.body($.body.new({ forms }));
             return this;
@@ -597,6 +600,40 @@ ${props.map(prop => '  ' + prop).join('\n')}
     });
 
     $.class.new({
+      name: 'string-literal-node',
+      debug: true,
+      components: [
+        $.node,
+        $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'parse',
+          do(reader) {
+            let stringValue = "";
+            reader.expect('"');
+            while (reader.peek() !== '"') {
+              const currentChar = reader.next();
+              if (currentChar === '\\' && (reader.peek() === '\\' || reader.peek() === '"')) {
+                stringValue += currentChar + reader.next();
+              } else {
+                stringValue += currentChar;
+              }
+            }
+            reader.expect('"');
+            this.value(stringValue);
+            return this;
+          }
+        }),
+        function print() {
+          return `"${this.value().replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+        },
+        function estree() {
+          return b.literal(this.value());
+        }
+      ],
+    });
+
+
+    $.class.new({
       name: 'ref-reader-macro',
       components: [
         $.node,
@@ -664,7 +701,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return '!';
         },
         function estree() {
-          return this.quote();
+          return b.identifier('$TYPE_' + this.identifier());
         },
       ],
     });
@@ -849,7 +886,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return this.test(/[0-9]/);
         },
         function delimiter() {
-          return this.inc('(){}[]./:=');
+          return this.inc('(){}[]./:=|');
         },
         function term() {
           return this.delimiter() || this.whitespace();
@@ -888,9 +925,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
           }
           if (this.digit() || c === '-') {
             return $.number_literal.new().parse(this);
-          }
-          if (this.alpha()) {
-            return this.symbol();
           }
           throw new Error(`unhandled: ${c} at ${this.stream().pos()}`);
         },
@@ -932,6 +966,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           name: 'run',
           async: true,
           async do(code) {
+            this.log('run', code);
             const hash = this.hash(code);
 
             if (!this.cache().has(hash)) {
@@ -1001,12 +1036,6 @@ export default await base_mod.find('class', 'module').new({
         }),
         $.var.new({
           name: 'module',
-        }),
-        $.static.new({
-          name: 'run',
-          do(name, source, transformer) {
-            this.new({ name, source, transformer }).load();
-          }
         }),
         $.method.new({
           name: 'run',
