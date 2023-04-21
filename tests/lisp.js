@@ -11,7 +11,11 @@ export default await base_mod.find('class', 'module').new({
     $.case.new({
       name: 'lisp-basic-parse',
       do() {
-        const source = '~point.new({ :x 3 :y 4 })';
+        const source = `~point.new{
+  :x=3
+  :y=%wob.frob(1 2)
+  :change=$.do(.x(.x.add(.y)))
+}`;
         const reader = $.reader.from_source(source);
         let f = reader.read();
         this.assert_eq(source, f.print());
@@ -26,21 +30,24 @@ export default await base_mod.find('class', 'module').new({
           name: 'lisp-basic-run--counter',
           imports: [_],
           source: `
-~class.new({
-  :name :counter
-  :components (
-    ~var.new({ :name :count :default 0 })
-    ~method.new({
-      :name :inc
-      :do [.count(.count.+(1))]
-    })
+~class.new{
+  :name=:counter
+  :components=(
+    ~var.new{:name=:count :default=0}
+    ~method.new{
+      :name=:inc
+      :do=[|.count(.count.add(1))]
+    }
   )
-})
+}
 `,
         }).run(transformer);
-        const c = counter_mod.find('class', 'counter').new();
+
+        const $counter = counter_mod.find('class', 'counter');
+        const c = $counter.new();
         c.inc();
         c.inc();
+        this.assert_eq($counter.new().id(), 1);
         this.assert_eq(c.count(), 2);
       }
     });

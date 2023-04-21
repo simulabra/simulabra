@@ -22,7 +22,7 @@ function simulabra_string(obj) {
         const ps = [];
         for (const [k, v] of Object.entries(obj)) {
             // console.log('ss recur', k)
-            ps.push(`${k}=${simulabra_string(v)}`)
+            ps.push(`${k}: ${simulabra_string(v)}`)
         }
         return '{' + ps.join(' ') + '}';
     } else {
@@ -242,6 +242,9 @@ function bootstrap() {
     String.prototype.deskewer = function () {
         return this.replace(/-/g, '_');
     };
+    String.prototype.skewer = function () {
+        return this.replace(/_/g, '-');
+    };
 
 
     function parametize(props, obj) {
@@ -282,10 +285,10 @@ function bootstrap() {
             return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
         },
         function title() {
-            return `${this.class().description()}:${this.name()}`;
+            return `${this.class().description()}:${this.name() ?? this.id()}`;
         },
         function log(...args) {
-            $debug.log(this.title(), ...args);
+            $debug?.log(this.title(), ...args);
         },
         function dlog(...args) {
             if ($debug && this.class().debug()) {
@@ -299,7 +302,8 @@ function bootstrap() {
             return this.class().descended(cls);
         },
         classDef.class,
-        BVar.new({ name: 'name', default: '?' }),
+        BVar.new({ name: 'name' }),
+        BVar.new({ name: 'id' }),
     ];
 
     // const $base_proto = {};
@@ -311,15 +315,13 @@ function bootstrap() {
 
     const $class_components = [
         function init() {
+            this.id_ctr(0);
             this.proto(new ClassPrototype(this));
             $base_components.load(this.proto());
             this._proto._class = this;
             this.load(this.proto());
             this.proto()._reify();
-            if (__._mod) {
-                // console.log('deffin', this.name());
-                __.mod().def(this);
-            }
+            __.mod()?.def(this)
         },
         function load(target) {
             for (const v of this.components()) {
@@ -349,8 +351,14 @@ function bootstrap() {
             }
             return vars;
         },
+        function genid() {
+            let id = this.id_ctr();
+            this.id_ctr(id + 1);
+            return id;
+        },
         BVar.new({ name: 'name' }),
         BVar.new({ name: 'proto' }),
+        BVar.new({ name: 'id-ctr' }),
         BVar.new({
             name: 'components',
             default: [],
@@ -367,6 +375,7 @@ function bootstrap() {
         // console.log('class new ' + props.name);
         const obj = Object.create(this.proto());
         parametize(props, obj);
+        obj.id(this.genid());
         obj.init(this);
         return obj;
     };
@@ -561,16 +570,13 @@ function bootstrap() {
             }),
             $var.new({ name: 'on-load' }),
             $var.new({ name: 'loaded', default: false }),
-            function key(name) {
-                return '$' + name.deskewer();
-            },
+            $var.new({ name: 'repos', default: () => ({}) }),
             function repo(className) {
-                this.dlog('repo', className);
-                return this[this.key(className)] || {};
+                return this.repos()[className] || {};
             },
             function find(className, name) {
                 // totally dies to recursion!
-                const v = this.repo(className)[this.key(name)];
+                const v = this.repo(className)[name];
                 if (v) {
                     return v;
                 } else {
@@ -586,7 +592,7 @@ function bootstrap() {
             function proxy(className) {
                 return new Proxy(this, {
                     get(target, p) {
-                        return target.find(className, p);
+                        return target.find(className, p.skewer());
                     }
                 })
             },
@@ -594,15 +600,12 @@ function bootstrap() {
                 return '_' + sym.deskewer();
             },
             function def(obj) {
-                const className = this.key(obj.class().name());
-                const name = this.key(obj.name());
-                // this.log('def', className, name);
-                if (!this.hasOwnProperty(className)) {
-                    this.dlog('env init for class', className);
-                    this[className] = {};
+                const className = obj.class().name();
+                const name = obj.name();
+                if (!this.repos().hasOwnProperty(className)) {
+                    this.repos()[className] = {};
                 }
-                this[className][name] = obj;
-                // this.dlog('env val', this[className]);
+                this.repos()[className][name] = obj;
             },
             function child(moddef) {
                 return $.module.new({
@@ -612,7 +615,6 @@ function bootstrap() {
             },
             async function load() {
                 if (!this.loaded() && this.on_load()) {
-                    // this.log('loading...');
                     this.loaded(true);
                     for (const imp of this.imports()) {
                         await imp.load();
@@ -621,7 +623,6 @@ function bootstrap() {
                     __.mod(this);
                     await this.on_load().apply(this, [this, this.proxy('class')]);
                     __.mod(om);
-                    // this.log('loaded');
                 }
                 return this;
             },
@@ -818,7 +819,7 @@ function bootstrap() {
                 },
             }),
             function description(seen = {}) {
-                return `(${this.map(it => it?.description(seen) ?? '' + it).join(' ')})`;
+                return `(${this.map(it => { debug(it, it.description); return simulabra_string(it) ?? '' + it }).join(' ')})`;
             },
         ]
     });

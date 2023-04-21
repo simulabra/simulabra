@@ -96,6 +96,7 @@ export default base_mod.find('class', 'module').new({
       ]
     });
 
+
     $.class.new({
       name: 'readtable',
       components: [
@@ -107,8 +108,8 @@ export default base_mod.find('class', 'module').new({
                 ':': $.symbol_node,
                 '/': $.this_node,
                 '(': $.list_node,
-                '{': $.map_node,
                 '[': $.lambda_node,
+                '{': $.map_node,
                 '\'': $.quote_node,
                 '`': $.quasiquote_node,
                 ',': $.unquote_node,
@@ -120,6 +121,7 @@ export default base_mod.find('class', 'module').new({
                 '&': $.do_node,
                 '^': $.return_node,
                 '@': $.restarg_node,
+                '"': $.string_literal_node,
               },
             });
           },
@@ -131,11 +133,15 @@ export default base_mod.find('class', 'module').new({
         },
         function get(char) {
           // $.debug.log(`rt get ${char} ${this.table()[char]}`);
-          return this.table()[char];
+          if (this.has_char(char)) {
+            return this.table()[char];
+          } else {
+            throw new Error(this.format(`doesn't have ${char}`));
+          }
         },
         function has_char(char) {
           // $.debug.log(char)
-          if (char in this.table()) {
+          if (this.table()[char]) {
             // $.debug.log(this.table()[char]);
             return true;
           }
@@ -190,7 +196,13 @@ export default base_mod.find('class', 'module').new({
             return $.quote_node.new({ value: this });
           }
         }),
-
+        $.var.new({ name: 'start' }),
+        $.var.new({ name: 'end' }),
+        $.before.new({
+          name: 'parse',
+          do(reader) {
+          }
+        }),
       ]
     });
 
@@ -249,7 +261,7 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         function print() {
-          return '.';
+          return '';
         },
         function estree() {
           return b.thisExpression();
@@ -268,9 +280,14 @@ export default base_mod.find('class', 'module').new({
             this.receiver() ?? this.receiver($.this_node.new());
             reader.expect('.');
             this.selector(reader.identifier());
-            this.args($.list_node.new());
+            this.args();
             if (reader.peek() === '(') {
-              this.args().parse(reader);
+              this.args($.list_node.new().parse(reader));
+            } else if (reader.peek() === '{') {
+              this.cut(true);
+              this.args($.list_node.new({ items: [reader.read()] }));
+            } else {
+              this.args($.list_node.new());
             }
             return this;
           }
@@ -278,29 +295,55 @@ export default base_mod.find('class', 'module').new({
         $.var.new({ name: 'receiver' }),
         $.var.new({ name: 'selector' }),
         $.var.new({ name: 'args' }),
+        $.var.new({ name: 'cut', default: false }),
         function print() {
-          return `${this.receiver().print()}.${this.selector()}${this.args()?.print()}`;
+          if (this.cut()) {
+            return `${this.receiver().print()}.${this.selector()}${this.args().items()[0].print()}`;
+          } else {
+            return `${this.receiver().print()}.${this.selector()}${this.args()?.empty() ? '' : this.args().print()}`;
+          }
         },
         function estree() {
           if (this.selector() === '+') {
             return b.binaryExpression('+', this.receiver().estree(), this.args().items()[0].estree());
           } else {
-            return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), this.args().items().map(a => a.estree()));
+            let args = this.args().items().map(it => it.estree());
+            if (!Array.isArray(args)) {
+              args = [args];
+            }
+            return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), args);
           }
         },
         function expand() {
           if (this.receiver().isa($.invoke_node)) {
             this.log('find macro', this.selector());
             const macro = _.find('macro', this.selector());
-            const v = macro.expand(...this.args());
+            const v = macro.expand(...this.args().expand());
             if (v === undefined) {
               throw new Error(`macro expansion failed for ${macro.title()} in ${this.title()}`)
             }
             return v;
           } else {
-            return this.visit(function () { return this.expand(); });
+            return this.visit(function () { return this?.expand ? this.expand() : this; });
           }
         }
+      ],
+    });
+
+    $.class.new({
+      name: 'invoke-node',
+      components: [
+        $.node,
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('$'); // parse message?
+            return this;
+          }
+        }),
+        function print() {
+          return '$';
+        },
       ],
     });
 
@@ -314,13 +357,13 @@ export default base_mod.find('class', 'module').new({
           name: 'parse',
           do: function parse(reader) {
             this.key($.symbol_node.new().parse(reader));
-            reader.strip();
+            reader.expect('=');
             this.value(reader.read());
             return this;
           }
         }),
         function print() {
-          return `${this.key().print()} ${this.value().print()}`;
+          return `${this.key().print()}=${this.value().print()}`;
         },
         function estree() {
           return b.property('init', this.key().estree(), this.value().estree());
@@ -354,7 +397,11 @@ export default base_mod.find('class', 'module').new({
         function print() {
           return `(${this.items().map(it => it.print()).join(' ')})`;
         },
+        function empty() {
+          return this.items().length === 0;
+        },
         function estree() {
+          this.log(this.items());
           return b.arrayExpression(this.items().map(it => it.estree()));
         },
         function expand() {
@@ -380,26 +427,21 @@ export default base_mod.find('class', 'module').new({
         $.method.new({
           name: 'parse',
           do(reader) {
+            this.args([]);
             reader.expect('[');
-            reader.strip();
-            if (reader.peek() === '|') {
-              reader.expect('|');
-              this.args([]);
-              while (reader.peek() !== '|') {
-                reader.strip();
-                this.args().push($.argref_node.new().parse(reader));
-                reader.strip();
-              }
-              reader.expect('|');
-            } else {
-              this.args([$.argref_node.new({ identifier: 'it' })]);
+            while (reader.peek() !== '|') {
+              this.args().push(reader.read());
+              reader.strip();
+            this.log(reader.peek());
             }
+            reader.expect('|');
+            reader.strip();
             const forms = [];
             while (reader.peek() !== ']') {
-              reader.strip();
               forms.push(reader.read());
               reader.strip();
             }
+            this.log(reader.peek());
             reader.expect(']');
             this.body($.body.new({ forms }));
             return this;
@@ -422,11 +464,17 @@ export default base_mod.find('class', 'module').new({
       components: [
         $.node,
         $.var.new({ name: 'properties' }),
+        $.var.new({ name: 'space' }),
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
             reader.next(); // {
             this.properties([]);
+            if (reader.peek() === '\n') {
+              this.space(true);
+            } else {
+              this.space(false);
+            }
             while (reader.peek() !== '}') {
               reader.strip();
               this.properties().push($.property.new().parse(reader))
@@ -437,7 +485,14 @@ export default base_mod.find('class', 'module').new({
           }
         }),
         function print() {
-          return `{ ${this.properties().map(prop => prop.print()).join(' ')} }`;
+          const props = this.properties().map(prop => prop.print());
+          if (!this.space()) {
+            return `{${props.join(' ')}}`;
+          } else {
+            return `{
+${props.map(prop => '  ' + prop).join('\n')}
+}`
+          }
         },
         function estree() {
           return b.objectExpression(this.properties().map(p => p.estree()))
@@ -516,23 +571,6 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'invoke-node',
-      components: [
-        $.node,
-        $.method.new({
-          name: 'parse',
-          do: function parse(reader) {
-            reader.expect('$'); // parse message?
-            return this;
-          }
-        }),
-        function print() {
-          return '$';
-        },
-      ],
-    });
-
-    $.class.new({
       name: 'number-literal',
       components: [
         $.node,
@@ -560,6 +598,40 @@ export default base_mod.find('class', 'module').new({
         }
       ]
     });
+
+    $.class.new({
+      name: 'string-literal-node',
+      debug: true,
+      components: [
+        $.node,
+        $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'parse',
+          do(reader) {
+            let stringValue = "";
+            reader.expect('"');
+            while (reader.peek() !== '"') {
+              const currentChar = reader.next();
+              if (currentChar === '\\' && (reader.peek() === '\\' || reader.peek() === '"')) {
+                stringValue += currentChar + reader.next();
+              } else {
+                stringValue += currentChar;
+              }
+            }
+            reader.expect('"');
+            this.value(stringValue);
+            return this;
+          }
+        }),
+        function print() {
+          return `"${this.value().replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+        },
+        function estree() {
+          return b.literal(this.value());
+        }
+      ],
+    });
+
 
     $.class.new({
       name: 'ref-reader-macro',
@@ -629,7 +701,7 @@ export default base_mod.find('class', 'module').new({
           return '!';
         },
         function estree() {
-          return this.quote();
+          return b.identifier('$TYPE_' + this.identifier());
         },
       ],
     });
@@ -793,10 +865,10 @@ export default base_mod.find('class', 'module').new({
           return this.stream().next();
         },
         function expect(c) {
-          const sc = this.stream().next();
-          if (sc !== c) {
-            throw new Error(`expected ${c} got ${sc}`);
+          if (this.stream().peek() !== c) {
+            throw new Error(`expected ${c} got ${this.stream().peek()}`);
           }
+          return this.stream().next();
         },
         function inc(chars) {
           return chars.includes(this.peek());
@@ -814,7 +886,7 @@ export default base_mod.find('class', 'module').new({
           return this.test(/[0-9]/);
         },
         function delimiter() {
-          return this.inc('(){}[].');
+          return this.inc('(){}[]./:=|');
         },
         function term() {
           return this.delimiter() || this.whitespace();
@@ -835,7 +907,7 @@ export default base_mod.find('class', 'module').new({
           this.strip();
           let c = this.peek();
           if (c === null) {
-            return;
+            return null;
           }
           if (this.readtable().has_char(c)) {
             const res = this.readtable().get(c).new().parse(this);
@@ -843,6 +915,8 @@ export default base_mod.find('class', 'module').new({
             // this.log(c, this.peek());
             if (this.peek() === '.') {
               return $.message_node.new({ receiver: res }).parse(this);
+            } else if (this.peek() === ':') {
+              return $.pointer_node.new({ class: res }).parse(this);
             } else {
               return res;
             }
@@ -851,9 +925,6 @@ export default base_mod.find('class', 'module').new({
           }
           if (this.digit() || c === '-') {
             return $.number_literal.new().parse(this);
-          }
-          if (this.alpha()) {
-            return this.symbol();
           }
           throw new Error(`unhandled: ${c} at ${this.stream().pos()}`);
         },
@@ -864,8 +935,6 @@ export default base_mod.find('class', 'module').new({
               const p = this.read();
               if (p) {
                 ps.push(p);
-              } else {
-                this.log('read returned nothing?');
               }
             }
             return $.program.new({ forms: ps });
@@ -897,6 +966,7 @@ export default base_mod.find('class', 'module').new({
           name: 'run',
           async: true,
           async do(code) {
+            this.log('run', code);
             const hash = this.hash(code);
 
             if (!this.cache().has(hash)) {
@@ -950,6 +1020,7 @@ export default await base_mod.find('class', 'module').new({
   on_load(_, $) {
 `; // file cache + dynamic imports?
             const hat = '}}).load();';
+
             return this.module_cache().run(prelude + source + hat);
           }
         }),
@@ -965,12 +1036,6 @@ export default await base_mod.find('class', 'module').new({
         }),
         $.var.new({
           name: 'module',
-        }),
-        $.static.new({
-          name: 'run',
-          do(name, source, transformer) {
-            this.new({ name, source, transformer }).load();
-          }
         }),
         $.method.new({
           name: 'run',
