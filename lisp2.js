@@ -311,6 +311,7 @@ export default base_mod.find('class', 'module').new({
             if (!Array.isArray(args)) {
               args = [args];
             }
+            this.log(this.receiver());
             return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), args);
           }
         },
@@ -454,6 +455,7 @@ export default base_mod.find('class', 'module').new({
           return `[${this.default_args() ? '' : '|' + this.args().map(a => a.print()).join(' ') + '|'}${this.body().print()}]`
         },
         function estree() {
+          this.log(this.body());
           return b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
         }
       ],

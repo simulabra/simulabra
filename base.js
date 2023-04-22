@@ -272,15 +272,15 @@ function bootstrap() {
 
     const $base_components = [
         function init() {},
-        function description(seen = {}) {
+        function description(seen = {}) { //TODO: add depth
             if (seen[this]) {
                 return '*circ*';
             } else {
                 seen[this] = true;
             }
             // this.log('base desc', this._class._name)
-            const vars = this.vars();
-            const varDesc = vars.length > 0 ? `{${vars.filter(v => v.value() !== v.var_ref().defval()).map(vs => vs?.description(seen)).join(' ')}}` : '';
+            const vars = this.vars().filter(v => v.value() !== v.var_ref().defval());
+            const varDesc = vars.length > 0 ? `{\n${vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
             return `${this.class().description(seen)}.new${varDesc}`;
         },
         function vars() {
