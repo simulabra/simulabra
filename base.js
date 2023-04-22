@@ -22,7 +22,7 @@ function simulabra_string(obj) {
         const ps = [];
         for (const [k, v] of Object.entries(obj)) {
             // console.log('ss recur', k)
-            ps.push(`${k}: ${simulabra_string(v)}`)
+            ps.push(`:${k}=${simulabra_string(v)}`)
         }
         return '{' + ps.join(' ') + '}';
     } else {
@@ -279,7 +279,9 @@ function bootstrap() {
                 seen[this] = true;
             }
             // this.log('base desc', this._class._name)
-            return `${this.class().description(seen)}.new{${this.vars().map(vs => ' ' + vs?.description(seen)).join('') }}`;
+            const vars = this.vars();
+            const varDesc = vars.length > 0 ? `{${vars.filter(v => v.value() !== v.var_ref().defval()).map(vs => vs?.description(seen)).join(' ')}}` : '';
+            return `${this.class().description(seen)}.new${varDesc}`;
         },
         function vars() {
             return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
@@ -464,7 +466,7 @@ function bootstrap() {
             $var.new({ name: 'value' }),
             function description() {
                 // this.log('description!!', this.var_ref().name(), this.value());
-                return `${this.var_ref().title()}=${this.var_ref().debug() ? simulabra_string(this.value()) : 'hidden'}`;
+                return `:${this.var_ref().name()}=${this.var_ref().debug() ? simulabra_string(this.value()) : 'hidden'}`;
             }
         ]
     });
@@ -740,7 +742,7 @@ function bootstrap() {
                 },
             }),
             function description() {
-                return this;
+                return `"${this}"`;
             },
         ]
     });
