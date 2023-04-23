@@ -1,6 +1,6 @@
 globalThis.SIMULABRA = {
     debug() {
-        return false;
+        return true;
     },
     mod() {
         return this._mod;
@@ -8,10 +8,23 @@ globalThis.SIMULABRA = {
     trace() {
         return false;
     },
+    stringify() {
+
+    },
+    display() {
+
+    }
 };
 
+
+function simulabra_display(obj) {
+    if (typeof obj === 'string') {
+        return obj;
+    } else {
+        return simulabra_string(obj);
+    }
+}
 function simulabra_string(obj) {
-    // console.log('simulabra_string', obj?._name)
     if (obj === undefined || obj === null) {
         return '' + obj;
     } else if (Object.getPrototypeOf(obj) === ClassPrototype) {
@@ -36,7 +49,7 @@ function debug(...args) {
     if (__.$$debug_class) {
         __.$$debug_class.log(...args);
     } else {
-        console.log(...args.map(a => simulabra_string(a)));
+        console.log(...args.map(a => simulabra_display(a)));
     }
 }
 
@@ -47,13 +60,13 @@ class Frame {
         this._args = args;
     }
     description() {
-        return `${pry(this._receiver)}.${this._method_impl._name}/${this._args.length}`;
+        return `${pry(this._receiver)}.${this._method_impl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
     }
 }
 
 function pry(obj) {
     if (typeof obj === 'object' && obj._class !== undefined) {
-        return `~${obj._class._name}/${obj._name || '?'}`;
+        return obj.title();
     } else {
         return `#native/${typeof obj}`;
     }
@@ -68,9 +81,6 @@ class FrameStack {
         this._frames = [];
     }
     push(frame) {
-        if ($$().trace()) {
-            console.log(frame.description())
-        }
         this._frames.push(frame);
         return this;
     }
@@ -85,7 +95,7 @@ class FrameStack {
         return this._frames[this.idx()];
     }
     trace() {
-        for (let i = 0; i <= this._frames.length; i++) {
+        for (let i = 0; i < this._frames.length; i++) {
             debug('stack frame', i, this._frames[i]);
         }
     }
@@ -101,6 +111,7 @@ class MethodImpl {
             _primary: null,
             _befores: [],
             _afters: [],
+            _debug: true,
         };
         Object.assign(this, defaults);
         Object.assign(this, props);
@@ -287,7 +298,7 @@ function bootstrap() {
             return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
         },
         function title() {
-            return `${this.class().description()}:${this.name() ?? this.id()}`;
+            return `${this.class().description()}#${this.name() ?? this.id()}`;
         },
         function log(...args) {
             $debug?.log(this.title(), ...args);
@@ -515,7 +526,7 @@ function bootstrap() {
             $static.new({
                 name: 'format',
                 do: function format(...args) {
-                    return args.map(a => simulabra_string(a));
+                    return args.map(a => simulabra_display(a));
                 }
             }),
         ]
@@ -659,7 +670,7 @@ function bootstrap() {
             }),
             $.var.new({
                 name: 'debug',
-                default: false, // now only, how to change while running?
+                default: true, // now only, how to change while running?
             }),
             $.var.new({
                 name: 'trace',
