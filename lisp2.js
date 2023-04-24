@@ -187,7 +187,7 @@ export default base_mod.find('class', 'module').new({
         $.method.new({
           name: 'expand',
           do() {
-            return this;
+            return this.visit(function () { return this?.expand ? this.expand() : this; });
           }
         }),
         $.method.new({
@@ -271,7 +271,6 @@ export default base_mod.find('class', 'module').new({
 
     $.class.new({
       name: 'message-node',
-      debug: true,
       components: [
         $.node,
         $.method.new({
@@ -288,6 +287,10 @@ export default base_mod.find('class', 'module').new({
               this.args($.list_node.new({ items: [reader.read()] }));
             } else {
               this.args($.list_node.new());
+            }
+            if (reader.peek() === '.') {
+              const chain = $.message_node.new({ receiver: this });
+              return chain.parse(reader);
             }
             return this;
           }
@@ -311,7 +314,6 @@ export default base_mod.find('class', 'module').new({
             if (!Array.isArray(args)) {
               args = [args];
             }
-            this.log(this.receiver());
             return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), args);
           }
         },
@@ -761,7 +763,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
       components: [
         $.var.new({ name: 'forms' }),
         function estree() {
-          // this.log('vars', this.vars());
           return b.blockStatement(this.forms().map(f => {
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
