@@ -118,7 +118,6 @@ export default base_mod.find('class', 'module').new({
                 '%': $.argref_node,
                 '~': $.classref_node,
                 '!': $.typeref_node,
-                '&': $.do_node,
                 '^': $.return_node,
                 '@': $.restarg_node,
                 '"': $.string_literal_node,
@@ -319,14 +318,17 @@ export default base_mod.find('class', 'module').new({
         },
         function expand() {
           if (this.receiver().isa($.invoke_node)) {
-            this.log('find macro', this.selector());
             const macro = _.find('macro', this.selector());
+            if (!macro) {
+              throw new Error(`couldn't find macro: ${this.selector()} in ${this.print()}`)
+            }
             const v = macro.expand(...this.args().expand());
             if (v === undefined) {
               throw new Error(`macro expansion failed for ${macro.title()} in ${this.title()}`)
             }
             return v;
           } else {
+            //TODO: supercall/next
             return this.visit(function () { return this?.expand ? this.expand() : this; });
           }
         }
@@ -657,7 +659,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return this;
         }
       ],
-    })
+    });
 
     $.class.new({
       name: 'argref-node',
@@ -756,7 +758,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           expand_fn: new Function(fn_comp),
         });
       }
-    })
+    });
 
     $.class.new({
       name: 'body',

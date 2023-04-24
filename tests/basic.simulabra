@@ -12,13 +12,11 @@
   )
 }
 
-~point.log("here!")
-
 ~case.new{
   :name=:basic-points
   :do=[|
-    $.let(%p ~point.new{:x=3})
-    $.let(%q ~point.new{:y=4})
+    %p=~point.new{:x=3}
+    %q=~point.new{:y=4}
     .assert-eq(%p.dist(%q) 5)
   ]
 }

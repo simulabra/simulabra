@@ -599,13 +599,18 @@ function bootstrap() {
                             return iv;
                         }
                     }
-                    return null;
+                    return undefined;
                 }
             },
             function proxy(className) {
                 return new Proxy(this, {
                     get(target, p) {
-                        return target.find(className, p.skewer());
+                        const v = target.find(className, p.skewer());
+                        if (v === undefined) {
+                            // target.log(target.repo(className))
+                            throw new Error(`failed to find ~${className}#${p}`);
+                        }
+                        return v;
                     }
                 })
             },
