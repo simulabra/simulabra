@@ -1,8 +1,16 @@
 ~class.new{
   :name=:point
   :components=(
-    ~var.new{:name=:x :type=:number}
-    ~var.new{:name=:y :type=:number}
+    ~var.new{
+      :name=:x
+      :type=:number
+      :default=0
+    }
+    ~var.new{
+      :name=:y
+      :type=:number
+      :default=0
+    }
     ~method.new{
       :name=:dist
       :do=[%it|^.x.-(%it.x).pow(2).+(.y.-(%it.y).pow(2)).sqrt]
@@ -10,12 +18,48 @@
   )
 }
 
-
 ~case.new{
   :name=:basic-points
   :do=[|
-    %p=~point.new{:x=3 :y=0}
-    %q=~point.new{:x=0 :y=4}
+    %p=~point.new{:x=3}
+    %q=~point.new{:y=4}
     .assert-eq(%p.dist(%q) 5)
+  ]
+}
+
+~class.new{
+  :name=:math
+  :components=(
+    ~static.new{
+      :name=:pi
+      :do=[|^3.14159]
+    }
+  )
+}
+
+~class.new{
+  :name=:circle
+  :components=(
+    ~point
+    ~var.new{
+      :name=:r
+      :type=:number
+      :default=1
+    }
+    ~method.new{
+      :name=:area
+      :do=[|^~math.pi.*(.r.pow(2))]
+    }
+  )
+}
+
+~case.new{
+  :name=:basic-circles
+  :do=[|
+    %p=~circle.new{:x=3}
+    %q=~circle.new{:y=4 :r=2}
+    .assert-eq(%p.dist(%q) 5)
+    .assert-eq(%p.area ~math.pi)
+    .assert-eq(%q.area 4.*(~math.pi))
   ]
 }

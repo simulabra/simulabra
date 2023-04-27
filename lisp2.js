@@ -63,9 +63,9 @@ export default base_mod.find('class', 'module').new({
         }),
         $.method.new({
           name: 'peek',
-          do: function () {
-            if (this.pos() < this.value().length) {
-              return this.value()[this.pos()];
+          do: function (n = 0) {
+            if (this.pos() + n < this.value().length) {
+              return this.value()[this.pos() + n];
             }
             return null;
           }
@@ -601,7 +601,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
               n += '-';
               reader.next();
             }
-            while (reader.digit() || reader.peek() === '.') {
+            while (reader.digit() || (reader.peek() === '.' && /[0-9]/.test(reader.peek(1)))) {
               n += reader.next();
             }
             this.value(+n);
@@ -875,8 +875,8 @@ ${props.map(prop => '  ' + prop).join('\n')}
             });
           }
         }),
-        function peek() {
-          return this.stream().peek();
+        function peek(n = 0) {
+          return this.stream().peek(n);
         },
         function next() {
           return this.stream().next();
@@ -920,32 +920,31 @@ ${props.map(prop => '  ' + prop).join('\n')}
             this.stream().next();
           }
         },
-        function read() {
-          this.strip();
-          let c = this.peek();
-          if (c === null) {
-            return null;
-          }
-          if (this.readtable().has_char(c)) {
-            const res = this.readtable().get(c).new().parse(this);
-            // this.log('from readtable', res);
-            // this.log(c, this.peek());
-            if (this.peek() === '.') {
-              return $.message_node.new({ receiver: res }).parse(this);
-            } else if (this.peek() === ':') {
-              return $.pointer_node.new({ class: res }).parse(this);
-            } else if (this.peek() === '=') {
-              return $.assignment_node.new({ lhs: res }).parse(this);
-            } else {
-              return res;
-            }
-          } else {
-            this.dlog('not in readtable:', c);
-          }
+        function node() {
+          const c = this.peek();
           if (this.digit() || c === '-') {
             return $.number_literal.new().parse(this);
+          } else if (this.readtable().has_char(c)) {
+            return this.readtable().get(c).new().parse(this);
+          } else {
+            throw new Error(`unhandled: ${c} at ${this.stream().pos()}`);
           }
-          throw new Error(`unhandled: ${c} at ${this.stream().pos()}`);
+        },
+        function read() {
+          this.strip();
+          if (this.peek() === null) { // not good
+            return null;
+          }
+          const res = this.node();
+          if (this.peek() === '.') {
+            return $.message_node.new({ receiver: res }).parse(this);
+          } else if (this.peek() === ':') {
+            return $.pointer_node.new({ class: res }).parse(this);
+          } else if (this.peek() === '=') {
+            return $.assignment_node.new({ lhs: res }).parse(this);
+          } else {
+            return res;
+          }
         },
         function program() {
           const ps = [];
