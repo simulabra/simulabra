@@ -5,18 +5,17 @@
     ~var.new{:name=:y :type=:number}
     ~method.new{
       :name=:dist
-      :args=(!self)
-      :ret=(~number)
       :do=[%it|^.x.-(%it.x).pow(2).+(.y.-(%it.y).pow(2)).sqrt]
     }
   )
 }
 
+
 ~case.new{
   :name=:basic-points
   :do=[|
-    %p=~point.new{:x=3}
-    %q=~point.new{:y=4}
+    %p=~point.new{:x=3 :y=0}
+    %q=~point.new{:x=0 :y=4}
     .assert-eq(%p.dist(%q) 5)
   ]
 }

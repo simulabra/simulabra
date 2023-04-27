@@ -127,11 +127,9 @@ export default base_mod.find('class', 'module').new({
         }),
         $.var.new({ name: 'table', default: {} }),
         function add(macro, char) {
-          // $.debug.log(`rt add ${macro.char()} ${macro.name()}`);
           this.table()[char] = macro;
         },
         function get(char) {
-          // $.debug.log(`rt get ${char} ${this.table()[char]}`);
           if (this.has_char(char)) {
             return this.table()[char];
           } else {
@@ -139,12 +137,7 @@ export default base_mod.find('class', 'module').new({
           }
         },
         function has_char(char) {
-          // $.debug.log(char)
-          if (this.table()[char]) {
-            // $.debug.log(this.table()[char]);
-            return true;
-          }
-          return false;
+          return char in this.table();
         },
       ]
     });
@@ -306,14 +299,14 @@ export default base_mod.find('class', 'module').new({
           }
         },
         function estree() {
-          if (this.selector() === '+') {
-            return b.binaryExpression('+', this.receiver().estree(), this.args().items()[0].estree());
+          if ('-+/*'.includes(this.selector())) {
+            return b.binaryExpression(this.selector(), this.receiver().estree(), this.args().items()[0].estree());
           } else {
             let args = this.args().items().map(it => it.estree());
             if (!Array.isArray(args)) {
               args = [args];
             }
-            return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector())), args);
+            return b.callExpression(b.memberExpression(this.receiver().estree(), b.identifier(this.selector().deskewer())), args);
           }
         },
         function expand() {
@@ -381,6 +374,29 @@ export default base_mod.find('class', 'module').new({
     })
 
     $.class.new({
+      name: 'assignment-node',
+      components: [
+        $.node,
+        $.var.new({ name: 'lhs' }),
+        $.var.new({ name: 'rhs' }),
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('=');
+            this.rhs(reader.read());
+            return this;
+          }
+        }),
+        function print() {
+          return `${this.lhs().print()}=${this.rhs().print()}`;
+        },
+        function estree() {
+          return b.variableDeclaration('let', [b.variableDeclarator(this.lhs().estree(), this.rhs().estree())]);
+        },
+      ],
+    })
+
+    $.class.new({
       name: 'list-node',
       components: [
         $.node,
@@ -406,7 +422,6 @@ export default base_mod.find('class', 'module').new({
           return this.items().length === 0;
         },
         function estree() {
-          this.log(this.items());
           return b.arrayExpression(this.items().map(it => it.estree()));
         },
         function expand() {
@@ -437,7 +452,6 @@ export default base_mod.find('class', 'module').new({
             while (reader.peek() !== '|') {
               this.args().push(reader.read());
               reader.strip();
-            this.log(reader.peek());
             }
             reader.expect('|');
             reader.strip();
@@ -446,7 +460,6 @@ export default base_mod.find('class', 'module').new({
               forms.push(reader.read());
               reader.strip();
             }
-            this.log(reader.peek());
             reader.expect(']');
             this.body($.body.new({ forms }));
             return this;
@@ -459,7 +472,6 @@ export default base_mod.find('class', 'module').new({
           return `[${this.default_args() ? '' : '|' + this.args().map(a => a.print()).join(' ') + '|'}${this.body().print()}]`
         },
         function estree() {
-          this.log(this.body());
           return b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
         }
       ],
@@ -767,7 +779,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
         function estree() {
           return b.blockStatement(this.forms().map(f => {
             const ftree = f.estree();
-            if (ftree.type.includes('Statement')) {
+            if (ftree.type.includes('Statement') || ftree.type === 'VariableDeclaration') {
               return ftree;
             } else {
               return b.expressionStatement(ftree);
@@ -922,6 +934,8 @@ ${props.map(prop => '  ' + prop).join('\n')}
               return $.message_node.new({ receiver: res }).parse(this);
             } else if (this.peek() === ':') {
               return $.pointer_node.new({ class: res }).parse(this);
+            } else if (this.peek() === '=') {
+              return $.assignment_node.new({ lhs: res }).parse(this);
             } else {
               return res;
             }
@@ -971,7 +985,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
           name: 'run',
           async: true,
           async do(code) {
-            this.log('run', code);
             const hash = this.hash(code);
 
             if (!this.cache().has(hash)) {
