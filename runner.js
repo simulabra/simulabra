@@ -20,16 +20,13 @@ export default await base_mod.find('class', 'module').new({
         $.method.new({
           name: 'run-mod',
           async do(mod) {
+            __.mod(mod);
             const cases = mod.repos().case;
             if (cases === undefined) {
               throw new Error(`no cases in module ${mod.description()}`);
             }
             for (const test_case of Object.values(cases)) {
-              try {
-                await test_case.run();
-              } catch (e) {
-                console.log(e);
-              }
+              await test_case.run();
             }
           }
         }),

@@ -334,7 +334,6 @@ function bootstrap() {
             this._proto._class = this;
             this.load(this.proto());
             this.proto()._reify();
-            __.mod()?.def(this)
         },
         function load(target) {
             for (const v of this.components()) {
@@ -390,6 +389,7 @@ function bootstrap() {
         parametize(props, obj);
         obj.id(this.genid());
         obj.init(this);
+        __.mod()?.def(obj)
         return obj;
     };
 

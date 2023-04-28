@@ -15,13 +15,7 @@ export default base_mod.find('class', 'module').new({
           name: 'run',
           async: true,
           async do() {
-            try {
-              await this.do().apply(this);
-            } catch (e) {
-              this.log('!!!!! failed !!!!!');
-              console.error(e);
-              return;
-            }
+            await this.do().apply(this);
             this.log('passed');
           }
         }),
