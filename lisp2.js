@@ -101,6 +101,18 @@ export default base_mod.find('class', 'module').new({
       name: 'readtable',
       components: [
         $.static.new({
+          name: 'standard-chain',
+          do() {
+            return this.new({
+              table: {
+                '#': $.pointer_node,
+                '.': $.message_node,
+                '=': $.assignment_node,
+              }
+            });
+          }
+        }),
+        $.static.new({
           name: 'standard',
           do() {
             return this.new({
@@ -126,9 +138,6 @@ export default base_mod.find('class', 'module').new({
           },
         }),
         $.var.new({ name: 'table', default: {} }),
-        function add(macro, char) {
-          this.table()[char] = macro;
-        },
         function get(char) {
           if (this.has_char(char)) {
             return this.table()[char];
@@ -172,7 +181,7 @@ export default base_mod.find('class', 'module').new({
         $.method.new({
           name: 'visit',
           do(fn, args = []) {
-            const newmap = Object.fromEntries(this.vars().map(it => [it.var_ref().name(), fn.apply(it.value(), args)]));
+            const newmap = Object.fromEntries(this.vars().map(it => [it.var_ref().name().deskewer(), fn.apply(it.value(), args)]));
             return this.class().new(newmap);
           }
         }),
@@ -265,6 +274,13 @@ export default base_mod.find('class', 'module').new({
       name: 'message-node',
       components: [
         $.node,
+        $.method.new({
+          name: 'chain',
+          do: function chain(reader, node) {
+            this.receiver(node);
+            return this.parse(reader);
+          }
+        }),
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
@@ -379,6 +395,13 @@ export default base_mod.find('class', 'module').new({
         $.node,
         $.var.new({ name: 'lhs' }),
         $.var.new({ name: 'rhs' }),
+        $.method.new({
+          name: 'chain',
+          do: function chain(reader, n) {
+            this.lhs(n);
+            return this.parse(reader);
+          }
+        }),
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
@@ -840,6 +863,37 @@ ${props.map(prop => '  ' + prop).join('\n')}
     });
 
     $.class.new({
+      name: 'pointer-node',
+      components: [
+        $.node,
+        $.var.new({ name: 'class-ref' }),
+        $.var.new({ name: 'ref-name' }),
+        $.method.new({
+          name: 'chain',
+          do: function chain(reader, n) {
+            this.class_ref(n);
+            return this.parse(reader);
+          }
+        }),
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('#');
+            this.ref_name(reader.identifier());
+            return this;
+          }
+        }),
+        function print() {
+          return `${this.class_ref().print()}#${this.ref_name()}`;
+        },
+        function estree() {
+          return b.callExpression(b.memberExpression(b.identifier('_'), b.identifier('find')), [b.literal(this.class_ref().identifier()), b.literal(this.ref_name())]);
+        }
+      ]
+    });
+
+
+    $.class.new({
       name: 'restarg-node',
       components: [
         $.node,
@@ -866,7 +920,8 @@ ${props.map(prop => '  ' + prop).join('\n')}
       doc: 'read source into forms',
       components: [
         $.var.new({ name: 'stream', debug: false }),
-        $.var.new({ name: 'readtable', default: $.readtable.standard(), debug: false, }),
+        $.var.new({ name: 'readtable', default: () => $.readtable.standard(), debug: false, }),
+        $.var.new({ name: 'chain-table', default: () => $.readtable.standard_chain(), debug: false, }),
         $.static.new({
           name: 'from-source',
           do(source) {
@@ -903,7 +958,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return this.test(/[0-9]/);
         },
         function delimiter() {
-          return this.inc('(){}[]./:=|');
+          return this.inc('(){}[]./:=|#');
         },
         function term() {
           return this.delimiter() || this.whitespace();
@@ -930,21 +985,18 @@ ${props.map(prop => '  ' + prop).join('\n')}
             throw new Error(`unhandled: ${c} at ${this.stream().pos()}`);
           }
         },
+        function chain() {
+        },
         function read() {
           this.strip();
           if (this.peek() === null) { // not good
             return null;
           }
-          const res = this.node();
-          if (this.peek() === '.') {
-            return $.message_node.new({ receiver: res }).parse(this);
-          } else if (this.peek() === ':') {
-            return $.pointer_node.new({ class: res }).parse(this);
-          } else if (this.peek() === '=') {
-            return $.assignment_node.new({ lhs: res }).parse(this);
-          } else {
-            return res;
+          let n = this.node();
+          while (this.chain_table().has_char(this.peek())) {
+            n = this.chain_table().get(this.peek()).new().chain(this, n);
           }
+          return n;
         },
         function program() {
           const ps = [];

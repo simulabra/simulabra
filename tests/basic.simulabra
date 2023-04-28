@@ -63,3 +63,11 @@
     .assert-eq(%q.area 4.*(~math.pi))
   ]
 }
+
+~case.new{
+  :name=:basic-references
+  :do=[|
+    %p=~point.new{:name=:test :x=7}
+    .assert-eq(~point#test.x 7)
+  ]
+}

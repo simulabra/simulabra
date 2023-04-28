@@ -51,11 +51,10 @@ export default await base_mod.find('class', 'module').new({
                   const source = (await readFile(filePath)).toString();
                   const transformer = $.transformer.new();
                   const mod = await $.script.new({
-                    name: 'lisp-basic-run--counter',
+                    name: filePath,
                     imports: [_],
                     source,
                   }).run(transformer);
-                  this.log(mod);
                   await this.run_mod(mod);
                 }
               } catch (e) {
