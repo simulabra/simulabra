@@ -1,221 +1,242 @@
-globalThis.SIMULABRA = {
-    debug() {
-        return true;
-    },
-    mod() {
-        return this._mod;
-    },
-    trace() {
-        return false;
-    },
-    stringify() {
-
-    },
-    display() {
-
-    }
-};
-
-
-function simulabra_display(obj) {
-    if (typeof obj === 'string') {
-        return obj;
-    } else {
-        return simulabra_string(obj);
-    }
-}
-function simulabra_string(obj) {
-    if (obj === undefined || obj === null) {
-        return '' + obj;
-    } else if (Object.getPrototypeOf(obj) === ClassPrototype) {
-        return '#proto ' + obj._name || '?';
-    } else if (typeof obj.description === 'function') {
-        return obj.description();
-    } else if (typeof obj === 'object') {
-        const ps = [];
-        for (const [k, v] of Object.entries(obj)) {
-            // console.log('ss recur', k)
-            ps.push(`:${k}=${simulabra_string(v)}`)
-        }
-        return '{' + ps.join(' ') + '}';
-    } else {
-        // console.log('ss was', obj);
-        return obj.toString();
-    }
-}
-
-function debug(...args) {
-    let __ = globalThis.SIMULABRA;
-    if (__.$$debug_class) {
-        __.$$debug_class.log(...args);
-    } else {
-        console.log(...args.map(a => simulabra_display(a)));
-    }
-}
-
-class Frame {
-    constructor(receiver, method_impl, args) {
-        this._receiver = receiver;
-        this._method_impl = method_impl;
-        this._args = args;
-    }
-    description() {
-        return `${pry(this._receiver)}.${this._method_impl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
-    }
-}
-
-function pry(obj) {
-    if (typeof obj === 'object' && obj._class !== undefined) {
-        return obj.title();
-    } else {
-        return `#native/${typeof obj}`;
-    }
-}
-
-function $$() {
-    return globalThis.SIMULABRA;
-}
-
-class FrameStack {
-    constructor() {
-        this._frames = [];
-    }
-    push(frame) {
-        this._frames.push(frame);
-        return this;
-    }
-    pop() {
-        const frame = this._frames.pop();
-        return frame;
-    }
-    idx() {
-        return this._frames.length - 1;
-    }
-    frame() {
-        return this._frames[this.idx()];
-    }
-    trace() {
-        for (let i = 0; i < this._frames.length; i++) {
-            debug('stack frame', i, this._frames[i]);
-        }
-    }
-    description() {
-        return 'FrameStack';
-    }
-}
-
-class MethodImpl {
-    constructor(props) {
-        const defaults = {
-            _name: '',
-            _primary: null,
-            _befores: [],
-            _afters: [],
-            _debug: true,
-        };
-        Object.assign(this, defaults);
-        Object.assign(this, props);
-    }
-    reify(proto) {
-        if (!$$().debug() && this._befores.length === 0 && this._afters.length === 0) {
-            proto[this._name.deskewer()] = this._primary;
-            return;
-        }
-        const self = this;
-        // console.log('reify', this.name, this.primary)
-        proto[this._name.deskewer()] = function (...args) {
-            const __ = globalThis.SIMULABRA;
-            if (self._debug) {
-                __._stack.push(new Frame(this, self, args)); // uhh
-            }
-            try {
-                self._befores.forEach(b => b.apply(this, args));
-                let res = self._primary.apply(this, args);
-                // console.log('in reified', self.name, self.primary, res)
-                self._afters.forEach(a => a.apply(this, args)); // res too?
-                if (self._debug) {
-                    __._stack.pop();
-                }
-                return res;
-            } catch (e) {
-                if (!e._logged && self._debug) {
-                    e._logged = true;
-                    debug('failed message: call', self._name, 'on', this._parent, 'with', args);
-                    __._stack.trace();
-                }
-                throw e;
-            }
-        }
-    }
-}
-
-class ClassPrototype {
-    constructor(parent) {
-        this._impls = {};
-        this._parent = parent;
-    }
-
-    _reify() {
-        for (const impl of Object.values(this._impls)) {
-            impl.reify(this);
-        }
-    }
-
-    _add(name, op) {
-        op.combine(this._get_impl(name));
-    }
-
-    _get_impl(name) {
-        if (!(name in this._impls)) {
-            this._impls[name] = new MethodImpl({ _name: name });
-        }
-        return this._impls[name];
-    }
-}
-
-class BVar {
-    constructor({ name, ...desc }) {
-        this._name = name;
-        this._desc = desc;
-    }
-    static new(args) {
-        return new this(args);
-    }
-    name() {
-        return this._name;
-    }
-    load(proto) {
-        const key = '_' + this.name();
-        const self = this;
-        proto._add(self.name(), function (assign) {
-            if (assign !== undefined) {
-                // console.log('bvar set', name, key);
-                this[key] = assign;
-            } else if (this[key] === undefined && self._desc.default !== undefined) {
-                this[key] = typeof self._desc.default === 'function' ? self._desc.default() : self._desc.default;
-            }
-            return this[key];
-        });
-    }
-    class() {
-        return BVar;
-    }
-    debug() {
-        return this._desc.debug || false;
-    }
-    description() {
-        return `{~#bvar ${this.name()}}`
-    }
-}
-
+console.log('~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~');
+console.log('STARTING SIMULABRA: INFINITE SOFTWARE');
 function bootstrap() {
+    globalThis.SIMULABRA = {
+        debug() {
+            return true;
+        },
+        mod() {
+            return this._mod;
+        },
+        trace() {
+            return true;
+        },
+        stringify() {
+
+        },
+        display() {
+
+        }
+    };
+
+
+    function simulabra_display(obj) {
+        if (typeof obj === 'string') {
+            return obj;
+        } else {
+            return simulabra_string(obj);
+        }
+    }
+    function simulabra_string(obj, seen = new Set()) {
+        if (seen.has(obj)) {
+            return "*circ*";
+        }
+        seen.add(obj);
+        if (obj === undefined || obj === null) {
+            return '' + obj;
+        } else if (Object.getPrototypeOf(obj) === ClassPrototype) {
+            return '#proto ' + obj._name || '?';
+        } else if (typeof obj.description === 'function') {
+            return obj.description(seen);
+        } else if (typeof obj === 'object') {
+            const ps = [];
+            for (const [k, v] of Object.entries(obj)) {
+                // console.log('ss recur', k)
+                ps.push(`:${k}=${simulabra_string(v, seen)}`)
+            }
+            return '{' + ps.join(' ') + '}';
+        } else {
+            // console.log('ss was', obj);
+            return obj.toString();
+        }
+    }
+
+    function debug(...args) {
+        let __ = globalThis.SIMULABRA;
+        if (__.$$debug_class) {
+            __.$$debug_class.log(...args);
+        } else {
+            console.log(...args.map(a => simulabra_display(a)));
+        }
+    }
+
+    class Frame {
+        constructor(receiver, method_impl, args) {
+            this._receiver = receiver;
+            this._method_impl = method_impl;
+            this._args = args;
+        }
+        description() {
+            console.log('frame desc')
+            return `${pry(this._receiver)}.${this._method_impl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
+        }
+    }
+
+    function pry(obj) {
+        if (typeof obj === 'object' && obj.title instanceof Function) {
+            return obj.title();
+        } else if (typeof obj === 'string') {
+            return obj;
+        } else {
+            return `#native/${typeof obj}#${obj.toString()}`;
+        }
+    }
+
+    function $$() {
+        return globalThis.SIMULABRA;
+    }
+
+    class FrameStack {
+        constructor() {
+            this._frames = [];
+        }
+        push(frame) {
+            this._frames.push(frame);
+            return this;
+        }
+        pop() {
+            const frame = this._frames.pop();
+            return frame;
+        }
+        idx() {
+            return this._frames.length - 1;
+        }
+        frame() {
+            return this._frames[this.idx()];
+        }
+        trace() {
+            for (let i = 0; i < this._frames.length; i++) {
+                debug('stack frame', i, this._frames[i]);
+            }
+        }
+        description() {
+            return 'FrameStack';
+        }
+    }
+
+    class MethodImpl {
+        constructor(props) {
+            const defaults = {
+                _name: '',
+                _primary: null,
+                _befores: [],
+                _afters: [],
+                _debug: true,
+            };
+            Object.assign(this, defaults);
+            Object.assign(this, props);
+        }
+        reify(proto) {
+            if (!this._name) {
+                throw new Error('tried to reify without a name!');
+            }
+            if (!__._debug && this._befores.length === 0 && this._afters.length === 0) {
+                proto[this._name.deskewer()] = this._primary;
+                if (__._trace) {
+                    console.log('call');
+                }
+                return;
+            }
+            const self = this;
+            proto[this._name.deskewer()] = function (...args) {
+                const __ = globalThis.SIMULABRA;
+                if (self._debug) {
+                    const frame = new Frame(this, self, args);
+                    __.stack().push(frame); // uhh
+                    if (__._trace) {
+                        console.log('call', frame.description());
+                    }
+                }
+                try {
+                    self._befores.forEach(b => b.apply(this, args));
+                    let res = self._primary.apply(this, args);
+                    // console.log('in reified', self.name, self.primary, res)
+                    self._afters.forEach(a => a.apply(this, args)); // res too?
+                    if (self._debug) {
+                        __._stack.pop();
+                    }
+                    return res;
+                } catch (e) {
+                    if (!e._logged && self._debug) {
+                        e._logged = true;
+                        debug('failed message: call', self._name, 'on', this._parent, 'with', args);
+                        __._stack.trace();
+                    }
+                    throw e;
+                }
+            }
+        }
+    }
+
+    class ClassPrototype {
+        constructor(parent) {
+            this._impls = {};
+            this._parent = parent;
+        }
+
+        _reify() {
+            for (const impl of Object.values(this._impls)) {
+                impl.reify(this);
+            }
+        }
+
+        _add(name, op) {
+            op.combine(this._get_impl(name));
+        }
+
+        _get_impl(name) {
+            if (!(name in this._impls)) {
+                this._impls[name] = new MethodImpl({ _name: name });
+            }
+            return this._impls[name];
+        }
+    }
+
+    class BVar {
+        constructor({ name, ...desc }) {
+            this._name = name;
+            this._desc = desc;
+        }
+        static new(args) {
+            return new this(args);
+        }
+        static descended(other) {
+            return other === BVar || other === $var;
+        }
+        name() {
+            return this._name;
+        }
+        load(proto) {
+            const key = '_' + this.name();
+            const self = this;
+            proto._add(self.name(), function (assign) {
+                if (assign !== undefined) {
+                    this[key] = assign;
+                } else if (this[key] === undefined) {
+                    this[key] = self.defval();
+                }
+                return this[key];
+            });
+        }
+        defval() {
+            return typeof this._desc.default === 'function' ? this._desc.default() : this._desc.default;
+        }
+        class() {
+            return BVar;
+        }
+        debug() {
+            return this._desc.debug || false;
+        }
+        description() {
+            return `{~#bvar ${this.name()}}`
+        }
+    }
+
     var __ = globalThis.SIMULABRA;
     if (__._bootstrapped) {
         return __;
     }
 
-    console.log('~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~');
-    console.log('STARTING SIMULABRA: INFINITE SOFTWARE');
     __._stack = new FrameStack();
 
     Object.prototype._add = function add(name, op) {
@@ -283,13 +304,7 @@ function bootstrap() {
 
     const $base_components = [
         function init() {},
-        function description(seen = {}) { //TODO: add depth
-            if (seen[this]) {
-                return '*circ*';
-            } else {
-                seen[this] = true;
-            }
-            // this.log('base desc', this._class._name)
+        function description(seen) { //TODO: add depth
             const vars = this.vars().filter(v => v.value() !== v.var_ref().defval());
             const varDesc = vars.length > 0 ? `{\n${vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
             return `${this.class().description(seen)}.new${varDesc}`;
@@ -334,6 +349,7 @@ function bootstrap() {
             this._proto._class = this;
             this.load(this.proto());
             this.proto()._reify();
+            __.mod()?.def(this)
         },
         function load(target) {
             for (const v of this.components()) {
@@ -353,15 +369,24 @@ function bootstrap() {
             return this === target || !!this.components().find(c => c === target);
         },
         function vars() {
-            let vars = [];
-            for (const c of this.components()) {
-                if (c.class().descended($var)) {
-                    vars.push(c);
-                } else if (c.class().descended($class)) {
-                    vars = [...vars, ...c.class().vars()];
+            let visited = new Set();
+
+            const _vars = (cls) => {
+                if (visited.has(cls)) return [];
+                visited.add(cls);
+
+                let vars = [];
+                for (const c of cls.components()) {
+                    if (c.class().descended($var)) {
+                        vars.push(c);
+                    } else if (c.class().descended($class)) {
+                        vars = [...vars, ..._vars(c.class())];
+                    }
                 }
-            }
-            return vars;
+                return vars;
+            };
+
+            return _vars(this);
         },
         function genid() {
             let id = this.id_ctr();
@@ -389,7 +414,6 @@ function bootstrap() {
         parametize(props, obj);
         obj.id(this.genid());
         obj.init(this);
-        __.mod()?.def(obj)
         return obj;
     };
 
@@ -475,9 +499,17 @@ function bootstrap() {
         components: [
             $var.new({ name: 'var-ref' }),
             $var.new({ name: 'value' }),
-            function description() {
-                // this.log('description!!', this.var_ref().name(), this.value());
-                return `:${this.var_ref().name()}=${this.var_ref().debug() ? simulabra_string(this.value()) : 'hidden'}`;
+            function description(seen) {
+                let d;
+                if (this.value().title instanceof Function) {
+                    d = this.value().title();
+                } else if (!this.var_ref().debug()) {
+                    d = `<hidden>`;
+                } else {
+                    d = simulabra_string(this.value(), seen);
+                }
+                // console.log('description!!', this.var_ref().name(), typeof this.value(), typeof this.value()._class);
+                return `:${this.var_ref().name()}=${d}`;
             }
         ]
     });
@@ -620,10 +652,12 @@ function bootstrap() {
             function def(obj) {
                 const className = obj.class().name();
                 const name = obj.name();
+                this.log('def', className, name);
                 if (!this.repos().hasOwnProperty(className)) {
                     this.repos()[className] = {};
                 }
                 this.repos()[className][name] = obj;
+                this.log(this.repos()[className][name]);
             },
             function child(moddef) {
                 return $.module.new({
@@ -679,7 +713,7 @@ function bootstrap() {
             }),
             $.var.new({
                 name: 'trace',
-                default: false,
+                default: true,
             }),
             function $() {
                 return this.mod().proxy('class');
@@ -705,8 +739,7 @@ function bootstrap() {
             $.after.new({
                 name: 'init',
                 do() {
-                    // this.log('deffin');
-                    // __.mod().log('deffo')
+                    console.log('def', this.name());
                     __.mod().def(this);
                 }
             })

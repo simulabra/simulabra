@@ -15,8 +15,15 @@ export default base_mod.find('class', 'module').new({
           name: 'run',
           async: true,
           async do() {
-            await this.do().apply(this);
-            this.log('passed');
+            try {
+              this.log(this.do());
+              await this.do().apply(this);
+              this.log('passed');
+            } catch (e) {
+              // demands a native error class?
+              this.log('failed');
+              throw e;
+            }
           }
         }),
         $.var.new({ name: 'do' }),

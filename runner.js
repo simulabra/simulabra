@@ -39,24 +39,24 @@ export default await base_mod.find('class', 'module').new({
               const filePath = join(path, file);
               const ext = extname(filePath);
               this.log('load', filePath, ext);
-              try {
-                if (ext === '.js') {
-                  const esm = await import('./' + filePath);
-                  const mod = esm.default;
-                  await this.run_mod(mod);
-                } else if (ext === '.simulabra') {
-                  const source = (await readFile(filePath)).toString();
-                  const transformer = $.transformer.new();
+              if (ext === '.js') {
+                const esm = await import('./' + filePath);
+                const mod = esm.default;
+                await this.run_mod(mod);
+              } else if (ext === '.simulabra') {
+                const source = (await readFile(filePath)).toString();
+                const transformer = $.transformer.new();
+                try {
                   const mod = await $.script.new({
                     name: filePath,
                     imports: [_],
                     source,
                   }).run(transformer);
                   await this.run_mod(mod);
+                } catch (e) {
+                  this.log('failed to load module at ' + filePath);
+                  throw e;
                 }
-              } catch (e) {
-                this.log('failed to load module at ' + filePath);
-                throw e;
               }
             }
           }

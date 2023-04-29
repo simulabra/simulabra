@@ -211,6 +211,14 @@ export default base_mod.find('class', 'module').new({
       name: 'symbol-node',
       components: [
         $.node,
+        $.static.new({
+          name: 'from',
+          do(str) {
+            return this.new({
+              value: str
+            });
+          }
+        }),
         $.var.new({ name: 'value' }),
         $.method.new({
           name: 'parse',
@@ -461,6 +469,13 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'quoted-estree',
+      components: [
+        $.var.new({ name: 'estree' })
+      ]
+    });
+
+    $.class.new({
       name: 'lambda-node',
       debug: true,
       components: [
@@ -508,8 +523,12 @@ export default base_mod.find('class', 'module').new({
               items: [$.map_node.new({
                 properties: [
                   $.property.new({
-                    key: 'fn',
-                    value: ??
+                    key: $.symbol_node.from('fn'),
+                    value: $.quoted_estree.new({ estree: b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree()) }),
+                  }),
+                  $.property.new({
+                    key: $.symbol_node.from('mod'),
+                    value: $.quoted_estree.new({ estree: b.callExpression(b.memberExpression(b.identifier('__'), b.identifier('mod')), []) }), // @mod __.mod()
                   })
                 ]
               })]
