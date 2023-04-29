@@ -495,7 +495,26 @@ export default base_mod.find('class', 'module').new({
           return `[${this.default_args() ? '' : '|' + this.args().map(a => a.print()).join(' ') + '|'}${this.body().print()}]`
         },
         function estree() {
-          return b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
+          // return b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
+          // ~closure.new{:fn=<fn> :mod=@mod}
+          // really need macros
+          // ~macro.new{:name=:closure-fn :do=[%fn|`~closure.new{:fn=,fn :mod=@mod}]}
+          return $.message_node.new({
+            receiver: $.classref_node.new({
+              identifier: 'closure',
+            }),
+            selector: 'new',
+            args: $.list_node.new({
+              items: [$.map_node.new({
+                properties: [
+                  $.property.new({
+                    key: 'fn',
+                    value: ??
+                  })
+                ]
+              })]
+            }),
+          }).estree();
         }
       ],
     });

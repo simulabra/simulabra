@@ -858,6 +858,23 @@ function bootstrap() {
         ]
     });
 
+    $.class.new({
+        name: 'closure',
+        components: [
+            $.var.new({ name: 'fn' }),
+            $.var.new({ name: 'mod' }),
+            $.method.new({
+                name: 'call',
+                do: function call(...args) {
+                    const om = __.mod();
+                    __.mod(this.mod());
+                    this.fn(...args);
+                    __.mod(om);
+                }
+            })
+        ]
+    })
+
     return __;
 }
 
