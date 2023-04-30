@@ -31,33 +31,38 @@ export default await base_mod.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'load-file',
+          async: true,
+          async do(filePath) {
+            const ext = extname(filePath);
+            if (ext === '.js') {
+              const esm = await import('./' + filePath);
+              return esm.default;
+            } else if (ext === '.simulabra') {
+              const source = (await readFile(filePath)).toString();
+              const transformer = $.transformer.new();
+              return await $.script.new({
+                name: filePath,
+                imports: [_],
+                source,
+              }).run(transformer);
+            }
+          }
+        }),
+        $.method.new({
           name: 'run',
           async: true,
           async do(path) {
             const files = await readdir(path);
-
             for (const file of files) {
+              this.log('load', file);
               const filePath = join(path, file);
-              const ext = extname(filePath);
-              this.log('load', filePath, ext);
-              if (ext === '.js') {
-                const esm = await import('./' + filePath);
-                const mod = esm.default;
+              try {
+                const mod = await this.load_file(filePath);
                 this.run_mod(mod);
-              } else if (ext === '.simulabra') {
-                const source = (await readFile(filePath)).toString();
-                const transformer = $.transformer.new();
-                try {
-                  const mod = await $.script.new({
-                    name: filePath,
-                    imports: [_],
-                    source,
-                  }).run(transformer);
-                  this.run_mod(mod);
-                } catch (e) {
-                  this.log('failed to load module at ' + filePath);
-                  throw e;
-                }
+              } catch (e) {
+                this.log('failed to load module at ' + filePath);
+                throw e;
               }
             }
           }
