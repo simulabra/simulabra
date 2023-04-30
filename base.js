@@ -130,16 +130,16 @@ function bootstrap() {
             if (!this._name) {
                 throw new Error('tried to reify without a name!');
             }
-            if (!__._debug && this._befores.length === 0 && this._afters.length === 0) {
+            if (!$$()._debug && this._befores.length === 0 && this._afters.length === 0) {
                 proto[this._name.deskewer()] = this._primary;
-                if (__._trace) {
+                if ($$()._trace) {
                     console.log('call');
                 }
                 return;
             }
             const self = this;
             proto[this._name.deskewer()] = function (...args) {
-                const __ = globalThis.SIMULABRA;
+                const __ = $$();
                 if (self._debug) {
                     const frame = new Frame(this, self, args);
                     __.stack().push(frame); // uhh
@@ -349,7 +349,7 @@ function bootstrap() {
             this._proto._class = this;
             this.load(this.proto());
             this.proto()._reify();
-            __.mod()?.def(this)
+            $$().mod()?.def(this)
         },
         function load(target) {
             for (const v of this.components()) {
@@ -447,6 +447,7 @@ function bootstrap() {
             BVar.new({ name: 'name', }),
             BVar.new({ name: 'mutable', default: true }),
             BVar.new({ name: 'debug', default: true }),
+            BVar.new({ name: 'trace', default: true }),
             BVar.new({ name: 'default', }),
             BVar.new({ name: 'default-init', }),
             BVar.new({ name: 'required', }),
@@ -468,9 +469,10 @@ function bootstrap() {
                         if (assign !== undefined) {
                             this[pk] = assign;
                             ('update' in this) && this.update({ changed: self.name() }); // best there is?
-                            return this;
-                        }
-                        if (!(pk in this)) {
+                            if (self._trace) {
+                                self.log('muted to', assign);
+                            }
+                        } else if (!(pk in this)) {
                             this[pk] = self.defval(this);
                         }
                         return this[pk];
@@ -657,7 +659,6 @@ function bootstrap() {
                     this.repos()[className] = {};
                 }
                 this.repos()[className][name] = obj;
-                this.log(this.repos()[className][name]);
             },
             function child(moddef) {
                 return $.module.new({
@@ -671,10 +672,10 @@ function bootstrap() {
                     for (const imp of this.imports()) {
                         await imp.load();
                     }
-                    const om = __.mod();
-                    __.mod(this);
+                    const om = $$().mod();
+                    $$().mod(this);
                     await this.on_load().apply(this, [this, this.proxy('class')]);
-                    __.mod(om);
+                    $$().mod(om);
                 }
                 return this;
             },
@@ -702,7 +703,10 @@ function bootstrap() {
     $.class.new({
         name: 'simulabra-global',
         components: [
-            $.var.new({ name: 'mod' }),
+            $.var.new({
+                name: 'mod',
+                trace: true,
+            }),
             $.var.new({
                 name: 'stack',
                 debug: false,
@@ -739,8 +743,8 @@ function bootstrap() {
             $.after.new({
                 name: 'init',
                 do() {
-                    console.log('def', this.name());
-                    __.mod().def(this);
+                    this.log('deffed', $$().mod());
+                    $$().mod().def(this);
                 }
             })
         ]
