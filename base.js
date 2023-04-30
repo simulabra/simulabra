@@ -447,7 +447,7 @@ function bootstrap() {
             BVar.new({ name: 'name', }),
             BVar.new({ name: 'mutable', default: true }),
             BVar.new({ name: 'debug', default: true }),
-            BVar.new({ name: 'trace', default: true }),
+            BVar.new({ name: 'trace', default: false }),
             BVar.new({ name: 'default', }),
             BVar.new({ name: 'default-init', }),
             BVar.new({ name: 'required', }),
@@ -527,7 +527,11 @@ function bootstrap() {
                 if (impl._name !== this.name()) {
                     throw new Error('tried to combine method on non-same named impl');
                 }
-                impl._primary = this.do();
+                let fn = this.do();
+                if (typeof fn !== 'function') {
+                    fn = fn.fn();
+                }
+                impl._primary = fn;
                 impl._debug = this.debug();
             },
         ]
@@ -654,7 +658,7 @@ function bootstrap() {
             function def(obj) {
                 const className = obj.class().name();
                 const name = obj.name();
-                this.log('def', className, name);
+                // this.log('def', className, name);
                 if (!this.repos().hasOwnProperty(className)) {
                     this.repos()[className] = {};
                 }
@@ -705,7 +709,6 @@ function bootstrap() {
         components: [
             $.var.new({
                 name: 'mod',
-                trace: true,
             }),
             $.var.new({
                 name: 'stack',
@@ -743,7 +746,6 @@ function bootstrap() {
             $.after.new({
                 name: 'init',
                 do() {
-                    this.log('deffed', $$().mod());
                     $$().mod().def(this);
                 }
             })
@@ -901,12 +903,12 @@ function bootstrap() {
             $.var.new({ name: 'fn' }),
             $.var.new({ name: 'mod' }),
             $.method.new({
-                name: 'call',
-                do: function call(...args) {
-                    const om = __.mod();
-                    __.mod(this.mod());
-                    this.fn(...args);
-                    __.mod(om);
+                name: 'apply',
+                do: async function apply(self, args = []) {
+                    const om = $$().mod();
+                    $$().mod(this.mod());
+                    await this.fn.apply(self, args);
+                    $$().mod(om);
                 }
             })
         ]
