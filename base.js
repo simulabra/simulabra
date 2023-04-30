@@ -543,7 +543,11 @@ function bootstrap() {
             $var.new({ name: 'do' }),
             function load(proto) {
                 const impl = new MethodImpl({ _name: this.name() });
-                impl._primary = this.do();
+                let fn = this.do();
+                if (typeof fn !== 'function') {
+                    fn = fn.fn();
+                }
+                impl._primary = fn;
                 impl.reify(proto._parent);
             }
         ]
@@ -904,11 +908,12 @@ function bootstrap() {
             $.var.new({ name: 'mod' }),
             $.method.new({
                 name: 'apply',
-                do: async function apply(self, args = []) {
+                do: function apply(self, args = []) {
                     const om = $$().mod();
                     $$().mod(this.mod());
-                    await this.fn.apply(self, args);
+                    const res = this.fn().apply(self, args);
                     $$().mod(om);
+                    return res;
                 }
             })
         ]

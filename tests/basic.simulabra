@@ -1,6 +1,7 @@
 ~class.new{
   :name=:point
   :components=(
+    ~deffed
     ~var.new{
       :name=:x
       :type=:number

@@ -131,7 +131,7 @@ export default base_mod.find('class', 'module').new({
                 '~': $.classref_node,
                 '!': $.typeref_node,
                 '^': $.return_node,
-                '@': $.restarg_node,
+                '@': $.globalref_node,
                 '"': $.string_literal_node,
               },
             });
@@ -528,7 +528,7 @@ export default base_mod.find('class', 'module').new({
                   }),
                   $.property.new({
                     key: $.symbol_node.from('mod'),
-                    value: $.quoted_estree.new({ estree: b.callExpression(b.memberExpression(b.identifier('__'), b.identifier('mod')), []) }), // @mod __.mod()
+                    value: $.globalref_node.new({ identifier: 'mod' }), // @mod __.mod()
                   })
                 ]
               })]
@@ -738,12 +738,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
       name: 'argref-node',
       components: [
         $.ref_reader_macro,
-        $.static.new({
-          name: 'char',
-          do() {
-            return '%';
-          }
-        }),
         function char() {
           return '%';
         },
@@ -757,12 +751,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
       name: 'classref-node',
       components: [
         $.ref_reader_macro,
-        $.method.new({
-          name: 'char',
-          do() {
-            return '~';
-          }
-        }),
         function char() {
           return '~';
         },
@@ -770,6 +758,19 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return b.memberExpression(b.identifier('$'), b.identifier(this.identifier()));
         },
       ],
+    });
+
+    $.class.new({
+      name: 'globalref-node',
+      components: [
+        $.ref_reader_macro,
+        function char() {
+          return '@';
+        },
+        function estree() {
+          return b.callExpression(b.memberExpression(b.memberExpression(b.identifier('globalThis'), b.identifier('SIMULABRA')), b.identifier(this.identifier())), []);
+        }
+      ]
     });
 
     $.class.new({

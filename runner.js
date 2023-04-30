@@ -19,19 +19,20 @@ export default await base_mod.find('class', 'module').new({
         }),
         $.method.new({
           name: 'run-mod',
-          async do(mod) {
+          do(mod) {
             __.mod(mod);
             const cases = mod.repos().case;
             if (cases === undefined) {
               throw new Error(`no cases in module ${mod.description()}`);
             }
             for (const test_case of Object.values(cases)) {
-              await test_case.run();
+              test_case.run();
             }
           }
         }),
         $.method.new({
           name: 'run',
+          async: true,
           async do(path) {
             const files = await readdir(path);
 
@@ -42,7 +43,7 @@ export default await base_mod.find('class', 'module').new({
               if (ext === '.js') {
                 const esm = await import('./' + filePath);
                 const mod = esm.default;
-                await this.run_mod(mod);
+                this.run_mod(mod);
               } else if (ext === '.simulabra') {
                 const source = (await readFile(filePath)).toString();
                 const transformer = $.transformer.new();
@@ -52,7 +53,7 @@ export default await base_mod.find('class', 'module').new({
                     imports: [_],
                     source,
                   }).run(transformer);
-                  await this.run_mod(mod);
+                  this.run_mod(mod);
                 } catch (e) {
                   this.log('failed to load module at ' + filePath);
                   throw e;

@@ -13,10 +13,9 @@ export default base_mod.find('class', 'module').new({
         $.deffed,
         $.method.new({
           name: 'run',
-          async: true,
-          async do() {
+          do() {
             try {
-              await this.do().apply(this);
+              this.do().apply(this);
               this.log('passed');
             } catch (e) {
               // demands a native error class?
