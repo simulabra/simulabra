@@ -72,3 +72,15 @@
     .assert-eq(~point#test.x 7)
   ]
 }
+
+~case.new{
+  :name=:basic-closures
+  :do=[|
+    %fn=[%it|^%it.*(2)]
+    %q=%fn.do(3)
+    .assert-eq(%q 6)
+    %fnp=[|^.x.*(2)]
+    %p=~point.new{:x=2}
+    .assert-eq(%fnp.apply(%p) 4)
+  ]
+}

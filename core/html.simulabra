@@ -1,34 +1,41 @@
-~class.new({
+~class.new{
   :name :html-element
   :desc "base class for DOM elements"
   :components (
-    ~var.new({
+    ~var.new{
       :name :id
-    })
-    ~method.new({
+    }
+    ~method.new{
       :name :dom-node
-      :do [^$js(document).getElementById(.id)]
-    })
-    ~method.new({
+      :do [^@context.document.getElementById(.id)]
+    }
+    ~method.new{
       :name :load
-      :do [.children.map([%it.load])]
-    })
-    ~method.new({
+      :do [_ .children.map([%_.load])]
+    }
+    ~method.new{
       :name :render
       :do [
         $set(.dom-node :innerHTML .html)
         .load
       ]
-    })
-    ~method.new({
+    }
+    ~var.new{
       :name :children
-      :do [^()]
-    })
-    ~method.new({
+      :default [()]
+    }
+    ~method.new{
       :name :html
-    })
+    }
   )
-})
+}
+
+~class.new{
+  :name :div
+  :components (
+    ~html-element
+  )
+}
 
 $(def (~class new {
   name 'list-element
@@ -38,12 +45,12 @@ $(def (~class new {
     list (~var default [])
     html $(method [] `<div id="${.(id)}">${.(list | map $(do %it(html)) | join )}</div>`)
   }
-}))
+})
 
 $(def (~class new {
   name 'div
   implements [!HTML]
   super ~element
-}))
+})
 
 (~div of "hello, world!")

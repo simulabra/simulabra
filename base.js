@@ -915,6 +915,12 @@ function bootstrap() {
                     $$().mod(om);
                     return res;
                 }
+            }),
+            $.method.new({
+                name: 'do',
+                do(...args) {
+                    return this.apply(this.mod(), args);
+                }
             })
         ]
     })
