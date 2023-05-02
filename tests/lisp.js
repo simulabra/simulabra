@@ -36,7 +36,7 @@ export default await base_mod.find('class', 'module').new({
     ~var.new{:name=:count :default=0}
     ~method.new{
       :name=:inc
-      :do=[|.count(.count.add(1))]
+      :do=[.count(.count.add(1))]
     }
   )
 }

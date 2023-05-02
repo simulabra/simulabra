@@ -127,6 +127,7 @@ export default base_mod.find('class', 'module').new({
                 ',': $.unquote_node,
                 '.': $.message_node,
                 '$': $.invoke_node,
+                '_': $.it_node,
                 '%': $.argref_node,
                 '~': $.classref_node,
                 '!': $.typeref_node,
@@ -370,6 +371,26 @@ export default base_mod.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'it-node',
+      components: [
+        $.node,
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('_'); // parse message?
+            return this;
+          }
+        }),
+        function print() {
+          return '_';
+        },
+        function estree() {
+          return $.argref_node.new({ identifier: 'it' }).estree();
+        }
+      ],
+    });
+
+    $.class.new({
       name: 'property',
       components: [
         $.node,
@@ -487,11 +508,16 @@ export default base_mod.find('class', 'module').new({
           do(reader) {
             this.args([]);
             reader.expect('[');
-            while (reader.peek() !== '|') {
+            if (reader.peek() === '|') {
+              reader.expect('|');
+              while (reader.peek() !== '|') {
+                this.args().push(reader.read());
+                reader.strip();
+              }
+              reader.expect('|');
+            } else if (reader.peek() === '_') {
               this.args().push(reader.read());
-              reader.strip();
             }
-            reader.expect('|');
             reader.strip();
             const forms = [];
             while (reader.peek() !== ']') {
