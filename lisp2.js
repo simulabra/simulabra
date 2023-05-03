@@ -1,40 +1,7 @@
-/*
- * probably let's just burn it all
- * start afresh with syntax
- * make it lispier?
- *
- * (. msg-name %x %y)
- * symbol .this-msg ~class-name !type-name %arg-name ^return :symbol $.macro-name |pipe-name
- * (. msg-name %x %y) ($ macro-name s (./frob))
- * (%arg msg .) (~debug log "testing") (. x |+ 5 |sqrt)
- * [2 4 6 8]
- * {name :something value (%x * 42 |pow 3)}
- *
- * ($.def ~class point {
- *   :slots {
- *     :x (~var new)
- *     :y (~var new)
- *     :dist ($.fn [other] ^(. x |- (%other x) |pow 2 |+ (. y |- (%other y |pow 2)) |sqrt))
- *   }
- * })
- *
- * quasiquotes
- * "Backquote expressions are just a handy notation for writing complicated
- * combinations of calls to list constructors." (Bawden)
- * ($.macro :cpt (%name))
- * `(.add {:,%name {:value (.,%name)}})
- * ($.cpt :x) => (.add {:x {:value (.x)}})
- *
- * traits?
- * desires for the shape of something?
- *
- * ObjectLiteral
- * Literal
- */
-
 import bootstrap from './base.js';
 import { createHash } from 'crypto';
 import fs from 'fs/promises';
+import ofs from 'fs';
 import path from 'path';
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
@@ -108,6 +75,8 @@ export default base_mod.find('class', 'module').new({
                 '#': $.pointer_node,
                 '.': $.message_node,
                 '=': $.assignment_node,
+                '(': $.list_node,
+                '{': $.map_node,
               }
             });
           }
@@ -120,8 +89,8 @@ export default base_mod.find('class', 'module').new({
                 ':': $.symbol_node,
                 '/': $.this_node,
                 '(': $.list_node,
-                '[': $.lambda_node,
                 '{': $.map_node,
+                '[': $.lambda_node,
                 '\'': $.quote_node,
                 '`': $.quasiquote_node,
                 ',': $.unquote_node,
@@ -570,6 +539,16 @@ export default base_mod.find('class', 'module').new({
         $.node,
         $.var.new({ name: 'properties' }),
         $.var.new({ name: 'space' }),
+        $.method.new({
+          name: 'chain',
+          do: function chain(reader, node) {
+            return $.message_node.new({
+              receiver: node,
+              selector: 'new',
+              args: $.list_node.new({ items: [$.map_node.new().parse(reader)], }),
+            });
+          }
+        }),
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
@@ -1095,6 +1074,31 @@ ${props.map(prop => '  ' + prop).join('\n')}
           name: 'hash',
           do(code) {
             return createHash('md5').update(code).digest('hex').substring(0, 8);
+          }
+        }),
+        $.after.new({
+          name: 'init',
+          async do() {
+            this.log('after init');
+            await this.clear_out_js();
+          }
+        }),
+        $.method.new({
+          name: 'clear-out-js',
+          do() {
+            try {
+              const files = ofs.readdirSync('out');
+
+              for (const file of files) {
+                const filePath = path.join('out', file);
+                this.log('clean cached', filePath);
+                ofs.unlinkSync(filePath);
+              }
+
+              console.log('All files deleted successfully');
+            } catch (error) {
+              console.error('Error while deleting files:', error);
+            }
           }
         }),
         $.method.new({

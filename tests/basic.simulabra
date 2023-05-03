@@ -1,22 +1,22 @@
-~class.new{
+~class{
   :name=:point
   :components=(
     ~deffed
-    ~var.new{
+    ~var{
       :name=:x
       :type=:number
       :default=0
     }
-    ~var.new{
+    ~var{
       :name=:y
       :type=:number
       :default=0
     }
-    ~method.new{
+    ~method{
       :name=:dist
       :do=[_ ^.x.-(_.x).pow(2).+(.y.-(_.y).pow(2)).sqrt]
     }
-    ~method.new{
+    ~method{
       :name=:translate
       :do=[|%x %y|
         .x(.x.+(%x))
