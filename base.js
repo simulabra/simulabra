@@ -862,6 +862,15 @@ function bootstrap() {
         ]
     });
 
+    $.class.new({
+        name: 'number',
+        components: [
+            function primitive() {
+                return _.find('primitive', 'number-primitive');
+            }
+        ]
+    });
+
     $.primitive.new({
         name: 'array-primitive',
         js_prototype: Array.prototype,

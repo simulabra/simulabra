@@ -4,16 +4,18 @@
     ~deffed
     ~var{
       :name=:x
-      :type=:number
+      :type=~number
       :default=0
     }
     ~var{
       :name=:y
-      :type=:number
+      :type=~number
       :default=0
     }
     ~method{
       :name=:dist
+      :args=(~self)
+      :ret=~number
       :do=[_ ^.x.-(_.x).pow(2).+(.y.-(_.y).pow(2)).sqrt]
     }
     ~method{
@@ -26,70 +28,81 @@
   )
 }
 
-~case.new{
+~case{
   :name=:basic-points
   :do=[
-    %p=~point.new{:x=3}
-    %q=~point.new{:y=4}
+    %p=~point{:x=3}
+    %q=~point{:y=4}
     .assert-eq(%p.dist(%q) 5)
     %p.translate(1 3)
-    .assert-eq(%p.dist(~point.new) 5)
+    .assert-eq(%p.dist(~point{}) 5)
   ]
 }
 
-~class.new{
+~class{
   :name=:math
   :components=(
-    ~static.new{
+    ~static{
       :name=:pi
       :do=[^3.14159]
     }
   )
 }
 
-~class.new{
-  :name=:circle
+~class{
+  :name=:shape
   :components=(
     ~point
-    ~var.new{
+    ~virtual{
+      :name=:area
+      :ret=:number
+    }
+  )
+}
+
+~class{
+  :name=:circle
+  :components=(
+    ~shape
+    ~var{
       :name=:r
       :type=:number
       :default=1
     }
-    ~method.new{
+    ~method{
       :name=:area
       :do=[^~math.pi.*(.r.pow(2))]
     }
   )
 }
 
-~case.new{
+~case{
   :name=:basic-circles
   :do=[
-    %p=~circle.new{:x=3}
-    %q=~circle.new{:y=4 :r=2}
+    %p=~circle{:x=3}
+    %q=~circle{:y=4 :r=2}
     .assert-eq(%p.dist(%q) 5)
     .assert-eq(%p.area ~math.pi)
     .assert-eq(%q.area 4.*(~math.pi))
   ]
 }
 
-~case.new{
+~case{
   :name=:basic-references
   :do=[
-    %p=~point.new{:name=:test :x=7}
+    %p=~point{:name=:test :x=7}
     .assert-eq(~point#test.x 7)
   ]
 }
 
-~case.new{
+~case{
   :name=:basic-closures
   :do=[
     %fn=[_ ^_.*(2)]
     %q=%fn.do(3)
     .assert-eq(%q 6)
     %fnp=[^.x.*(2)]
-    %p=~point.new{:x=2}
+    %p=~point{:x=2}
     .assert-eq(%fnp.apply(%p) 4)
   ]
 }

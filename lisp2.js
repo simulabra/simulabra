@@ -773,6 +773,10 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return '@';
         },
         function estree() {
+          const id = this.identifier();
+          if (id === 'true' || id === 'false') {
+            return b.booleanLiteral(Boolean(id));
+          }
           return b.callExpression(b.memberExpression(b.memberExpression(b.identifier('globalThis'), b.identifier('SIMULABRA')), b.identifier(this.identifier())), []);
         }
       ]

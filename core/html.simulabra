@@ -1,56 +1,38 @@
-~class.new{
+~class{
   :name :html-element
   :desc "base class for DOM elements"
   :components (
-    ~var.new{
+    ~var{
       :name :id
     }
-    ~method.new{
+    ~method{
       :name :dom-node
       :do [^@context.document.getElementById(.id)]
     }
-    ~method.new{
+    ~method{
       :name :load
       :do [_ .children.map([%_.load])]
     }
-    ~method.new{
+    ~method{
       :name :render
       :do [
         $set(.dom-node :innerHTML .html)
         .load
       ]
     }
-    ~var.new{
+    ~var{
       :name :children
       :default [()]
     }
-    ~method.new{
+    ~method{
       :name :html
     }
   )
 }
 
-~class.new{
+~class{
   :name :div
   :components (
     ~html-element
   )
 }
-
-$(def (~class new {
-  name 'list-element
-  implements [!HTML]
-  super ~element
-  slots {
-    list (~var default [])
-    html $(method [] `<div id="${.(id)}">${.(list | map $(do %it(html)) | join )}</div>`)
-  }
-})
-
-$(def (~class new {
-  name 'div
-  implements [!HTML]
-  super ~element
-})
-
-(~div of "hello, world!")
