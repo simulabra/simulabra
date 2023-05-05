@@ -1,0 +1,18 @@
+~class{
+  :name=:url
+  :components=(
+    ~var{
+      :name=:js-inner
+      :foreign=@true
+    }
+
+    ~static{
+      :name=:from-string
+      :do=[|%url-string|
+        .new{
+          :js-inner=~js-node{:js=`"new URL(\"${%url-string}\")"}
+        }
+      ]
+    }
+  )
+}

@@ -757,6 +757,11 @@ function bootstrap() {
     });
 
     $.class.new({
+        name: 'self',
+        components: []
+    });
+
+    $.class.new({
         name: 'primitive',
         components: [
             $.class,
