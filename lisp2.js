@@ -415,7 +415,20 @@ export default base_mod.find('class', 'module').new({
           return b.variableDeclaration('let', [b.variableDeclarator(this.lhs().estree(), this.rhs().estree())]);
         },
       ],
-    })
+    });
+
+    $.class.new({
+      name: 'call-node',
+      components: [
+        $.node,
+        $.var.new({ name: 'fn' }),
+        $.var.new({ name: 'args' }),
+        function estree() {
+          return b.callExpression(b.memberthis.fn().estree(), this.args().items().map(it => it.estree()));
+        }
+      ]
+    });
+
 
     $.class.new({
       name: 'list-node',
@@ -436,6 +449,14 @@ export default base_mod.find('class', 'module').new({
             return this;
           },
         }),
+        function chain(reader, node) {
+          this.parse(reader);
+          return $.message_node.new({
+            receiver: node,
+            selector: 'apply',
+            args: this.map(items => [$.this_node.new(), items]),
+          });
+        },
         function print() {
           return `(${this.items().map(it => it.print()).join(' ')})`;
         },
@@ -449,7 +470,7 @@ export default base_mod.find('class', 'module').new({
           return this.class().new({ items: this.items().map(it => it.expand()) });
         },
         function map(fn) {
-          return this.class().new({ items: this.items().map(fn) });
+          return this.class().new({ items: fn(this.items()) });
         },
         function push(it) {
           this.items().push(it);

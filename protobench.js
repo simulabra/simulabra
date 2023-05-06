@@ -22,8 +22,24 @@ const direct = {
   }
 }
 
+function debuggable(obj) {
+  return new Proxy(obj, {
+    get(target, p) {
+      if (p in target) {
+        return target[p];
+      } else {
+        throw new Error('ahh!');
+      }
+    }
+  });
+}
+
 function directProto() {
   return Object.create(direct);
+}
+
+function directProtoDebuggable() {
+  return Object.create(debuggable(direct));
 }
 
 function sd(...protos) {
@@ -154,6 +170,7 @@ bench('single', () => sweat(sdo()));
 bench('multiple', () => sweat(mdo()));
 bench('direct', () => sweat(direct));
 bench('directproto', () => sweat(directProto()));
+bench('directprotodebuggable', () => sweat(directProtoDebuggable()));
 bench('simulabra', () => sweat($.p.new()));
 bench('simulabra no debug', () => sweat($.p_no_debug.new()));
 bench('simulabra direct no debug', () => sweat($.p_direct_no_debug.new()));

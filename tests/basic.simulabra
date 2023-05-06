@@ -99,7 +99,7 @@
   :name=:basic-closures
   :do=[
     %fn=[_ ^_.*(2)]
-    %q=%fn.do(3)
+    %q=%fn(3)
     .assert-eq(%q 6)
     %fnp=[^.x.*(2)]
     %p=~point{:x=2}

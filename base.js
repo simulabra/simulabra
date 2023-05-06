@@ -168,15 +168,31 @@ function bootstrap() {
         }
     }
 
+    function DebugProto() {
+        return new Proxy({}, {
+            get(target, p) {
+                if (p in target) {
+                    return target[p];
+                } else if (p[0] === '_') {
+                    console.log('miss', p);
+                    return undefined; // default? nullable?
+                }
+                console.log(target);
+                throw new Error('not found: ' + p);
+            }
+        });
+    }
+
     class ClassPrototype {
         constructor(parent) {
             this._impls = {};
-            this._parent = parent;
+            this._proto = DebugProto();
+            this._proto._parent = parent;
         }
 
         _reify() {
             for (const impl of Object.values(this._impls)) {
-                impl.reify(this);
+                impl.reify(this._proto);
             }
         }
 
@@ -207,12 +223,12 @@ function bootstrap() {
             return this._name;
         }
         load(proto) {
-            const key = '_' + this.name();
+            const key = '_' + this.name().deskewer();
             const self = this;
             proto._add(self.name(), function (assign) {
                 if (assign !== undefined) {
                     this[key] = assign;
-                } else if (this[key] === undefined) {
+                } else if (!(key in this)) {
                     this[key] = self.defval();
                 }
                 return this[key];
@@ -408,19 +424,23 @@ function bootstrap() {
 
 
     const $class_slots = new ClassPrototype(null);
-    $class_slots.new = function (props = {}) {
-        // console.log('class new ' + props.name);
-        const obj = Object.create(this.proto());
-        parametize(props, obj);
-        obj.id(this.genid());
-        obj.init(this);
-        return obj;
+    const newObj = {
+        new(props = {}) {
+            // console.log('class new ' + props.name);
+            const obj = Object.create(this.proto()._proto);
+            parametize(props, obj);
+            obj.id(this.genid());
+            obj.init(this);
+            return obj;
+        }
     };
+    $class_components.push(newObj.new);
 
     manload($base_components, $class_slots);
     manload($class_components, $class_slots);
     $class_slots._reify();
-    var $class = Object.create($class_slots);
+    console.log($class_slots._proto);
+    var $class = Object.create($class_slots._proto);
     $class._parent = $class;
 
     $class._name = 'class';
@@ -548,7 +568,7 @@ function bootstrap() {
                     fn = fn.fn();
                 }
                 impl._primary = fn;
-                impl.reify(proto._parent);
+                impl.reify(proto._proto._parent);
             }
         ]
     })
