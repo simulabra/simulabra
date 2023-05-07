@@ -237,7 +237,13 @@ export default base_mod.find('class', 'module').new({
       },
       function expand() {
         return this;
-      }
+      },
+      function stream(params) {
+        return $.stream.new({
+          value: this,
+          ...params
+        });
+      },
     ]);
 
     $.class.new({
@@ -996,6 +1002,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
         $.var.new({ name: 'stream', debug: false }),
         $.var.new({ name: 'readtable', default: () => $.readtable.standard(), debug: false, }),
         $.var.new({ name: 'chain-table', default: () => $.readtable.standard_chain(), debug: false, }),
+        $.var.new({ name: 'comments', default: [] }),
         $.static.new({
           name: 'from-source',
           do(source) {
@@ -1047,9 +1054,14 @@ ${props.map(prop => '  ' + prop).join('\n')}
         function strip() {
           while (this.whitespace() || this.peek() === ';') {
             if (this.peek() === ';') { // comment
-              while (this.peek() !== '\n') {
+              while (' ;'.includes(this.peek())) {
                 this.next();
               }
+              let cmt = '';
+              while (this.peek() !== '\n') {
+                cmt += this.next();
+              }
+              this.comments().push(cmt);
             }
             this.stream().next();
           }
@@ -1208,7 +1220,9 @@ export default await base_mod.find('class', 'module').new({
         $.method.new({
           name: 'run',
           do(_transformer) {
-            const program = $.reader.from_source(this.source()).program();
+            const program = $.reader.new({
+              stream: this.source().stream()
+            }).program();
             const transformedCode = _transformer.transform(program);
             const code = prettyPrint(transformedCode).code;
             return _transformer.run(this.name(), code);
