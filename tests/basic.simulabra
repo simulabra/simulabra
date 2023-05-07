@@ -29,7 +29,7 @@
 }
 
 ~case{
-  :name=:basic-points
+  :name=:basic-points ; skewer-cased
   :do=[
     %p=~point{:x=3}
     %q=~point{:y=4}
@@ -91,6 +91,7 @@
   :name=:basic-references
   :do=[
     %p=~point{:name=:test :x=7}
+    .assert-eq(~point.new.x 0)
     .assert-eq(~point#test.x 7)
   ]
 }

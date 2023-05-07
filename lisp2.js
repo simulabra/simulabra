@@ -1045,7 +1045,12 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return s;
         },
         function strip() {
-          while (this.whitespace()) {
+          while (this.whitespace() || this.peek() === ';') {
+            if (this.peek() === ';') { // comment
+              while (this.peek() !== '\n') {
+                this.next();
+              }
+            }
             this.stream().next();
           }
         },
