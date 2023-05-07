@@ -223,6 +223,11 @@ export default base_mod.find('class', 'module').new({
         return this.map(e => {
           return e.expand();
         });
+      },
+      function estree() {
+        return $.list_node.new({
+          items: this
+        }).estree();
       }
     ]);
 

@@ -170,15 +170,17 @@ function bootstrap() {
 
     function DebugProto() {
         return new Proxy({}, {
-            get(target, p) {
+            get(target, p, receiver) {
                 if (p in target) {
                     return target[p];
                 } else if (p[0] === '_') {
-                    console.log('miss', p);
                     return undefined; // default? nullable?
+                } else if (typeof p === 'symbol') {
+                    return target[p];
+                } else if (p === 'then') {
+                    return target[p];
                 }
-                console.log(target);
-                throw new Error('not found: ' + p);
+                throw new Error(`not found: ${p} on ${receiver.title()}`);
             }
         });
     }
@@ -345,6 +347,9 @@ function bootstrap() {
         function isa(cls) {
             return this.class().descended(cls);
         },
+        function toJSON() {
+            return this;
+        },
         classDef.class,
         BVar.new({ name: 'name' }),
         BVar.new({ name: 'id' }),
@@ -439,7 +444,6 @@ function bootstrap() {
     manload($base_components, $class_slots);
     manload($class_components, $class_slots);
     $class_slots._reify();
-    console.log($class_slots._proto);
     var $class = Object.create($class_slots._proto);
     $class._parent = $class;
 
