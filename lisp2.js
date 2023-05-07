@@ -1109,7 +1109,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
         $.after.new({
           name: 'init',
           async do() {
-            this.log('after init');
             await this.clear_out_js();
           }
         }),
@@ -1118,14 +1117,10 @@ ${props.map(prop => '  ' + prop).join('\n')}
           do() {
             try {
               const files = ofs.readdirSync('out');
-
               for (const file of files) {
                 const filePath = path.join('out', file);
-                this.log('clean cached', filePath);
                 ofs.unlinkSync(filePath);
               }
-
-              console.log('All files deleted successfully');
             } catch (error) {
               console.error('Error while deleting files:', error);
             }

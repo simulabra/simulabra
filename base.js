@@ -465,6 +465,7 @@ function bootstrap() {
 
     defaultFn.name = 'default';
 
+    // a missing middle
     var $var = $class.new({
         name: 'var',
         components: [
