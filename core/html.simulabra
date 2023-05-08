@@ -1,38 +1,43 @@
 ~class{
-  :name :html-element
-  :desc "base class for DOM elements"
-  :components (
+  :name=:html-element
+  :desc="base class for DOM elements"
+  :components=(
     ~var{
-      :name :id
+      :name=:id
     }
     ~method{
-      :name :dom-node
-      :do [^@context.document.getElementById(.id)]
+      :name=:dom-node
+      :do=[^@context.document.getElementById(.id)]
     }
     ~method{
-      :name :load
-      :do [_ .children.map([%_.load])]
+      :name=:load
+      :do=[_ .children.map([%_.load])]
     }
     ~method{
-      :name :render
-      :do [
-        $set(.dom-node :innerHTML .html)
+      :name=:render
+      :do=[
+        .dom-node/innerHTML=.html
         .load
       ]
     }
     ~var{
-      :name :children
-      :default [()]
+      :name=:children
+      :default=[()]
     }
-    ~method{
-      :name :html
+    ~virtual{
+      :name=:html
     }
   )
 }
 
 ~class{
-  :name :div
-  :components (
+  :name=:div
+  :components=(
     ~html-element
   )
+}
+
+~case{
+  :name=:basic-html
+  :do=[]
 }

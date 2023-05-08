@@ -70,6 +70,8 @@ export default await base_mod.find('class', 'module').new({
       ]
     });
 
-    await $.test_runner.new().run('tests');
+    const runner = $.test_runner.new();
+    await runner.run('tests');
+    await runner.run('core');
   }
 }).load();

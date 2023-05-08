@@ -77,6 +77,7 @@ export default base_mod.find('class', 'module').new({
                 '=': $.assignment_node,
                 '(': $.list_node,
                 '{': $.map_node,
+                '/': $.slot_node,
               }
             });
           }
@@ -87,7 +88,6 @@ export default base_mod.find('class', 'module').new({
             return this.new({
               table: {
                 ':': $.symbol_node,
-                '/': $.this_node,
                 '(': $.list_node,
                 '{': $.map_node,
                 '[': $.lambda_node,
@@ -423,7 +423,7 @@ export default base_mod.find('class', 'module').new({
           return `${this.lhs().print()}=${this.rhs().print()}`;
         },
         function estree() {
-          return b.variableDeclaration('let', [b.variableDeclarator(this.lhs().estree(), this.rhs().estree())]);
+          return this.lhs().assign(this.rhs());
         },
       ],
     });
@@ -653,10 +653,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           name: 'parse',
           do: function parse(reader) {
             reader.next(); // `
-            let value = reader.read();
-            return value.visit(function () {
-              this.quasiexpand();
-            });
+            return reader.read().quasiexpand();
           }
         }),
       ],
@@ -742,6 +739,9 @@ ${props.map(prop => '  ' + prop).join('\n')}
         function print() {
           return `"${this.value().replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
         },
+        function quasiexpand() {
+          return this;
+        },
         function estree() {
           return b.literal(this.value());
         }
@@ -778,8 +778,11 @@ ${props.map(prop => '  ' + prop).join('\n')}
         function char() {
           return '%';
         },
+        function assign(rhs) {
+          return b.variableDeclaration('let', [b.variableDeclarator(this.estree(), rhs.estree())]);
+        },
         function estree() {
-          return b.identifier(`_${this.identifier()}`);
+          return b.identifier(`_${this.identifier().deskewer()}`);
         },
       ],
     });
@@ -792,7 +795,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
           return '~';
         },
         function estree() {
-          return b.memberExpression(b.identifier('$'), b.identifier(this.identifier()));
+          return b.memberExpression(b.identifier('$'), b.identifier(this.identifier().deskewer()));
         },
       ],
     });
@@ -968,6 +971,39 @@ ${props.map(prop => '  ' + prop).join('\n')}
         },
         function estree() {
           return b.callExpression(b.memberExpression(b.identifier('_'), b.identifier('find')), [b.literal(this.class_ref().identifier()), b.literal(this.ref_name())]);
+        }
+      ]
+    });
+
+    $.class.new({
+      name: 'slot-node',
+      components: [
+        $.node,
+        $.var.new({ name: 'receiver' }),
+        $.var.new({ name: 'slot-name' }),
+        $.method.new({
+          name: 'chain',
+          do: function chain(reader, n) {
+            this.receiver(n);
+            return this.parse(reader);
+          }
+        }),
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('/');
+            this.slot_name(reader.identifier());
+            return this;
+          }
+        }),
+        function assign(rhs) {
+          return b.assignmentExpression('=', this.estree(), rhs.estree());
+        },
+        function print() {
+          return `${this.receiver().print()}/${this.slot_name()}`;
+        },
+        function estree() {
+          return b.memberExpression(this.receiver().estree(), b.literal(this.slot_name()));
         }
       ]
     });

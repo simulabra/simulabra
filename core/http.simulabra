@@ -16,3 +16,8 @@
     }
   )
 }
+
+~case{
+  :name=:basic-http
+  :do=[]
+}
