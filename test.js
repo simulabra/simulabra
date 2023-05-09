@@ -42,7 +42,6 @@ export default base_mod.find('class', 'module').new({
         $.case,
         $.method.new({
           name: 'run',
-          async: true,
           do() {
             try {
               this.do().apply(this);

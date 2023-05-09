@@ -26,6 +26,7 @@ export default await base_mod.find('class', 'module').new({
       name: 'lisp-basic-run',
       async do() {
         const transformer = $.transformer.new();
+        transformer.module_cache($.module_cache.new());
         const counter_mod = await $.script.new({
           name: 'lisp-basic-run--counter',
           imports: [_],

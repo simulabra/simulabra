@@ -17,6 +17,9 @@ export default await base_mod.find('class', 'module').new({
         $.var.new({
           name: 'mod',
         }),
+        $.var.new({
+          name: 'module-cache',
+        }),
         $.method.new({
           name: 'run-mod',
           do(mod) {
@@ -41,6 +44,7 @@ export default await base_mod.find('class', 'module').new({
             } else if (ext === '.simulabra') {
               const source = (await readFile(filePath)).toString();
               const transformer = $.transformer.new();
+              transformer.module_cache(this.module_cache());
               return await $.script.new({
                 name: filePath,
                 imports: [_],
@@ -71,6 +75,8 @@ export default await base_mod.find('class', 'module').new({
     });
 
     const runner = $.test_runner.new();
+    runner.module_cache($.module_cache.new());
+    runner.module_cache().clear_out_js();
     await runner.run('tests');
     await runner.run('core');
   }

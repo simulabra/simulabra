@@ -146,7 +146,7 @@ export default base_mod.find('class', 'module').new({
         $.method.new({
           name: 'children',
           do() {
-            return this.vars().filter(vs => this.log(vs) || vs.value().class().descended($.node));
+            return this.vars().filter(vs => vs.value().class().descended($.node));
           }
         }),
         $.method.new({
@@ -173,6 +173,13 @@ export default base_mod.find('class', 'module').new({
         $.before.new({
           name: 'parse',
           do(reader) {
+            this.start(reader.stream().pos());
+          }
+        }),
+        $.after.new({
+          name: 'parse',
+          do(reader) {
+            this.end(reader.stream().pos());
           }
         }),
       ]
@@ -539,21 +546,20 @@ export default base_mod.find('class', 'module').new({
           return `[${this.default_args() ? '' : '|' + this.args().map(a => a.print()).join(' ') + '|'}${this.body().print()}]`
         },
         function estree() {
-          // return b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
-          // ~closure.new{:fn=<fn> :mod=@mod}
-          // really need macros
-          // ~macro.new{:name=:closure-fn :do=[%fn|`~closure.new{:fn=,fn :mod=@mod}]}
+          const fn = b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
+          if (this.async()) {
+            fn.async = true;
+          }
           const properties = [
             $.property.new({
               key: $.symbol_node.from('fn'),
-              make this handle async value: $.quoted_estree.new({ estree: b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree()) }),
+              value: $.quoted_estree.new({ estree: fn }),
             }),
             $.property.new({
               key: $.symbol_node.from('mod'),
               value: $.globalref_node.new({ identifier: 'mod' }), // @mod __.mod()
             }),
           ];
-          this.log(this.async());
           return $.message_node.new({
             receiver: $.classref_node.new({
               identifier: this.async() ? 'async-closure' : 'closure',
@@ -911,7 +917,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
         },
         function estree() {
           return b.program(this.forms().map(f => {
-            // this.log(f);
             const ftree = f.estree();
             if (ftree.type.includes('Statement')) {
               return ftree;
@@ -967,7 +972,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
         },
         function estree() {
           if (this.value().isa($.lambda_node)) {
-            this.log('lambda', this.value());
             this.value().async(true);
             return this.value().estree();
           }
@@ -1190,15 +1194,10 @@ ${props.map(prop => '  ' + prop).join('\n')}
             return createHash('md5').update(code).digest('hex').substring(0, 8);
           }
         }),
-        $.after.new({
-          name: 'init',
-          async do() {
-            await this.clear_out_js();
-          }
-        }),
         $.method.new({
           name: 'clear-out-js',
           do() {
+            this.log('clear old js files');
             try {
               const files = ofs.readdirSync('out');
               for (const file of files) {
@@ -1213,8 +1212,8 @@ ${props.map(prop => '  ' + prop).join('\n')}
         $.method.new({
           name: 'run',
           async: true,
-          async do(code) {
-            const hash = this.hash(code);
+          async do(name, code) {
+            const hash = this.hash(name + code);
 
             if (!this.cache().has(hash)) {
               const modulePath = path.join('out', `${hash}.mjs`);
@@ -1224,6 +1223,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
               } catch (err) {
                 if (err.code === 'ENOENT') {
                   await fs.writeFile(modulePath, code);
+                  this.log(`~module#${name} >> ${hash}.mjs`);
                 } else {
                   throw err;
                 }
@@ -1244,7 +1244,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
       components: [
         $.var.new({
           name: 'module-cache',
-          default: () => $.module_cache.new(),
         }),
         $.method.new({
           name: 'transform',
@@ -1268,7 +1267,7 @@ export default await base_mod.find('class', 'module').new({
 `; // file cache + dynamic imports?
             const hat = '}}).load();';
 
-            return this.module_cache().run(prelude + source + hat);
+            return this.module_cache().run(name, prelude + source + hat);
           }
         }),
       ],
