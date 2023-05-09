@@ -681,9 +681,6 @@ function bootstrap() {
                     }
                 })
             },
-            function symname(sym) {
-                return '_' + sym.deskewer();
-            },
             function def(obj) {
                 const className = obj.class().name();
                 const name = obj.name();
@@ -692,12 +689,6 @@ function bootstrap() {
                     this.repos()[className] = {};
                 }
                 this.repos()[className][name] = obj;
-            },
-            function child(moddef) {
-                return $.module.new({
-                    imports: [this, ...moddef.imports],
-                    ...moddef
-                })
             },
             async function load() {
                 if (!this.loaded() && this.on_load()) {
@@ -962,7 +953,31 @@ function bootstrap() {
                 }
             })
         ]
-    })
+    });
+
+    $.class.new({
+        name: 'async-closure',
+        components: [
+            $.var.new({ name: 'fn' }),
+            $.var.new({ name: 'mod' }),
+            $.method.new({
+                name: 'apply',
+                do: async function apply(self, args = []) {
+                    const om = $$().mod();
+                    $$().mod(this.mod());
+                    const res = await this.fn().apply(self, args);
+                    $$().mod(om);
+                    return res;
+                }
+            }),
+            $.method.new({
+                name: 'do',
+                do(...args) {
+                    return this.apply(this.mod(), args);
+                }
+            })
+        ]
+    });
 
     return __;
 }

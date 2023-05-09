@@ -107,3 +107,27 @@
     .assert-eq(%fnp.apply(%p) 4)
   ]
 }
+
+~class{
+  :name=:waiter
+  :components=(
+    ~method.new{
+      :name=:wait
+      :async=@true
+      :do=[|%ms|
+        ~promise.do([|%resolve|
+          @js.setTimeout(1000 [
+            %resolve()
+          ])
+        ])
+      ]
+    }
+  )
+}
+
+~async-case{
+  :name=:basic-async
+  :do=&[
+    &~waiter.new.wait(1000);
+  ]
+}

@@ -101,6 +101,7 @@ export default base_mod.find('class', 'module').new({
                 '~': $.classref_node,
                 '!': $.typeref_node,
                 '^': $.return_node,
+                '&': $.await_node,
                 '@': $.globalref_node,
                 '"': $.string_literal_node,
               },
@@ -504,6 +505,7 @@ export default base_mod.find('class', 'module').new({
         $.node,
         $.var.new({ name: 'args' }),
         $.var.new({ name: 'body' }),
+        $.var.new({ name: 'async', default: false }),
         $.method.new({
           name: 'parse',
           do(reader) {
@@ -541,23 +543,25 @@ export default base_mod.find('class', 'module').new({
           // ~closure.new{:fn=<fn> :mod=@mod}
           // really need macros
           // ~macro.new{:name=:closure-fn :do=[%fn|`~closure.new{:fn=,fn :mod=@mod}]}
+          const properties = [
+            $.property.new({
+              key: $.symbol_node.from('fn'),
+              make this handle async value: $.quoted_estree.new({ estree: b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree()) }),
+            }),
+            $.property.new({
+              key: $.symbol_node.from('mod'),
+              value: $.globalref_node.new({ identifier: 'mod' }), // @mod __.mod()
+            }),
+          ];
+          this.log(this.async());
           return $.message_node.new({
             receiver: $.classref_node.new({
-              identifier: 'closure',
+              identifier: this.async() ? 'async-closure' : 'closure',
             }),
             selector: 'new',
             args: $.list_node.new({
               items: [$.map_node.new({
-                properties: [
-                  $.property.new({
-                    key: $.symbol_node.from('fn'),
-                    value: $.quoted_estree.new({ estree: b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree()) }),
-                  }),
-                  $.property.new({
-                    key: $.symbol_node.from('mod'),
-                    value: $.globalref_node.new({ identifier: 'mod' }), // @mod __.mod()
-                  })
-                ]
+                properties
               })]
             }),
           }).estree();
@@ -941,6 +945,33 @@ ${props.map(prop => '  ' + prop).join('\n')}
         },
         function estree() {
           return b.returnStatement(this.value().estree());
+        }
+      ]
+    });
+
+    $.class.new({
+      name: 'await-node',
+      components: [
+        $.node,
+        $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'parse',
+          do: function parse(reader) {
+            reader.expect('&');
+            this.value(reader.read());
+            return this;
+          }
+        }),
+        function print() {
+          return `&${this.value().print()}`;
+        },
+        function estree() {
+          if (this.value().isa($.lambda_node)) {
+            this.log('lambda', this.value());
+            this.value().async(true);
+            return this.value().estree();
+          }
+          return b.awaitExpression(this.value().estree());
         }
       ]
     });

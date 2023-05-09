@@ -36,5 +36,35 @@ export default base_mod.find('class', 'module').new({
         })
       ]
     });
+    $.class.new({
+      name: 'async-case',
+      components: [
+        $.case,
+        $.method.new({
+          name: 'run',
+          async: true,
+          do() {
+            try {
+              this.do().apply(this);
+              this.log('passed');
+            } catch (e) {
+              // demands a native error class?
+              this.log('failed');
+              throw e;
+            }
+          }
+        }),
+        $.var.new({ name: 'do' }),
+        $.method.new({
+          name: 'assert-eq',
+          do(a, b) {
+            if (a !== b) {
+              this.log('neq', JSON.stringify(a), JSON.stringify(b));
+              throw new Error(`assertion failed: ${a.description()} !== ${b.description()}`);
+            }
+          }
+        })
+      ]
+    });
   },
 });
