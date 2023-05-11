@@ -44,9 +44,10 @@ export default await base_mod.find('class', 'module').new({
             } else if (ext === '.simulabra') {
               const source = (await readFile(filePath)).toString();
               const transformer = $.transformer.new();
+              let moduleName = filePath.replace(/\.simulabra/, '').replaceAll('/', '-');
               transformer.module_cache(this.module_cache());
               return await $.script.new({
-                name: filePath,
+                name: moduleName,
                 imports: [_],
                 source,
               }).run(transformer);
