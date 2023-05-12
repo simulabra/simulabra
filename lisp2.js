@@ -1187,20 +1187,25 @@ ${props.map(prop => '  ' + prop).join('\n')}
         }),
         $.method.new({
           name: 'run',
-          do(name, source) {
+          do(script) {
+            const program = $.reader.new({
+              stream: script.source().stream()
+            }).program();
+            const estree = this.transform(program);
+            const js = prettyPrint(estree).code;
             const prelude = `
 import base from 'simulabra/base';
 import lisp from 'simulabra/lisp2';
 import test from 'simulabra/test';
 const __ = globalThis.SIMULABRA;
 export default await base.find('class', 'module').new({
-  name: '${name}',
+  name: '${script.name()}',
   imports: [base, test, lisp],
   on_load(_, $) {
 `; // file cache + dynamic imports?
             const hat = '}}).load();';
 
-            return this.module_cache().run(name, prelude + source + hat);
+            return this.module_cache().run(script.name(), prelude + js + hat);
           }
         }),
       ],
@@ -1219,12 +1224,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'run',
           do(_transformer) {
-            const program = $.reader.new({
-              stream: this.source().stream()
-            }).program();
-            const transformedCode = _transformer.transform(program);
-            const code = prettyPrint(transformedCode).code;
-            return _transformer.run(this.name(), code);
+            return _transformer.run(this);
           }
         })
       ]
