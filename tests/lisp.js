@@ -1,11 +1,11 @@
 import base from '../base.js';
 import test from '../test.js';
-import lisp from '../lisp2.js';
+import lang from '../lang.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
   name: 'test-lisp',
-  imports: [base, test, lisp],
+  imports: [base, test, lang],
   async on_load(_, $) {
     $.case.new({
       name: 'lisp-basic-parse',

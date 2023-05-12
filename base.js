@@ -666,7 +666,7 @@ function bootstrap() {
         if (v) {
           return v;
         } else {
-          for (const imp of this.imports()) {
+          for (let imp of this.imports()) {
             const iv = imp.find(className, name);
             if (iv) {
               return iv;
@@ -713,11 +713,6 @@ function bootstrap() {
           const om = $$().mod();
           $$().mod(this);
           await this.on_load().apply(this, [this, this.proxy('class')]);
-          this.log('loaded');
-          this.log(this.repos());
-          if (this.find('module_def', this.name())) {
-            this.log('module-def?');
-          }
           $$().mod(om);
         }
         return this;
@@ -1102,14 +1097,6 @@ function bootstrap() {
         },
       }),
     ],
-  });
-
-  $.class.new({
-    name: 'module-def',
-    components: [
-      $.deffed,
-      $.var.new({ name: 'imports' }),
-    ]
   });
 
   return _;

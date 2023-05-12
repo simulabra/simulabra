@@ -1,10 +1,10 @@
 import base from './base.js';
-import lisp from './lisp2.js';
+import lang from './lang.js';
 var __ = globalThis.SIMULABRA;
 
 export default base.find('class', 'module').new({
   name: 'test',
-  imports: [base, lisp],
+  imports: [base, lang],
   on_load(_, $) {
     $.class.new({
       name: 'case',

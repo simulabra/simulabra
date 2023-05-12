@@ -3,11 +3,11 @@ import { join, extname } from 'path';
 import base from './base.js';
 const __ = globalThis.SIMULABRA;
 import test from './test.js';
-import lisp from './lisp2.js';
+import lang from './lang.js';
 
 export default await base.find('class', 'module').new({
   name: 'runner',
-  imports: [test, lisp],
+  imports: [test, lang],
   async on_load(_, $) {
     $.class.new({
       name: 'test-runner',

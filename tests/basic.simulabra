@@ -1,8 +1,3 @@
-~module-def{
-  :name=:tests--basic
-  :imports=(~module#base ~module#lisp2 ~module#test)
-}
-
 ~class{
   :name=:point
   :components=(
