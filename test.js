@@ -1,11 +1,10 @@
-import bootstrap from './base.js';
-var __ = bootstrap();
-import lisp_mod from './lisp2.js';
-let base_mod = __._base_mod;
+import base from './base.js';
+import lisp from './lisp2.js';
+var __ = globalThis.SIMULABRA;
 
-export default base_mod.find('class', 'module').new({
+export default base.find('class', 'module').new({
   name: 'test',
-  imports: [base_mod, lisp_mod],
+  imports: [base, lisp],
   on_load(_, $) {
     $.class.new({
       name: 'case',

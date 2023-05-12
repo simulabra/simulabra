@@ -1,15 +1,13 @@
 import { readdir, readFile } from 'fs/promises';
 import { join, extname } from 'path';
+import base from './base.js';
+const __ = globalThis.SIMULABRA;
+import test from './test.js';
+import lisp from './lisp2.js';
 
-import bootstrap from './base.js';
-var __ = bootstrap();
-import test_mod from './test.js';
-import lisp_mod from './lisp2.js';
-let base_mod = __._base_mod;
-
-export default await base_mod.find('class', 'module').new({
+export default await base.find('class', 'module').new({
   name: 'runner',
-  imports: [test_mod, lisp_mod],
+  imports: [test, lisp],
   async on_load(_, $) {
     $.class.new({
       name: 'test-runner',

@@ -1,12 +1,11 @@
-import bootstrap from '../base.js';
-const __ = bootstrap();
-import test_mod from '../test.js';
-import lisp_mod from '../lisp2.js';
-const base_mod = __.base();
+import base from '../base.js';
+import test from '../test.js';
+import lisp from '../lisp2.js';
+const __ = globalThis.SIMULABRA;
 
-export default await base_mod.find('class', 'module').new({
+export default await base.find('class', 'module').new({
   name: 'test-lisp',
-  imports: [base_mod, test_mod, lisp_mod],
+  imports: [base, test, lisp],
   async on_load(_, $) {
     $.case.new({
       name: 'lisp-basic-parse',

@@ -1,11 +1,10 @@
-import bootstrap from '../base.js';
-var __ = bootstrap();
-import test_mod from '../test.js';
-let base_mod = __._base_mod;
+import base from '../base.js';
+import test from '../test.js';
+const __ = globalThis.SIMULABRA;
 
-export default await base_mod.find('class', 'module').new({
+export default await base.find('class', 'module').new({
   name: 'brainfuck-interpreter',
-  imports: [test_mod],
+  imports: [test],
   on_load(_, $) {
     $.class.new({
       name: 'brainfuck-interpreter',

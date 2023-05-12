@@ -1,3 +1,7 @@
+import { createHash } from 'crypto';
+import fs from 'fs/promises';
+import ofs from 'fs';
+import path from 'path';
 console.log('~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~');
 console.log('STARTING SIMULABRA: INFINITE SOFTWARE');
 function bootstrap() {
@@ -168,6 +172,10 @@ function bootstrap() {
         }
     }
 
+    function nativePassthrough(name) {
+        return (typeof name === 'symbol') || ['then'].includes(name);
+    }
+
     function DebugProto() {
         return new Proxy({}, {
             get(target, p, receiver) {
@@ -175,9 +183,7 @@ function bootstrap() {
                     return target[p];
                 } else if (p[0] === '_') {
                     return undefined; // default? nullable?
-                } else if (typeof p === 'symbol') {
-                    return target[p];
-                } else if (p === 'then') {
+                } else if (nativePassthrough(p)) {
                     return target[p];
                 }
                 throw new Error(`not found: ${p} on ${receiver.title()}`);
@@ -669,13 +675,21 @@ function bootstrap() {
                     return undefined;
                 }
             },
-            function proxy(className) {
+            function proxy(className, errFn) {
                 return new Proxy(this, {
                     get(target, p) {
+                        if (p === 'then' || p === 'format' || p === 'url') {
+                            return target[p];
+                        }
                         const v = target.find(className, p.skewer());
                         if (v === undefined) {
                             // target.log(target.repo(className))
-                            throw new Error(`failed to find ~${className}#${p}`);
+                            const err = new Error(`failed to find ~${className}#${p}`);
+                            if (errFn) {
+                                errFn(err);
+                            } else {
+                                throw err;
+                            }
                         }
                         return v;
                     }
@@ -979,9 +993,115 @@ function bootstrap() {
         ]
     });
 
-    return __;
+    $.class.new({
+        name: 'singleton',
+        components: [
+            $.static.new({
+                name: 'inst',
+                do(params) {
+                    if (!this.__inst) {
+                        this.__inst = this.new(params);
+                    }
+                    return this.__inst;
+                }
+            }),
+        ]
+    });
+
+    // TODO: custom in-memory loader?
+    // see https://nodejs.org/api/esm.html#customizing-esm-specifier-resolution-algorithm
+    $.class.new({
+      name: 'module-cache',
+      components: [
+        $.singleton,
+        $.var.new({
+          name: 'cache',
+          default: () => new Map(),
+        }),
+        $.var.new({
+          name: 'module-hashes',
+          default: () => new Map(),
+        }),
+        $.method.new({
+          name: 'hash',
+          do(code) {
+            return createHash('md5').update(code).digest('hex').substring(0, 8);
+          }
+        }),
+        $.method.new({
+          name: 'module-hash',
+          do(modname) {
+            return this.module_hashes()[modname];
+          }
+        }),
+        $.method.new({
+          name: 'clear-out-js',
+          do() {
+            this.log('clear old js files');
+            try {
+              const files = ofs.readdirSync('out');
+              for (const file of files) {
+                const filePath = path.join('out', file);
+                ofs.unlinkSync(filePath);
+              }
+            } catch (error) {
+              console.error('Error while deleting files:', error);
+            }
+          }
+        }),
+        $.method.new({
+          name: 'save',
+          async: true,
+          async do(name, code) {
+            const hash = this.hash(name + code);
+            const modulePath = path.join('out', `${hash}.mjs`);
+
+            try {
+              await fs.access(modulePath);
+            } catch (err) {
+              if (err.code === 'ENOENT') {
+                await fs.writeFile(modulePath, code);
+                this.module_hashes()[name] = hash;
+                this.log(`~module#${name} >> ${hash}.mjs`);
+              } else {
+                throw err;
+              }
+            }
+          }
+        }),
+        $.method.new({
+          name: 'run',
+          async: true,
+          async do(name, code) {
+            const hash = this.hash(name + code);
+
+            if (!this.cache().has(hash)) {
+              const modulePath = path.join('out', `${hash}.mjs`);
+
+              try {
+                await fs.access(modulePath);
+              } catch (err) {
+                if (err.code === 'ENOENT') {
+                  await fs.writeFile(modulePath, code);
+                  this.log(`~module#${name} >> ${hash}.mjs`);
+                } else {
+                  throw err;
+                }
+              }
+
+              const importedModule = await import(`./out/${hash}.mjs`);
+              this.cache().set(hash, importedModule.default);
+            }
+
+            return this.cache().get(hash);
+          },
+        }),
+      ],
+    });
+
+    return _;
 }
 
-bootstrap();
+const base = bootstrap();
 
-export default bootstrap;
+export default base;

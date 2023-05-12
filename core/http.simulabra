@@ -17,6 +17,10 @@
   )
 }
 
+~class{
+  :name=:http-server
+}
+
 ~case{
   :name=:basic-http
   :do=[]

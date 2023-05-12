@@ -1,16 +1,11 @@
-import bootstrap from './base.js';
-import { createHash } from 'crypto';
-import fs from 'fs/promises';
-import ofs from 'fs';
-import path from 'path';
+import base from './base.js';
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
-var __ = bootstrap();
-let base_mod = __.base();
+var __ = globalThis.SIMULABRA;
 
-export default base_mod.find('class', 'module').new({
+export default base.find('class', 'module').new({
   name: 'lisp',
-  imports: [base_mod],
+  imports: [base],
   on_load(_, $) {
     $.class.new({
       name: 'stream',
@@ -1178,67 +1173,6 @@ ${props.map(prop => '  ' + prop).join('\n')}
       ],
     });
 
-    // TODO: custom in-memory loader?
-    // see https://nodejs.org/api/esm.html#customizing-esm-specifier-resolution-algorithm
-    $.class.new({
-      name: 'module-cache',
-      components: [
-        $.module,
-        $.var.new({
-          name: 'cache',
-          default: () => new Map(),
-        }),
-        $.method.new({
-          name: 'hash',
-          do(code) {
-            return createHash('md5').update(code).digest('hex').substring(0, 8);
-          }
-        }),
-        $.method.new({
-          name: 'clear-out-js',
-          do() {
-            this.log('clear old js files');
-            try {
-              const files = ofs.readdirSync('out');
-              for (const file of files) {
-                const filePath = path.join('out', file);
-                ofs.unlinkSync(filePath);
-              }
-            } catch (error) {
-              console.error('Error while deleting files:', error);
-            }
-          }
-        }),
-        $.method.new({
-          name: 'run',
-          async: true,
-          async do(name, code) {
-            const hash = this.hash(name + code);
-
-            if (!this.cache().has(hash)) {
-              const modulePath = path.join('out', `${hash}.mjs`);
-
-              try {
-                await fs.access(modulePath);
-              } catch (err) {
-                if (err.code === 'ENOENT') {
-                  await fs.writeFile(modulePath, code);
-                  this.log(`~module#${name} >> ${hash}.mjs`);
-                } else {
-                  throw err;
-                }
-              }
-
-              const importedModule = await import(`./out/${hash}.mjs`);
-              this.cache().set(hash, importedModule.default);
-            }
-
-            return this.cache().get(hash);
-          },
-        }),
-      ],
-    });
-
     $.class.new({
       name: 'transformer',
       components: [
@@ -1255,14 +1189,13 @@ ${props.map(prop => '  ' + prop).join('\n')}
           name: 'run',
           do(name, source) {
             const prelude = `
-import bootstrap from '../base.js';
-var __ = bootstrap();
-import test_mod from '../test.js';
-import lisp_mod from '../lisp2.js';
-const base_mod = __._base_mod;
-export default await base_mod.find('class', 'module').new({
+import base from 'simulabra/base';
+import lisp from 'simulabra/lisp2';
+import test from 'simulabra/test';
+const __ = globalThis.SIMULABRA;
+export default await base.find('class', 'module').new({
   name: '${name}',
-  imports: [base_mod, test_mod, lisp_mod],
+  imports: [base, test, lisp],
   on_load(_, $) {
 `; // file cache + dynamic imports?
             const hat = '}}).load();';

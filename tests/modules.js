@@ -1,15 +1,14 @@
-import bootstrap from '../base.js';
-var __ = bootstrap();
-import test_mod from '../test.js';
-let base_mod = __.base();
+import base from '../base.js';
+import test from '../test.js';
+const __ = globalThis.SIMULABRA;
 
-export default await base_mod.find('class', 'module').new({
+export default await base.find('class', 'module').new({
   name: 'test-modules',
-  imports: [base_mod, test_mod],
+  imports: [base, test],
   async on_load(_, $) {
-    const a_mod = $.module.new({
+    const a = $.module.new({
       name: 'test-a',
-      imports: [base_mod],
+      imports: [base],
       on_load(_, $) {
         $.class.new({
           name: 'a',
@@ -28,10 +27,10 @@ export default await base_mod.find('class', 'module').new({
         })
       }
     });
-    await a_mod.load();
-    const b_mod = $.module.new({
+    await a.load();
+    const b = $.module.new({
       name: 'test-b',
-      imports: [base_mod, a_mod],
+      imports: [base, a],
       on_load(_, $) {
         $.class.new({
           name: 'b',
@@ -47,12 +46,12 @@ export default await base_mod.find('class', 'module').new({
         })
       }
     });
-    await b_mod.load();
+    await b.load();
 
     $.case.new({
       name: 'module-inheritance',
       do() {
-        const binst = b_mod.$().b.new();
+        const binst = b.$().b.new();
         binst.frob();
         binst.frob();
         this.assert_eq(binst.x(), 5);
