@@ -17,7 +17,7 @@
     ~static{
       :name=:from-string
       :do=[|%url-string|
-        .new{
+        ^.new{
           :inner=~js-node{:js=`"new URL(\"${%url-string}\")"}
         }
       ]
@@ -45,6 +45,7 @@
 ~case{
   :name=:basic-http
   :do=[
-    %u=~url.from-string("localhost");
+    %u=~url.from-string("https://simulabra.com/about");
+    .log(%u.inner)
   ]
 }
