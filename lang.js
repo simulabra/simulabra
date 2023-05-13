@@ -1,5 +1,5 @@
 import base from './base.js';
-import { prettyPrint, types } from 'recast';
+import { parse, prettyPrint, types } from 'recast';
 const b = types.builders;
 const __ = globalThis.SIMULABRA;
 
@@ -50,8 +50,8 @@ export default base.find('class', 'module').new({
               }
             }
             const lineContent = this.value().substring(lineStart, this.value().indexOf('\n', lineStart));
-            const currentChar = this.value()[this.pos()];
-            const lineWithBracket = lineContent.slice(0, this.pos() - lineStart) + ' >>>' + currentChar + '<<< ' + lineContent.slice(this.pos() - lineStart + 1);
+            const cc = this.value()[this.pos()];
+            const lineWithBracket = lineContent.slice(0, this.pos() - lineStart) + ' >>>' + cc + '<<< ' + lineContent.slice(this.pos() - lineStart + 1);
             return `[line ${line}] ${lineWithBracket.trim()}`;
           }
         }),
@@ -329,7 +329,7 @@ export default base.find('class', 'module').new({
             if (!macro) {
               throw new Error(`couldn't find macro: ${this.selector()} in ${this.print()}`)
             }
-            const v = macro.expand(...this.args().expand());
+            const v = macro.expand(...this.args().expand().items());
             if (v === undefined) {
               throw new Error(`macro expansion failed for ${macro.title()} in ${this.title()}`)
             }
@@ -378,6 +378,29 @@ export default base.find('class', 'module').new({
         }
       ],
     });
+
+    $.class.new({
+      name: 'js-node',
+      components: [
+        $.node,
+        $.var.new({ name: 'js' }),
+        $.static.new({
+          name: 'from-string',
+          do(str) {
+            return this.new({
+              js: str
+            });
+          }
+        }),
+        // function print() {
+        //   return `${this.key().print()}=${this.value().print()}`;
+        // },
+        function estree() {
+          this.log(this.js());
+          return parse(this.js().value().expand());
+        },
+      ],
+    })
 
     $.class.new({
       name: 'property',
@@ -657,18 +680,65 @@ ${props.map(prop => '  ' + prop).join('\n')}
       ],
     });
 
-    $.class.new({
-      name: 'quasiquote-node',
-      components: [
-        $.method.new({
-          name: 'parse',
-          do: function parse(reader) {
-            reader.next(); // `
-            return reader.read().quasiexpand();
+$.class.new({
+  name: 'quasiquote-node',
+  debug: true,
+  components: [
+    $.node,
+    $.var.new({ name: 'chunks' }),
+    $.method.new({
+      name: 'parse',
+      do: function parse(reader) {
+        let quotedValue = '';
+        reader.expect('`');
+        reader.expect('"');
+        let chunks = [];
+        while (reader.peek() !== '"') {
+          const cc = reader.next();
+          if (cc === '\\' && (reader.peek() === '\\' || reader.peek() === '"')) {
+            quotedValue += cc + reader.next();
+          } else if (cc === '$' && reader.peek() === '{') {
+            chunks.push(quotedValue);
+            quotedValue = '';
+            reader.expect('{');
+            chunks.push(reader.read());
+            reader.expect('}'); // consume '}'
+          } else {
+            quotedValue += cc;
           }
-        }),
-      ],
-    });
+        }
+        if (quotedValue.length > 0) {
+          chunks.push(quotedValue);
+        }
+        reader.expect('"');
+        this.chunks(chunks);
+        return this;
+      }
+    }),
+    function expand() {
+      return this.class().new({
+        chunks: this.chunks().map(c => c.expand()),
+      });
+    },
+    function value() {
+
+    },
+    function print() {
+      return `"${this.quoted().replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    },
+    function quasiexpand() {
+      return this;
+    },
+    function estree() {
+      return b.templateLiteral(
+        this.chunks().filter(c => typeof c === 'string').map(c => b.templateElement({ cooked: c, raw: c }, false)),
+        this.chunks().filter(c => typeof c !== 'string').map(c => c.estree()),
+      );
+    }
+  ],
+});
+
+
 
     $.class.new({
       name: 'unquote-node',
@@ -732,18 +802,18 @@ ${props.map(prop => '  ' + prop).join('\n')}
         $.method.new({
           name: 'parse',
           do(reader) {
-            let stringValue = "";
+            let sv = "";
             reader.expect('"');
             while (reader.peek() !== '"') {
-              const currentChar = reader.next();
-              if (currentChar === '\\' && (reader.peek() === '\\' || reader.peek() === '"')) {
-                stringValue += currentChar + reader.next();
+              const cc = reader.next();
+              if (cc === '\\' && (reader.peek() === '\\' || reader.peek() === '"')) {
+                sv += cc + reader.next();
               } else {
-                stringValue += currentChar;
+                sv += cc;
               }
             }
             reader.expect('"');
-            this.value(stringValue);
+            this.value(sv);
             return this;
           }
         }),
@@ -898,9 +968,11 @@ ${props.map(prop => '  ' + prop).join('\n')}
       name: 'js',
       expand_fn(str) {
         if (typeof str !== 'string') {
+          this.log('expand', str);
           str = str.expand();
+          this.log('expanded to', str);
         }
-        return $.js_node(str);
+        return $.js_node.from_string(str);
       }
     })
 
@@ -944,7 +1016,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
               }
             }
           } catch (e) {
-            this.log('reading program failed at', this.stream().line_info());
+            this.log('reading program failed at', reader.stream().line_info());
             throw e;
           }
           return this;
