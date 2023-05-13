@@ -678,7 +678,7 @@ function bootstrap() {
       function proxy(className, errFn) {
         return new Proxy(this, {
           get(target, p) {
-            if (p === 'then' || p === 'format' || p === 'url') {
+            if (p === 'then' || p === 'format') {
               return target[p];
             }
             const v = target.find(className, p.skewer());

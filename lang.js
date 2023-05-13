@@ -1,7 +1,7 @@
 import base from './base.js';
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
-var __ = globalThis.SIMULABRA;
+const __ = globalThis.SIMULABRA;
 
 export default base.find('class', 'module').new({
   name: 'lisp',
@@ -893,6 +893,16 @@ ${props.map(prop => '  ' + prop).join('\n')}
         });
       }
     });
+
+    $.macro.new({
+      name: 'js',
+      expand_fn(str) {
+        if (typeof str !== 'string') {
+          str = str.expand();
+        }
+        return $.js_node(str);
+      }
+    })
 
     $.class.new({
       name: 'body',
