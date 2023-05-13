@@ -30,6 +30,8 @@ export default await base.find('class', 'module').new({
           name: 'lisp-basic-run--counter',
           imports: [_],
           source: `
+!import=(:base)
+
 ~class.new{
   :name=:counter
   :components=(
