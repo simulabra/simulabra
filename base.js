@@ -336,6 +336,9 @@ function bootstrap() {
     function vars() {
       return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
     },
+    function me() {
+      return this;
+    },
     function title() {
       return `${this.class().description()}#${this.name() ?? this.id()}`;
     },
@@ -952,10 +955,10 @@ function bootstrap() {
       $.var.new({ name: 'mod' }),
       $.method.new({
         name: 'apply',
-        do: function apply(self, args = []) {
+        do: function apply(args = []) {
           const om = $$().mod();
           $$().mod(this.mod());
-          const res = this.fn().apply(self, args);
+          const res = this.fn(...args);
           $$().mod(om);
           return res;
         }
@@ -963,7 +966,16 @@ function bootstrap() {
       $.method.new({
         name: 'do',
         do(...args) {
-          return this.apply(this.mod(), args);
+          return this.apply(args);
+        }
+      }),
+      $.method.new({
+        name: 'wrap',
+        do() {
+          const self = this;
+          const fn = function(...args) { return self.fn(...args); };
+          fn._closure = this;
+          return fn;
         }
       })
     ]
@@ -972,8 +984,7 @@ function bootstrap() {
   $.class.new({
     name: 'async-closure',
     components: [
-      $.var.new({ name: 'fn' }),
-      $.var.new({ name: 'mod' }),
+      $.closure,
       $.method.new({
         name: 'apply',
         do: async function apply(self, args = []) {
@@ -984,12 +995,6 @@ function bootstrap() {
           return res;
         }
       }),
-      $.method.new({
-        name: 'do',
-        do(...args) {
-          return this.apply(this.mod(), args);
-        }
-      })
     ]
   });
 

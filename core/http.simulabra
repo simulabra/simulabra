@@ -28,6 +28,13 @@
 ~class{
   :name=:request-handler
   :components=(
+    ~var{:name=:server}
+    ~var{:name=:path}
+    ~var{:name=:do}
+    ~after{
+      :name=:init
+      :do=[.server.add-handler(.me)]
+    }
     ~method{
       :name=:handle
       :do=[]
@@ -38,7 +45,18 @@
 ~class{
   :name=:http-server
   :components=(
-    ~js-wrap
+    ~var{
+      :name=:handlers
+      :default=()
+    }
+    ~method{
+      :name=:add-handler
+      :do=[|%handler| .handlers.push(%handler)]
+    }
+    ~method{
+      :name=:path-handler
+      :do=[|%path| .handlers.find([_ _.path.eq(%path)])]
+    }
   )
 }
 
@@ -47,5 +65,13 @@
   :do=[
     %u=~url.from-string("https://simulabra.com/about");
     .log(%u.inner)
+    %server=~http-server.new
+    %handler=~request-handler{
+      :name=:test-handler
+      :server=%server
+      :path="/"
+      :do=[|%req %res| %res.send("hello!")]
+    }
+    .assert-eq(%handler.name %server.path-handler("/"))
   ]
 }

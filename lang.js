@@ -585,15 +585,19 @@ export default base.find('class', 'module').new({
             }),
           ];
           return $.message_node.new({
-            receiver: $.classref_node.new({
-              identifier: this.async() ? 'async-closure' : 'closure',
+            receiver: $.message_node.new({
+              receiver: $.classref_node.new({
+                identifier: this.async() ? 'async-closure' : 'closure',
+              }),
+              selector: 'new',
+              args: $.list_node.new({
+                items: [$.map_node.new({
+                  properties
+                })]
+              }),
             }),
-            selector: 'new',
-            args: $.list_node.new({
-              items: [$.map_node.new({
-                properties
-              })]
-            }),
+            selector: 'wrap',
+            args: $.list_node.new(),
           }).estree();
         }
       ],
