@@ -392,15 +392,12 @@ export default base.find('class', 'module').new({
             });
           }
         }),
-        // function print() {
-        //   return `${this.key().print()}=${this.value().print()}`;
-        // },
         function estree() {
-          this.log(this.js());
-          return parse(this.js().value().expand());
+          const es = parse(this.js());
+          return es.program.body[0].expression;
         },
       ],
-    })
+    });
 
     $.class.new({
       name: 'property',
@@ -428,7 +425,7 @@ export default base.find('class', 'module').new({
           return this.class().new({ key: this.key(), value: this.value().expand() });
         }
       ],
-    })
+    });
 
     $.class.new({
       name: 'assignment-node',
@@ -953,12 +950,7 @@ $.class.new({
     $.macro.new({
       name: 'js',
       expand_fn(str) {
-        if (typeof str !== 'string') {
-          this.log('expand', str);
-          str = str.expand();
-          this.log('expanded to', str);
-        }
-        return $.js_node.from_string(str);
+        return $.js_node.from_string(str.expand().value());
       }
     })
 
@@ -1286,9 +1278,12 @@ $.class.new({
             const estree = this.transform(program);
             const js = this.pretty_js(estree);
             const imports = program.metas().find(m => m.name() === 'import')?.value().eval(this);
+            const jsImports = program.metas().find(m => m.name() === 'js-import')?.value().eval(this);
             const importHeader = imports.map(imp => `import ${imp} from 'simulabra/${imp}';`).join('\n');
+            const jsImportHeader = jsImports?.map(jsImp => `import * as ${jsImp} from '${jsImp}'`).join('\n') ?? '';
             const prelude = `
 ${importHeader}
+${jsImportHeader}
 const __ = globalThis.SIMULABRA;
 export default await base.find('class', 'module').new({
   name: '${script.name()}',

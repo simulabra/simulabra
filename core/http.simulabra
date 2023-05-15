@@ -1,4 +1,5 @@
 !import=(:base :lang :test)
+!js-import=(:http)
 
 ~class{
   :name=:js-wrap
@@ -37,7 +38,7 @@
     }
     ~method{
       :name=:handle
-      :do=[]
+      :do=[|%req %res| .do(%req %res)]
     }
   )
 }
@@ -45,6 +46,7 @@
 ~class{
   :name=:http-server
   :components=(
+    ~js-wrap
     ~var{
       :name=:handlers
       :default=()
@@ -59,6 +61,24 @@
         ^.handlers.find([_ ^_.path.eq(%path)])
       ]
     }
+    ~method{
+      :name=:create-server
+      :do=[|%fn|
+        ^$.js(:http).createServer(%fn)
+      ]
+    }
+    ~method{
+      :name=:start
+      :do=[|%port|
+        .create-server([|%req %res|
+          %path-handler=.path-handler(%req.url)
+          %path-handler.if-null(
+            [%res.end("404 Not Found")]
+            [%path-handler.handle(%req %res)]
+          )
+        ]).listen(%port)
+      ]
+    }
   )
 }
 
@@ -70,8 +90,12 @@
       :name=:test-handler
       :server=%server
       :path="/"
-      :do=[|%req %res| %res.send("hello!")]
+      :do=[|%req %res|
+        %res.writeHead(200 {:Content-Type="text/html"})
+        %res.end("<!DOCTYPE html><html><body><h1>Hello, World!</h1></body></html>")
+      ]
     }
     .assert-eq(%handler.name %server.path-handler("/").name)
+    %server.start(8080)
   ]
 }
