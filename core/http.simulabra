@@ -55,16 +55,16 @@
     }
     ~method{
       :name=:path-handler
-      :do=[|%path| .handlers.find([_ _.path.eq(%path)])]
+      :do=[|%path|
+        ^.handlers.find([_ ^_.path.eq(%path)])
+      ]
     }
   )
 }
 
 ~case{
-  :name=:basic-http
+  :name=:basic-http-path-handlers
   :do=[
-    %u=~url.from-string("https://simulabra.com/about");
-    .log(%u.inner)
     %server=~http-server.new
     %handler=~request-handler{
       :name=:test-handler
@@ -72,6 +72,6 @@
       :path="/"
       :do=[|%req %res| %res.send("hello!")]
     }
-    .assert-eq(%handler.name %server.path-handler("/"))
+    .assert-eq(%handler.name %server.path-handler("/").name)
   ]
 }

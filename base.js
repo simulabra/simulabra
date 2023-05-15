@@ -459,21 +459,6 @@ function bootstrap() {
   $class._name = 'class';
   $class.proto($class);
 
-  const defaultFn = {
-    load(target) {
-      target['default'] = function (ctx) {
-        if (this._default instanceof Function) {
-          return this._default.apply(ctx);
-        } else {
-          return this._default;
-        }
-      };
-    },
-    name: 'default',
-  }
-
-  defaultFn.name = 'default';
-
   // a missing middle
   var $var = $class.new({
     name: 'var',
@@ -742,6 +727,19 @@ function bootstrap() {
   _.def($module);
 
   $.class.new({
+    name: 'static-var',
+    components: [
+      $.var,
+      $.after.new({
+        name: 'load',
+        do(proto) {
+          proto._get_impl(this.name()).reify(proto._proto._parent);
+        }
+      }),
+    ]
+  })
+
+  $.class.new({
     name: 'simulabra-global',
     components: [
       $.var.new({
@@ -939,6 +937,13 @@ function bootstrap() {
       function description(seen = {}) {
         return `<function-primitive ${this.name}>`;
       },
+      function wrap(ctx) {
+        this._closure = $.closure.new({
+          fn: this,
+          mod: ctx
+        });
+        return this;
+      }
       // $method.new({
       //   name: 'class',
       //   do() {

@@ -133,3 +133,27 @@
     &~waiter.new.wait(1000);
   ]
 }
+
+~class{
+  :name=:static-counter
+  :components=(
+    ~static-var{
+      :name=:count
+      :default=0
+    }
+    ~static{
+      :name=:inc
+      :do=[.count(.count.+(1))]
+    }
+  )
+}
+
+~case{
+  :name=:basic-static
+  :do=[
+    .assert-eq(~static-counter.count 0)
+    ~static-counter.inc
+    ~static-counter.inc
+    .assert-eq(~static-counter.count 2)
+  ]
+}

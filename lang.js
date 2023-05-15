@@ -569,37 +569,19 @@ export default base.find('class', 'module').new({
         function print() {
           return `[${this.default_args() ? '' : '|' + this.args().map(a => a.print()).join(' ') + '|'}${this.body().print()}]`
         },
+        // (function name(...args) { body }).wrap()
         function estree() {
-          const fn = b.functionExpression(null, this.args().map(a => a.estree()), this.body().estree());
+          const fn = b.functionExpression(this.name() ?? null, this.args().map(a => a.estree()), this.body().estree());
           if (this.async()) {
             fn.async = true;
           }
-          const properties = [
-            $.property.new({
-              key: $.symbol_node.from('fn'),
-              value: $.quoted_estree.new({ estree: fn }),
-            }),
-            $.property.new({
-              key: $.symbol_node.from('mod'),
-              value: $.globalref_node.new({ identifier: 'mod' }), // @mod __.mod()
-            }),
-          ];
-          return $.message_node.new({
-            receiver: $.message_node.new({
-              receiver: $.classref_node.new({
-                identifier: this.async() ? 'async-closure' : 'closure',
-              }),
-              selector: 'new',
-              args: $.list_node.new({
-                items: [$.map_node.new({
-                  properties
-                })]
-              }),
-            }),
-            selector: 'wrap',
-            args: $.list_node.new(),
-          }).estree();
+          const wrapCall = b.callExpression(
+            b.memberExpression(fn, b.identifier('wrap'), false),
+            [b.thisExpression()]
+          );
+          return wrapCall;
         }
+
       ],
     });
 

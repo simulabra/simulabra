@@ -28,8 +28,7 @@ export default base.find('class', 'module').new({
           name: 'assert-eq',
           do(a, b) {
             if (a !== b) {
-              this.log('neq', JSON.stringify(a), JSON.stringify(b));
-              throw new Error(`assertion failed: ${a.description()} !== ${b.description()}`);
+              throw new Error(`assertion failed: ${a?.description()} !== ${b?.description()}`);
             }
           }
         })
