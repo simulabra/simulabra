@@ -13,9 +13,6 @@ export default await base.find('class', 'module').new({
       name: 'test-runner',
       components: [
         $.var.new({
-          name: 'mod',
-        }),
-        $.var.new({
           name: 'module-cache',
         }),
         $.method.new({
@@ -29,6 +26,8 @@ export default await base.find('class', 'module').new({
             for (const test_case of Object.values(cases)) {
               test_case.run();
             }
+            const n = Object.values(cases).length;
+            mod.log(`${n} test cases passed`);
           }
         }),
         $.method.new({

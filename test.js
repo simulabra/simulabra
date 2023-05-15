@@ -15,7 +15,7 @@ export default base.find('class', 'module').new({
           do() {
             try {
               this.do().apply(this);
-              this.log('passed');
+              // this.log('passed');
             } catch (e) {
               // demands a native error class?
               this.log('failed');
@@ -43,7 +43,7 @@ export default base.find('class', 'module').new({
           do() {
             try {
               this.do().apply(this);
-              this.log('passed');
+              // this.log('passed');
             } catch (e) {
               // demands a native error class?
               this.log('failed');
