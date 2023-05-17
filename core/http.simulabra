@@ -1,5 +1,5 @@
 !import=(:base :lang :test)
-!js-import=(:http)
+!js-import=(:http :axios)
 
 ~class{
   :name=:js-wrap
@@ -44,6 +44,23 @@
 }
 
 ~class{
+  :name=:http-request
+  :components=(
+    ~var{:name=:verb}
+    ~var{:name=:url}
+    ~method{
+      :name=:fetch
+      :do=[
+        ^$.js("axios").request{
+          :url=.url.href
+          :method=.verb
+        }
+      ]
+    }
+  )
+}
+
+~class{
   :name=:http-server
   :components=(
     ~js-wrap
@@ -64,7 +81,7 @@
     ~method{
       :name=:create-server
       :do=[|%fn|
-        ^$.js(:http).createServer(%fn)
+        ^.inner($.js(:http).createServer(%fn))
       ]
     }
     ~method{
@@ -82,7 +99,7 @@
   )
 }
 
-~case{
+~async-case{
   :name=:basic-http-path-handlers
   :do=[
     %server=~http-server.new
@@ -97,5 +114,6 @@
     }
     .assert-eq(%handler.name %server.path-handler("/").name)
     %server.start(8080)
+    .log("server started")
   ]
 }

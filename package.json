@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "acorn": "^8.8.0",
+    "axios": "^1.4.0",
     "meriyah": "^4.3.2",
     "mitata": "^0.1.6",
     "recast": "^0.22.0",

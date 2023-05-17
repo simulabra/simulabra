@@ -285,7 +285,10 @@ function bootstrap() {
     return {
       descended() {
         return false;
-      }
+      },
+      name() {
+        return 'native-function';
+      },
     }
   };
   Number.prototype.description = function () {
@@ -354,6 +357,7 @@ function bootstrap() {
       proto._add(this.name(), this);
     },
     function isa(cls) {
+      // this.log('isa', this.class().name(), cls.name());
       return this.class().descended(cls);
     },
     function toJSON() {
@@ -396,7 +400,7 @@ function bootstrap() {
       return `~${this.name()}`;
     },
     function descended(target) {
-      return this === target || !!this.components().find(c => c === target);
+      return this.name() === target.name() || !!this.components().find(c => (this.log(c), c.class().name() === 'class' && c.descended(target)));
     },
     function vars() {
       let visited = new Set();
@@ -645,8 +649,12 @@ function bootstrap() {
       $var.new({ name: 'on-load' }),
       $var.new({ name: 'loaded', default: false }),
       $var.new({ name: 'repos', default: () => ({}) }),
+      $var.new({ name: 'classes', default: () => [] }),
       function repo(className) {
         return this.repos()[className] || {};
+      },
+      function instances(cls) {
+        return this.classes().filter(c => (c.log('isa', cls.name(), c.isa(cls)), c.isa(cls)));
       },
       function find(className, name) {
         // totally dies to recursion!
@@ -691,6 +699,7 @@ function bootstrap() {
           this.repos()[className] = {};
         }
         this.repos()[className][name] = obj;
+        this.classes().push(obj);
       },
       async function load() {
         if (!this.loaded() && this.on_load()) {

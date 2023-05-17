@@ -7,7 +7,7 @@ import lang from './lang.js';
 
 export default await base.find('class', 'module').new({
   name: 'runner',
-  imports: [test, lang],
+  imports: [base, test, lang],
   async on_load(_, $) {
     $.class.new({
       name: 'test-runner',
@@ -19,7 +19,7 @@ export default await base.find('class', 'module').new({
           name: 'run-mod',
           do(mod) {
             __.mod(mod);
-            const cases = mod.repos().case;
+            const cases = mod.instances($.case);
             if (cases === undefined) {
               throw new Error(`no cases in module ${mod.description()}`);
             }
