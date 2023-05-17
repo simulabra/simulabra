@@ -117,11 +117,13 @@
       :name=:wait
       :async=@true
       :do=[|%ms|
-        ~promise.do([|%resolve|
-          @js.setTimeout(1000 [
-            %resolve()
-          ])
-        ])
+        ~promise{
+          :do=[
+            $.js(:setTimeout)(1000 [
+              .resolve
+            ])
+          ]
+        }
       ]
     }
   )

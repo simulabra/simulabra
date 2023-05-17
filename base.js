@@ -400,7 +400,7 @@ function bootstrap() {
       return `~${this.name()}`;
     },
     function descended(target) {
-      return this.name() === target.name() || !!this.components().find(c => (this.log(c), c.class().name() === 'class' && c.descended(target)));
+      return this.name() === target.name() || !!this.components().find(c => c.class().name() === 'class' && c.descended(target));
     },
     function vars() {
       let visited = new Set();
@@ -654,7 +654,7 @@ function bootstrap() {
         return this.repos()[className] || {};
       },
       function instances(cls) {
-        return this.classes().filter(c => (c.log('isa', cls.name(), c.isa(cls)), c.isa(cls)));
+        return this.classes().filter(c => c.isa(cls));
       },
       function find(className, name) {
         // totally dies to recursion!
@@ -1117,6 +1117,13 @@ function bootstrap() {
       }),
     ],
   });
+
+  $.class.new({
+    name: 'promise',
+    components: [
+
+    ]
+  })
 
   return _;
 }
