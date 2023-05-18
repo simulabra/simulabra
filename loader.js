@@ -1,9 +1,8 @@
 import { existsSync } from 'fs';
 
 export async function resolve(specifier, context, next) {
-  if (specifier.indexOf('simulabra') === 0) {
-    const [_trash, modName] = specifier.split('/');
-    const __ = globalThis.SIMULABRA;
+  if (specifier.indexOf('simulabra/') === 0) {
+    let modName = specifier.replace('simulabra/', '');
     try {
       if (existsSync(`${modName}.js`)) {
         return {
@@ -11,7 +10,10 @@ export async function resolve(specifier, context, next) {
           url: `file:///${process.cwd()}/${modName}.js`
         };
       } else {
-        const cache = __.mod().find('class', 'module-cache').inst();
+        if (modName.indexOf('/') === -1) {
+          modName = 'core/' + modName;
+        }
+        const cache = globalThis.SIMULABRA.mod().find('class', 'module-cache').inst();
         if (!cache.hashed(modName)) {
           await cache.load_module(modName);
         }
@@ -22,7 +24,7 @@ export async function resolve(specifier, context, next) {
         };
       }
     } catch (e) {
-      __.log('failed to resolve');
+      console.log('failed to resolve');
       console.error(e);
       throw new Error(`esm loader resolve failed for '${modName}'!!`);
     }

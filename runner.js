@@ -41,7 +41,7 @@ export default await base.find('class', 'module').new({
               const source = (await readFile(filePath)).toString();
               const transformer = $.transformer.new();
               let moduleName = filePath.replace(/\.simulabra/, '');
-              transformer.module_cache(this.module_cache());
+              transformer.module_cache($.module_cache.inst());
               return await $.script.new({
                 name: moduleName,
                 imports: [_],
@@ -72,8 +72,7 @@ export default await base.find('class', 'module').new({
     });
 
     const runner = $.test_runner.new();
-    runner.module_cache($.module_cache.new());
-    runner.module_cache().clear_out_js();
+    $.module_cache.inst().clear_out_js();
     await runner.run('tests');
     await runner.run('core');
   }

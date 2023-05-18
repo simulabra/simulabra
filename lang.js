@@ -1398,7 +1398,7 @@ export default await base.find('class', 'module').new({
           name: 'load-module',
           async: true,
           async do(modName) {
-            const source = (await fs.readFile(`core/${modName}.simulabra`)).toString();
+            const source = (await fs.readFile(`${modName}.simulabra`)).toString();
             const transformer = $.transformer.new();
             transformer.module_cache(this);
             return await $.script.new({
