@@ -483,7 +483,7 @@ export default base.find('class', 'module').new({
           do: function parse(reader) {
             this.items([]);
             reader.expect('(');
-            while (reader.peek() !== ')') {
+            while (reader.peek() !== ')' && !reader.stream().ended()) {
               reader.strip();
               this.items().push(reader.read());
               reader.strip();
