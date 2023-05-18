@@ -1,11 +1,10 @@
-import base from './base.js';
 import { parse, prettyPrint, types } from 'recast';
 import { createHash } from 'crypto';
 import fs from 'fs/promises';
 import ofs from 'fs';
 import path from 'path';
 const b = types.builders;
-const __ = globalThis.SIMULABRA;
+import base from 'simulabra/base';
 
 export default base.find('class', 'module').new({
   name: 'lisp',
@@ -927,7 +926,7 @@ $.class.new({
         $.after.new({
           name: 'init',
           do() {
-            __._mod.def(this);
+            globalThis.SIMULABRA._mod.def(this);
           }
         })
       ],
@@ -1288,7 +1287,6 @@ $.class.new({
             const prelude = `
 ${importHeader}
 ${jsImportHeader}
-const __ = globalThis.SIMULABRA;
 export default await base.find('class', 'module').new({
   name: '${script.name()}',
   imports: [${imports.join(', ')}],

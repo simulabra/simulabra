@@ -13,8 +13,6 @@ export async function resolve(specifier, context, next) {
       } else {
         const cache = __.mod().find('class', 'module-cache').inst();
         if (!cache.hashed(modName)) {
-          cache.log('cache miss', modName);
-          // load core/html.simulabra
           await cache.load_module(modName);
         }
         const hash = cache.module_hashes()[modName];
@@ -23,7 +21,6 @@ export async function resolve(specifier, context, next) {
           url: `file:///${process.cwd()}/out/${hash}.mjs`
         };
       }
-      // or .simulabra file!!
     } catch (e) {
       __.log('failed to resolve');
       console.error(e);

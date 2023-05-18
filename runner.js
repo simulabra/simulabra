@@ -1,9 +1,8 @@
 import { readdir, readFile } from 'fs/promises';
 import { join, extname } from 'path';
-import base from './base.js';
-const __ = globalThis.SIMULABRA;
-import test from './test.js';
-import lang from './lang.js';
+import base from 'simulabra/base';
+import test from 'simulabra/test';
+import lang from 'simulabra/lang';
 
 export default await base.find('class', 'module').new({
   name: 'runner',
@@ -18,12 +17,12 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'run-mod',
           do(mod) {
-            __.mod(mod);
+            globalThis.SIMULABRA.mod(mod);
             const cases = mod.instances($.case);
             if (cases === undefined) {
               throw new Error(`no cases in module ${mod.description()}`);
             }
-            for (const test_case of Object.values(cases)) {
+            for (const test_case of cases) {
               test_case.run();
             }
             const n = Object.values(cases).length;
