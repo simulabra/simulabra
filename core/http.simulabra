@@ -1,4 +1,4 @@
-!import=(:base :lang :test)
+!import=(:base :lang :test :html)
 !js-import=(:http :axios)
 
 ~class{

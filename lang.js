@@ -1,5 +1,9 @@
 import base from './base.js';
 import { parse, prettyPrint, types } from 'recast';
+import { createHash } from 'crypto';
+import fs from 'fs/promises';
+import ofs from 'fs';
+import path from 'path';
 const b = types.builders;
 const __ = globalThis.SIMULABRA;
 
@@ -1315,6 +1319,98 @@ export default await base.find('class', 'module').new({
           }
         })
       ]
+    });
+
+    // TODO: custom in-memory loader?
+    // see https://nodejs.org/api/esm.html#customizing-esm-specifier-resolution-algorithm
+    $.class.new({
+      name: 'module-cache',
+      components: [
+        $.singleton,
+        $.var.new({
+          name: 'cache',
+          default: () => new Map(),
+        }),
+        $.var.new({
+          name: 'module-hashes',
+          default: () => new Map(),
+        }),
+        $.method.new({
+          name: 'hash',
+          do(code) {
+            return createHash('md5').update(code).digest('hex').substring(0, 8);
+          }
+        }),
+        $.method.new({
+          name: 'module-hash',
+          do(modname) {
+            return this.module_hashes()[modname];
+          }
+        }),
+        $.method.new({
+          name: 'hashed',
+          do(modname) {
+            return modname in this.module_hashes();
+          }
+        }),
+        $.method.new({
+          name: 'clear-out-js',
+          do() {
+            this.log('clear old js files');
+            try {
+              const files = ofs.readdirSync('out');
+              for (const file of files) {
+                const filePath = path.join('out', file);
+                ofs.unlinkSync(filePath);
+              }
+            } catch (error) {
+              console.error('Error while deleting files:', error);
+            }
+          }
+        }),
+        $.method.new({
+          name: 'run',
+          async: true,
+          async do(name, code) {
+            const hash = this.hash(name + code);
+
+            if (!this.cache().has(name)) {
+              const modulePath = path.join('out', `${hash}.mjs`);
+
+              try {
+                await fs.access(modulePath);
+              } catch (err) {
+                if (err.code === 'ENOENT') {
+                  await fs.writeFile(modulePath, code);
+                  this.log(`~module#${name} >> ${hash}.mjs`);
+                } else {
+                  throw err;
+                }
+              }
+
+              const importedModule = await import(`./out/${hash}.mjs`);
+              this.module_hashes()[name] = hash;
+              this.cache().set(name, importedModule.default);
+            }
+
+            return this.cache().get(name);
+          },
+        }),
+        $.method.new({
+          name: 'load-module',
+          async: true,
+          async do(modName) {
+            const source = (await fs.readFile(`core/${modName}.simulabra`)).toString();
+            const transformer = $.transformer.new();
+            transformer.module_cache(this);
+            return await $.script.new({
+              name: modName,
+              imports: [_],
+              source,
+            }).run(transformer);
+          }
+        }),
+      ],
     });
   }
 });

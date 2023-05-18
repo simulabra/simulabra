@@ -2,7 +2,8 @@
   "name": "simulabra",
   "module": "simulabra-core",
   "scripts": {
-    "test": "watchexec -w . -e js,simulabra -r -- node --experimental-loader ./loader.js runner.js"
+    "test": "watchexec -w . -e js,simulabra -r -- node --experimental-loader ./loader.js runner.js",
+    "test-bun": "watchexec -w . -e js,simulabra -r -- bun run runner.js"
   },
   "type": "module",
   "devDependencies": {

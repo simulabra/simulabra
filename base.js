@@ -1,7 +1,3 @@
-import { createHash } from 'crypto';
-import fs from 'fs/promises';
-import ofs from 'fs';
-import path from 'path';
 function bootstrap() {
   let __ = globalThis.SIMULABRA;
   if (__?._bootstrapped) {
@@ -1027,96 +1023,6 @@ function bootstrap() {
     ]
   });
 
-  // TODO: custom in-memory loader?
-  // see https://nodejs.org/api/esm.html#customizing-esm-specifier-resolution-algorithm
-  $.class.new({
-    name: 'module-cache',
-    components: [
-      $.singleton,
-      $.var.new({
-        name: 'cache',
-        default: () => new Map(),
-      }),
-      $.var.new({
-        name: 'module-hashes',
-        default: () => new Map(),
-      }),
-      $.method.new({
-        name: 'hash',
-        do(code) {
-          return createHash('md5').update(code).digest('hex').substring(0, 8);
-        }
-      }),
-      $.method.new({
-        name: 'module-hash',
-        do(modname) {
-          return this.module_hashes()[modname];
-        }
-      }),
-      $.method.new({
-        name: 'clear-out-js',
-        do() {
-          this.log('clear old js files');
-          try {
-            const files = ofs.readdirSync('out');
-            for (const file of files) {
-              const filePath = path.join('out', file);
-              ofs.unlinkSync(filePath);
-            }
-          } catch (error) {
-            console.error('Error while deleting files:', error);
-          }
-        }
-      }),
-      $.method.new({
-        name: 'save',
-        async: true,
-        async do(name, code) {
-          const hash = this.hash(name + code);
-          const modulePath = path.join('out', `${hash}.mjs`);
-
-          try {
-            await fs.access(modulePath);
-          } catch (err) {
-            if (err.code === 'ENOENT') {
-              await fs.writeFile(modulePath, code);
-              this.module_hashes()[name] = hash;
-              this.log(`~module#${name} >> ${hash}.mjs`);
-            } else {
-              throw err;
-            }
-          }
-        }
-      }),
-      $.method.new({
-        name: 'run',
-        async: true,
-        async do(name, code) {
-          const hash = this.hash(name + code);
-
-          if (!this.cache().has(hash)) {
-            const modulePath = path.join('out', `${hash}.mjs`);
-
-            try {
-              await fs.access(modulePath);
-            } catch (err) {
-              if (err.code === 'ENOENT') {
-                await fs.writeFile(modulePath, code);
-                this.log(`~module#${name} >> ${hash}.mjs`);
-              } else {
-                throw err;
-              }
-            }
-
-            const importedModule = await import(`./out/${hash}.mjs`);
-            this.cache().set(hash, importedModule.default);
-          }
-
-          return this.cache().get(hash);
-        },
-      }),
-    ],
-  });
 
   $.class.new({
     name: 'promise',
