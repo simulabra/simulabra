@@ -9,7 +9,7 @@
     }
     ~method{
       :name=:dom-node
-      :do=[^@context.document.getElementById(.id)]
+      :do=[^@.context.document.getElementById(.id)]
     }
     ~method{
       :name=:load-children

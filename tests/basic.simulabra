@@ -122,7 +122,7 @@
   :components=(
     ~method{
       :name=:wait
-      :async=@true
+      :async=~true
       :do=[|%ms|
         ~promise{
           :do=[
@@ -170,6 +170,6 @@
 ~case{
   :name=:basic-conditionals
   :do=[
-    ;.assert-eq(@true.$if{:then=1 :else=0} 1)
+    ;.assert-eq(~true.$if{:then=1 :else=0} 1)
   ]
 }

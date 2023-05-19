@@ -773,6 +773,17 @@ function bootstrap() {
         name: 'trace',
         default: true,
       }),
+      $.method.new({
+        name: 'js-new',
+        do(className, ...args) {
+          const obj = new globalThis[className](...args);
+          this.log(className, args, obj);
+          return obj;
+        }
+      }),
+      function js_get(obj, p) {
+        return obj[p];
+      },
       function $() {
         return this.mod().proxy('class');
       },

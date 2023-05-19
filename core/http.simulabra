@@ -6,7 +6,7 @@
   :components=(
     ~var{
       :name=:inner
-      :foreign=@true
+      :foreign=~true
     }
   )
 }
@@ -19,9 +19,13 @@
       :name=:from-string
       :do=[|%url-string|
         ^.new{
-          :inner=$.js(`"new URL(\"${%url-string}\")")
+          :inner=@.js-new(:URL %url-string)
         }
       ]
+    }
+    ~method{
+      :name=:href
+      :do=[^@.js-get(.inner :href)]
     }
   )
 }
@@ -101,7 +105,7 @@
 
 ~async-case{
   :name=:basic-http-path-handlers
-  :do=[
+  :do=&[
     %server=~http-server.new
     %handler=~request-handler{
       :name=:test-handler
@@ -115,5 +119,6 @@
     .assert-eq(%handler.name %server.path-handler("/").name)
     %server.start(8080)
     .log("server started")
+    &~http-request{:verb=:get :url=~url.from-string("http://localhost:8080")}.fetch
   ]
 }

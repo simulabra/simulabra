@@ -100,7 +100,7 @@ export default base.find('class', 'module').new({
                 '!': $.meta_node,
                 '^': $.return_node,
                 '&': $.await_node,
-                '@': $.globalref_node,
+                '@': $.global_node,
                 '"': $.string_literal_node,
               },
             });
@@ -706,14 +706,8 @@ $.class.new({
         chunks: this.chunks().map(c => c.expand()),
       });
     },
-    function value() {
-
-    },
     function print() {
       return `"${this.quoted().replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-    },
-    function quasiexpand() {
-      return this;
     },
     function estree() {
       return b.templateLiteral(
@@ -858,6 +852,14 @@ $.class.new({
       name: 'classref-node',
       components: [
         $.ref_reader_macro,
+        function parse(reader) {
+          reader.expect('~');
+          this.identifier(reader.identifier());
+          if (['true', 'false'].includes(this.identifier())) {
+            return $.boolean_node.new({ value: Boolean(this.identifier()) });
+          }
+          return this;
+        },
         function char() {
           return '~';
         },
@@ -868,18 +870,29 @@ $.class.new({
     });
 
     $.class.new({
-      name: 'globalref-node',
+      name: 'global-node',
       components: [
-        $.ref_reader_macro,
-        function char() {
+        $.node,
+        function parse(reader) {
+          reader.expect('@');
+          return this;
+        },
+        function print() {
           return '@';
         },
         function estree() {
-          const id = this.identifier();
-          if (id === 'true' || id === 'false') {
-            return b.booleanLiteral(Boolean(id));
-          }
-          return b.callExpression(b.memberExpression(b.memberExpression(b.identifier('globalThis'), b.identifier('SIMULABRA')), b.identifier(this.identifier())), []);
+          return b.memberExpression(b.identifier('globalThis'), b.identifier('SIMULABRA'));
+        }
+      ]
+    });
+
+    $.class.new({
+      name: 'boolean-node',
+      components: [
+        $.node,
+        $.var.new({ name: 'value', }),
+        function estree() {
+          return b.booleanLiteral(this.value());
         }
       ]
     });
@@ -953,9 +966,9 @@ $.class.new({
     $.macro.new({
       name: 'js',
       expand_fn(str) {
-        return $.js_node.from_string(str.expand().value());
+        return $.js_node.from_string(str.expand().value()); // TODO interpret
       }
-    })
+    });
 
     $.class.new({
       name: 'body',
