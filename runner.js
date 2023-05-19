@@ -36,6 +36,12 @@ export default await base.find('class', 'module').new({
         $.var.new({
           name: 'timer',
         }),
+        $.after.new({
+          name: 'init',
+          do() {
+            this.timer($.test_timer.new({ name: 'runner-timer' }));
+          }
+        }),
         $.method.new({
           name: 'run-mod',
           do(mod) {
@@ -77,7 +83,6 @@ export default await base.find('class', 'module').new({
           name: 'run',
           async: true,
           async do(path) {
-            this.timer($.test_timer.new({ name: 'runner-timer' }));
             const files = await readdir(path);
             for (const file of files) {
               this.log('load', file);

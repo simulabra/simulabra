@@ -40,6 +40,7 @@ export default base.find('class', 'module').new({
         $.case,
         $.method.new({
           name: 'run',
+          override: true,
           do() {
             try {
               this.do().apply(this);
@@ -51,16 +52,6 @@ export default base.find('class', 'module').new({
             }
           }
         }),
-        $.var.new({ name: 'do' }),
-        $.method.new({
-          name: 'assert-eq',
-          do(a, b) {
-            if (a !== b) {
-              this.log('neq', JSON.stringify(a), JSON.stringify(b));
-              throw new Error(`assertion failed: ${a.description()} !== ${b.description()}`);
-            }
-          }
-        })
       ]
     });
   },

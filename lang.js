@@ -16,7 +16,7 @@ export default base.find('class', 'module').new({
         $.var.new({ name: 'pos', default: 0 }),
         $.var.new({ name: 'value' }),
         $.method.new({
-          name: 'next',
+          name: 'chomp',
           do: function () {
             if (this.pos() < this.value().length) {
               const res = this.value()[this.pos()];
@@ -604,7 +604,7 @@ export default base.find('class', 'module').new({
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // {
+            reader.chomp(); // {
             this.properties([]);
             if (reader.peek() === '\n') {
               this.space(true);
@@ -616,7 +616,7 @@ export default base.find('class', 'module').new({
               this.properties().push($.property.new().parse(reader))
               reader.strip();
             }
-            reader.next(); // }
+            reader.chomp(); // }
             return this;
           }
         }),
@@ -646,7 +646,7 @@ ${props.map(prop => '  ' + prop).join('\n')}
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // '
+            reader.chomp(); // '
             this.value(reader.read());
             return this;
           }
@@ -680,9 +680,9 @@ $.class.new({
         reader.expect('"');
         let chunks = [];
         while (reader.peek() !== '"') {
-          const cc = reader.next();
+          const cc = reader.chomp();
           if (cc === '\\' && (reader.peek() === '\\' || reader.peek() === '"')) {
-            quotedValue += cc + reader.next();
+            quotedValue += cc + reader.chomp();
           } else if (cc === '$' && reader.peek() === '{') {
             chunks.push(quotedValue);
             quotedValue = '';
@@ -732,7 +732,7 @@ $.class.new({
         $.method.new({
           name: 'parse',
           do: function parse(reader) {
-            reader.next(); // ,
+            reader.chomp(); // ,
             this.value(reader.read());
             return this;
           }
@@ -761,10 +761,10 @@ $.class.new({
             let n = '';
             if (reader.peek() === '-') {
               n += '-';
-              reader.next();
+              reader.chomp();
             }
             while (reader.digit() || (reader.peek() === '.' && /[0-9]/.test(reader.peek(1)))) {
-              n += reader.next();
+              n += reader.chomp();
             }
             this.value(+n);
             return this;
@@ -791,9 +791,9 @@ $.class.new({
             let sv = "";
             reader.expect('"');
             while (reader.peek() !== '"') {
-              const cc = reader.next();
+              const cc = reader.chomp();
               if (cc === '\\' && (reader.peek() === '\\' || reader.peek() === '"')) {
-                sv += cc + reader.next();
+                sv += cc + reader.chomp();
               } else {
                 sv += cc;
               }
@@ -1175,14 +1175,14 @@ $.class.new({
         function peek(n = 0) {
           return this.stream().peek(n);
         },
-        function next() {
-          return this.stream().next();
+        function chomp() {
+          return this.stream().chomp();
         },
         function expect(c) {
           if (this.stream().peek() !== c) {
             throw new Error(`expected ${c} got ${this.stream().peek()}`);
           }
-          return this.stream().next();
+          return this.stream().chomp();
         },
         function inc(chars) {
           return chars.includes(this.peek());
@@ -1208,7 +1208,7 @@ $.class.new({
         function identifier() {
           let s = '';
           while (!this.term()) {
-            s += this.next();
+            s += this.chomp();
           }
           return s;
         },
@@ -1216,15 +1216,15 @@ $.class.new({
           while (this.whitespace() || this.peek() === ';') {
             if (this.peek() === ';') { // comment
               while (' ;'.includes(this.peek())) {
-                this.next();
+                this.chomp();
               }
               let cmt = '';
               while (this.peek() !== '\n') {
-                cmt += this.next();
+                cmt += this.chomp();
               }
               this.comments().push(cmt);
             }
-            this.stream().next();
+            this.stream().chomp();
           }
         },
         function node() {

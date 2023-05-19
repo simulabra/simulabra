@@ -12,7 +12,7 @@
       :do=[^@context.document.getElementById(.id)]
     }
     ~method{
-      :name=:load
+      :name=:load-children
       :do=[_ .children.map([%_.load])]
     }
     ~method{

@@ -544,6 +544,7 @@ function bootstrap() {
       $var.new({ name: 'do' }), // fn, meat and taters
       $var.new({ name: 'message' }),
       $var.new({ name: 'name' }),
+      $var.new({ name: 'override', default: false }),
       $var.new({ name: 'debug', default: true }),
       function combine(impl) {
         if (impl._name !== this.name()) {
@@ -554,7 +555,11 @@ function bootstrap() {
           fn = fn.fn();
         }
         if (impl._primary) {
-          fn._next = impl._primary;
+          if (this.override()) {
+            fn._next = impl._primary;
+          } else {
+            throw new Error(`invalid override on ${this.title()}!`);
+          }
         }
         impl._primary = fn;
         impl._debug = this.debug();
@@ -1003,6 +1008,7 @@ function bootstrap() {
       $.closure,
       $.method.new({
         name: 'apply',
+        override: true,
         do: async function apply(self, args = []) {
           const om = $$().mod();
           $$().mod(this.mod());

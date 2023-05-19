@@ -192,6 +192,7 @@ export default await base.find('class', 'module').new({
         $.after_before_combined,
         $.method.new({
           name: 'bump',
+          override: true,
           do() {
             return this.x(this.x() + 3);
           }
