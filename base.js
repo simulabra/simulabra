@@ -127,6 +127,7 @@ function bootstrap() {
         _befores: [],
         _afters: [],
         _debug: true,
+        _next: null,
       };
       Object.assign(this, defaults);
       Object.assign(this, props);
@@ -135,40 +136,38 @@ function bootstrap() {
       if (!this._name) {
         throw new Error('tried to reify without a name!');
       }
-      if (!$$()._debug && this._befores.length === 0 && this._afters.length === 0) {
-        proto[this._name.deskewer()] = this._primary;
-        if ($$()._trace) {
-          console.log('call');
-        }
-        return;
-      }
       const self = this;
-      proto[this._name.deskewer()] = function (...args) {
-        const __ = $$();
-        if (self._debug) {
-          const frame = new Frame(this, self, args);
-          __.stack().push(frame); // uhh
-          if (__._trace) {
-            console.log('call', frame.description());
-          }
-        }
-        try {
-          self._befores.forEach(b => b.apply(this, args));
-          let res = self._primary.apply(this, args);
-          // console.log('in reified', self.name, self.primary, res)
-          self._afters.forEach(a => a.apply(this, args)); // res too?
+      const key = this._name.deskewer();
+      if (!$$()._debug && this._befores.length === 0 && this._afters.length === 0) {
+        proto[key] = this._primary;
+      } else {
+        proto[key] = function (...args) {
+          const __ = $$();
           if (self._debug) {
-            __._stack.pop();
+            const frame = new Frame(this, self, args);
+            __.stack().push(frame); // uhh
+            if (__._trace) {
+              console.log('call', frame.description());
+            }
           }
-          return res;
-        } catch (e) {
-          if (!e._logged && self._debug) {
-            e._logged = true;
-            debug('failed message: call', self._name, 'on', this._parent, 'with', args);
-            __._stack.trace();
+          try {
+            self._befores.forEach(b => b.apply(this, args));
+            let res = self._primary.apply(this, args);
+            // console.log('in reified', self.name, self.primary, res)
+            self._afters.forEach(a => a.apply(this, args)); // res too?
+            if (self._debug) {
+              __._stack.pop();
+            }
+            return res;
+          } catch (e) {
+            if (!e._logged && self._debug) {
+              e._logged = true;
+              debug('failed message: call', self._name, 'on', this._parent, 'with', args);
+              __._stack.trace();
+            }
+            throw e;
           }
-          throw e;
-        }
+        };
       }
     }
   }
@@ -355,6 +354,10 @@ function bootstrap() {
     function isa(cls) {
       // this.log('isa', this.class().name(), cls.name());
       return this.class().descended(cls);
+    },
+    function next(selector, ...args) {
+      const fn = this[selector];
+      return fn._next.apply(this, args);
     },
     function toJSON() {
       return this;
@@ -549,6 +552,9 @@ function bootstrap() {
         let fn = this.do();
         if (typeof fn !== 'function') {
           fn = fn.fn();
+        }
+        if (impl._primary) {
+          fn._next = impl._primary;
         }
         impl._primary = fn;
         impl._debug = this.debug();

@@ -9,14 +9,37 @@ export default await base.find('class', 'module').new({
   imports: [base, test, lang],
   async on_load(_, $) {
     $.class.new({
+      name: 'test-timer',
+      components: [
+        $.var.new({ name: 'start' }),
+        $.after.new({
+          name: 'init',
+          do() {
+            this.start(+new Date());
+          }
+        }),
+        $.method.new({
+          name: 'mark',
+          do() {
+            return `(${+new Date() - this.start()}ms)`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'test-runner',
       components: [
         $.var.new({
           name: 'module-cache',
         }),
+        $.var.new({
+          name: 'timer',
+        }),
         $.method.new({
           name: 'run-mod',
           do(mod) {
+            this.log(`run ${mod.title()}`);
             globalThis.SIMULABRA.mod(mod);
             const cases = mod.instances($.case);
             if (cases === undefined) {
@@ -26,7 +49,7 @@ export default await base.find('class', 'module').new({
               test_case.run();
             }
             const n = Object.values(cases).length;
-            mod.log(`${n} test cases passed`);
+            this.log(mod.title(), `${n} test cases passed`);
           }
         }),
         $.method.new({
@@ -54,6 +77,7 @@ export default await base.find('class', 'module').new({
           name: 'run',
           async: true,
           async do(path) {
+            this.timer($.test_timer.new({ name: 'runner-timer' }));
             const files = await readdir(path);
             for (const file of files) {
               this.log('load', file);
@@ -66,8 +90,16 @@ export default await base.find('class', 'module').new({
                 throw e;
               }
             }
+            this.log('done running');
           }
-        })
+        }),
+        $.method.new({
+          name: 'log',
+          override: true,
+          do(...args) {
+            this.next('log', this.timer().mark(), ...args);
+          }
+        }),
       ]
     });
 
