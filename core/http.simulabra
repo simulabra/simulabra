@@ -1,5 +1,6 @@
 !import=(:base :lang :test :html)
-!js-import=(:http :axios)
+!js-import=(:http)
+$.js("import fetch from 'node-fetch'")
 
 ~class{
   :name=:js-wrap
@@ -55,6 +56,7 @@
     ~method{
       :name=:fetch
       :do=[
+        .log($.js(:fetch))
         ^$.js("axios").request{
           :url=.url.href
           :method=.verb

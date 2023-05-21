@@ -397,7 +397,7 @@ export default base.find('class', 'module').new({
         }),
         function estree() {
           const es = parse(this.js());
-          return es.program.body[0].expression;
+          return es.program.body[0].expression ?? es.program.body[0];
         },
       ],
     });
@@ -1295,6 +1295,7 @@ $.class.new({
             const js = this.pretty_js(estree);
             const imports = program.metas().find(m => m.name() === 'import')?.value().eval(this);
             const jsImports = program.metas().find(m => m.name() === 'js-import')?.value().eval(this);
+            const jsDefaultImports = program.metas().find(m => m.name() === 'js-import')?.value().eval(this);
             const importHeader = imports.map(imp => `import ${imp} from 'simulabra/${imp}';`).join('\n');
             const jsImportHeader = jsImports?.map(jsImp => `import * as ${jsImp} from '${jsImp}'`).join('\n') ?? '';
             const prelude = `
