@@ -1,4 +1,8 @@
-!import=(:base :lang :test)
+!{
+  :name=:basic
+  :package=:core
+  :imports=(:lang :test)
+}
 
 ~class{
   :name=:point

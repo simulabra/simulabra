@@ -1,9 +1,11 @@
 # SIMULABRA: INFINITE SOFTWARE
-Simulabra is an object-oriented programming system (language/editor/platform) for the Web, built from the ground up for humans and AI. Forget about all the bloated nonsense that adds useless complexity. Bring your ideas to life, whether they are for Web applications, simulations, games, or AI agents. 
+Simulabra is an object-oriented programming system (language/editor/platform) for the Web, built from the ground up for human-AI symbiosis. Use it to build whatever you can imagine, whether that's websites, simulations, games, or AI agents.
 
+A taste:
 ``` simulabra
 ~class{
   :name=:point
+  :doc="a 2d point in Cartesian space"
   :components=(
     ~var{
       :name=:x
@@ -17,14 +19,16 @@ Simulabra is an object-oriented programming system (language/editor/platform) fo
     }
     ~method{
       :name=:center-dist
+      :ret=~number
       :do=[
-        .x.pow(2).+(.y.pow(2)).sqrt
+        .x.**(2).+(.y.**(2)).sqrt
       ]
     }
   )
 }
 ```
 
+Simulabra draws from the work of many, some nearly forgotten, in traditions that go back to the classical age of computing.
 ## Language
  - inspired by Smalltalk and Lisp
  - targets Javascript for speed, ecosystem, ubiquity, and [suitability of prototypes as a substrate for class sytems](http://merlintec.com/vmworkshop99/sub.pdf)
@@ -47,3 +51,11 @@ Simulabra is an object-oriented programming system (language/editor/platform) fo
 
 ## Current status
 After bikeshedding the language for over a year, it's time to start building the editor and platform parts, although the language is far from done. Anything and everything is up to change during the alpha stage. Perhaps more important is the AI assistant that will help bootstrap the rest of the project.
+
+
+## Running
+Right now there's just a console test runner that's probably broken.
+``` sh
+npm install
+npm run test
+```

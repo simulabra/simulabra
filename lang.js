@@ -183,7 +183,8 @@ export default base.find('class', 'module').new({
         $.method.new({
           name: 'eval',
           do(transformer) {
-            return eval(transformer.pretty_js(transformer.transform(this)));
+            const code = transformer.pretty_js(transformer.transform(this));
+            return eval(code);
           }
         }),
       ]
@@ -220,6 +221,12 @@ export default base.find('class', 'module').new({
           name: 'print',
           do() {
             return ':' + this.value();
+          }
+        }),
+        $.method.new({
+          name: 'jsify',
+          do() {
+            return this.value();
           }
         }),
       ],
@@ -518,6 +525,9 @@ export default base.find('class', 'module').new({
         function push(it) {
           this.items().push(it);
           return this;
+        },
+        function jsify() {
+          return this.items().map(it => it.jsify());
         }
       ]
     });
@@ -635,7 +645,24 @@ ${props.map(prop => '  ' + prop).join('\n')}
         },
         function expand() {
           return this.class().new({ properties: this.properties().map(prop => prop.expand()) });
-        }
+        },
+        $.method.new({
+          name: 'eval',
+          override: true,
+          do(transformer) {
+            const estree = transformer.transform(this);
+            const code = transformer.pretty_js(b.expressionStatement(estree));
+            return eval(code);
+          }
+        }),
+        function jsify() {
+          const obj = {};
+          this.log(this.properties());
+          for (const prop of this.properties()) {
+            obj[prop.key().jsify()] = prop.value().jsify();
+          }
+          return obj;
+        },
       ],
     });
 
@@ -904,14 +931,15 @@ $.class.new({
         $.var.new({ name: 'value' }),
         function parse(reader) {
           reader.expect('!');
-          this.name(reader.identifier());
-          reader.expect('=');
-          this.value(reader.read());
+          this.value($.map_node.new().parse(reader));
           return this;
         },
         function assign(rhs) {
           return this;
-        }
+        },
+        function print() {
+          return `!${this.value().print()}`;
+        },
       ],
     });
 
@@ -993,17 +1021,16 @@ $.class.new({
     $.class.new({
       name: 'program',
       components: [
-        $.var.new({ name: 'metas' }),
+        $.var.new({ name: 'meta' }),
         $.var.new({ name: 'forms' }),
         function parse(reader) {
           this.forms([]);
-          this.metas([]);
           try {
             while (!reader.stream().ended()) {
               const p = reader.read();
               if (p) {
                 if (p.isa($.meta_node)) {
-                  this.metas().push(p);
+                  this.meta(p);
                 } else {
                   this.forms().push(p);
                 }
@@ -1293,17 +1320,13 @@ $.class.new({
             const program = $.program.new().parse(reader);
             const estree = this.transform(program);
             const js = this.pretty_js(estree);
-            const imports = program.metas().find(m => m.name() === 'import')?.value().eval(this);
-            const jsImports = program.metas().find(m => m.name() === 'js-import')?.value().eval(this);
-            const jsDefaultImports = program.metas().find(m => m.name() === 'js-import')?.value().eval(this);
-            const importHeader = imports.map(imp => `import ${imp} from 'simulabra/${imp}';`).join('\n');
-            const jsImportHeader = jsImports?.map(jsImp => `import * as ${jsImp} from '${jsImp}'`).join('\n') ?? '';
+            const modMeta = program.meta().value().eval(this);
+            this.log(modMeta);
             const prelude = `
-${importHeader}
-${jsImportHeader}
+import base from 'simulabra/base';
 export default await base.find('class', 'module').new({
-  name: '${script.name()}',
-  imports: [${imports.join(', ')}],
+  name: '${modMeta.name}',
+  imports: ${JSON.stringify(modMeta.imports)},
   on_load(_, $) {
 `; // file cache + dynamic imports?
             const hat = '}}).load();';

@@ -1,6 +1,9 @@
-!import=(:base :lang :test :html)
-!js-import=(:http)
-$.js("import fetch from 'node-fetch'")
+!{
+  :name=:http
+  :package=:simulabra/core
+  :imports=(:lang :test :html)
+  :js-imports=(~js-glob-import{:from=:http} ~js-default-import{:from=:node-fetch :as=:fetch})
+}
 
 ~class{
   :name=:js-wrap

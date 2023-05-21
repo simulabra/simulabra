@@ -670,7 +670,8 @@ function bootstrap() {
           return v;
         } else {
           for (let imp of this.imports()) {
-            const iv = imp.find(className, name);
+            this.log(imp);
+            const iv = __.base().find('module', imp).find(className, name);
             if (iv) {
               return iv;
             }
@@ -712,7 +713,8 @@ function bootstrap() {
         if (!this.loaded() && this.on_load()) {
           this.loaded(true);
           for (const imp of this.imports()) {
-            await imp.load();
+            this.log('dynamic import', imp);
+            await import(`simulabra/${imp}`);
           }
           const om = $$().mod();
           $$().mod(this);

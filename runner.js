@@ -6,7 +6,7 @@ import lang from 'simulabra/lang';
 
 export default await base.find('class', 'module').new({
   name: 'runner',
-  imports: [base, test, lang],
+  imports: ['test', 'lang'],
   async on_load(_, $) {
     $.class.new({
       name: 'test-timer',
