@@ -8,56 +8,58 @@
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&display=swap" rel="stylesheet">
     <title>Simulabra</title>
     <style>
-        body {
-            background-color: #fbf1c7;
-            font-family: 'EB Garamond', Georgia, serif;
-            color: #3c3836;
-            margin: 0;
-            line-height: 1.4;
-        }
-
-        .title {
-            border-bottom: 1px solid #a89984;
-            padding-bottom: .2em;
-            font-style: italic;
-          margin-top: 0.5em;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 1em;
-
-            /* Centering text content */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .flex-container {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .flex-container > div {
-            flex: 1;
-            margin: 1em;
-            padding: 0em 1em;
-            background: #f2e5bc;
-            border-radius: 1em;
-          border: 1px solid #a89984;
-        }
-
-      .headline {
+      body {
+        background-color: #fbf1c7;
+        font-family: 'EB Garamond', Georgia, serif;
+        color: #3c3836;
+        margin: 0;
+        line-height: 1.5;
+        padding: 0 1em;
       }
 
-        @media screen and (max-width: 768px) {
-            .flex-container {
-                flex-direction: column;
-            }
+      .title {
+        border-bottom: 1px solid #a89984;
+        padding-bottom: .2em;
+        font-style: italic;
+        margin-top: 0.5em;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1em;
+
+        /* Centering text content */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+
+      .flex-container {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .flex-container > div {
+        flex: 1;
+        margin: 1em;
+        padding: 0em 1em;
+        background: #f2e5bc;
+        border-radius: 1em;
+        border: 1px solid #a89984;
+      }
+
+      p {
+        font-size: 1.2em;
+      }
+
+      @media screen and (max-width: 768px) {
+        .flex-container {
+          flex-direction: column;
         }
+      }
     </style>
 </head>
 <body>
@@ -79,7 +81,7 @@
                     <p>Take the agony out of actually running software with native deployments, distributed computing, and storage, whether local, self-hosted, or in the cloud.</p>
                 </div>
             </div>
-            <p>Simulabra is currently in early alpha and many parts are incomplete. Check out the <a href="https://github.com/simulabra/simulabra">source</a> for more information.</p>
+            <p class="headline">Simulabra is currently in early alpha and many parts are incomplete. Check out the <a href="https://github.com/simulabra/simulabra">source</a> for more information.</p>
         </div>
     </div>
 </body>
