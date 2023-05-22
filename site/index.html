@@ -5,27 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&family=Inter:wght@600&display=swap" rel="stylesheet">
     <title>Simulabra</title>
     <style>
+      :root {
+        --primary-color: #af3a03;
+        --body-background-color: #fbf1c7;
+        --body-font-color: #3c3836;
+        --infinite-font-color: #7C6F64;
+        --flex-container-background: #f2e5bc;
+      }
+
       body {
-        background-color: #fbf1c7;
+        background-color: var(--body-background-color);
+        border-top: 1em solid var(--primary-color);
         font-family: 'EB Garamond', Georgia, serif;
-        color: #3c3836;
+        color: var(--body-font-color);
         margin: 0;
         line-height: 1.5;
         padding: 0 1em;
       }
 
-      .title {
-        border-bottom: 1px solid #a89984;
-        padding-bottom: .2em;
+      .name {
+        font-size: 3em;
         font-style: italic;
-        margin-top: 0.5em;
+        font-family: 'Inter', sans-serif;
+        margin: 0 auto;
+        color: var(--primary-color);
+      }
+
+      .infinite {
+        font-style: italic;
+        font-family: 'Inter', sans-serif;
+        font-size: 1em;
+        color: var(--infinite-font-color);
+        margin-top: 0;
+      }
+
+      .title {
+        color: var(--primary-color);
+        font-family: 'Inter', sans-serif;
       }
 
       .container {
-        max-width: 900px;
+        max-width: 768px;
         margin: 0 auto;
         padding: 1em;
 
@@ -46,9 +69,9 @@
         flex: 1;
         margin: 1em;
         padding: 0em 1em;
-        background: #f2e5bc;
+        background: var(--flex-container-background);
         border-radius: 1em;
-        border: 1px solid #a89984;
+        border: 1px solid var(--primary-color);
       }
 
       p {
@@ -63,26 +86,33 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="content">
-            <h2 class="title">SIMULABRA: INFINITE SOFTWARE</h2>
-            <p class="headline">Simulabra is an object-oriented programming system for the Web. It's not just a programming language though: it's everything you need to make almost any kind of software, all in one place, with the help of ubiquitous artificial assistance.</p>
-            <div class="flex-container">
-                <div id="language">
-                    <h2 class="title">Language</h2>
-                    <p>A simple, uniform syntax and a fresh take on object-oriented programming make an ideal medium for sculpting ideas.</p>
-                </div>
-                <div id="editor">
-                    <h2 class="title">Editor</h2>
-                    <p>A truly integrated Web-based development environment built from the ground up with AI and malleability in mind.</p>
-                </div>
-                <div id="platform">
-                    <h2 class="title">Platform</h2>
-                    <p>Take the agony out of actually running software with native deployments, distributed computing, and storage, whether local, self-hosted, or in the cloud.</p>
-                </div>
-            </div>
-            <p class="headline">Simulabra is currently in early alpha and many parts are incomplete. Check out the <a href="https://github.com/simulabra/simulabra">source</a> for more information.</p>
+  <div class="container">
+    <div class="content">
+      <div>
+        <h2 class="name">SIMULABRA</h2>
+        <p class="infinite">the software construction kit</p>
+      </div>
+      <p class="headline">
+        Simulabra is an object-oriented programming system for the Web.
+        It has everything you need to make almost any kind of software with the help of ubiquitous artificial assistance.
+        Design, build, test, and run all in one place, whether for an AI cooking assistant, Discord bot, or multiplayer game.
+      </p>
+      <div class="flex-container">
+        <div id="language">
+          <h2 class="title">language</h2>
+          <p>A simple, uniform syntax and a fresh take on object-oriented programming make an ideal medium for sculpting ideas.</p>
         </div>
+        <div id="editor">
+          <h2 class="title">editor</h2>
+          <p>Web-based IDE built from the ground up with AI and malleability in mind, for beginners and experts alike.</p>
+        </div>
+        <div id="platform">
+          <h2 class="title">platform</h2>
+          <p>Focus on building and take the agony out of shipping software whether local, self-hosted, or in the cloud.</p>
+        </div>
+      </div>
+      <p class="headline">Simulabra is currently in early alpha and many parts are incomplete. Check out the <a href="https://github.com/simulabra/simulabra">source</a> for more information.</p>
     </div>
+  </div>
 </body>
 </html>
