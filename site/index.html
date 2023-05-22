@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulabra | Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&display=swap" rel="stylesheet">
+    <title>Simulabra</title>
     <style>
         body {
-            background-color: #f5f5dc;
-            font-family: Georgia, serif;
-            color: #333;
-            padding: 1em;
+            background-color: #fbf1c7;
+            font-family: 'EB Garamond', Georgia, serif;
+            color: #3c3836;
             margin: 0;
-            line-height: 1.6;
+            line-height: 1.4;
         }
 
         .title {
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid #a89984;
             padding-bottom: .2em;
+            font-style: italic;
+          margin-top: 0.5em;
         }
 
         .container {
@@ -40,10 +44,14 @@
         .flex-container > div {
             flex: 1;
             margin: 1em;
-            padding: 1em;
-            background: #fff;
-            border-radius: 8px;
+            padding: 0em 1em;
+            background: #f2e5bc;
+            border-radius: 1em;
+          border: 1px solid #a89984;
         }
+
+      .headline {
+      }
 
         @media screen and (max-width: 768px) {
             .flex-container {
@@ -54,23 +62,21 @@
 </head>
 <body>
     <div class="container">
-      <div class="title">
-        <h1>Simulabra</h1>
-      </div>
         <div class="content">
-            <p>Simulabra is an object-oriented programming system for the Web. It isn't just a programming language though.</p>
+            <h2 class="title">SIMULABRA: INFINITE SOFTWARE</h2>
+            <p class="headline">Simulabra is an object-oriented programming system for the Web. It's not just a programming language though: it's everything you need to make almost any kind of software, all in one place, with the help of ubiquitous artificial assistance.</p>
             <div class="flex-container">
                 <div id="language">
                     <h2 class="title">Language</h2>
-                    <p>A simple, uniform syntax and a fresh take on object-oriented programming make an ideal medium for sculpting ideas</p>
+                    <p>A simple, uniform syntax and a fresh take on object-oriented programming make an ideal medium for sculpting ideas.</p>
                 </div>
                 <div id="editor">
                     <h2 class="title">Editor</h2>
-                    <p>A truly integrated Web-based development environment built from the ground up with AI and malleability in mind</p>
+                    <p>A truly integrated Web-based development environment built from the ground up with AI and malleability in mind.</p>
                 </div>
                 <div id="platform">
                     <h2 class="title">Platform</h2>
-                    <p>Take the agony out of actually running software with native deployments, distributed computing, and storage, whether local, self-hosted, or in our cloud</p>
+                    <p>Take the agony out of actually running software with native deployments, distributed computing, and storage, whether local, self-hosted, or in the cloud.</p>
                 </div>
             </div>
             <p>Simulabra is currently in early alpha and many parts are incomplete. Check out the <a href="https://github.com/simulabra/simulabra">source</a> for more information.</p>
