@@ -9,7 +9,8 @@
     <title>Simulabra</title>
     <style>
       :root {
-        --primary-color: #af3a03;
+        --secondary-color: #af3a03;
+        --primary-color: #458588;
         --body-background-color: #fbf1c7;
         --body-font-color: #3c3836;
         --infinite-font-color: #7C6F64;
@@ -27,28 +28,29 @@
       }
 
       .name {
-        font-size: 3em;
-        font-style: italic;
-        font-family: 'Inter', sans-serif;
+        font-size: 4em;
+        /* font-style: italic;
+           font-family: 'Inter', sans-serif; */
         margin: 0 auto;
-        color: var(--primary-color);
+        /* color: var(--primary-color); */
       }
 
       .infinite {
         font-style: italic;
         font-family: 'Inter', sans-serif;
-        font-size: 1em;
         color: var(--infinite-font-color);
         margin-top: 0;
       }
 
       .title {
-        color: var(--primary-color);
+        /* color: var(--primary-color); */
+        color: var(--infinite-font-color);
         font-family: 'Inter', sans-serif;
+        margin-bottom: 0;
       }
 
       .container {
-        max-width: 768px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 1em;
 
@@ -75,7 +77,7 @@
       }
 
       p {
-        font-size: 1.2em;
+        font-size: 1.4em;
       }
 
       @media screen and (max-width: 768px) {
@@ -89,7 +91,7 @@
   <div class="container">
     <div class="content">
       <div>
-        <h2 class="name">SIMULABRA</h2>
+        <h1 class="name">Simulabra</h1>
         <p class="infinite">the software construction kit</p>
       </div>
       <p class="headline">
@@ -99,15 +101,15 @@
       </p>
       <div class="flex-container">
         <div id="language">
-          <h2 class="title">language</h2>
+          <h3 class="title">it's a language</h3>
           <p>A simple, uniform syntax and a fresh take on object-oriented programming make an ideal medium for sculpting ideas.</p>
         </div>
         <div id="editor">
-          <h2 class="title">editor</h2>
+          <h3 class="title">an editor</h3>
           <p>Web-based IDE built from the ground up with AI and malleability in mind, for beginners and experts alike.</p>
         </div>
         <div id="platform">
-          <h2 class="title">platform</h2>
+          <h3 class="title">and a platform</h3>
           <p>Focus on building and take the agony out of shipping software whether local, self-hosted, or in the cloud.</p>
         </div>
       </div>
