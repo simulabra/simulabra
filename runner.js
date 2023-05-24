@@ -1,8 +1,6 @@
 import { readdir, readFile } from 'fs/promises';
 import { join, extname } from 'path';
 import base from 'simulabra/base';
-import test from 'simulabra/test';
-import lang from 'simulabra/lang';
 
 export default await base.find('class', 'module').new({
   name: 'runner',

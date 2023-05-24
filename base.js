@@ -764,6 +764,10 @@ function bootstrap() {
         name: 'mod',
       }),
       $.var.new({
+        name: 'modules',
+        default: () => {},
+      }),
+      $.var.new({
         name: 'stack',
         debug: false,
       }),
