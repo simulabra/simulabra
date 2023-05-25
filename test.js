@@ -1,10 +1,9 @@
 import base from './base.js';
-import lang from './lang.js';
 var __ = globalThis.SIMULABRA;
 
-export default base.find('class', 'module').new({
+export default await base.find('class', 'module').new({
   name: 'test',
-  imports: [base, lang],
+  imports: [base],
   on_load(_, $) {
     $.class.new({
       name: 'case',
@@ -25,7 +24,7 @@ export default base.find('class', 'module').new({
         }),
         $.var.new({ name: 'do' }),
         $.method.new({
-          name: 'assert-eq',
+          name: 'assert_eq',
           do(a, b) {
             if (a !== b) {
               throw new Error(`assertion failed: ${a?.description()} !== ${b?.description()}`);
@@ -35,7 +34,7 @@ export default base.find('class', 'module').new({
       ]
     });
     $.class.new({
-      name: 'async-case',
+      name: 'async_case',
       components: [
         $.case,
         $.method.new({
@@ -55,4 +54,4 @@ export default base.find('class', 'module').new({
       ]
     });
   },
-});
+}).load();

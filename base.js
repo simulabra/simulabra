@@ -137,7 +137,7 @@ function bootstrap() {
         throw new Error('tried to reify without a name!');
       }
       const self = this;
-      const key = this._name.deskewer();
+      const key = this._name;
       if (!$$()._debug && this._befores.length === 0 && this._afters.length === 0) {
         proto[key] = this._primary;
       } else {
@@ -231,7 +231,7 @@ function bootstrap() {
       return this._name;
     }
     load(proto) {
-      const key = '_' + this.name().deskewer();
+      const key = '_' + this.name();
       const self = this;
       proto._add(self.name(), function (assign) {
         if (assign !== undefined) {
@@ -259,7 +259,7 @@ function bootstrap() {
   __._stack = new FrameStack();
 
   Object.prototype._add = function add(name, op) {
-    this[name.deskewer()] = op;
+    this[name] = op;
   }
   Object.prototype.eq = function (other) {
     return this === other;
@@ -282,7 +282,7 @@ function bootstrap() {
         return false;
       },
       name() {
-        return 'native-function';
+        return 'native_function';
       },
     }
   };
@@ -292,14 +292,6 @@ function bootstrap() {
   Array.prototype.description = function (seen = {}) {
     return `[${this.map(e => e.description(seen)).join(' ')}]`;
   }
-
-  String.prototype.deskewer = function () {
-    return this.replace(/-/g, '_');
-  };
-  String.prototype.skewer = function () {
-    return this.replace(/_/g, '-');
-  };
-
 
   function parametize(props, obj) {
     for (const [k, v] of Object.entries(props)) {
@@ -332,7 +324,7 @@ function bootstrap() {
       return `${this.class().description(seen)}.new${varDesc}`;
     },
     function vars() {
-      return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name().deskewer()]() }));
+      return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name()]() }));
     },
     function me() {
       return this;
@@ -428,7 +420,7 @@ function bootstrap() {
     },
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'proto' }),
-    BVar.new({ name: 'id-ctr' }),
+    BVar.new({ name: 'id_ctr' }),
     BVar.new({
       name: 'components',
       default: [],
@@ -471,7 +463,7 @@ function bootstrap() {
       BVar.new({ name: 'debug', default: true }),
       BVar.new({ name: 'trace', default: false }),
       BVar.new({ name: 'default', }),
-      BVar.new({ name: 'default-init', }),
+      BVar.new({ name: 'default_init', }),
       BVar.new({ name: 'required', }),
       function defval(ctx) {
         if (this.default() instanceof Function) {
@@ -484,7 +476,7 @@ function bootstrap() {
         return this.debug() || $debug.debug();
       },
       function combine(impl) {
-        const pk = '_' + this.name().deskewer();
+        const pk = '_' + this.name();
         var self = this;
         if (this.mutable()) {
           impl._primary = function mutableAccess(assign) {
@@ -519,9 +511,9 @@ function bootstrap() {
   });
 
   const $var_state = $class.new({
-    name: 'var-state',
+    name: 'var_state',
     components: [
-      $var.new({ name: 'var-ref' }),
+      $var.new({ name: 'var_ref' }),
       $var.new({ name: 'value' }),
       function description(seen) {
         let d;
@@ -653,7 +645,7 @@ function bootstrap() {
         default: [],
         debug: false,
       }),
-      $var.new({ name: 'on-load' }),
+      $var.new({ name: 'on_load' }),
       $var.new({ name: 'loaded', default: false }),
       $var.new({ name: 'repos', default: () => ({}) }),
       $var.new({ name: 'classes', default: () => [] }),
@@ -670,8 +662,7 @@ function bootstrap() {
           return v;
         } else {
           for (let imp of this.imports()) {
-            this.log(imp);
-            const iv = __.base().find('module', imp).find(className, name);
+            const iv = imp.find(className, name);
             if (iv) {
               return iv;
             }
@@ -685,7 +676,7 @@ function bootstrap() {
             if (p === 'then' || p === 'format') {
               return target[p];
             }
-            const v = target.find(className, p.skewer());
+            const v = target.find(className, p);
             if (v === undefined) {
               // target.log(target.repo(className))
               const err = new Error(`failed to find ~${className}#${p}`);
@@ -712,10 +703,10 @@ function bootstrap() {
       async function load() {
         if (!this.loaded() && this.on_load()) {
           this.loaded(true);
-          for (const imp of this.imports()) {
-            this.log('dynamic import', imp);
-            await import(`simulabra/${imp}`);
-          }
+          // for (const imp of this.imports()) {
+          //   this.log('dynamic import', imp);
+          //   await import(`./${imp}.js`);
+          // }
           const om = $$().mod();
           $$().mod(this);
           await this.on_load().apply(this, [this, this.proxy('class')]);
@@ -745,7 +736,7 @@ function bootstrap() {
   _.def($module);
 
   $.class.new({
-    name: 'static-var',
+    name: 'static_var',
     components: [
       $.var,
       $.after.new({
@@ -758,7 +749,7 @@ function bootstrap() {
   })
 
   $.class.new({
-    name: 'simulabra-global',
+    name: 'simulabra_global',
     components: [
       $.var.new({
         name: 'mod',
@@ -780,7 +771,7 @@ function bootstrap() {
         default: true,
       }),
       $.method.new({
-        name: 'js-new',
+        name: 'js_new',
         do(className, ...args) {
           const obj = new globalThis[className](...args);
           this.log(className, args, obj);
@@ -851,7 +842,7 @@ function bootstrap() {
 
 
   $.primitive.new({
-    name: 'object-primitive',
+    name: 'object_primitive',
     js_prototype: Object.prototype,
   });
 
@@ -860,7 +851,7 @@ function bootstrap() {
   // }
 
   $.primitive.new({
-    name: 'string-primitive',
+    name: 'string_primitive',
     js_prototype: String.prototype,
     components: [
       $.method.new({
@@ -876,7 +867,7 @@ function bootstrap() {
   });
 
   $.primitive.new({
-    name: 'boolean-primitive',
+    name: 'boolean_primitive',
     js_prototype: Boolean.prototype,
     components: [
       $method.new({
@@ -892,7 +883,7 @@ function bootstrap() {
   });
 
   $.primitive.new({
-    name: 'number-primitive',
+    name: 'number_primitive',
     js_prototype: Number.prototype,
     components: [
       function js() {
@@ -935,13 +926,13 @@ function bootstrap() {
     name: 'number',
     components: [
       function primitive() {
-        return _.find('primitive', 'number-primitive');
+        return _.find('primitive', 'number_primitive');
       }
     ]
   });
 
   $.primitive.new({
-    name: 'array-primitive',
+    name: 'array_primitive',
     js_prototype: Array.prototype,
     components: [
       function intoObject() {
@@ -964,11 +955,11 @@ function bootstrap() {
   });
 
   $.primitive.new({
-    name: 'function-primitive',
+    name: 'function_primitive',
     js_prototype: Function.prototype,
     components: [
       function description(seen = {}) {
-        return `<function-primitive ${this.name}>`;
+        return `<function_primitive ${this.name}>`;
       },
       function wrap(ctx) {
         this._closure = $.closure.new({
@@ -1020,7 +1011,7 @@ function bootstrap() {
   });
 
   $.class.new({
-    name: 'async-closure',
+    name: 'async_closure',
     components: [
       $.closure,
       $.method.new({

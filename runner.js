@@ -1,13 +1,14 @@
 import { readdir, readFile } from 'fs/promises';
 import { join, extname } from 'path';
-import base from 'simulabra/base';
+import base from './base.js';
+import test from './test.js';
 
 export default await base.find('class', 'module').new({
   name: 'runner',
-  imports: ['test', 'lang'],
+  imports: [test],
   async on_load(_, $) {
     $.class.new({
-      name: 'test-timer',
+      name: 'test_timer',
       components: [
         $.var.new({ name: 'start' }),
         $.after.new({
@@ -26,10 +27,10 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'test-runner',
+      name: 'test_runner',
       components: [
         $.var.new({
-          name: 'module-cache',
+          name: 'module_cache',
         }),
         $.var.new({
           name: 'timer',
@@ -37,12 +38,13 @@ export default await base.find('class', 'module').new({
         $.after.new({
           name: 'init',
           do() {
-            this.timer($.test_timer.new({ name: 'runner-timer' }));
+            this.timer($.test_timer.new({ name: 'runner_timer' }));
           }
         }),
         $.method.new({
-          name: 'run-mod',
-          do(mod) {
+          name: 'run_mod',
+          async: true,
+          async do(mod) {
             this.log(`run ${mod.title()}`);
             globalThis.SIMULABRA.mod(mod);
             const cases = mod.instances($.case);
@@ -50,31 +52,18 @@ export default await base.find('class', 'module').new({
               throw new Error(`no cases in module ${mod.description()}`);
             }
             for (const test_case of cases) {
-              test_case.run();
+              await test_case.run();
             }
             const n = Object.values(cases).length;
             this.log(mod.title(), `${n} test cases passed`);
           }
         }),
         $.method.new({
-          name: 'load-file',
+          name: 'load_file',
           async: true,
           async do(filePath) {
-            const ext = extname(filePath);
-            if (ext === '.js') {
-              const esm = await import('./' + filePath);
-              return esm.default;
-            } else if (ext === '.simulabra') {
-              const source = (await readFile(filePath)).toString();
-              const transformer = $.transformer.new();
-              let moduleName = filePath.replace(/\.simulabra/, '');
-              transformer.module_cache($.module_cache.inst());
-              return await $.script.new({
-                name: moduleName,
-                imports: [_],
-                source,
-              }).run(transformer);
-            }
+            const esm = await import('./' + filePath);
+            return esm.default;
           }
         }),
         $.method.new({
@@ -87,7 +76,7 @@ export default await base.find('class', 'module').new({
               const filePath = join(path, file);
               try {
                 const mod = await this.load_file(filePath);
-                this.run_mod(mod);
+                await this.run_mod(mod);
               } catch (e) {
                 this.log('failed to load module at ' + filePath);
                 throw e;
@@ -107,8 +96,6 @@ export default await base.find('class', 'module').new({
     });
 
     const runner = $.test_runner.new();
-    $.module_cache.inst().clear_out_js();
     await runner.run('tests');
-    await runner.run('core');
   }
 }).load();

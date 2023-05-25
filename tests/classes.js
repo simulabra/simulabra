@@ -3,7 +3,7 @@ import test from '../test.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
-  name: 'test-classes',
+  name: 'test_classes',
   imports: [test],
   on_load(_, $) {
     $.class.new({
@@ -12,7 +12,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'class-def',
+      name: 'class_def',
       do() {
         const b = $.basic.new();
         this.assert_eq(b.class(), $.basic);
@@ -31,7 +31,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'class-def-var',
+      name: 'class_def_var',
       do() {
         const p = $.point.new({ x: 2 });
         this.assert_eq(p.x(), 2);
@@ -39,7 +39,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'class-set-var',
+      name: 'class_set_var',
       do() {
         const p = $.point.new({ x: 2 });
         p.x(3);
@@ -48,12 +48,12 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'point-extended',
+      name: 'point_extended',
       components: [
         $.point,
         $.var.new({ name: 'phi' }),
         $.method.new({
-          name: 'phi-shift',
+          name: 'phi_shift',
           do() {
             return this.dist() * this.phi() / Math.PI;
           }
@@ -62,15 +62,15 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'class-name',
+      name: 'class_name',
       do() {
         this.assert_eq($.point.name(), 'point');
-        this.assert_eq($.point_extended.name(), 'point-extended');
+        this.assert_eq($.point_extended.name(), 'point_extended');
       }
     });
 
     $.case.new({
-      name: 'class-inheritance-phi',
+      name: 'class_inheritance_phi',
       do() {
         const pe = $.point_extended.new({ x: 3, y: 4, phi: Math.PI });
         this.assert_eq(pe.phi_shift(), 5);
@@ -87,7 +87,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'color-point',
+      name: 'color_point',
       components: [
         $.color,
         $.point,
@@ -98,7 +98,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'class-multiple-inheritance-override',
+      name: 'class_multiple_inheritance_override',
       do() {
         const cp = $.color_point.new({ r: 33, g: 55, b: 44, x: 3, y: 4 });
         this.assert_eq(cp.dist(), 5);
@@ -108,7 +108,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'before-basic',
+      name: 'before_basic',
       components: [
         $.var.new({ name: 'x', default: 0 }),
         $.method.new({
@@ -127,7 +127,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'before-basic',
+      name: 'before_basic',
       do() {
         const ab = $.before_basic.new();
         ab.bump();
@@ -136,7 +136,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'after-basic',
+      name: 'after_basic',
       components: [
         $.var.new({ name: 'x', default: 0 }),
         $.method.new({
@@ -156,7 +156,7 @@ export default await base.find('class', 'module').new({
 
 
     $.case.new({
-      name: 'after-basic',
+      name: 'after_basic',
       do() {
         const ab = $.after_basic.new();
         ab.bump();
@@ -165,7 +165,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'after-before-combined',
+      name: 'after_before_combined',
       components: [
         $.before_basic,
         $.after.new({
@@ -178,7 +178,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'after-before-combined',
+      name: 'after_before_combined',
       do() {
         const ab = $.after_before_combined.new();
         ab.bump();
@@ -187,7 +187,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'after-before-combined-method',
+      name: 'after_before_combined_method',
       components: [
         $.after_before_combined,
         $.method.new({
@@ -201,7 +201,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'after-before-combined-method',
+      name: 'after_before_combined_method',
       do() {
         const abc = $.after_before_combined_method.new();
         abc.bump();
@@ -209,7 +209,7 @@ export default await base.find('class', 'module').new({
       }
     });
     $.class.new({
-      name: 'after-multiple',
+      name: 'after_multiple',
       components: [
         $.after_basic,
         $.after.new({
@@ -222,7 +222,7 @@ export default await base.find('class', 'module').new({
     });
 
     $.case.new({
-      name: 'after-multiple',
+      name: 'after_multiple',
       do() {
 
         const am = $.after_multiple.new();

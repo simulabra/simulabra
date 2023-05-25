@@ -3,11 +3,11 @@ import test from '../test.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
-  name: 'brainfuck-interpreter',
-  imports: [test],
+  name: 'brainfuck_interpreter',
+  imports: [base, test],
   on_load(_, $) {
     $.class.new({
-      name: 'brainfuck-interpreter',
+      name: 'brainfuck_interpreter',
       components: [
         $.var.new({ name: 'code', default: '' }),
         $.var.new({ name: 'input', default: '' }),
@@ -74,7 +74,7 @@ export default await base.find('class', 'module').new({
     });
     // Test: Basic brainfuck interpreter initialization
     $.case.new({
-      name: 'interpreter-init',
+      name: 'interpreter_init',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: '++.' });
         this.assert_eq(bf.code(), '++.');
@@ -83,7 +83,7 @@ export default await base.find('class', 'module').new({
 
     // Test: Simple brainfuck program execution
     $.case.new({
-      name: 'interpreter-exec-simple',
+      name: 'interpreter_exec_simple',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: '++.' });
         bf.execute();
@@ -93,7 +93,7 @@ export default await base.find('class', 'module').new({
 
     // Test: Brainfuck program execution with loops
     $.case.new({
-      name: 'interpreter-exec-loops',
+      name: 'interpreter_exec_loops',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: '++[>++<-]>.' });
         bf.execute();
@@ -103,7 +103,7 @@ export default await base.find('class', 'module').new({
 
     // Test: Brainfuck program execution with input
     $.case.new({
-      name: 'interpreter-exec-input',
+      name: 'interpreter_exec_input',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: ',+.', input: String.fromCharCode(2) });
         bf.execute();
@@ -113,7 +113,7 @@ export default await base.find('class', 'module').new({
 
     // Test: Hello World!
     $.case.new({
-      name: 'interpreter-hello-world',
+      name: 'interpreter_hello_world',
       do() {
         const bf = $.brainfuck_interpreter.new({
           code: '++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.',
