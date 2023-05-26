@@ -14,12 +14,11 @@ export default await base.find('class', 'module').new({
         const server = $.http_server.new({
           port: 3030,
           handlers: [
-            $.request_handler.new({
+            $.path_request_handler.new({
               path: '/',
               handler(req, res) {
                 this.log('handle http request');
-                res.writeHead(200, { 'Content-type': 'text/html' });
-                res.end('<h1>hello world!!</h1>');
+                res.ok('<h1>hello world!!</h1>');
               },
             }),
           ]
