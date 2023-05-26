@@ -1,6 +1,5 @@
 import base from './base.js';
 import { createServer } from 'http';
-var __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
   name: 'http',

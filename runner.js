@@ -1,5 +1,5 @@
-import { readdir, readFile } from 'fs/promises';
-import { join, extname } from 'path';
+import { readdir } from 'fs/promises';
+import { join } from 'path';
 import base from './base.js';
 import test from './test.js';
 
@@ -20,7 +20,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'mark',
           do() {
-            return `(${+new Date() - this.start()}ms)`;
+            return `[${+new Date() - this.start()}ms]`;
           }
         }),
       ]
