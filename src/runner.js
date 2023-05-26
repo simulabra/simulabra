@@ -1,5 +1,5 @@
 import { readdir } from 'fs/promises';
-import { join } from 'path';
+import { join, dirname, relative } from 'path';
 import base from './base.js';
 import test from './test.js';
 
@@ -62,7 +62,7 @@ export default await base.find('class', 'module').new({
           name: 'load_file',
           async: true,
           async do(filePath) {
-            const esm = await import('./' + filePath);
+            const esm = await import(filePath);
             return esm.default;
           }
         }),
@@ -73,7 +73,9 @@ export default await base.find('class', 'module').new({
             const files = await readdir(path);
             for (const file of files) {
               this.log('load', file);
-              const filePath = join(path, file);
+              this.log(dirname(__dirname));
+              const filePath = join(dirname(__dirname), join(path, file));
+              this.log(filePath);
               try {
                 const mod = await this.load_file(filePath);
                 await this.run_mod(mod);

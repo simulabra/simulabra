@@ -1,5 +1,5 @@
-import base from '../base.js';
-import test from '../test.js';
+import base from '../src/base.js';
+import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
