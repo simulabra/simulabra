@@ -42,7 +42,7 @@ export default await base.find('class', 'module').new({
           override: true,
           do() {
             try {
-              this.do().apply(this);
+              return this.do().apply(this);
               // this.log('passed');
             } catch (e) {
               // demands a native error class?

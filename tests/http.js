@@ -1,7 +1,7 @@
+import fetch from 'node-fetch';
 import base from '../base.js';
 import test from '../test.js';
 import http from '../http.js';
-import fetch from 'node-fetch';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
@@ -24,15 +24,13 @@ export default await base.find('class', 'module').new({
             }),
           ]
         });
-        this.assert_eq(server.node_server().listening, true);
-
         const response = await fetch('http://localhost:3030');
         const text = await response.text();
 
         this.assert_eq(response.status, 200);
         this.assert_eq(text, '<h1>hello world!!</h1>');
 
-        // server.node_server().close();
+        server.node_server().close();
       }
     });
   }

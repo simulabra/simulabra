@@ -24,7 +24,7 @@ export default await base.find('class', 'module').new({
             this.node_server(createServer((req, res) => {
               for (const handler of this.handlers()) {
                 if (handler.path() === req.url) {
-                  handler.handler().apply(this, [req, res]);
+                  handler.handle(req, res);
                 }
               }
             }));
@@ -48,6 +48,12 @@ export default await base.find('class', 'module').new({
         $.var.new({
           name: 'handler',
         }),
+        $.method.new({
+          name: 'handle',
+          do(...args) {
+            this.handler().apply(this, args)
+          }
+        })
       ]
     });
   },

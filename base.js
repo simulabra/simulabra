@@ -173,7 +173,7 @@ function bootstrap() {
   }
 
   function nativePassthrough(name) {
-    return (typeof name === 'symbol') || ['then'].includes(name);
+    return (typeof name === 'symbol') || ['then', 'fetch'].includes(name);
   }
 
   function DebugProto() {
@@ -770,6 +770,18 @@ function bootstrap() {
         name: 'trace',
         default: true,
       }),
+      $.var.new({
+        name: 'tick',
+        default: 0,
+      }),
+      $.method.new({
+        name: 'start_ticking',
+        do() {
+          setInterval(() => {
+            this.tick(this.tick() + 1);
+          }, 16);
+        }
+      }),
       $.method.new({
         name: 'js_new',
         do(className, ...args) {
@@ -798,6 +810,7 @@ function bootstrap() {
   });
   globalThis.SIMULABRA = __;
   __.$$debug_class = $debug;
+  __.start_ticking();
 
   $.class.new({
     name: 'deffed',
