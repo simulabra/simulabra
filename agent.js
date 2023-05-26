@@ -27,7 +27,6 @@ await base.find('class', 'module').new({
         $.filetype_request_handler.new({
           filetype: 'js',
           handler(req, res) {
-            this.log(req.inner().url);
             res.ok(readFileSync('.' + req.inner().url).toString(), 'application/javascript');
           }
         }),

@@ -228,6 +228,7 @@ export default await base.find('class', 'module').new({
         const am = $.after_multiple.new();
         am.bump();
         this.assert_eq(am.x(), 4);
+        this.log($.after_multiple.src_line());
       }
     });
   }

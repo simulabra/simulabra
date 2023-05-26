@@ -89,7 +89,7 @@ export default await base.find('class', 'module').new({
           name: 'log',
           override: true,
           do(...args) {
-            this.next('log', this.timer().mark(), ...args);
+            this.next('log', this.timer()?.mark(), ...args);
           }
         }),
       ]

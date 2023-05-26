@@ -317,7 +317,14 @@ function bootstrap() {
   }
 
   const $base_components = [
-    function init() {},
+    function init() {
+      // mostly broken
+      if (globalThis.SIMULABRA._debug) {
+        const stack = (new Error()).stack;
+        const line = stack.split('\n')[2];
+        this.src_line(line);
+      }
+    },
     function description(seen) { //TODO: add depth
       const vars = this.vars().filter(v => v.value() !== v.var_ref().defval());
       const varDesc = vars.length > 0 ? `{\n${vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
@@ -357,6 +364,7 @@ function bootstrap() {
     classDef.class,
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'id' }),
+    BVar.new({ name: 'src_line' }),
   ];
 
   // const $base_proto = {};
@@ -368,6 +376,7 @@ function bootstrap() {
 
   const $class_components = [
     function init() {
+      $base_components[0].apply(this);
       this.id_ctr(0);
       this.proto(new ClassPrototype(this));
       $base_components.load(this.proto());
