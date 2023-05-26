@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Untitled</title>
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body, html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#container {
+  display: flex;
+  height: 100%;
+}
+
+.col {
+  flex: 1;
+  border: 1px solid #ddd;
+  overflow: auto;
+}
+
+#class-browser {}
+
+#code-editor {}
+
+#object-explorer, #message-log {
+  height: 50%;
+  border: 1px solid #ddd;
+}
+
+#object-explorer {}
+
+#message-log {}
+
+</style>
+</head>
+<body>
+<script type="module">
+  import base from './base.js';
+  import html from './html.js';
+  await base.find('class', 'module').new({
+    name: 'client',
+    imports: [base],
+    on_load(_, $) {
+      this.log('in client!');
+
+    }
+  }).load();
+</script>
+  <div id="container">
+    <div class="col" id="class-browser"></div>
+    <div class="col" id="code-editor"></div>
+    <div class="col">
+      <div id="object-explorer"></div>
+      <div id="message-log"></div>
+    </div>
+  </div>
+</body>
+</html>

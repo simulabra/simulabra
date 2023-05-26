@@ -12,22 +12,13 @@ export default await base.find('class', 'module').new({
         $.path_request_handler.new({
           path: '/',
           handler(req, res) {
-            res.ok(`<html><body><script type="module">
-import base from './base.js';
-await base.find('class', 'module').new({
-  name: 'client',
-  imports: [base],
-  on_load(_, $) {
-    this.log('in client!');
-  }
-}).load();
-</script></body></html>`);
+            res.ok(readFileSync('./src/bootstrap.html').toString());
           }
         }),
         $.filetype_request_handler.new({
           filetype: 'js',
           handler(req, res) {
-            res.ok(readFileSync('.' + req.inner().url).toString(), 'application/javascript');
+            res.ok(readFileSync('./src/' + req.inner().url).toString(), 'application/javascript');
           }
         }),
       ]
