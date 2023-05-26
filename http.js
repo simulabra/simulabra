@@ -25,7 +25,6 @@ export default await base.find('class', 'module').new({
               for (const handler of this.handlers()) {
                 if (handler.path() === req.url) {
                   handler.handler().apply(this, [req, res]);
-                  break; // Exit the loop after finding the correct handler
                 }
               }
             }));
@@ -33,18 +32,9 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
-          name: 'create',
-          do(port, handler) {
-            this.http_server = node_http.createServer(handler);
-            this.http_server.listen(port);
-            // this.log(`Server running at port ${port}`);
-          }
-        }),
-        $.method.new({
           name: 'close',
           do() {
             this.http_server.close();
-            // this.log('Server closed');
           }
         })
       ]

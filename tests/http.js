@@ -24,19 +24,12 @@ export default await base.find('class', 'module').new({
             }),
           ]
         });
-
-        // Assert that the server is listening
         this.assert_eq(server.node_server().listening, true);
 
-        // Fetch the route and assert the response
         const response = await fetch('http://localhost:3030');
-
         const text = await response.text();
 
-        // Assert that the response status is 200
         this.assert_eq(response.status, 200);
-
-        // Assert that the response body is as expected
         this.assert_eq(text, '<h1>hello world!!</h1>');
 
         // server.node_server().close();
