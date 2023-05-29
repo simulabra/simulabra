@@ -486,7 +486,7 @@ function bootstrap() {
       },
       function combine(impl) {
         const pk = '_' + this.name();
-        var self = this;
+        const self = this;
         if (this.mutable()) {
           impl._primary = function mutableAccess(assign) {
             if (assign !== undefined) {
@@ -885,6 +885,9 @@ function bootstrap() {
       function description() {
         return `"${this}"`;
       },
+      function to_dom() {
+        return document.createTextNode(this);
+      }
     ]
   });
 

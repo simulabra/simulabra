@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Untitled</title>
+<title>SIMULABRA</title>
 <meta name="description" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -44,10 +44,14 @@ body, html {
   import html from './html.js';
   await base.find('class', 'module').new({
     name: 'client',
-    imports: [base],
+    imports: [base, html],
     on_load(_, $) {
       this.log('in client!');
-
+      document.getElementById('message-log').appendChild($.html_element.new({
+        tag: 'h3',
+        properties: {},
+        children: ['hello from simulabra!']
+      }).to_dom());
     }
   }).load();
 </script>

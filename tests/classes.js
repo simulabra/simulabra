@@ -224,11 +224,9 @@ export default await base.find('class', 'module').new({
     $.case.new({
       name: 'after_multiple',
       do() {
-
         const am = $.after_multiple.new();
         am.bump();
         this.assert_eq(am.x(), 4);
-        this.log($.after_multiple.src_line());
       }
     });
   }

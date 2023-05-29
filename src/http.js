@@ -3,6 +3,7 @@ import { createServer } from 'http';
 
 export default await base.find('class', 'module').new({
   name: 'http',
+  package: 'simulabra',
   imports: [base],
   on_load(_, $) {
     $.class.new({
