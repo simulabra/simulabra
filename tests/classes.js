@@ -229,5 +229,25 @@ export default await base.find('class', 'module').new({
         this.assert_eq(am.x(), 4);
       }
     });
+
+    $.case.new({
+      name: 'static',
+      do() {
+        $.class.new({
+          name: 'static_test',
+          components: [
+            $.static.new({
+              name: 'frob',
+              do(n) {
+                return n * 2;
+              }
+            }),
+          ]
+        });
+
+        this.assert_eq($.static_test.frob(3), 6);
+      }
+    });
+
   }
 }).load();

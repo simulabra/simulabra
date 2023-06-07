@@ -1074,7 +1074,112 @@ function bootstrap() {
     components: [
 
     ]
-  })
+  });
+
+  $.class.new({
+    name: 'match',
+    components: [
+      $.static.new({
+        name: 'of',
+        do(input) {
+          return $.match.new({ input });
+        }
+      }),
+      $.var.new({ name: 'input' }),
+      $.var.new({ name: 'cases', default: [] }),
+      $.method.new({
+        name: 'with',
+        do(pattern, action) {
+          const newCase = $.case.new({ pattern, action });
+          this.cases().push(newCase);
+        }
+      }),
+      $.method.new({
+        name: 'exhaustive',
+        do() {
+          for (const caseInstance of this.cases()) {
+            const result = caseInstance.run(this.input());
+            if (result !== null) {
+              return result;
+            }
+          }
+          throw new Error("No match found!");
+        }
+      }),
+    ]
+  });
+
+  $.class.new({
+    name: 'case',
+    components: [
+      $.var.new({ name: 'pattern' }),
+      $.var.new({ name: 'action' }),
+      $.method.new({
+        name: 'run',
+        do(input) {
+          if (this.pattern().match(input)) {
+            return this.action()(input);
+          }
+          return null;
+        }
+      }),
+    ]
+  });
+
+  $.class.new({
+    name: 'success',
+    components: [
+      $.var.new({ name: 'value' }),
+      $.method.new({
+        name: 'ok',
+        do() {
+          return true;
+        }
+      }),
+    ]
+  });
+
+  $.class.new({
+    name: 'failure',
+    components: [
+      $.method.new({
+        name: 'ok',
+        do() {
+          return false;
+        }
+      }),
+    ]
+  });
+
+  $.class.new({
+    name: 'wildcard_pattern',
+    components: [
+      $.method.new({
+        name: 'match',
+        do(o) {
+          return $.success.new({ value: o });
+        }
+      }),
+    ]
+  });
+
+  $.class.new({
+    name: 'and_pattern',
+    components: [
+      $.var.new({ name: 'lhs' }),
+      $.var.new({ name: 'rhs' }),
+      $.method.new({
+        name: 'match',
+        do(o) {
+          const ml = this.lhs().match(o);
+          if (!ml.ok()) { return ml; }
+          const rl = this.rhs().match(o);
+          if (!rl.ok()) { return rl; }
+          return $.success.new({ value: o });
+        }
+      }),
+    ]
+  });
 
   return _;
 }
