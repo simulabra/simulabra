@@ -20,7 +20,14 @@ function bootstrap() {
     },
     display() {
 
-    }
+    },
+    register(o) {
+      const u = o.uri();
+      this._tracked[u] = {};
+      this._objects.set(this._tracked[u], o);
+    },
+    _tracked: {},
+    _objects: new WeakMap(),
   };
   __ = globalThis.SIMULABRA;
 
@@ -324,6 +331,8 @@ function bootstrap() {
         const line = stack.split('\n')[2];
         this.src_line(line);
       }
+
+      globalThis.SIMULABRA.register(this);
     },
     function description(seen) { //TODO: add depth
       const vars = this.vars().filter(v => v.value() !== v.var_ref().defval());
@@ -336,8 +345,14 @@ function bootstrap() {
     function me() {
       return this;
     },
+    function uid() {
+      return this.name() ?? this.id();
+    },
     function title() {
-      return `${this.class().description()}#${this.name() ?? this.id()}`;
+      return `${this.class().description()}#${this.uid()}`;
+    },
+    function uri() {
+      return `simulabra://localhost/${this.class().name()}/${this.uid()}`;
     },
     function log(...args) {
       $debug?.log(this.title(), ...args);
@@ -843,7 +858,21 @@ function bootstrap() {
       },
       function base() {
         return _;
-      }
+      },
+      function register(o) {
+        const u = o.uri();
+        this.log('register', u);
+        this._tracked[u] = {};
+        this._objects.set(this._tracked[u], o);
+      },
+      function live_objects() {
+        this.log(this.tracked());
+        for (const u of Object.keys(this.tracked())) {
+          this.log('key', u);
+        }
+      },
+      $.var.new({ name: 'tracked' }),
+      $.var.new({ name: 'objects' }),
     ]
   });
 
@@ -852,7 +881,10 @@ function bootstrap() {
     mod: _,
     base_mod: _,
     bootstrapped: true,
+    tracked: globalThis.SIMULABRA._tracked,
+    objects: globalThis.SIMULABRA._objects,
   });
+
   __.handle('log', args => console.log(...args));
   globalThis.SIMULABRA = __;
   __.$$debug_class = $debug;
