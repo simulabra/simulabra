@@ -30,6 +30,7 @@ body, html {
 #object-explorer, #message-log {
   height: 50%;
   border: 1px solid #ddd;
+  overflow: auto;
 }
 
 #object-explorer {}
@@ -52,6 +53,11 @@ body, html {
       mlog.add('message one!');
       mlog.add('message two!');
       __.live_objects();
+      const exp = $.object_explorer.new({
+        element: document.getElementById('object-explorer'),
+        click(e) { mlog.add(__.deref(this.children()[0]).description()) },
+      });
+      Object.keys(__.tracked()).forEach(k => exp.add(k));
     }
   }).load();
 </script>

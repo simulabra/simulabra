@@ -861,14 +861,16 @@ function bootstrap() {
       },
       function register(o) {
         const u = o.uri();
-        this.log('register', u);
         this._tracked[u] = {};
         this._objects.set(this._tracked[u], o);
+      },
+      function deref(u) {
+        return this.objects().get(this.tracked()[u]);
       },
       function live_objects() {
         this.log(this.tracked());
         for (const u of Object.keys(this.tracked())) {
-          this.log('key', u);
+          this.log('key', u, this.objects().get(this.tracked()[u]));
         }
       },
       $.var.new({ name: 'tracked' }),
