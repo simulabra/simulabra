@@ -46,12 +46,15 @@ body, html {
     name: 'client',
     imports: [base, html],
     on_load(_, $) {
+      const __ = globalThis.SIMULABRA;
+      __.handle('log', args => {
+        document.getElementById('message-log').appendChild($.html_element.new({
+          tag: 'div',
+          properties: {},
+          children: [args.map(a => a.toString()).join(' ')],
+        }).to_dom());
+      });
       this.log('in client!');
-      document.getElementById('message-log').appendChild($.html_element.new({
-        tag: 'h3',
-        properties: {},
-        children: ['hello from simulabra!']
-      }).to_dom());
     }
   }).load();
 </script>

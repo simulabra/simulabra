@@ -592,7 +592,7 @@ function bootstrap() {
         do: function log(...args) {
           // const stack = (new Error).stack;
           // const source = stack.split('\n')[2];
-          console.log(...this.format(...args));
+          $$().dispatch('log', args);
           return this;
         }
       }),
@@ -783,6 +783,10 @@ function bootstrap() {
         name: 'tick',
         default: 0,
       }),
+      $.var.new({
+        name: 'handlers',
+        default: {},
+      }),
       $.method.new({
         name: 'start_ticking',
         do() {
@@ -797,6 +801,34 @@ function bootstrap() {
           const obj = new globalThis[className](...args);
           this.log(className, args, obj);
           return obj;
+        }
+      }),
+      $.method.new({
+        name: 'get_handlers',
+        do(name) {
+          if (name in this.handlers()) {
+            return this.handlers()[name];
+          } else {
+            console.log('no handlers for ' + name);
+            return [];
+          }
+        }
+      }),
+      $.method.new({
+        name: 'handle',
+        do(name, fn) {
+          if (this.handlers()[name] === undefined) {
+            this.handlers()[name] = [];
+          }
+          this.handlers()[name].push(fn);
+        }
+      }),
+      $.method.new({
+        name: 'dispatch',
+        do(name, data) {
+          for (const handler of this.get_handlers(name)) {
+            handler(data);
+          }
         }
       }),
       function js_get(obj, p) {
@@ -817,6 +849,7 @@ function bootstrap() {
     base_mod: _,
     bootstrapped: true,
   });
+  __.handle('log', args => console.log(...args));
   globalThis.SIMULABRA = __;
   __.$$debug_class = $debug;
   __.start_ticking();
