@@ -26,5 +26,22 @@ export default await base.find('class', 'module').new({
         })
       ]
     });
+
+    $.class.new({
+      name: 'message_log',
+      components: [
+        $.var.new({ name: 'element' }),
+        $.method.new({
+          name: 'add',
+          do(message) {
+            this.element().appendChild($.html_element.new({
+              tag: 'div',
+              properties: {},
+              children: [message],
+            }).to_dom());
+          }
+        }),
+      ]
+    });
   }
 }).load();

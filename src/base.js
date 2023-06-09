@@ -390,6 +390,10 @@ function bootstrap() {
         v.load(target);
       }
     },
+    function extend(comp) {
+      comp.load(this.proto());
+      this.proto()._reify();
+    },
     function defaultInitSlot(slot, dval) {
       const pk = '_' + slot;
       if (!(pk in this)) {

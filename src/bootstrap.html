@@ -47,14 +47,10 @@ body, html {
     imports: [base, html],
     on_load(_, $) {
       const __ = globalThis.SIMULABRA;
-      __.handle('log', args => {
-        document.getElementById('message-log').appendChild($.html_element.new({
-          tag: 'div',
-          properties: {},
-          children: [args.map(a => a.toString()).join(' ')],
-        }).to_dom());
-      });
+      const mlog = $.message_log.new({ element: document.getElementById('message-log') });
       this.log('in client!');
+      mlog.add('message one!');
+      mlog.add('message two!');
     }
   }).load();
 </script>

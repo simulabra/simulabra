@@ -249,5 +249,31 @@ export default await base.find('class', 'module').new({
       }
     });
 
+    $.case.new({
+      name: 'basic extend',
+      do() {
+        $.class.new({
+          name: 'ext1',
+          components: [
+            $.method.new({
+              name: 'p',
+              do() {}
+            }),
+          ]
+        });
+        let x = 0;
+        $.ext1.extend($.after.new({
+          name: 'p',
+          do() {
+            x++;
+          }
+        }));
+        let e = $.ext1.new();
+        this.assert_eq(x, 0);
+        e.p();
+        this.assert_eq(x, 1);
+      }
+    });
+
   }
 }).load();
