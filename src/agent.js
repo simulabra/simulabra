@@ -1,5 +1,6 @@
 import base from './base.js';
 import http from './http.js';
+import transform from './transform';
 import { readFileSync } from 'fs';
 
 export default await base.find('class', 'module').new({
@@ -18,7 +19,9 @@ export default await base.find('class', 'module').new({
         $.filetype_request_handler.new({
           filetype: 'js',
           handler(req, res) {
-            res.ok(readFileSync('./src/' + req.inner().url).toString(), 'application/javascript');
+            // TODO: apply transform here?
+            res.ok(transform('./src/' + req.inner().url), 'application/javascript');
+            // <a href="#">test</a>
           }
         }),
       ]

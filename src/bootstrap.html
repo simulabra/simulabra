@@ -53,8 +53,8 @@ body, html {
       mlog.add('message one!');
       mlog.add('message two!');
       __.live_objects();
-      const exp = $.object_explorer.new({
-        element: document.getElementById('object-explorer'),
+      const exp = $.object_browser.new({
+        element: document.getElementById('object-browser'),
         click(e) { mlog.add(__.deref(this.children()[0]).description()) },
       });
       Object.keys(__.tracked()).forEach(k => exp.add(k));
@@ -62,7 +62,7 @@ body, html {
   }).load();
 </script>
   <div id="container">
-    <div class="col" id="class-browser"></div>
+    <div class="col" id="object-browser"></div>
     <div class="col" id="code-editor"></div>
     <div class="col">
       <div id="object-explorer"></div>

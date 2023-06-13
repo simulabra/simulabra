@@ -1,4 +1,4 @@
-import base from './base.js';
+import base from './base';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
@@ -38,10 +38,31 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'add',
           do(message) {
+            this.element().appendChild(<div>{message}</div>);
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'object_browser',
+      components: [
+        $.var.new({ name: 'element' }),
+        $.var.new({ name: 'click' }),
+        $.method.new({
+          name: 'add',
+          do(u) {
+            // <div><a href="#" onclick={this.click()}>u</a></div>
             this.element().appendChild($.html_element.new({
               tag: 'div',
-              properties: {},
-              children: [message],
+              children: [$.html_element.new({
+                tag: 'a',
+                properties: { href: '#' },
+                events: {
+                  click: this.click(),
+                },
+                children: [u],
+              })]
             }).to_dom());
           }
         }),
@@ -52,17 +73,14 @@ export default await base.find('class', 'module').new({
       name: 'object_explorer',
       components: [
         $.var.new({ name: 'element' }),
-        $.var.new({ name: 'click' }),
-        $.method.new({
-          name: 'add',
-          do(u) {
+        $.var.new({ name: 'object' }),
+        $.after.new({
+          name: 'init',
+          do() {
+            // <div>{this.object().name()}</div>
             this.element().appendChild($.html_element.new({
               tag: 'div',
-              properties: {},
-              events: {
-                click: this.click(),
-              },
-              children: [u],
+              children: [this.object().name()]
             }).to_dom());
           }
         }),
@@ -70,3 +88,10 @@ export default await base.find('class', 'module').new({
     });
   }
 }).load();
+
+/*
+I want to make a JSX-like transformer for my object framework as a shorthand for creating dynamic HTML elements.
+```
+```
+Take me through what a basic implementation would look like,
+ */
