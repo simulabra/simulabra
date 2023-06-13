@@ -1,4 +1,4 @@
-import base from './base';
+import base from './base.js';
 import { createServer } from 'http';
 
 export default await base.find('class', 'module').new({
@@ -110,11 +110,13 @@ export default await base.find('class', 'module').new({
       components: [
         $.request_handler,
         $.var_handler,
-        $.var.new({ name: 'filetype' }),
+        $.var.new({ name: 'filetypes' }),
         $.method.new({
           name: 'match',
           do(url) {
-            return new RegExp(`\.${this.filetype()}$`).test(url);
+            const filetype = /\.([^\.]+)$/.exec(url)[1];
+            this.log(filetype, this.filetypes());
+            return this.filetypes().includes(filetype);
           }
         }),
       ]

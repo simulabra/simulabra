@@ -42,7 +42,7 @@ body, html {
 <body>
 <script type="module">
   import base from './base.js';
-  import html from './html.js';
+  import html from './html.jsx';
   await base.find('class', 'module').new({
     name: 'client',
     imports: [base, html],

@@ -17,9 +17,10 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.filetype_request_handler.new({
-          filetype: 'js',
+          filetypes: ['js', 'jsx'],
           handler(req, res) {
             // TODO: apply transform here?
+            console.log('handle', req.inner().url);
             res.ok(transform('./src/' + req.inner().url), 'application/javascript');
             // <a href="#">test</a>
           }
