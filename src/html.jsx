@@ -53,7 +53,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'add',
           do(message) {
-            this.element().appendChild(<div>message</div>);
+            this.element().appendChild(<div>{message}</div>);
           }
         }),
       ]
@@ -67,18 +67,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'add',
           do(u) {
-            this.element().appendChild(<div><a href="#" onclick={this.click()}>u</a></div>);
-            // this.element().appendChild($.html_element.new({
-            //   tag: 'div',
-            //   children: [$.html_element.new({
-            //     tag: 'a',
-            //     properties: { href: '#' },
-            //     events: {
-            //       click: this.click(),
-            //     },
-            //     children: [u],
-            //   })]
-            // }).to_dom());
+            this.element().appendChild(<div><a href="#" object={u} onclick={this.click()}>{globalThis.SIMULABRA.deref(u).title()}</a></div>);
           }
         }),
       ]
@@ -92,21 +81,10 @@ export default await base.find('class', 'module').new({
         $.after.new({
           name: 'init',
           do() {
-            // <div>{this.object().name()}</div>
-            this.element().appendChild($.html_element.new({
-              tag: 'div',
-              children: [this.object().name()]
-            }).to_dom());
+            this.element().appendChild(<div>{this.object().name()}</div>);
           }
         }),
       ]
     });
   }
 }).load();
-
-/*
-I want to make a JSX-like transformer for my object framework as a shorthand for creating dynamic HTML elements.
-```
-```
-Take me through what a basic implementation would look like,
- */

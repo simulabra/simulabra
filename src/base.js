@@ -868,10 +868,10 @@ function bootstrap() {
         return this.objects().get(this.tracked()[u]);
       },
       function live_objects() {
-        this.log(this.tracked());
-        for (const u of Object.keys(this.tracked())) {
-          this.log('key', u, this.objects().get(this.tracked()[u]));
-        }
+        // this.log(this.tracked());
+        // for (const u of Object.keys(this.tracked())) {
+        //   this.log('key', u, this.objects().get(this.tracked()[u]));
+        // }
       },
       $.var.new({ name: 'tracked' }),
       $.var.new({ name: 'objects' }),

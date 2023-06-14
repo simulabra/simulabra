@@ -55,7 +55,7 @@ body, html {
       __.live_objects();
       const exp = $.object_browser.new({
         element: document.getElementById('object-browser'),
-        click(e) { mlog.add(__.deref(this.children()[0]).description()) },
+        click(e) { mlog.add(__.deref(this.properties().object).title()) },
       });
       Object.keys(__.tracked()).forEach(k => exp.add(k));
     }

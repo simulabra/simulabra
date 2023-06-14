@@ -12,55 +12,64 @@ function jsxAttribute(node) {
 }
 
 function jsx(node) {
-  const exp = b.callExpression(
-    b.memberExpression(
-      b.callExpression(
-        b.memberExpression(
+  if (node.type === 'JSXElement') {
+    const exp = b.callExpression(
+      b.memberExpression(
+        b.callExpression(
           b.memberExpression(
-            b.identifier('$'),
-            b.identifier('html_element'),
+            b.memberExpression(
+              b.identifier('$'),
+              b.identifier('html_element'),
+              false
+            ),
+            b.identifier('new'),
             false
           ),
-          b.identifier('new'),
-          false
+          [
+            b.objectExpression([
+              b.property(
+                'init',
+                b.identifier('tag'),
+                b.literal('div')
+              ),
+              b.property(
+                'init',
+                b.identifier('properties'),
+                b.objectExpression([])
+              ),
+              b.property(
+                'init',
+                b.identifier('children'),
+                b.arrayExpression([])
+              )
+            ])
+          ]
         ),
-        [
-          b.objectExpression([
-            b.property(
-              'init',
-              b.identifier('tag'),
-              b.literal('div')
-            ),
-            b.property(
-              'init',
-              b.identifier('properties'),
-              b.objectExpression([])
-            ),
-            b.property(
-              'init',
-              b.identifier('children'),
-              b.arrayExpression([])
-            )
-          ])
-        ]
+        b.identifier('to_dom'),
+        false
       ),
-      b.identifier('to_dom'),
-      false
-    ),
-    []
-  );
+      []
+    );
 
-  exp.callee.object.arguments[0].properties[0].value.value = node.openingElement.name.name;
-  exp.callee.object.arguments[0].properties[1].value.properties = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));
-  exp.callee.object.arguments[0].properties[2].value.elements = node.children.map(c => nodemap(c));
+    exp.callee.object.arguments[0].properties[0].value.value = node.openingElement.name.name;
+    exp.callee.object.arguments[0].properties[1].value.properties = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));
+    exp.callee.object.arguments[0].properties[2].value.elements = node.children.map(c => nodemap(c));
 
-  return exp;
+    return exp;
+  } else if (node.type === 'JSXText') {
+    return b.literal(node.value);
+  } else if (node.type === 'JSXExpressionContainer') {
+    return node.expression;
+  } else {
+    globalThis.SIMULABRA.log('not handled', node);
+    return node;
+  }
 
 }
 
 function nodemap(node) {
   let newnode;
-  if ('type' in node && node.type === 'JSXElement') {
+  if ('type' in node && node.type.indexOf('JSX') === 0) {
     newnode = jsx(node);
   } else if (Array.isArray(node)) {
     newnode = [ ...node ];
