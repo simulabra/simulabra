@@ -3,6 +3,13 @@ import { prettyPrint, types } from 'recast';
 const b = types.builders;
 import { existsSync, readFileSync } from 'fs';
 
+function jsxAttribute(node) {
+  if (node.type === 'JSXExpressionContainer') {
+    return node.expression;
+  } else {
+    return node;
+  }
+}
 
 function jsx(node) {
   const exp = b.callExpression(
@@ -42,7 +49,10 @@ function jsx(node) {
     ),
     []
   );
+  console.log(node);
 
+  exp.callee.object.arguments[0].properties[0].value.value = node.openingElement.name.name;
+  exp.callee.object.arguments[0].properties[1].value.properties = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));
   exp.callee.object.arguments[0].properties[2].value.elements = node.children.map(c => nodemap(c));
 
   return exp;

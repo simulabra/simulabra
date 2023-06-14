@@ -24,7 +24,6 @@ export default await base.find('class', 'module').new({
                 if (typeof node === 'object' && 'type' in node && typeof node.type === 'string') {
                   return node;
                 } else {
-                  this.log(node);
                   return node.to_dom();
                 }
               }
@@ -60,18 +59,18 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'add',
           do(u) {
-            // <div><a href="#" onclick={this.click()}>u</a></div>
-            this.element().appendChild($.html_element.new({
-              tag: 'div',
-              children: [$.html_element.new({
-                tag: 'a',
-                properties: { href: '#' },
-                events: {
-                  click: this.click(),
-                },
-                children: [u],
-              })]
-            }).to_dom());
+            this.element().appendChild(<div><a href="#" onclick={this.click()}>u</a></div>);
+            // this.element().appendChild($.html_element.new({
+            //   tag: 'div',
+            //   children: [$.html_element.new({
+            //     tag: 'a',
+            //     properties: { href: '#' },
+            //     events: {
+            //       click: this.click(),
+            //     },
+            //     children: [u],
+            //   })]
+            // }).to_dom());
           }
         }),
       ]
