@@ -17,7 +17,15 @@ export default await base.find('class', 'module').new({
           do() {
             const elem = document.createElement(this.tag());
             for (const prop of Object.keys(this.properties())) {
-              elem.setAttribute(prop, this.properties()[prop]);
+              if (prop.indexOf('on') === 0) {
+                const fn = this.properties()[prop];
+                const self = this;
+                elem.addEventListener(prop.slice(2), e => {
+                  fn.apply(self, [e]);
+                });
+              } else {
+                elem.setAttribute(prop, this.properties()[prop]);
+              }
             }
             for (const child of this.children()) {
               const domify = (node) => {
