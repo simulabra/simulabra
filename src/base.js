@@ -268,9 +268,9 @@ function bootstrap() {
   Object.prototype._add = function add(name, op) {
     this[name] = op;
   }
-  Object.prototype.eq = function (other) {
-    return this === other;
-  }
+  // Object.prototype.eq = function (other) {
+  //   return this === other;
+  // }
   Function.prototype.load = function (proto) {
     proto._add(this.name, this);
   };

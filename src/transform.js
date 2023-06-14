@@ -3,8 +3,50 @@ import { prettyPrint, types } from 'recast';
 const b = types.builders;
 import { existsSync, readFileSync } from 'fs';
 
+
 function jsx(node) {
-  return b.identifier('jsx');
+  const exp = b.callExpression(
+    b.memberExpression(
+      b.callExpression(
+        b.memberExpression(
+          b.memberExpression(
+            b.identifier('$'),
+            b.identifier('html_element'),
+            false
+          ),
+          b.identifier('new'),
+          false
+        ),
+        [
+          b.objectExpression([
+            b.property(
+              'init',
+              b.identifier('tag'),
+              b.literal('div')
+            ),
+            b.property(
+              'init',
+              b.identifier('properties'),
+              b.objectExpression([])
+            ),
+            b.property(
+              'init',
+              b.identifier('children'),
+              b.arrayExpression([])
+            )
+          ])
+        ]
+      ),
+      b.identifier('to_dom'),
+      false
+    ),
+    []
+  );
+
+  exp.callee.object.arguments[0].properties[2].value.elements = node.children.map(c => nodemap(c));
+
+  return exp;
+
 }
 
 function nodemap(node) {
