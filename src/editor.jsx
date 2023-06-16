@@ -79,8 +79,12 @@ export default await base.find('class', 'module').new({
           override: true,
           do() {
             this.inner(...<>
-              {this.browser()}
-              <div>Code here</div>
+              <div class="col">
+                {this.browser()}
+              </div>
+              <div class="col">
+                <div className="code_editor">Code here</div>
+              </div>
               <div class="col">
                 {this.explorer()}
                 {this.messages()}
