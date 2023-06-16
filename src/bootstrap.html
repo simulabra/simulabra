@@ -42,22 +42,13 @@ body, html {
 <body>
 <script type="module">
   import base from './base.js';
-  import html from './html.jsx';
+  import editor from './editor.jsx';
   await base.find('class', 'module').new({
     name: 'client',
-    imports: [base, html],
+    imports: [base, editor],
     on_load(_, $) {
       const __ = globalThis.SIMULABRA;
-      const mlog = $.message_log.new({ element: document.getElementById('message-log') });
-      this.log('in client!');
-      mlog.add('message one!');
-      mlog.add('message two!');
-      __.live_objects();
-      const exp = $.object_browser.new({
-        element: document.getElementById('object-browser'),
-        click(e) { mlog.add(__.deref(this.properties().object).title()) },
-      });
-      Object.keys(__.tracked()).forEach(k => exp.add(k));
+      $.editor.new();
     }
   }).load();
 </script>

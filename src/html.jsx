@@ -1,10 +1,38 @@
 import base from './base.js';
-const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
   name: 'html',
   imports: [base],
   async on_load(_, $) {
+    const __ = globalThis.SIMULABRA;
+
+    $.class.new({
+      name: 'component',
+      components: [
+        $.var.new({
+          name: 'element',
+        }),
+        $.method.new({
+          name: 'to_dom',
+          do() {
+            return this.render().to_dom();
+          }
+        }),
+        $.after.new({
+          name: 'init',
+          do() {
+            this.element(this.to_dom());
+          }
+        }),
+        $.method.new({
+          name: 'container',
+          do() {
+            return <div ref={this.uri()}></div>
+          }
+        }),
+      ]
+    });
+
     $.class.new({
       name: 'html_element',
       components: [
@@ -46,45 +74,5 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'message_log',
-      components: [
-        $.var.new({ name: 'element' }),
-        $.method.new({
-          name: 'add',
-          do(message) {
-            this.element().appendChild(<div>{message}</div>);
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'object_browser',
-      components: [
-        $.var.new({ name: 'element' }),
-        $.var.new({ name: 'click' }),
-        $.method.new({
-          name: 'add',
-          do(u) {
-            this.element().appendChild(<div><a href="#" object={u} onclick={this.click()}>{globalThis.SIMULABRA.deref(u).title()}</a></div>);
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'object_explorer',
-      components: [
-        $.var.new({ name: 'element' }),
-        $.var.new({ name: 'object' }),
-        $.after.new({
-          name: 'init',
-          do() {
-            this.element().appendChild(<div>{this.object().name()}</div>);
-          }
-        }),
-      ]
-    });
   }
 }).load();

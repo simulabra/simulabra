@@ -13,49 +13,57 @@ function jsxAttribute(node) {
 
 function jsx(node) {
   if (node.type === 'JSXElement') {
-    const exp = b.callExpression(
-      b.memberExpression(
-        b.callExpression(
+    const tag = node.openingElement.name.name;
+    const props = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));
+    if (tag[0] === '$') {
+      return b.callExpression(
+        b.memberExpression(
           b.memberExpression(
-            b.memberExpression(
-              b.identifier('$'),
-              b.identifier('html_element'),
-              false
-            ),
-            b.identifier('new'),
+            b.identifier('$'),
+            b.identifier(tag.slice(1)),
             false
           ),
-          [
-            b.objectExpression([
-              b.property(
-                'init',
-                b.identifier('tag'),
-                b.literal('div')
-              ),
-              b.property(
-                'init',
-                b.identifier('properties'),
-                b.objectExpression([])
-              ),
-              b.property(
-                'init',
-                b.identifier('children'),
-                b.arrayExpression([])
-              )
-            ])
-          ]
+          b.identifier('new'),
+          false
         ),
-        b.identifier('to_dom'),
-        false
-      ),
-      []
-    );
-
-    exp.callee.object.arguments[0].properties[0].value.value = node.openingElement.name.name;
-    exp.callee.object.arguments[0].properties[1].value.properties = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));
-    exp.callee.object.arguments[0].properties[2].value.elements = node.children.map(c => nodemap(c));
-
-    return exp;
+        [
+          b.objectExpression(props),
+        ]
+      );
+    } else {
+      const properties = props;
+      const children = node.children.map(c => nodemap(c));
+      return b.callExpression(
+        b.memberExpression(
+          b.memberExpression(
+            b.identifier('$'),
+            b.identifier('html_element'),
+            false
+          ),
+          b.identifier('new'),
+          false
+        ),
+        [
+          b.objectExpression([
+            b.property(
+              'init',
+              b.identifier('tag'),
+              b.literal(tag)
+            ),
+            b.property(
+              'init',
+              b.identifier('properties'),
+              b.objectExpression(properties)
+            ),
+            b.property(
+              'init',
+              b.identifier('children'),
+              b.arrayExpression(children)
+            )
+          ])
+        ]
+      );
+    }
   } else if (node.type === 'JSXText') {
     return b.literal(node.value);
   } else if (node.type === 'JSXExpressionContainer') {
