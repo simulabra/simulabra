@@ -72,10 +72,8 @@ export default await base.find('class', 'module').new({
           async do(path) {
             const files = await readdir(path);
             for (const file of files) {
-              this.log('load', file);
-              this.log(dirname(__dirname));
+              // this.log('load', file);
               const filePath = join(dirname(__dirname), join(path, file));
-              this.log(filePath);
               try {
                 const mod = await this.load_file(filePath);
                 await this.run_mod(mod);

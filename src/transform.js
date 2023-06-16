@@ -68,6 +68,8 @@ function jsx(node) {
     return b.literal(node.value);
   } else if (node.type === 'JSXExpressionContainer') {
     return node.expression;
+  } else if (node.type === 'JSXFragment') {
+    return b.arrayExpression(node.children);
   } else {
     globalThis.SIMULABRA.log('not handled', node);
     return node;

@@ -9,25 +9,49 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'component',
       components: [
+        $.method.new({
+          name: 'container',
+          do() {
+            return <div class={this.class().name()} ref={this.uri()}></div>
+          }
+        }),
+        $.method.new({
+          name: 'inner',
+          do(...objs) {
+            this.element(this.container());
+            this.element().children(objs);
+          }
+        }),
         $.var.new({
           name: 'element',
         }),
         $.method.new({
+          name: 'render',
+          do() {
+            this.element().children(this.children());
+          }
+        }),
+        $.var.new({
+          name: 'children',
+          default: []
+        }),
+        $.method.new({
           name: 'to_dom',
           do() {
-            return this.render().to_dom();
+            this.render();
+            return this.element().to_dom();
+          }
+        }),
+        $.method.new({
+          name: 'add_child',
+          do(child) {
+            this.children().push(child);
           }
         }),
         $.after.new({
           name: 'init',
           do() {
-            this.element(this.to_dom());
-          }
-        }),
-        $.method.new({
-          name: 'container',
-          do() {
-            return <div ref={this.uri()}></div>
+            this.element(this.container());
           }
         }),
       ]
@@ -39,10 +63,12 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'tag', default: 'div' }),
         $.var.new({ name: 'properties', default: {} }),
         $.var.new({ name: 'events', default: {} }),
-        $.var.new({ name: 'children', default: () => [] }),
+        $.var.new({ name: 'children', default: [] }),
         $.method.new({
           name: 'to_dom',
+          override: true,
           do() {
+            this.log(this);
             const elem = document.createElement(this.tag());
             for (const prop of Object.keys(this.properties())) {
               if (prop.indexOf('on') === 0) {
@@ -57,8 +83,11 @@ export default await base.find('class', 'module').new({
             }
             for (const child of this.children()) {
               const domify = (node) => {
+                console.log(node);
                 if (typeof node === 'object' && 'type' in node && typeof node.type === 'string') {
                   return node;
+                } else if (typeof node === 'string') {
+                  return document.createTextNode(node);
                 } else {
                   return node.to_dom();
                 }

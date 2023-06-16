@@ -9,20 +9,14 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'message_log',
-      slots: [
+      components: [
         $.component,
         $.var.new({ name: 'message_list', default: [] }),
         $.method.new({
           name: 'add',
           do(message) {
             this.message_list().push(message);
-            this.element().appendChild(<div>{message}</div>);
-          }
-        }),
-        $.method.new({
-          name: 'render',
-          do() {
-            return this.message_list().map(m => m.render());
+            this.add_child(<div>{message}</div>);
           }
         }),
       ]
@@ -36,7 +30,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'add',
           do(u) {
-            this.element().appendChild(<div><a href="#" object={u} onclick={this.click()}>{__.deref(u).title()}</a></div>);
+            this.add_child(<div><a href="#" object={u} onclick={this.click()}>{__.deref(u).title()}</a></div>);
           }
         }),
       ]
@@ -50,7 +44,7 @@ export default await base.find('class', 'module').new({
         $.after.new({
           name: 'init',
           do() {
-            this.element().appendChild(<div>{this.object().name()}</div>);
+            this.children([<div>{this.object()?.name() ?? '<none>'}</div>]);
           }
         }),
       ]
@@ -59,7 +53,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'editor',
       components: [
-        $.after.new({
+        $.before.new({
           name: 'init',
           do() {
             let self = this;
@@ -68,9 +62,12 @@ export default await base.find('class', 'module').new({
               click(e) { self.messages.add(__.deref(this.properties().object).title()) }
             }));
             this.explorer($.object_explorer.new());
-            Object.keys(__.tracked()).forEach(k => this.explorer().add(k));
+            Object.keys(__.tracked()).forEach(k => this.browser().add(k));
 
             this.messages().add('hello there!');
+            this.messages().render();
+            this.browser().render();
+            this.explorer().render();
           }
         }),
         $.component,
@@ -79,12 +76,16 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'explorer' }),
         $.method.new({
           name: 'render',
+          override: true,
           do() {
-            return <div ref={this.uri()}>
-                     {this.messages().render()}
-                     {this.browser().render()}
-                     {this.explorer().render()}
-                   </div>
+            this.inner(...<>
+              {this.browser()}
+              <div>Code here</div>
+              <div class="col">
+                {this.explorer()}
+                {this.messages()}
+              </div>
+            </>);
           }
         }),
       ]
