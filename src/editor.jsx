@@ -7,55 +7,32 @@ export default await base.find('class', 'module').new({
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
-    $.class.new({
-      name: 'message_log',
-      slots: [
-        $.component,
-        $.var.new({ name: 'message_list', default: [] }),
-        $.method.new({
-          name: 'add',
-          do(message) {
-            this.message_list().push(message);
-            this.add_child(<div>{message}</div>);
-          }
-        }),
-      ]
-    });
+    <$class name="message_log">
+      <$$component />
+      <$var name="message_list" default={[]} />
+      <$method name="add"
+        do={function add(message) {
+          this.message_list().push(message);
+          this.children([<div>{message}</div>]);
+        }}
+      />
+    </$class>;
 
-    $.class.new({
-      name: 'object_browser',
-      slots: [
-        $.component,
-        $.var.new({ name: 'click' }),
-        $.var.new({ name: 'objects' }),
-        $.after.new({
-          name: 'init',
-          do() {
-            this.linkify();
-          }
-        }),
-        $.method.new({
-          name: 'linkify',
-          do() {
-            this.children(this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>));
-          }
-        }),
-      ]
-    });
-
-    // $.class.new({
-    //   name: 'object_explorer',
-    //   slots: [
-    //     $.component,
-    //     $.var.new({ name: 'object' }),
-    //     $.after.new({
-    //       name: 'init',
-    //       do() {
-    //         this.children([<div>{this.object()?.name() ?? '<none>'}</div>]);
-    //       }
-    //     }),
-    //   ]
-    // });
+    <$class name="object_browser">
+      <$$component />
+      <$var name="click" />
+      <$var name="objects" />
+      <$after name="init"
+        do={function init() {
+          this.linkify();
+        }}
+      />
+      <$method name="linkify"
+        do={function linkify() {
+          this.children(this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>));
+        }}
+      />
+    </$class>;
 
     <$class name="object_explorer">
       <$$component />
@@ -65,55 +42,49 @@ export default await base.find('class', 'module').new({
           this.children([<div>{this.object()?.name() ?? '<none>'}</div>]);
         }}
       />
-    </$class>
-
-    $.class.new({
-      name: 'editor',
-      slots: [
-        $.before.new({
-          name: 'init',
-          do() {
-            let self = this;
-            this.messages($.message_log.new());
-            this.browser($.object_browser.new({
-              objects: Object.keys(__.tracked()),
-              click(e) {
+    </$class>;
+    <$class name="editor">
+      <$before name="init"
+        do={function init() {
+          const self = this;
+          this.messages(<$message_log />);
+          this.browser(
+            <$object_browser
+              objects={Object.keys(__.tracked())}
+              click={function click(e) {
                 this.log('click');
                 self.messages().add(__.deref(this.properties().object).title());
+              }}
+            />
+          );
+          this.explorer(<$object_explorer />);
 
-              }
-            }));
-            this.explorer($.object_explorer.new());
-
-            this.messages().add('hello there!');
-            this.messages().render();
-            this.browser().render();
-            this.explorer().render();
-          }
-        }),
-        $.component,
-        $.var.new({ name: 'messages' }),
-        $.var.new({ name: 'browser' }),
-        $.var.new({ name: 'explorer' }),
-        $.method.new({
-          name: 'render',
-          override: true,
-          do() {
-            this.inner(...<>
-              <div class="col">
-                {this.browser()}
-              </div>
-              <div class="col">
-                <div className="code_editor">Code here</div>
-              </div>
-              <div class="col">
-                {this.explorer()}
-                {this.messages()}
-              </div>
-            </>);
-          }
-        }),
-      ]
-    });
+          this.messages().add('hello there!');
+          this.messages().render();
+          this.browser().render();
+          this.explorer().render();
+        }}
+      />
+      <$$component />
+      <$var name="messages" />
+      <$var name="browser" />
+      <$var name="explorer" />
+      <$method name="render" override={true}
+        do={function render() {
+          this.inner(...<>
+            <div class="col">
+              {this.browser()}
+            </div>
+            <div class="col">
+              <div className="code_editor">Code here</div>
+            </div>
+            <div class="col">
+              {this.explorer()}
+              {this.messages()}
+            </div>
+          </>);
+        }}
+      />
+    </$class>;
   }
 }).load();

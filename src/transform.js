@@ -101,7 +101,6 @@ function nodemap(node) {
 }
 
 export default function transform(path) {
-  console.log('transform', path);
   const source = readFileSync(path).toString();
   const estree = meriyahParse(source, {
     module: true,
