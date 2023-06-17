@@ -1,7 +1,7 @@
 import { parseScript as meriyahParse } from "meriyah";
 import { prettyPrint, types } from 'recast';
 const b = types.builders;
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 
 function jsxAttribute(node) {
   if (node.type === 'JSXExpressionContainer') {
@@ -20,8 +20,7 @@ function jsx(node) {
       return b.memberExpression(b.identifier('$'), b.identifier(tag.slice(2)), false);
     } else if (tag[0] === '$') {
       if (node.children.length > 0) {
-        console.log(children);
-        props.push(b.property('init', b.identifier('components'), b.arrayExpression(children.filter(c => c.type !== 'Literal'))));
+        props.push(b.property('init', b.identifier('slots'), b.arrayExpression(children.filter(c => c.type !== 'Literal'))));
       }
       return b.callExpression(
         b.memberExpression(

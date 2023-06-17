@@ -9,7 +9,7 @@ export default await base.find('class', 'module').new({
   async on_load(_, $) {
     $.class.new({
       name: 'test_timer',
-      components: [
+      slots: [
         $.var.new({ name: 'start' }),
         $.after.new({
           name: 'init',
@@ -28,7 +28,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'test_runner',
-      components: [
+      slots: [
         $.var.new({
           name: 'module_cache',
         }),

@@ -7,7 +7,7 @@ export default await base.find('class', 'module').new({
   on_load(_, $) {
     $.class.new({
       name: 'case',
-      components: [
+      slots: [
         $.deffed,
         $.method.new({
           name: 'run',
@@ -35,7 +35,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'async_case',
-      components: [
+      slots: [
         $.case,
         $.method.new({
           name: 'run',

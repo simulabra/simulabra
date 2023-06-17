@@ -311,8 +311,8 @@ function bootstrap() {
     return obj;
   }
 
-  function manload(components, proto) {
-    for (const c of components) {
+  function manload(slots, proto) {
+    for (const c of slots) {
       c.load(proto);
     }
   }
@@ -323,7 +323,7 @@ function bootstrap() {
     }
   }
 
-  const $base_components = [
+  const $base_slots = [
     function init() {
       // mostly broken
       if (globalThis.SIMULABRA._debug) {
@@ -383,25 +383,25 @@ function bootstrap() {
   ];
 
   // const $base_proto = {};
-  // manload($base_components, $base_proto);
+  // manload($base_slots, $base_proto);
 
   Array.prototype.load = function (target) {
     this.forEach(it => it.load(target));
   }
 
-  const $class_components = [
+  const $class_slots = [
     function init() {
-      $base_components[0].apply(this);
+      $base_slots[0].apply(this);
       this.id_ctr(0);
       this.proto(new ClassPrototype(this));
-      $base_components.load(this.proto());
+      $base_slots.load(this.proto());
       this._proto._class = this;
       this.load(this.proto());
       this.proto()._reify();
       $$().mod()?.def(this)
     },
     function load(target) {
-      for (const v of this.components()) {
+      for (const v of this.slots()) {
         v.load(target);
       }
     },
@@ -419,7 +419,7 @@ function bootstrap() {
       return `~${this.name()}`;
     },
     function descended(target) {
-      return this.name() === target.name() || !!this.components().find(c => c.class().name() === 'class' && c.descended(target));
+      return this.name() === target.name() || !!this.slots().find(c => c.class().name() === 'class' && c.descended(target));
     },
     function vars() {
       let visited = new Set();
@@ -429,7 +429,7 @@ function bootstrap() {
         visited.add(cls);
 
         let vars = [];
-        for (const c of cls.components()) {
+        for (const c of cls.slots()) {
           if (c.class().descended($var)) {
             vars.push(c);
           } else if (c.class().descended($class)) {
@@ -450,7 +450,7 @@ function bootstrap() {
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
     BVar.new({
-      name: 'components',
+      name: 'slots',
       default: [],
     }),
     BVar.new({
@@ -460,7 +460,7 @@ function bootstrap() {
   ];
 
 
-  const $class_slots = new ClassPrototype(null);
+  const $class_proto = new ClassPrototype(null);
   const newObj = {
     new(props = {}) {
       // console.log('class new ' + props.name);
@@ -471,12 +471,12 @@ function bootstrap() {
       return obj;
     }
   };
-  $class_components.push(newObj.new);
+  $class_slots.push(newObj.new);
 
-  manload($base_components, $class_slots);
-  manload($class_components, $class_slots);
-  $class_slots._reify();
-  var $class = Object.create($class_slots._proto);
+  manload($base_slots, $class_proto);
+  manload($class_slots, $class_proto);
+  $class_proto._reify();
+  var $class = Object.create($class_proto._proto);
   $class._parent = $class;
 
   $class._name = 'class';
@@ -485,7 +485,7 @@ function bootstrap() {
   // a missing middle
   var $var = $class.new({
     name: 'var',
-    components: [
+    slots: [
       BVar.new({ name: 'name', }),
       BVar.new({ name: 'mutable', default: true }),
       BVar.new({ name: 'debug', default: true }),
@@ -540,7 +540,7 @@ function bootstrap() {
 
   const $var_state = $class.new({
     name: 'var_state',
-    components: [
+    slots: [
       $var.new({ name: 'var_ref' }),
       $var.new({ name: 'value' }),
       function description(seen) {
@@ -560,7 +560,7 @@ function bootstrap() {
 
   const $method = $class.new({
     name: 'method',
-    components: [
+    slots: [
       $var.new({ name: 'do' }), // fn, meat and taters
       $var.new({ name: 'message' }),
       $var.new({ name: 'name' }),
@@ -589,7 +589,7 @@ function bootstrap() {
 
   const $static = $class.new({
     name: 'static',
-    components: [
+    slots: [
       $var.new({ name: 'do' }),
       function load(proto) {
         const impl = new MethodImpl({ _name: this.name() });
@@ -605,7 +605,7 @@ function bootstrap() {
 
   var $debug = $class.new({
     name: 'debug',
-    components: [
+    slots: [
       $static.new({
         name: 'log',
         do: function log(...args) {
@@ -626,7 +626,7 @@ function bootstrap() {
 
   const $before = $class.new({
     name: 'before',
-    components: [
+    slots: [
       $var.new({ name: 'name' }),
       $var.new({ name: 'do' }),
       function combine(impl) {
@@ -637,7 +637,7 @@ function bootstrap() {
 
   const $after = $class.new({
     name: 'after',
-    components: [
+    slots: [
       $var.new({ name: 'name' }),
       $var.new({ name: 'do', debug: false }),
       function combine(impl) {
@@ -649,7 +649,7 @@ function bootstrap() {
 
   const $virtual = $class.new({
     name: 'virtual',
-    components: [
+    slots: [
       $var.new({ name: 'name' }),
       function load(parent) {
         this.dlog('virtual load', this);
@@ -665,7 +665,7 @@ function bootstrap() {
   const $module = $class.new({
     name: 'module',
     // debug: true,
-    components: [
+    slots: [
       $var.new({ name: 'name' }),
       $var.new({
         name: 'imports',
@@ -765,7 +765,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'static_var',
-    components: [
+    slots: [
       $.var,
       $.after.new({
         name: 'load',
@@ -778,7 +778,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'simulabra_global',
-    components: [
+    slots: [
       $.var.new({
         name: 'mod',
       }),
@@ -894,7 +894,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'deffed',
-    components: [
+    slots: [
       $.after.new({
         name: 'init',
         do() {
@@ -906,20 +906,20 @@ function bootstrap() {
 
   $.class.new({
     name: 'self',
-    components: []
+    slots: []
   });
 
   $.class.new({
     name: 'primitive',
-    components: [
+    slots: [
       $.class,
       $.deffed,
-      $.var.new({ name: 'components', default: [] }),
+      $.var.new({ name: 'slots', default: [] }),
       $.var.new({ name: 'js_prototype' }),
       $.var.new({ name: 'methods', default: {} }),
       $.var.new({ name: 'name' }),
       function init() {
-        for (let c of this.components()) {
+        for (let c of this.slots()) {
           c.load(this.js_prototype());
         }
         this.dlog('primitive init', this);
@@ -946,7 +946,7 @@ function bootstrap() {
   $.primitive.new({
     name: 'string_primitive',
     js_prototype: String.prototype,
-    components: [
+    slots: [
       $.method.new({
         name: 'class',
         do() {
@@ -965,7 +965,7 @@ function bootstrap() {
   $.primitive.new({
     name: 'boolean_primitive',
     js_prototype: Boolean.prototype,
-    components: [
+    slots: [
       $method.new({
         name: 'class',
         do() {
@@ -981,7 +981,7 @@ function bootstrap() {
   $.primitive.new({
     name: 'number_primitive',
     js_prototype: Number.prototype,
-    components: [
+    slots: [
       function js() {
         return this;
       },
@@ -1020,7 +1020,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'number',
-    components: [
+    slots: [
       function primitive() {
         return _.find('primitive', 'number_primitive');
       }
@@ -1030,7 +1030,7 @@ function bootstrap() {
   $.primitive.new({
     name: 'array_primitive',
     js_prototype: Array.prototype,
-    components: [
+    slots: [
       function intoObject() {
         const res = {};
         for (const it of this) {
@@ -1053,7 +1053,7 @@ function bootstrap() {
   $.primitive.new({
     name: 'function_primitive',
     js_prototype: Function.prototype,
-    components: [
+    slots: [
       function description(seen = {}) {
         return `<function_primitive ${this.name}>`;
       },
@@ -1075,7 +1075,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'closure',
-    components: [
+    slots: [
       $.var.new({ name: 'fn' }),
       $.var.new({ name: 'mod' }),
       $.method.new({
@@ -1108,7 +1108,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'async_closure',
-    components: [
+    slots: [
       $.closure,
       $.method.new({
         name: 'apply',
@@ -1126,7 +1126,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'singleton',
-    components: [
+    slots: [
       $.static.new({
         name: 'inst',
         do(params) {
@@ -1142,14 +1142,14 @@ function bootstrap() {
 
   $.class.new({
     name: 'promise',
-    components: [
+    slots: [
 
     ]
   });
 
   $.class.new({
     name: 'match',
-    components: [
+    slots: [
       $.static.new({
         name: 'of',
         do(input) {
@@ -1182,7 +1182,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'case',
-    components: [
+    slots: [
       $.var.new({ name: 'pattern' }),
       $.var.new({ name: 'action' }),
       $.method.new({
@@ -1199,7 +1199,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'success',
-    components: [
+    slots: [
       $.var.new({ name: 'value' }),
       $.method.new({
         name: 'ok',
@@ -1212,7 +1212,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'failure',
-    components: [
+    slots: [
       $.method.new({
         name: 'ok',
         do() {
@@ -1224,7 +1224,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'wildcard_pattern',
-    components: [
+    slots: [
       $.method.new({
         name: 'match',
         do(o) {
@@ -1236,7 +1236,7 @@ function bootstrap() {
 
   $.class.new({
     name: 'and_pattern',
-    components: [
+    slots: [
       $.var.new({ name: 'lhs' }),
       $.var.new({ name: 'rhs' }),
       $.method.new({

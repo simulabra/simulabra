@@ -12,7 +12,7 @@ export default await base.find('class', 'module').new({
       on_load(_, $) {
         $.class.new({
           name: 'a',
-          components: [
+          slots: [
             $.var.new({
               name: 'x',
               default: 1,
@@ -34,7 +34,7 @@ export default await base.find('class', 'module').new({
       on_load(_, $) {
         $.class.new({
           name: 'b',
-          components: [
+          slots: [
             $.a,
             $.after.new({
               name: 'frob',

@@ -8,7 +8,7 @@ export default await base.find('class', 'module').new({
   on_load(_, $) {
     $.class.new({
       name: 'brainfuck_interpreter',
-      components: [
+      slots: [
         $.var.new({ name: 'code', default: '' }),
         $.var.new({ name: 'input', default: '' }),
         $.var.new({ name: 'output', default: '' }),

@@ -8,7 +8,7 @@ export default await base.find('class', 'module').new({
   on_load(_, $) {
     $.class.new({
       name: 'basic',
-      components: []
+      slots: []
     });
 
     $.case.new({
@@ -21,7 +21,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'point',
-      components: [
+      slots: [
         $.var.new({ name: 'x' }),
         $.var.new({ name: 'y' }),
         function dist() {
@@ -49,7 +49,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'point_extended',
-      components: [
+      slots: [
         $.point,
         $.var.new({ name: 'phi' }),
         $.method.new({
@@ -79,7 +79,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'color',
-      components: [
+      slots: [
         $.var.new({ name: 'r' }),
         $.var.new({ name: 'g' }),
         $.var.new({ name: 'b' }),
@@ -88,7 +88,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'color_point',
-      components: [
+      slots: [
         $.color,
         $.point,
         function g() {
@@ -109,7 +109,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'before_basic',
-      components: [
+      slots: [
         $.var.new({ name: 'x', default: 0 }),
         $.method.new({
           name: 'bump',
@@ -137,7 +137,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'after_basic',
-      components: [
+      slots: [
         $.var.new({ name: 'x', default: 0 }),
         $.method.new({
           name: 'bump',
@@ -166,7 +166,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'after_before_combined',
-      components: [
+      slots: [
         $.before_basic,
         $.after.new({
           name: 'bump',
@@ -188,7 +188,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'after_before_combined_method',
-      components: [
+      slots: [
         $.after_before_combined,
         $.method.new({
           name: 'bump',
@@ -210,7 +210,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'after_multiple',
-      components: [
+      slots: [
         $.after_basic,
         $.after.new({
           name: 'bump',
@@ -235,7 +235,7 @@ export default await base.find('class', 'module').new({
       do() {
         $.class.new({
           name: 'static_test',
-          components: [
+          slots: [
             $.static.new({
               name: 'frob',
               do(n) {
@@ -254,7 +254,7 @@ export default await base.find('class', 'module').new({
       do() {
         $.class.new({
           name: 'ext1',
-          components: [
+          slots: [
             $.method.new({
               name: 'p',
               do() {}

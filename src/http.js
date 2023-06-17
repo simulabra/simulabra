@@ -8,7 +8,7 @@ export default await base.find('class', 'module').new({
   on_load(_, $) {
     $.class.new({
       name: 'http_request',
-      components: [
+      slots: [
         $.var.new({
           name: 'inner'
         }),
@@ -16,7 +16,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'http_response',
-      components: [
+      slots: [
         $.var.new({
           name: 'inner'
         }),
@@ -31,7 +31,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'http_server',
-      components: [
+      slots: [
         $.var.new({ name: 'node_server' }),
         $.var.new({
           name: 'port',
@@ -66,7 +66,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'request_handler',
-      components: [
+      slots: [
         $.virtual.new({
           name: 'match'
         }),
@@ -77,7 +77,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'var_handler',
-      components: [
+      slots: [
         $.var.new({
           name: 'handler',
         }),
@@ -91,7 +91,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'path_request_handler',
-      components: [
+      slots: [
         $.request_handler,
         $.var_handler,
         $.var.new({
@@ -107,7 +107,7 @@ export default await base.find('class', 'module').new({
     });
     $.class.new({
       name: 'filetype_request_handler',
-      components: [
+      slots: [
         $.request_handler,
         $.var_handler,
         $.var.new({ name: 'filetypes' }),

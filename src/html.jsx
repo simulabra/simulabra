@@ -8,7 +8,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'component',
-      components: [
+      slots: [
         $.method.new({
           name: 'container',
           do() {
@@ -59,7 +59,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'html_element',
-      components: [
+      slots: [
         $.var.new({ name: 'tag', default: 'div' }),
         $.var.new({ name: 'properties', default: {} }),
         $.var.new({ name: 'events', default: {} }),

@@ -9,7 +9,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'message_log',
-      components: [
+      slots: [
         $.component,
         $.var.new({ name: 'message_list', default: [] }),
         $.method.new({
@@ -24,7 +24,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'object_browser',
-      components: [
+      slots: [
         $.component,
         $.var.new({ name: 'click' }),
         $.var.new({ name: 'objects' }),
@@ -45,7 +45,7 @@ export default await base.find('class', 'module').new({
 
     // $.class.new({
     //   name: 'object_explorer',
-    //   components: [
+    //   slots: [
     //     $.component,
     //     $.var.new({ name: 'object' }),
     //     $.after.new({
@@ -69,7 +69,7 @@ export default await base.find('class', 'module').new({
 
     $.class.new({
       name: 'editor',
-      components: [
+      slots: [
         $.before.new({
           name: 'init',
           do() {
