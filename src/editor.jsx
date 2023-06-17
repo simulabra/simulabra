@@ -60,7 +60,11 @@ export default await base.find('class', 'module').new({
     <$class name="object_explorer">
       <$$component />
       <$var name="object" />
-      <$after name="init" do={function() { this.children([<div>{this.object()?.name() ?? '<none>'}</div>]) }}/>
+      <$after name="init"
+        do={function init() {
+          this.children([<div>{this.object()?.name() ?? '<none>'}</div>]);
+        }}
+      />
     </$class>
 
     $.class.new({
