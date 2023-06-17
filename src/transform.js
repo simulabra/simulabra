@@ -13,9 +13,16 @@ function jsxAttribute(node) {
 
 function jsx(node) {
   if (node.type === 'JSXElement') {
+    const children = node.children.map(c => nodemap(c));
     const tag = node.openingElement.name.name;
     const props = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));
-    if (tag[0] === '$') {
+    if (tag.indexOf('$$') === 0) {
+      return b.memberExpression(b.identifier('$'), b.identifier(tag.slice(2)), false);
+    } else if (tag[0] === '$') {
+      if (node.children.length > 0) {
+        console.log(children);
+        props.push(b.property('init', b.identifier('components'), b.arrayExpression(children.filter(c => c.type !== 'Literal'))));
+      }
       return b.callExpression(
         b.memberExpression(
           b.memberExpression(
@@ -32,7 +39,6 @@ function jsx(node) {
       );
     } else {
       const properties = props;
-      const children = node.children.map(c => nodemap(c));
       return b.callExpression(
         b.memberExpression(
           b.memberExpression(

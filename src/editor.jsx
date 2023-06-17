@@ -27,28 +27,41 @@ export default await base.find('class', 'module').new({
       components: [
         $.component,
         $.var.new({ name: 'click' }),
+        $.var.new({ name: 'objects' }),
+        $.after.new({
+          name: 'init',
+          do() {
+            this.linkify();
+          }
+        }),
         $.method.new({
-          name: 'add',
-          do(u) {
-            this.add_child(<div><a href="#" object={u} onclick={this.click()}>{__.deref(u).title()}</a></div>);
+          name: 'linkify',
+          do() {
+            this.children(this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>));
           }
         }),
       ]
     });
 
-    $.class.new({
-      name: 'object_explorer',
-      components: [
-        $.component,
-        $.var.new({ name: 'object' }),
-        $.after.new({
-          name: 'init',
-          do() {
-            this.children([<div>{this.object()?.name() ?? '<none>'}</div>]);
-          }
-        }),
-      ]
-    });
+    // $.class.new({
+    //   name: 'object_explorer',
+    //   components: [
+    //     $.component,
+    //     $.var.new({ name: 'object' }),
+    //     $.after.new({
+    //       name: 'init',
+    //       do() {
+    //         this.children([<div>{this.object()?.name() ?? '<none>'}</div>]);
+    //       }
+    //     }),
+    //   ]
+    // });
+
+    <$class name="object_explorer">
+      <$$component />
+      <$var name="object" />
+      <$after name="init" do={function() { this.children([<div>{this.object()?.name() ?? '<none>'}</div>]) }}/>
+    </$class>
 
     $.class.new({
       name: 'editor',
@@ -59,10 +72,14 @@ export default await base.find('class', 'module').new({
             let self = this;
             this.messages($.message_log.new());
             this.browser($.object_browser.new({
-              click(e) { self.messages.add(__.deref(this.properties().object).title()) }
+              objects: Object.keys(__.tracked()),
+              click(e) {
+                this.log('click');
+                self.messages().add(__.deref(this.properties().object).title());
+
+              }
             }));
             this.explorer($.object_explorer.new());
-            Object.keys(__.tracked()).forEach(k => this.browser().add(k));
 
             this.messages().add('hello there!');
             this.messages().render();
