@@ -16,6 +16,11 @@ export default await base.find('class', 'module').new({
           this.children([<div>{message}</div>]);
         }}
       />
+      <$method name="render"
+        do={function render() {
+          return this.message_list().map(m => <div>{m}</div>);
+        }}
+      />
     </$class>;
 
     <$class name="object_browser">
@@ -29,7 +34,12 @@ export default await base.find('class', 'module').new({
       />
       <$method name="linkify"
         do={function linkify() {
-          this.children(this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>));
+          this.children();
+        }}
+      />
+      <$method name="render"
+        do={function render() {
+          return this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>);
         }}
       />
     </$class>;
@@ -37,9 +47,9 @@ export default await base.find('class', 'module').new({
     <$class name="object_explorer">
       <$$component />
       <$var name="object" />
-      <$after name="init"
-        do={function init() {
-          this.children([<div>{this.object()?.name() ?? '<none>'}</div>]);
+      <$method name="render"
+        do={function render() {
+          return <div>{this.object()?.name() ?? '<none>'}</div>;
         }}
       />
     </$class>;
@@ -71,18 +81,18 @@ export default await base.find('class', 'module').new({
       <$var name="explorer" />
       <$method name="render" override={true}
         do={function render() {
-          this.inner(...<>
+          return <span>
             <div class="col">
-              {this.browser()}
+              {this.browser().render()}
             </div>
             <div class="col">
-              <div className="code_editor">Code here</div>
+              <div class="code_editor">Code here</div>
             </div>
             <div class="col">
-              {this.explorer()}
-              {this.messages()}
+              {this.explorer().render()}
+              {this.messages().render()}
             </div>
-          </>);
+          </span>;
         }}
       />
     </$class>;
