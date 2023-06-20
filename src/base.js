@@ -376,10 +376,32 @@ function bootstrap() {
     function toJSON() {
       return this;
     },
+    function message_observers(message) {
+      const observers = this.observers();
+      if (!observers) {
+        return [];
+      }
+      return observers[message] ?? [];
+    },
+    function emit(message, data) {
+      for (const ob of this.message_observers(message)) {
+        ob(data);
+      }
+    },
+    function on(message, cb) {
+      if (this.observers() === undefined) {
+        this.observers({});
+      }
+      if (this.observers()[message] === undefined) {
+        this.observers()[message] = [];
+      }
+      this.observers()[message].push(cb);
+    },
     classDef.class,
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'id' }),
     BVar.new({ name: 'src_line' }),
+    BVar.new({ name: 'observers' }),
   ];
 
   // const $base_proto = {};
@@ -510,7 +532,7 @@ function bootstrap() {
           impl._primary = function mutableAccess(assign) {
             if (assign !== undefined) {
               this[pk] = assign;
-              ('update' in this) && this.update({ changed: self.name() }); // best there is?
+              this.emit('update', this.name()); // best there is?
               if (self._trace) {
                 self.log('muted to', assign);
               }

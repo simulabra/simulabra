@@ -1,62 +1,24 @@
-# HTML
-Simulabra embeds its own hypertext markup language
-The main issue is maintaining data-DOM correspondence
-Inspiratio:
- - React: most popular, avoid mutating DOM directly, composable
- - HTMX: hypermedia focused, in HTML
- - Phoenix LiveView: server controlled, 
-Let's work backwards from the DX I want for a toy example (todo-list)
-```javascript
-$.class.new({
-  name: 'todo-item',
-  components: [
-    $.var.new({
-      name: 'text',
-      type: $.string,
-    }),
-    $.var.new({
-      name: 'done',
-      default: false,
-    }),
-    // react way
-    $.method.new({
-      name: 'render',
-      do() {
-        return $.div.of(
-          $.checkbox.new({
-            state: this.done(),
-            change(value) { this.done(value); } 
-          }),
-          this.text()
-        );
-        <div>
-          <$.checkbox state={this.done()} click={value => this.done(value)} />
-          {this.text()}
-        </div>
-      }
-    })
-  ]
-})
+## CRC
 
-$.class.new({
-  name: 'todo-item-html-view',
-  components: [
-    $.var.new({ name: 'item' }),
-    $.method.new({
-      name: 'render',
-      do() {
-        return $.div.of(
-          $.checkbox.new({
-            state: this.done(),
-            change(value) { this.done(value); } 
-          }),
-          this.text()
-        );
-      }
-    })
-  ]
-})
-```
-Come to think of it this approach to designing doesn't make a lot of sense, as what I ultimately want is a visual editor like Visual Basic or Figma that maps a concrete interface to code. So, what is best suited for that DX? I know there are projects in React-land that do something like this but I don't think they're that elegant. 
+### ~component
+base class for renderable HTML components like `<$circle r={2} />`
+responsibilities:
+ - render down to HTML elements
+ - pushes updates to the DOM element
+collaborators:
+ - ~html_element
+ - native DOM element
+
+### ~html_element < ~component
+HTML element such as div, a, span, form
+responsibilities:
+ - transform into correct textual HTML for represented element
+ ? track rendered element in DOM
 
 
+## processes
+
+### component rendering
+recursive calls to render form a tree of html elements
+(child components render wrapped with container)
+swap inner html of container element

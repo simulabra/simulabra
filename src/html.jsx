@@ -7,34 +7,31 @@ export default await base.find('class', 'module').new({
     const __ = globalThis.SIMULABRA;
 
     <$class name="component">
+      <$method name="dom_id"
+        do={function dom_id() {
+          return `${this.class().name()}--${this.id()}`;
+        }}
+      />
+      <$method name="element"
+        do={function element() {
+          return document.getElementById(this.dom_id());
+        }}
+      />
       <$method name="container"
-        do={function container() {
-          return <div class={this.class().name()} ref={this.uri()}></div>
+        do={function container(...children) {
+          return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
         }}
       />
-      <$method name="inner"
-        do={function inner(...objs) {
-          this.element(this.container());
-          this.element().children(objs);
-        }}
-      />
-      <$var name="element" />
       <$var name="children" default={[]} />
       <$method name="to_dom"
         do={function to_dom() {
-          const rr = this.render();
-          this.log('rendered', rr);
-          return rr.to_dom();
+          return this.container(this.render()).to_dom();
         }}
       />
-      <$method name="add_child"
-        do={function add_child(child) {
-          this.children().push(child);
-        }}
-      />
-      <$after name="init"
-        do={function init() {
-          this.element(this.container());
+      <$method name="swap"
+        do={function swap(content) {
+          this.log(content);
+          this.element().innerHTML = content.to_dom();
         }}
       />
     </$class>;

@@ -70,9 +70,7 @@ export default await base.find('class', 'module').new({
           this.explorer(<$object_explorer />);
 
           this.messages().add('hello there!');
-          this.messages().render();
-          this.browser().render();
-          this.explorer().render();
+          /* this.swap(this.render()); */
         }}
       />
       <$$component />
@@ -81,7 +79,7 @@ export default await base.find('class', 'module').new({
       <$var name="explorer" />
       <$method name="render" override={true}
         do={function render() {
-          return <span>
+          return <div class="container">
             <div class="col">
               {this.browser().render()}
             </div>
@@ -92,7 +90,7 @@ export default await base.find('class', 'module').new({
               {this.explorer().render()}
               {this.messages().render()}
             </div>
-          </span>;
+          </div>;
         }}
       />
     </$class>;
