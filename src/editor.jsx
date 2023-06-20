@@ -18,7 +18,7 @@ export default await base.find('class', 'module').new({
       />
       <$method name="render"
         do={function render() {
-          return this.message_list().map(m => <div>{m}</div>);
+          return <div>{this.message_list().map(m => <div>{m}</div>)}</div>;
         }}
       />
     </$class>;
@@ -39,7 +39,7 @@ export default await base.find('class', 'module').new({
       />
       <$method name="render"
         do={function render() {
-          return this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>);
+          return <div>{this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>)}</div>;
         }}
       />
     </$class>;
@@ -81,14 +81,14 @@ export default await base.find('class', 'module').new({
         do={function render() {
           return <div class="container">
             <div class="col">
-              {this.browser().render()}
+              {this.browser()}
             </div>
             <div class="col">
               <div class="code_editor">Code here</div>
             </div>
             <div class="col">
-              {this.explorer().render()}
-              {this.messages().render()}
+              {this.explorer()}
+              {this.messages()}
             </div>
           </div>;
         }}
