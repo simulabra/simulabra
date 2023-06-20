@@ -27,16 +27,6 @@ export default await base.find('class', 'module').new({
       <$$component />
       <$var name="click" />
       <$var name="objects" />
-      <$after name="init"
-        do={function init() {
-          this.linkify();
-        }}
-      />
-      <$method name="linkify"
-        do={function linkify() {
-          this.children();
-        }}
-      />
       <$method name="render"
         do={function render() {
           return <div>{this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>)}</div>;
@@ -49,7 +39,10 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="render"
         do={function render() {
-          return <div>{this.object()?.name() ?? '<none>'}</div>;
+          if (!this.object()) {
+            return '<node>';
+          }
+          return <div>{this.object().title()}</div>;
         }}
       />
     </$class>;
@@ -62,9 +55,8 @@ export default await base.find('class', 'module').new({
             <$object_browser
               objects={Object.keys(__.tracked())}
               click={function click(e) {
-                this.log('click');
                 self.messages().add(__.deref(this.properties().object).title());
-                self.messages().swap(self.messages().render());
+                self.explorer().object(__.deref(this.properties().object));
               }}
             />
           );

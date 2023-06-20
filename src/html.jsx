@@ -30,20 +30,39 @@ export default await base.find('class', 'module').new({
       />
       <$method name="swap"
         do={function swap(content) {
-          this.log(content);
           this.element().innerHTML = content.to_dom().outerHTML;
         }}
       />
+      <$after name="init"
+        do={function init() {
+          this.on('update', function() {
+            if (this.element()) {
+              this.swap(this.render());
+            }
+          });
+        }}
+      />
     </$class>;
+
 
     <$class name="html_element">
       <$var name="tag" default={'div'} />
       <$var name="properties" default={{}} />
       <$var name="events" default={{}} />
       <$var name="children" default={[]} />
+      <$method name="domify"
+        do={function domify(node) {
+          if (typeof node === 'object' && 'type' in node && typeof node.type === 'string') {
+            return node;
+          } else if (typeof node === 'string') {
+            return document.createTextNode(node);
+          } else {
+            return node.to_dom();
+          }
+        }}
+      />
       <$method name="to_dom" override={true}
         do={function to_dom() {
-          this.log(this);
           const elem = document.createElement(this.tag());
           for (const prop of Object.keys(this.properties())) {
             if (prop.indexOf('on') === 0) {
@@ -57,22 +76,12 @@ export default await base.find('class', 'module').new({
             }
           }
           for (const child of this.children()) {
-            const domify = (node) => {
-              console.log(node);
-              if (typeof node === 'object' && 'type' in node && typeof node.type === 'string') {
-                return node;
-              } else if (typeof node === 'string') {
-                return document.createTextNode(node);
-              } else {
-                return node.to_dom();
-              }
-            }
             if (Array.isArray(child)) {
               for (const n of child) {
-                elem.appendChild(domify(n));
+                elem.appendChild(this.domify(n));
               }
             } else {
-              elem.appendChild(domify(child));
+              elem.appendChild(this.domify(child));
             }
           }
           for (const [name, fn] of Object.entries(this.events())) {

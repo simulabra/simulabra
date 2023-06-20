@@ -395,7 +395,7 @@ function bootstrap() {
       if (this.observers()[message] === undefined) {
         this.observers()[message] = [];
       }
-      this.observers()[message].push(cb);
+      this.observers()[message].push(cb.bind(this));
     },
     classDef.class,
     BVar.new({ name: 'name' }),
