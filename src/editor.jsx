@@ -25,11 +25,15 @@ export default await base.find('class', 'module').new({
 
     <$class name="object_browser">
       <$$component />
-      <$var name="click" />
-      <$var name="objects" />
+      <$var name="objects"
+        desc="list of object urls"
+      />
       <$method name="render"
         do={function render() {
-          return <div>{this.objects().map(c => <div><a href="#" object={c} onclick={this.click()}>{__.deref(c).title()}</a></div>)}</div>;
+          return <div>{this.objects().map(c =>
+            <div><a href="#" object={c} onclick={e => this.emit('select', e)}>
+              {__.deref(c).title()}
+            </a></div>)}</div>;
         }}
       />
     </$class>;
@@ -54,16 +58,16 @@ export default await base.find('class', 'module').new({
           this.browser(
             <$object_browser
               objects={Object.keys(__.tracked())}
-              click={function click(e) {
-                self.messages().add(__.deref(this.properties().object).title());
-                self.explorer().object(__.deref(this.properties().object));
-              }}
             />
           );
+          this.browser().on('select', function select(e) {
+            const ref = e.target.attributes.object.value;
+            self.messages().add('select: ' + __.deref(ref).title());
+            self.explorer().object(__.deref(ref));
+          });
           this.explorer(<$object_explorer />);
 
-          this.messages().add('hello there!');
-          /* this.swap(this.render()); */
+          this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
         }}
       />
       <$$component />
