@@ -31,7 +31,7 @@ export default await base.find('class', 'module').new({
       <$method name="swap"
         do={function swap(content) {
           this.log(content);
-          this.element().innerHTML = content.to_dom();
+          this.element().innerHTML = content.to_dom().outerHTML;
         }}
       />
     </$class>;

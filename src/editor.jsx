@@ -64,6 +64,7 @@ export default await base.find('class', 'module').new({
               click={function click(e) {
                 this.log('click');
                 self.messages().add(__.deref(this.properties().object).title());
+                self.messages().swap(self.messages().render());
               }}
             />
           );
