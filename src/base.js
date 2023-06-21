@@ -633,7 +633,7 @@ function bootstrap() {
         do: function log(...args) {
           // const stack = (new Error).stack;
           // const source = stack.split('\n')[2];
-          $$().dispatch('log', args);
+          $$().emit('log', args);
           return this;
         }
       }),
@@ -844,34 +844,6 @@ function bootstrap() {
           return obj;
         }
       }),
-      $.method.new({
-        name: 'get_handlers',
-        do(name) {
-          if (name in this.handlers()) {
-            return this.handlers()[name];
-          } else {
-            console.log('no handlers for ' + name);
-            return [];
-          }
-        }
-      }),
-      $.method.new({
-        name: 'handle',
-        do(name, fn) {
-          if (this.handlers()[name] === undefined) {
-            this.handlers()[name] = [];
-          }
-          this.handlers()[name].push(fn);
-        }
-      }),
-      $.method.new({
-        name: 'dispatch',
-        do(name, data) {
-          for (const handler of this.get_handlers(name)) {
-            handler(data);
-          }
-        }
-      }),
       function js_get(obj, p) {
         return obj[p];
       },
@@ -889,12 +861,6 @@ function bootstrap() {
       function deref(u) {
         return this.objects().get(this.tracked()[u]);
       },
-      function live_objects() {
-        // this.log(this.tracked());
-        // for (const u of Object.keys(this.tracked())) {
-        //   this.log('key', u, this.objects().get(this.tracked()[u]));
-        // }
-      },
       $.var.new({ name: 'tracked' }),
       $.var.new({ name: 'objects' }),
     ]
@@ -909,7 +875,8 @@ function bootstrap() {
     objects: globalThis.SIMULABRA._objects,
   });
 
-  __.handle('log', args => console.log(...args));
+  __.on('log', args => console.log(...args));
+
   globalThis.SIMULABRA = __;
   __.$$debug_class = $debug;
   __.start_ticking();

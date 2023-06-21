@@ -53,17 +53,16 @@ export default await base.find('class', 'module').new({
     <$class name="editor">
       <$before name="init"
         do={function init() {
-          const self = this;
           this.messages(<$message_log />);
           this.browser(
             <$object_browser
               objects={Object.keys(__.tracked())}
             />
           );
-          this.browser().on('select', function select(e) {
+          this.browser().on('select', (e) => {
             const ref = e.target.attributes.object.value;
-            self.messages().add('select: ' + __.deref(ref).title());
-            self.explorer().object(__.deref(ref));
+            this.messages().add('select: ' + __.deref(ref).title());
+            this.explorer().object(__.deref(ref));
           });
           this.explorer(<$object_explorer />);
 
