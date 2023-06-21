@@ -215,6 +215,10 @@ function bootstrap() {
       }
       return this._impls[name];
     }
+
+    toString() {
+      return `~class-prototype#${this._proto._parent.name()}`;
+    }
   }
 
   class BVar {
@@ -333,8 +337,19 @@ function bootstrap() {
       const varDesc = vars.length > 0 ? `{\n${vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
       return `${this.class().description(seen)}.new${varDesc}`;
     },
+    function toString() {
+      return this.description();
+    },
     function state() {
-      return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name()]() }));
+      return this.class().vars().map(var_ref => {
+        const value = this[`_${var_ref.name()}`];
+        this.log('var', var_ref.name());
+        if (value !== undefined) {
+          return $var_state.new({ var_ref, value });
+        } else {
+          return null;
+        }
+      }).filter(v => v !== null);
     },
     function me() {
       return this;
@@ -435,7 +450,7 @@ function bootstrap() {
       return `~${this.name()}`;
     },
     function descended(target) {
-      return this.name() === target.name() || !!this.slots().find(c => c.class().name() === 'class' && c.descended(target));
+      return this.name() === target.name() || !!this.slots().find(c => c.class() !== BVar && c.class().name() === 'class' && c.descended(target));
     },
     function vars() {
       let visited = new Set();
@@ -446,7 +461,7 @@ function bootstrap() {
 
         let vars = [];
         for (const c of cls.slots()) {
-          if (c.class().descended($var)) {
+          if (c.class() === BVar || c.class().descended($var)) {
             vars.push(c);
           } else if (c.class().descended($class)) {
             vars = [...vars, ..._vars(c.class())];
@@ -497,6 +512,7 @@ function bootstrap() {
 
   $class._name = 'class';
   $class.proto($class);
+  $class.slots($class_slots);
 
   // a missing middle
   var $var = $class.new({

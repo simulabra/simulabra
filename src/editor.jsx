@@ -23,6 +23,18 @@ export default await base.find('class', 'module').new({
       />
     </$class>;
 
+    <$class name="link">
+      <$$component />
+      <$var name="object" />
+      <$method name="render"
+        do={function render() {
+          return <div><a href="#" object={this.object()} onclick={e => this.emit('select', e)}>
+            {this.object().title()}
+          </a></div>;
+        }}
+      />
+    </$class>;
+
     <$class name="object_browser">
       <$$component />
       <$var name="objects"
@@ -44,11 +56,16 @@ export default await base.find('class', 'module').new({
       <$method name="render"
         do={function render() {
           if (!this.object()) {
-            return '<node>';
+            return <span>(no object)</span>;
           }
+          this.log(this.object().state());
           return <div>
-                   {this.object().title()}
-                   {this.object().state().map(v => `${v.var_ref().name()}=${v.value()}`)}
+                   <h4>{this.object().title()}</h4>
+                   {this.object().state().map(v => {
+                     const name = v.var_ref().name();
+                     const value = v.value();
+                     return <div>{`${v.var_ref().name()}=${v.value()}`}</div>
+                   })}
                  </div>;
         }}
       />
