@@ -15,12 +15,6 @@ function bootstrap() {
     trace() {
       return true;
     },
-    stringify() {
-
-    },
-    display() {
-
-    },
     register(o) {
       const u = o.uri();
       this._tracked[u] = {};
@@ -335,11 +329,11 @@ function bootstrap() {
       globalThis.SIMULABRA.register(this);
     },
     function description(seen) { //TODO: add depth
-      const vars = this.vars().filter(v => v.value() !== v.var_ref().defval());
+      const vars = this.state().filter(v => v.value() !== v.var_ref().defval());
       const varDesc = vars.length > 0 ? `{\n${vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
       return `${this.class().description(seen)}.new${varDesc}`;
     },
-    function vars() {
+    function state() {
       return this.class().vars().map(v => $var_state.new({ var_ref: v, value: this[v.name()]() }));
     },
     function me() {

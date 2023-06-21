@@ -4,7 +4,7 @@ import html from './html.jsx';
 export default await base.find('class', 'module').new({
   name: 'editor',
   imports: [base, html],
-  async on_load(_, $) {
+  on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
     <$class name="message_log">
@@ -12,8 +12,8 @@ export default await base.find('class', 'module').new({
       <$var name="message_list" default={[]} />
       <$method name="add"
         do={function add(message) {
-          this.message_list().push(message);
-          this.children([<div>{message}</div>]);
+          this.message_list().push(message); // need proxy/wrapper to trigger update
+          this.emit('update'); // so we do it manual
         }}
       />
       <$method name="render"
@@ -46,7 +46,10 @@ export default await base.find('class', 'module').new({
           if (!this.object()) {
             return '<node>';
           }
-          return <div>{this.object().title()}</div>;
+          return <div>
+                   {this.object().title()}
+                   {this.object().state().map(v => `${v.var_ref().name()}=${v.value()}`)}
+                 </div>;
         }}
       />
     </$class>;
