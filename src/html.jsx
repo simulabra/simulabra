@@ -35,7 +35,7 @@ export default await base.find('class', 'module').new({
       />
       <$after name="init"
         do={function init() {
-          this.on('update', function() {
+          this.addEventListener('update', function() {
             if (this.element()) {
               this.swap(this.render());
             }

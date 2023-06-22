@@ -13,7 +13,7 @@ export default await base.find('class', 'module').new({
       <$method name="add"
         do={function add(message) {
           this.message_list().push(message); // need proxy/wrapper to trigger update
-          this.emit('update'); // so we do it manual
+          this.dispatchEvent({ type: 'update' }); // so we do it manual
         }}
       />
       <$method name="render"
@@ -28,9 +28,9 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="render"
         do={function render() {
-          return <div><a href="#" object={this.object()} onclick={e => this.emit('select', e)}>
-            {this.object().title()}
-          </a></div>;
+          return <div><a href="#" object={this.object()} onclick={e => this.dispatchEvent({ type: 'select', target: e.target })}>
+                        {__.deref(this.object()).title()}
+                      </a></div>;
         }}
       />
     </$class>;
@@ -42,10 +42,13 @@ export default await base.find('class', 'module').new({
       />
       <$method name="render"
         do={function render() {
-          return <div>{this.objects().map(c =>
-            <div><a href="#" object={c} onclick={e => this.emit('select', e)}>
-              {__.deref(c).title()}
-            </a></div>)}</div>;
+          return <div>{this.objects()
+                           .map(c => (<$link object={c} />))
+                           .map(l => {
+                             l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
+                             return l;
+                           })
+                      }</div>;
         }}
       />
     </$class>;
@@ -58,7 +61,6 @@ export default await base.find('class', 'module').new({
           if (!this.object()) {
             return <span>(no object)</span>;
           }
-          this.log(this.object().state());
           return <div>
                    <h4>{this.object().title()}</h4>
                    {this.object().state().map(v => {
@@ -79,7 +81,7 @@ export default await base.find('class', 'module').new({
               objects={Object.keys(__.tracked())}
             />
           );
-          this.browser().on('select', (e) => {
+          this.browser().addEventListener('select', (e) => {
             const ref = e.target.attributes.object.value;
             this.messages().add('select: ' + __.deref(ref).title());
             this.explorer().object(__.deref(ref));

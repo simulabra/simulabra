@@ -343,7 +343,6 @@ function bootstrap() {
     function state() {
       return this.class().vars().map(var_ref => {
         const value = this[`_${var_ref.name()}`];
-        this.log('var', var_ref.name());
         if (value !== undefined) {
           return $var_state.new({ var_ref, value });
         } else {
@@ -392,12 +391,12 @@ function bootstrap() {
       }
       return observers[message] ?? [];
     },
-    function emit(message, data) {
-      for (const ob of this.message_observers(message)) {
-        ob(data);
+    function dispatchEvent(event) {
+      for (const ob of this.message_observers(event.type)) {
+        ob(event);
       }
     },
-    function on(message, cb) {
+    function addEventListener(message, cb) {
       if (this.observers() === undefined) {
         this.observers({});
       }
@@ -542,7 +541,7 @@ function bootstrap() {
           impl._primary = function mutableAccess(assign) {
             if (assign !== undefined) {
               this[pk] = assign;
-              this.emit('update', this.name()); // best there is?
+              this.dispatchEvent(new Event('update')); // best there is?
               if (self._trace) {
                 self.log('muted to', assign);
               }
@@ -643,7 +642,7 @@ function bootstrap() {
         do: function log(...args) {
           // const stack = (new Error).stack;
           // const source = stack.split('\n')[2];
-          $$().emit('log', args);
+          $$().dispatchEvent({ type: 'log', args });
           return this;
         }
       }),
@@ -850,7 +849,6 @@ function bootstrap() {
         name: 'js_new',
         do(className, ...args) {
           const obj = new globalThis[className](...args);
-          this.log(className, args, obj);
           return obj;
         }
       }),
@@ -885,7 +883,7 @@ function bootstrap() {
     objects: globalThis.SIMULABRA._objects,
   });
 
-  __.on('log', args => console.log(...args));
+  __.addEventListener('log', e => console.log(...e.args));
 
   globalThis.SIMULABRA = __;
   __.$$debug_class = $debug;
