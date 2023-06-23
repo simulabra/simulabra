@@ -219,6 +219,10 @@ function bootstrap() {
     toString() {
       return `~class-prototype#${this._proto._parent.name()}`;
     }
+
+    to_dom() {
+      return document.createTextNode(this.toString());
+    }
   }
 
   class BVar {
@@ -971,7 +975,10 @@ function bootstrap() {
       }),
       function description() {
         return this.toString();
-      }
+      },
+      function to_dom() {
+        return document.createTextNode(this.toString());
+      },
     ]
   });
 
@@ -990,6 +997,9 @@ function bootstrap() {
       },
       function print() {
         return this.toString();
+      },
+      function to_dom() {
+        return document.createTextNode(this.toString());
       },
       $method.new({
         name: 'class',

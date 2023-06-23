@@ -43,8 +43,8 @@ export default await base.find('class', 'module').new({
       <$method name="render"
         do={function render() {
           return <div>{this.objects()
-                           .map(c => (<$link object={c} />))
-                           .map(l => {
+                           .map(c => {
+                             const l = <$link object={c} />;
                              l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
                              return l;
                            })
@@ -66,7 +66,11 @@ export default await base.find('class', 'module').new({
                    {this.object().state().map(v => {
                      const name = v.var_ref().name();
                      const value = v.value();
-                     return <div>{`${v.var_ref().name()}=${v.value()}`}</div>
+                     if (typeof value === 'object' && typeof value.title === 'function') {
+                       return <div>{name}=<$object_explorer object={value} /></div>
+                     } else {
+                       return <div>{name}={value}</div>
+                     }
                    })}
                  </div>;
         }}

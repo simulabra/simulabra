@@ -57,6 +57,7 @@ export default await base.find('class', 'module').new({
           } else if (typeof node === 'string') {
             return document.createTextNode(node);
           } else {
+            this.log(node);
             return node.to_dom();
           }
         }}
