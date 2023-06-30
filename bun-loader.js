@@ -5,8 +5,10 @@ plugin({
   name: "simulabra",
   setup(build) {
     build.onLoad({ filter: /\.jsx$/ }, (args) => {
+      const contents = transform(args.path);
+      console.log('transformed', contents);
       return {
-        contents: transform(args.path),
+        contents,
         loader: 'js',
       };
     });

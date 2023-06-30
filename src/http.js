@@ -38,14 +38,14 @@ export default await base.find('class', 'module').new({
           default: '3030',
         }),
         $.var.new({
-          name: 'handlers',
+          name: 'slots',
           default: [],
         }),
         $.after.new({
           name: 'init',
           do() {
             this.node_server(createServer((req, res) => {
-              for (const handler of this.handlers()) {
+              for (const handler of this.slots()) {
                 if (handler.match(req.url)) {
                   return handler.handle($.http_request.new({ inner: req }), $.http_response.new({ inner: res }));
                 }

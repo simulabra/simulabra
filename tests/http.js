@@ -13,7 +13,7 @@ export default await base.find('class', 'module').new({
       async do() {
         const server = $.http_server.new({
           port: 3030,
-          handlers: [
+          slots: [
             $.path_request_handler.new({
               path: '/',
               handler(req, res) {

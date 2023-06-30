@@ -3,7 +3,7 @@
   "module": "simulabra-core",
   "scripts": {
     "test": "watchexec -w . -e js,jsx -r -- bun run src/runner.js",
-    "agent": "watchexec -w . -e js,jsx -r -- bun run src/agent.js"
+    "agent": "watchexec -w . -e js,jsx -r -- bun run src/agent.jsx"
   },
   "type": "module",
   "devDependencies": {
