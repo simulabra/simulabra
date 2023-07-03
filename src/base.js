@@ -449,6 +449,12 @@ function bootstrap() {
         this[pk] = dval;
       }
     },
+    function from_jsx(properties, slots) {
+      if (slots !== undefined) {
+        properties.slots = slots;
+      }
+      return this.new(properties);
+    },
     function description() {
       return `~${this.name()}`;
     },

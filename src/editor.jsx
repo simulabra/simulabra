@@ -9,7 +9,8 @@ export default await base.find('class', 'module').new({
 
     <$class name="message_log">
       <$$component />
-      <$var name="message_list" default={[]} />
+      <$var name="message_list"
+            default={[]} />
       <$method name="add"
         do={function add(message) {
           this.message_list().push(message); // need proxy/wrapper to trigger update
@@ -42,13 +43,14 @@ export default await base.find('class', 'module').new({
       />
       <$method name="render"
         do={function render() {
-          return <div>{this.objects()
-                           .map(c => {
-                             const l = <$link object={c} />;
-                             l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
-                             return l;
-                           })
-                      }</div>;
+          return <div>{
+            this.objects()
+              .map(c => {
+                const l = <$link object={c} />;
+                l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
+                return l;
+              })
+          }</div>;
         }}
       />
     </$class>;
@@ -76,6 +78,7 @@ export default await base.find('class', 'module').new({
         }}
       />
     </$class>;
+
     <$class name="editor">
       <$before name="init"
         do={function init() {

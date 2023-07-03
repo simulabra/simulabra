@@ -19,8 +19,9 @@ function jsx(node) {
     if (tag.indexOf('$$') === 0) {
       return b.memberExpression(b.identifier('$'), b.identifier(tag.slice(2)), false);
     } else if (tag[0] === '$') {
+      const args = [b.objectExpression(props)];
       if (node.children.length > 0) {
-        props.push(b.property('init', b.identifier('slots'), b.arrayExpression(children.filter(c => c.type !== 'Literal'))));
+        args.push(b.arrayExpression(children.filter(c => c.type !== 'Literal')));
       }
       return b.callExpression(
         b.memberExpression(
@@ -29,12 +30,10 @@ function jsx(node) {
             b.identifier(tag.slice(1)),
             false
           ),
-          b.identifier('new'),
+          b.identifier('from_jsx'),
           false
         ),
-        [
-          b.objectExpression(props),
-        ]
+        args
       );
     } else {
       const properties = props;
