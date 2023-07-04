@@ -616,11 +616,12 @@ function bootstrap() {
           fn = fn.fn();
         }
         if (impl._primary) {
-          if (this.override()) {
-            fn._next = impl._primary;
-          } else {
-            throw new Error(`invalid override on ${this.title()}!`);
-          }
+          fn._next = impl._primary;
+          // if (this.override()) {
+          //   fn._next = impl._primary;
+          // } else {
+          //   throw new Error(`invalid override on ${this.title()}!`);
+          // }
         }
         impl._primary = fn;
         impl._debug = this.debug();
@@ -1060,6 +1061,12 @@ function bootstrap() {
       function description(seen = {}) {
         return `(${this.map(it => { return simulabra_string(it) ?? '' + it }).join(' ')})`;
       },
+      function to_dom() {
+        return this.map(it => {
+          $debug.log('array', it);
+          return it.to_dom()
+        });
+      }
     ]
   });
 
@@ -1076,6 +1083,9 @@ function bootstrap() {
           mod: ctx
         });
         return this;
+      },
+      function to_dom() {
+        return document.createTextNode(`{${this.toString()}}`);
       }
       // $method.new({
       //   name: 'class',

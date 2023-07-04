@@ -58,6 +58,22 @@ export default await base.find('class', 'module').new({
     <$class name="object_explorer">
       <$$component />
       <$var name="object" />
+      <$method name="display"
+        do={function display(value) {
+          if (typeof value === 'object' && '_id' in value) {
+            // need something better
+            const l = <$link object={value.uri()} />;
+            l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
+            return l;
+          } else if (Array.isArray(value)) {
+            return value.map(it => this.display(it));
+          } else if (typeof value.to_dom === 'function') {
+            return value;
+          } else {
+            return '???';
+          }
+        }}
+      />
       <$method name="render"
         do={function render() {
           if (!this.object()) {
@@ -68,11 +84,7 @@ export default await base.find('class', 'module').new({
                    {this.object().state().map(v => {
                      const name = v.var_ref().name();
                      const value = v.value();
-                     if (typeof value === 'object' && typeof value.title === 'function') {
-                       return <div>{name}=<$object_explorer object={value} /></div>
-                     } else {
-                       return <div>{name}={value}</div>
-                     }
+                     return <div>{name}={this.display(value)}</div>;
                    })}
                  </div>;
         }}
