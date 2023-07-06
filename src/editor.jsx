@@ -29,8 +29,9 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="render"
         do={function render() {
-          return <div><a href="#" object={this.object()} onclick={e => this.dispatchEvent({ type: 'select', target: e.target })}>
-                        {__.deref(this.object()).title()}
+          this.log(this.object());
+          return <div><a href="#" object={this.object().uri()} onclick={e => this.dispatchEvent({ type: 'select', target: e.target })}>
+                        {this.object().title()}
                       </a></div>;
         }}
       />
@@ -62,7 +63,7 @@ export default await base.find('class', 'module').new({
         do={function display(value) {
           if (typeof value === 'object' && '_id' in value) {
             // need something better
-            const l = <$link object={value.uri()} />;
+            const l = <$link object={value} />;
             l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
             return l;
           } else if (Array.isArray(value)) {
@@ -97,13 +98,14 @@ export default await base.find('class', 'module').new({
           this.messages(<$message_log />);
           this.browser(
             <$object_browser
-              objects={Object.keys(__.tracked())}
+              // list of classes in the selected module
+              objects={_.classes()}
             />
           );
           this.browser().addEventListener('select', (e) => {
-            const ref = e.target.attributes.object.value;
-            this.messages().add('select: ' + __.deref(ref).title());
-            this.explorer().object(__.deref(ref));
+            const ref = __.deref(e.target.attributes.object.value);
+            this.messages().add('select: ' + ref.title());
+            this.explorer().object(ref);
           });
           this.explorer(<$object_explorer />);
 
