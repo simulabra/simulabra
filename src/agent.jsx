@@ -1,6 +1,6 @@
 import base from './base.js';
 import http from './http.js';
-import transform from './transform';
+import transform from './transform.js';
 import { readFileSync } from 'fs';
 
 export default await base.find('class', 'module').new({

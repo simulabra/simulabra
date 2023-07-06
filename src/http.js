@@ -12,6 +12,15 @@ export default await base.find('class', 'module').new({
         $.var.new({
           name: 'inner'
         }),
+        $.var.new({
+          name: 'start'
+        }),
+        $.method.new({
+          name: 'elapsed',
+          do() {
+            return +new Date() - +this.start();
+          }
+        })
       ]
     });
     $.class.new({
@@ -47,7 +56,7 @@ export default await base.find('class', 'module').new({
             this.node_server(createServer((req, res) => {
               for (const handler of this.slots()) {
                 if (handler.match(req.url)) {
-                  return handler.handle($.http_request.new({ inner: req }), $.http_response.new({ inner: res }));
+                  return handler.handle($.http_request.new({ inner: req, start: new Date() }), $.http_response.new({ inner: res }));
                 }
               }
               res.writeHead(404);
@@ -75,6 +84,18 @@ export default await base.find('class', 'module').new({
         }),
       ]
     });
+
+    $.class.new({
+      name: 'handler_logger',
+      slots: [
+        $.after.new({
+          name: 'handle',
+          do(req, res) {
+            this.log(`handle ${req.inner().url} in ${req.elapsed()} ms`);
+          }
+        })
+      ]
+    })
     $.class.new({
       name: 'var_handler',
       slots: [
@@ -94,6 +115,7 @@ export default await base.find('class', 'module').new({
       slots: [
         $.request_handler,
         $.var_handler,
+        $.handler_logger,
         $.var.new({
           name: 'path',
         }),
@@ -110,6 +132,7 @@ export default await base.find('class', 'module').new({
       slots: [
         $.request_handler,
         $.var_handler,
+        $.handler_logger,
         $.var.new({ name: 'filetypes' }),
         $.method.new({
           name: 'match',
