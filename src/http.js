@@ -1,5 +1,6 @@
 import base from './base.js';
 import { createServer } from 'http';
+import axios from 'axios';
 
 export default await base.find('class', 'module').new({
   name: 'http',
@@ -140,6 +141,29 @@ export default await base.find('class', 'module').new({
             const filetype = /\.([^\.]+)$/.exec(url)[1];
             this.log(filetype, this.filetypes());
             return this.filetypes().includes(filetype);
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'http_request_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'url' }),
+        $.var.new({ name: 'method' }),
+        $.var.new({ name: 'response_type' }),
+        $.var.new({ name: 'data' }),
+        $.method.new({
+          name: 'run',
+          async: true,
+          do: function run() {
+            return axios({
+              url: this.url(),
+              method: this.method(),
+              data: this.data(),
+              responseType: this.response_type(),
+            });
           }
         }),
       ]

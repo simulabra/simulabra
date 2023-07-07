@@ -6,23 +6,6 @@ export default await base.find('class', 'module').new({
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
-    <$class name="command">
-      <$virtual name="do" />
-      <$virtual name="active" />
-      <$var name="label" />
-      <$var name="value" />
-      <$var name="old_value" />
-      <$var name="object_modified" />
-      <$var name="old_owner" />
-
-
-      <$method name="dom_id"
-        do={function dom_id() {
-          return `${this.class().name()}--${this.id()}`;
-        }}
-      />
-    </$class>;
-
     <$class name="component">
       <$method name="dom_id"
         do={function dom_id() {

@@ -1275,6 +1275,13 @@ function bootstrap() {
     ]
   });
 
+  $.class.new({
+    name: 'command',
+    slots: [
+      $.virtual.new({ name: 'run' }),
+    ],
+  });
+
   return _;
 }
 
