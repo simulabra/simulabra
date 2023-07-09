@@ -22,7 +22,7 @@ export default await base.find('class', 'module').new({
           return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
         }}
       />
-      <$var name="children" default={[]} />
+      <$var name="parent" def={null} />
       <$method name="to_dom"
         do={function to_dom() {
           return this.container(this.render()).to_dom();
@@ -42,10 +42,25 @@ export default await base.find('class', 'module').new({
           });
         }}
       />
+      <$method name="dispatchEvent"
+        do={function dispatchEvent(event) {
+          const observers = this.message_observers(event.type);
+          this.log('dispatchEvent', event.type, observers.length, this.parent());
+          if (observers.length === 0) {
+            return this.parent()?.dispatchEvent(event);
+          }
+          let handled = false;
+          for (const ob of observers) {
+            handled = handled || ob(event);
+          }
+          return handled;
+        }}
+      />
     </$class>;
 
 
     <$class name="html_element">
+      <$$component />
       <$var name="tag" default={'div'} />
       <$var name="properties" default={{}} />
       <$var name="events" default={{}} />
@@ -57,7 +72,6 @@ export default await base.find('class', 'module').new({
           } else if (typeof node === 'string') {
             return document.createTextNode(node);
           } else {
-            this.log(node);
             return node.to_dom();
           }
         }}
@@ -65,18 +79,17 @@ export default await base.find('class', 'module').new({
       <$method name="to_dom" override={true}
         do={function to_dom() {
           const elem = document.createElement(this.tag());
-          for (const prop of Object.keys(this.properties())) {
-            if (prop.indexOf('on') === 0) {
-              const fn = this.properties()[prop];
-              const self = this;
-              elem.addEventListener(prop.slice(2), e => {
-                fn.apply(self, [e]);
-              });
+          for (const pkey of Object.keys(this.properties())) {
+            const prop = this.properties()[pkey];
+            if (typeof prop === 'string') {
+              elem.setAttribute(pkey, prop);
             } else {
-              elem.setAttribute(prop, this.properties()[prop]);
+              this.log('direct', pkey, prop);
+              elem[pkey] = prop;
             }
           }
           for (const child of this.children()) {
+            // TODO: handle nested arrays
             if (Array.isArray(child)) {
               for (const n of child) {
                 elem.appendChild(this.domify(n));

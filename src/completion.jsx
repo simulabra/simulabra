@@ -20,16 +20,16 @@ export default await base.find('class', 'module').new({
               response_type="stream"
               data={{
                 prompt: this.prompt(),
-                /* temperature: 0.7, */
-                /* top_k: 40, */
-                /* top_p: 0.9, */
-                /* repeat_penalty: 1.3, */
+                temperature: 0.7,
+                top_k: 100,
+                top_p: 2.0,
                 n_predict: 16,
                 stream: true,
               }}
             />).run();
             let out = '';
             res.data.on('data', chunk => {
+              this.log('receive data');
               const t = Buffer.from(chunk).toString('utf8');
               t.split('\n').forEach(l => {
                 if (l.startsWith('data: ')) {
@@ -43,11 +43,12 @@ export default await base.find('class', 'module').new({
         }} />
     </$class>;
 
-    const prompt = 'Your name: ';
+    const prompt = process.argv[2] || 'Simulabra was passed no prompt because';
     const result = await (<$local_llama_completion_command
                             server_url="http://localhost:3731"
                             prompt={prompt}
                           />).run();
     this.log(prompt + result);
+    process.exit(0);
   }
 }).load();

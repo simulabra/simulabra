@@ -29,10 +29,10 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="render"
         do={function render() {
-          this.log(this.object());
-          return <div><a href="#" object={this.object().uri()} onclick={e => this.dispatchEvent({ type: 'select', target: e.target })}>
-                        {this.object().title()}
-                      </a></div>;
+          this.log('render');
+          return <div><a href="#" id={`link-${this.id()}`} object={this.object().uri()} onclick={e => this.dispatchEvent({ type: 'select', target: e.target })}>
+            {this.object().title()}
+          </a></div>;
         }}
       />
     </$class>;
@@ -47,9 +47,8 @@ export default await base.find('class', 'module').new({
           return <div>{
             this.objects()
               .map(c => {
-                const l = <$link object={c} />;
-                l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
-                return l;
+                this.log('browser link select?', c, this);
+                return <$link object={c} parent={this} />;
               })
           }</div>;
         }}
@@ -63,9 +62,8 @@ export default await base.find('class', 'module').new({
         do={function display(value) {
           if (typeof value === 'object' && '_id' in value) {
             // need something better
-            const l = <$link object={value} />;
-            l.addEventListener('select', e => this.dispatchEvent({ type: 'select', target: e.target }));
-            return l;
+            this.log('explorer link select?', value, this);
+            return <$link object={value} parent={this} />;
           } else if (Array.isArray(value)) {
             return value.map(it => this.display(it));
           } else if (typeof value.to_dom === 'function') {
@@ -81,13 +79,13 @@ export default await base.find('class', 'module').new({
             return <span>(no object)</span>;
           }
           return <div>
-                   <h4>{this.object().title()}</h4>
-                   {this.object().state().map(v => {
-                     const name = v.var_ref().name();
-                     const value = v.value();
-                     return <div>{name}={this.display(value)}</div>;
-                   })}
-                 </div>;
+            <h4>{this.object().title()}</h4>
+            {this.object().state().map(v => {
+              const name = v.var_ref().name();
+              const value = v.value();
+              return <div>{name}={this.display(value)}</div>;
+            })}
+          </div>;
         }}
       />
     </$class>;
@@ -100,14 +98,16 @@ export default await base.find('class', 'module').new({
             <$object_browser
               // list of classes in the selected module
               objects={_.classes()}
+              parent={this}
             />
           );
-          this.browser().addEventListener('select', (e) => {
+          this.explorer(<$object_explorer parent={this} />);
+          this.addEventListener('select', (e) => {
+            this.log('selected?');
             const ref = __.deref(e.target.attributes.object.value);
             this.messages().add('select: ' + ref.title());
             this.explorer().object(ref);
           });
-          this.explorer(<$object_explorer />);
 
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
         }}

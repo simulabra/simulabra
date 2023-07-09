@@ -163,7 +163,7 @@ function bootstrap() {
           } catch (e) {
             if (!e._logged && self._debug) {
               e._logged = true;
-              debug('failed message: call', self._name, 'on', this._parent, 'with', args);
+              debug('failed message: call', self._name, 'on', this._class, 'with', args);
               __._stack.trace();
             }
             throw e;
@@ -196,7 +196,7 @@ function bootstrap() {
     constructor(parent) {
       this._impls = {};
       this._proto = DebugProto();
-      this._proto._parent = parent;
+      this._proto._class = parent;
     }
 
     _reify() {
@@ -217,12 +217,12 @@ function bootstrap() {
     }
 
     toString() {
-      return `~class-prototype#${this._proto._parent.name()}`;
+      return `~class-prototype#${this._proto._class.name()}`;
     }
 
-    to_dom() {
-      return document.createTextNode(this.toString());
-    }
+    // to_dom() {
+    //   return document.createTextNode(this.toString());
+    // }
   }
 
   class BVar {
@@ -321,7 +321,7 @@ function bootstrap() {
 
   const classDef = {
     class() {
-      return this._parent;
+      return this._class;
     }
   }
 
@@ -517,7 +517,7 @@ function bootstrap() {
   manload($class_slots, $class_proto);
   $class_proto._reify();
   var $class = Object.create($class_proto._proto);
-  $class._parent = $class;
+  $class._class = $class;
 
   $class._name = 'class';
   $class.proto($class);
@@ -640,7 +640,7 @@ function bootstrap() {
           fn = fn.fn();
         }
         impl._primary = fn;
-        impl.reify(proto._proto._parent);
+        impl.reify(proto._proto._class);
       }
     ]
   })
@@ -812,7 +812,7 @@ function bootstrap() {
       $.after.new({
         name: 'load',
         do(proto) {
-          proto._get_impl(this.name()).reify(proto._proto._parent);
+          proto._get_impl(this.name()).reify(proto._proto._class);
         }
       }),
     ]
