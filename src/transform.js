@@ -13,7 +13,9 @@ function jsxAttribute(node) {
 
 function jsx(node) {
   if (node.type === 'JSXElement') {
-    const children = node.children.map(c => nodemap(c));
+    const children = node.children
+      .filter(c => !(c.type === 'JSXText' && /\n +/.test(c.value)))
+      .map(c => nodemap(c));
     const tag = node.openingElement.name.name;
     const props = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));
     if (tag.indexOf('$$') === 0) {
@@ -69,6 +71,7 @@ function jsx(node) {
       );
     }
   } else if (node.type === 'JSXText') {
+    console.log('JSXText', node.value);
     return b.literal(node.value);
   } else if (node.type === 'JSXExpressionContainer') {
     return node.expression;

@@ -29,7 +29,6 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="render"
         do={function render() {
-          this.log('render');
           return <div><a href="#" id={`link-${this.id()}`} object={this.object().uri()} onclick={e => this.dispatchEvent({ type: 'select', target: e.target })}>
             {this.object().title()}
           </a></div>;
@@ -47,7 +46,6 @@ export default await base.find('class', 'module').new({
           return <div>{
             this.objects()
               .map(c => {
-                this.log('browser link select?', c, this);
                 return <$link object={c} parent={this} />;
               })
           }</div>;
@@ -61,8 +59,6 @@ export default await base.find('class', 'module').new({
       <$method name="display"
         do={function display(value) {
           if (typeof value === 'object' && '_id' in value) {
-            // need something better
-            this.log('explorer link select?', value, this);
             return <$link object={value} parent={this} />;
           } else if (Array.isArray(value)) {
             return value.map(it => this.display(it));
@@ -103,7 +99,6 @@ export default await base.find('class', 'module').new({
           );
           this.explorer(<$object_explorer parent={this} />);
           this.addEventListener('select', (e) => {
-            this.log('selected?');
             const ref = __.deref(e.target.attributes.object.value);
             this.messages().add('select: ' + ref.title());
             this.explorer().object(ref);

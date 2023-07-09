@@ -28,9 +28,17 @@ export default await base.find('class', 'module').new({
           return this.container(this.render()).to_dom();
         }}
       />
+      <$method name="clear"
+        do={function clear() {
+          while (this.element().firstChild) {
+            this.element().removeChild(this.element().firstChild);
+          }
+        }}
+      />
       <$method name="swap"
         do={function swap(content) {
-          this.element().innerHTML = content.to_dom().outerHTML;
+          this.clear();
+          this.element().appendChild(content.to_dom());
         }}
       />
       <$after name="init"
@@ -45,7 +53,7 @@ export default await base.find('class', 'module').new({
       <$method name="dispatchEvent"
         do={function dispatchEvent(event) {
           const observers = this.message_observers(event.type);
-          this.log('dispatchEvent', event.type, observers.length, this.parent());
+          /* this.log('dispatchEvent', event.type, observers.length, this.parent()); */
           if (observers.length === 0) {
             return this.parent()?.dispatchEvent(event);
           }
@@ -84,8 +92,13 @@ export default await base.find('class', 'module').new({
             if (typeof prop === 'string') {
               elem.setAttribute(pkey, prop);
             } else {
-              this.log('direct', pkey, prop);
-              elem[pkey] = prop;
+              elem.setAttribute('directed', pkey);
+              if (pkey.startsWith('on')) {
+                const eventName = pkey.slice(2).toLowerCase();
+                elem.addEventListener(eventName, prop);
+              } else {
+                elem[pkey] = prop;
+              }
             }
           }
           for (const child of this.children()) {
@@ -97,9 +110,6 @@ export default await base.find('class', 'module').new({
             } else {
               elem.appendChild(this.domify(child));
             }
-          }
-          for (const [name, fn] of Object.entries(this.events())) {
-            elem['on' + name] = fn.bind(this);
           }
           return elem;
         }}
