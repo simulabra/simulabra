@@ -55,7 +55,19 @@ export default await base.find('class', 'module').new({
 
     <$class name="object_explorer">
       <$$component />
+      <$var name="history" />
       <$var name="object" />
+      <$method name="select"
+        do={function select(value) {
+          this.history().push(this.object());
+          this.object(value);
+        }}
+      />
+      <$method name="back"
+        do={function back() {
+          this.object(this.history().pop());
+        }}
+      />
       <$method name="display"
         do={function display(value) {
           if (typeof value === 'object' && '_id' in value) {
@@ -65,7 +77,7 @@ export default await base.find('class', 'module').new({
           } else if (typeof value.to_dom === 'function') {
             return value;
           } else {
-            return '???';
+            return <div>???</div>;
           }
         }}
       />
@@ -75,7 +87,8 @@ export default await base.find('class', 'module').new({
             return <span>(no object)</span>;
           }
           return <div>
-            <h4>{this.object().title()}</h4>
+            <a href="#" onclick={e => this.back()}>back</a>
+            <$link object={this.object().class()} parent={this} />
             {this.object().state().map(v => {
               const name = v.var_ref().name();
               const value = v.value();
@@ -99,6 +112,7 @@ export default await base.find('class', 'module').new({
           );
           this.explorer(<$object_explorer parent={this} />);
           this.addEventListener('select', (e) => {
+            this.log(e);
             const ref = __.deref(e.target.attributes.object.value);
             this.messages().add('select: ' + ref.title());
             this.explorer().object(ref);

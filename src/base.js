@@ -793,17 +793,20 @@ function bootstrap() {
   var _ = $module.new({ name: 'base' });
   var $ = _.proxy('class');
   __._mod = _;
+  const INTRINSICS = [
+    $class,
+    $var,
+    $method,
+    $static,
+    $debug,
+    $var_state,
+    $virtual,
+    $before,
+    $after,
+    $module,
+  ];
 
-  _.def($class);
-  _.def($var);
-  _.def($method);
-  _.def($static);
-  _.def($debug);
-  _.def($var_state);
-  _.def($virtual);
-  _.def($before);
-  _.def($after);
-  _.def($module);
+  INTRINSICS.forEach(it => _.def(it));
 
   $.class.new({
     name: 'static_var',
@@ -899,6 +902,8 @@ function bootstrap() {
   globalThis.SIMULABRA = __;
   __.$$debug_class = $debug;
   __.start_ticking();
+
+  INTRINSICS.forEach(it => __.register(it));
 
   $.class.new({
     name: 'deffed',
