@@ -20,10 +20,10 @@ export default await base.find('class', 'module').new({
               response_type="stream"
               data={{
                 prompt: this.prompt(),
-                temperature: 0.7,
+                temperature: 0.5,
                 top_k: 100,
                 top_p: 2.0,
-                n_predict: 16,
+                n_predict: 32,
                 stream: true,
               }}
             />).run();
@@ -31,6 +31,7 @@ export default await base.find('class', 'module').new({
             res.data.on('data', chunk => {
               this.log('receive data');
               const t = Buffer.from(chunk).toString('utf8');
+              // Bun doesn't support data streaming with fetch, so it all comes at once
               t.split('\n').forEach(l => {
                 if (l.startsWith('data: ')) {
                   const message = JSON.parse(l.substring(6));

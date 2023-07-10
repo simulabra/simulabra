@@ -55,7 +55,7 @@ export default await base.find('class', 'module').new({
 
     <$class name="object_explorer">
       <$$component />
-      <$var name="history" />
+      <$var name="history" default={[]} />
       <$var name="object" />
       <$method name="select"
         do={function select(value) {
@@ -115,7 +115,7 @@ export default await base.find('class', 'module').new({
             this.log(e);
             const ref = __.deref(e.target.attributes.object.value);
             this.messages().add('select: ' + ref.title());
-            this.explorer().object(ref);
+            this.explorer().select(ref);
           });
 
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
