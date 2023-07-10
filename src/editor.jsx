@@ -74,7 +74,7 @@ export default await base.find('class', 'module').new({
             return <$link object={value} parent={this} />;
           } else if (Array.isArray(value)) {
             return value.map(it => this.display(it));
-          } else if (typeof value.to_dom === 'function') {
+          } else if ('to_dom' in Object.getPrototypeOf(value)) {
             return value;
           } else {
             return <div>???</div>;
@@ -112,7 +112,6 @@ export default await base.find('class', 'module').new({
           );
           this.explorer(<$object_explorer parent={this} />);
           this.addEventListener('select', (e) => {
-            this.log(e);
             const ref = __.deref(e.target.attributes.object.value);
             this.messages().add('select: ' + ref.title());
             this.explorer().select(ref);

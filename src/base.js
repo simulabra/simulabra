@@ -461,6 +461,9 @@ function bootstrap() {
     function descended(target) {
       return this.name() === target.name() || !!this.slots().find(c => c.class() !== BVar && c.class().name() === 'class' && c.descended(target));
     },
+    function title() {
+      return `~${this.name()}`;
+    },
     function vars() {
       let visited = new Set();
 
