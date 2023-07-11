@@ -29,9 +29,17 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="render"
         do={function render() {
-          return <div><a href="#" id={`link-${this.id()}`} object={this.object().uri()} onclick={e => this.dispatchEvent({ type: 'select', target: e.target })}>
-            {this.object().title()}
-          </a></div>;
+          return <div>
+            <a href="#"
+              id={`link-${this.id()}`}
+              object={this.object().uri()}
+              onclick={e => this.dispatchEvent({
+                type: 'command',
+                target: <$explorer_select_command target={__.deref(e.target.attributes.object.value)} />, })}
+            >
+              {this.object().title()}
+            </a>
+          </div>;
         }}
       />
     </$class>;
@@ -87,7 +95,6 @@ export default await base.find('class', 'module').new({
             return <span>(no object)</span>;
           }
           return <div>
-            <a href="#" onclick={e => this.back()}>back</a>
             <$link object={this.object().class()} parent={this} />
             {this.object().state().map(v => {
               const name = v.var_ref().name();
@@ -95,6 +102,27 @@ export default await base.find('class', 'module').new({
               return <div>{name}={this.display(value)}</div>;
             })}
           </div>;
+        }}
+      />
+    </$class>;
+
+    <$class name="explorer_select_command">
+      <$var name="target" />
+      <$var name="previous" />
+      <$method name="run"
+        do={function run(ctx) {
+          this.previous(ctx.explorer().object());
+          ctx.explorer().object(this.target());
+        }}
+      />
+      <$method name="undo"
+        do={function undo(ctx) {
+          ctx.explorer().object(this.previous());
+        }}
+      />
+      <$method name="description"
+        do={function description() {
+          return `~explorer_select_command target=${this.target().title()}`;
         }}
       />
     </$class>;
@@ -111,10 +139,9 @@ export default await base.find('class', 'module').new({
             />
           );
           this.explorer(<$object_explorer parent={this} />);
-          this.addEventListener('select', (e) => {
-            const ref = __.deref(e.target.attributes.object.value);
-            this.messages().add('select: ' + ref.title());
-            this.explorer().select(ref);
+          this.addEventListener('command', (e) => {
+            this.messages().add('run: ' + e.target.description());
+            e.target.run(this);
           });
 
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
