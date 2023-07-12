@@ -107,6 +107,7 @@ export default await base.find('class', 'module').new({
     </$class>;
 
     <$class name="explorer_select_command">
+      <$$command />
       <$var name="target" />
       <$var name="previous" />
       <$method name="run"
@@ -139,18 +140,19 @@ export default await base.find('class', 'module').new({
             />
           );
           this.explorer(<$object_explorer parent={this} />);
-          this.addEventListener('command', (e) => {
-            this.messages().add('run: ' + e.target.description());
-            e.target.run(this);
-          });
-
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
         }}
       />
       <$$component />
+      <$$application />
       <$var name="messages" />
       <$var name="browser" />
       <$var name="explorer" />
+      <$before name="process_command"
+        do={function process_command(cmd) {
+          this.messages().add('run: ' + cmd.description());
+        }}
+      />
       <$method name="render" override={true}
         do={function render() {
           return <div class="container">

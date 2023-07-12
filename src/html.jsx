@@ -116,5 +116,20 @@ export default await base.find('class', 'module').new({
       />
     </$class>;
 
+    <$class name="application">
+      <$after name="init"
+        do={function init() {
+          this.addEventListener('command', (e) => {
+            this.process_command(e.target);
+          });
+        }}
+      />
+      <$method name="process_command"
+        do={function process_command(cmd) {
+          cmd.run(this);
+        }}
+      />
+    </$class>
+
   }
 }).load();
