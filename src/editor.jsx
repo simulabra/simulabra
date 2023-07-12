@@ -11,24 +11,24 @@ export default await base.find('class', 'module').new({
       <$$component />
       <$var name="message_list"
             default={[]} />
-      <$method name="add"
-        do={function add(message) {
-          this.message_list().push(message); // need proxy/wrapper to trigger update
-          this.dispatchEvent({ type: 'update' }); // so we do it manual
-        }}
-      />
-      <$method name="render"
-        do={function render() {
+      <$method name="add">{
+        function add(message) {
+          this.message_list().push(message);
+          this.dispatchEvent({ type: 'update' });
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
           return <div>{this.message_list().map(m => <div>{m}</div>)}</div>;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="link">
       <$$component />
       <$var name="object" />
-      <$method name="render"
-        do={function render() {
+      <$method name="render">{
+        function render() {
           return <div>
             <a href="#"
               id={`link-${this.id()}`}
@@ -40,8 +40,8 @@ export default await base.find('class', 'module').new({
               {this.object().title()}
             </a>
           </div>;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="object_browser">
@@ -49,35 +49,35 @@ export default await base.find('class', 'module').new({
       <$var name="objects"
         desc="list of object urls"
       />
-      <$method name="render"
-        do={function render() {
+      <$method name="render">{
+        function render() {
           return <div>{
             this.objects()
               .map(c => {
                 return <$link object={c} parent={this} />;
               })
           }</div>;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="object_explorer">
       <$$component />
       <$var name="history" default={[]} />
       <$var name="object" />
-      <$method name="select"
-        do={function select(value) {
+      <$method name="select">{
+        function select(value) {
           this.history().push(this.object());
           this.object(value);
-        }}
-      />
-      <$method name="back"
-        do={function back() {
+        }
+      }</$method>
+      <$method name="back">{
+        function back() {
           this.object(this.history().pop());
-        }}
-      />
-      <$method name="display"
-        do={function display(value) {
+        }
+      }</$method>
+      <$method name="display">{
+        function display(value) {
           if (typeof value === 'object' && '_id' in value) {
             return <$link object={value} parent={this} />;
           } else if (Array.isArray(value)) {
@@ -87,10 +87,10 @@ export default await base.find('class', 'module').new({
           } else {
             return <div>???</div>;
           }
-        }}
-      />
-      <$method name="render"
-        do={function render() {
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
           if (!this.object()) {
             return <span>(no object)</span>;
           }
@@ -102,30 +102,30 @@ export default await base.find('class', 'module').new({
               return <div>{name}={this.display(value)}</div>;
             })}
           </div>;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="explorer_select_command">
       <$$command />
       <$var name="target" />
       <$var name="previous" />
-      <$method name="run"
-        do={function run(ctx) {
+      <$method name="run">{
+        function run(ctx) {
           this.previous(ctx.explorer().object());
           ctx.explorer().object(this.target());
-        }}
-      />
-      <$method name="undo"
-        do={function undo(ctx) {
+        }
+      }</$method>
+      <$method name="undo">{
+        function undo(ctx) {
           ctx.explorer().object(this.previous());
-        }}
-      />
-      <$method name="description"
-        do={function description() {
+        }
+      }</$method>
+      <$method name="description">{
+        function description() {
           return `~explorer_select_command target=${this.target().title()}`;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="editor">
@@ -153,8 +153,8 @@ export default await base.find('class', 'module').new({
           this.messages().add('run: ' + cmd.description());
         }}
       />
-      <$method name="render" override={true}
-        do={function render() {
+      <$method name="render">{
+        function render() {
           return <div class="container">
             <div class="col">
               {this.browser()}
@@ -167,8 +167,8 @@ export default await base.find('class', 'module').new({
               {this.messages()}
             </div>
           </div>;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
   }
 }).load();

@@ -602,6 +602,22 @@ function bootstrap() {
     ]
   });
 
+  const $static = $class.new({
+    name: 'static',
+    slots: [
+      $var.new({ name: 'do' }),
+      function load(proto) {
+        const impl = new MethodImpl({ _name: this.name() });
+        let fn = this.do();
+        if (typeof fn !== 'function') {
+          fn = fn.fn();
+        }
+        impl._primary = fn;
+        impl.reify(proto._proto._class);
+      }
+    ]
+  })
+
   const $method = $class.new({
     name: 'method',
     slots: [
@@ -610,6 +626,18 @@ function bootstrap() {
       $var.new({ name: 'name' }),
       $var.new({ name: 'override', default: false }),
       $var.new({ name: 'debug', default: true }),
+      $static.new({
+        name: 'from_jsx',
+        do(properties, slots) {
+          if (slots !== undefined) {
+            properties.slots = slots;
+            if (!properties.do) {
+              properties.do = slots[0];
+          }
+          }
+          return this.new(properties);
+        }
+      }),
       function combine(impl) {
         if (impl._name !== this.name()) {
           throw new Error('tried to combine method on non-same named impl');
@@ -631,22 +659,6 @@ function bootstrap() {
       },
     ]
   });
-
-  const $static = $class.new({
-    name: 'static',
-    slots: [
-      $var.new({ name: 'do' }),
-      function load(proto) {
-        const impl = new MethodImpl({ _name: this.name() });
-        let fn = this.do();
-        if (typeof fn !== 'function') {
-          fn = fn.fn();
-        }
-        impl._primary = fn;
-        impl.reify(proto._proto._class);
-      }
-    ]
-  })
 
   var $debug = $class.new({
     name: 'debug',
