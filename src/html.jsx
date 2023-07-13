@@ -17,9 +17,23 @@ export default await base.find('class', 'module').new({
           return document.getElementById(this.dom_id());
         }}
       />
+      <$method name="window">{
+        function window() {
+          return false;
+        }
+      }</$method>
       <$method name="container"
         do={function container(...children) {
-          return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
+          if (this.window()) {
+            return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
+              <div class="title">{this.title()}</div>
+              <div class="window-body">
+                {children}
+              </div>
+            </div>;
+          } else {
+            return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
+          }
         }}
       />
       <$var name="parent" def={null} />
@@ -38,7 +52,10 @@ export default await base.find('class', 'module').new({
       <$method name="swap"
         do={function swap(content) {
           this.clear();
-          this.element().appendChild(content.to_dom());
+          const children = [content.to_dom()].flat(Infinity);
+          for (const c of children) {
+            this.element().appendChild(c);
+          }
         }}
       />
       <$after name="init"

@@ -99,19 +99,29 @@ export default await base.find('class', 'module').new({
           }
         }
       }</$method>
+      <$method name="window">{
+        function window() {
+          return true;
+        }
+      }</$method>
+      <$method name="title">{
+        function title() {
+          return `object ${this.object()?.title() ?? '()'}`;
+        }
+      }</$method>
       <$method name="render">{
         function render() {
           if (!this.object()) {
             return <span>(no object)</span>;
           }
-          return <div>
+          return <>
             <$link object={this.object().class()} parent={this} />
             {this.object().state().map(v => {
               const name = v.var_ref().name();
               const value = v.value();
               return <div>{name}={this.display(value)}</div>;
             })}
-          </div>;
+          </>;
         }
       }</$method>
     </$class>;
@@ -170,10 +180,9 @@ export default await base.find('class', 'module').new({
               {this.browser()}
             </div>
             <div class="col">
-              <div class="code_editor">Code here</div>
+              {this.explorer()}
             </div>
             <div class="col">
-              {this.explorer()}
               {this.messages()}
             </div>
           </div>;
