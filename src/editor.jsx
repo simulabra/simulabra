@@ -8,7 +8,7 @@ export default await base.find('class', 'module').new({
     const __ = globalThis.SIMULABRA;
 
     <$class name="message_log">
-      <$$component />
+      <$$window />
       <$var name="message_list"
             default={[]} />
       <$method name="add">{
@@ -44,18 +44,8 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
-    <$class name="window">
-      <$$component />
-      <$var name="object" />
-      <$method name="render">{
-        function render() {
-          return <div class=""/>
-        }
-      }</$method>
-    </$class>;
-
     <$class name="object_browser">
-      <$$component />
+      <$$window />
       <$var name="objects"
         desc="list of object urls"
       />
@@ -72,7 +62,7 @@ export default await base.find('class', 'module').new({
     </$class>;
 
     <$class name="object_explorer">
-      <$$component />
+      <$$window />
       <$var name="history" default={[]} />
       <$var name="object" />
       <$method name="select">{

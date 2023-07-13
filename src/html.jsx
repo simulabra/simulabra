@@ -24,16 +24,7 @@ export default await base.find('class', 'module').new({
       }</$method>
       <$method name="container"
         do={function container(...children) {
-          if (this.window()) {
-            return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
-              <div class="title">{this.title()}</div>
-              <div class="window-body">
-                {children}
-              </div>
-            </div>;
-          } else {
-            return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
-          }
+          return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
         }}
       />
       <$var name="parent" def={null} />
@@ -81,6 +72,40 @@ export default await base.find('class', 'module').new({
           return handled;
         }}
       />
+    </$class>;
+
+    <$class name="window">
+      <$$component />
+      <$method name="container">{
+        function container(...children) {
+          return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
+            <div class="title">{this.title()}</div>
+            <div class="window-body">
+              children
+              {children}
+            </div>
+          </div>;
+        }
+      }</$method>
+      <$method name="clear">{
+        function clear() {
+          const el = this.element().querySelector('.window-body');
+          this.log(el);
+          while (el.firstChild) {
+            el.removeChild(el.firstChild);
+          }
+        }
+      }</$method>
+      <$method name="swap">{
+        function swap(content) {
+          this.clear();
+          const children = [content.to_dom()].flat(Infinity);
+          for (const c of children) {
+            this.element().querySelector('.window-body').appendChild(c);
+          }
+          this.element().querySelector('.title').innerHTML = this.title();
+        }
+      }</$method>
     </$class>;
 
 
