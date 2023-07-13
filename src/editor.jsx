@@ -178,6 +178,58 @@ export default await base.find('class', 'module').new({
           </div>;
         }
       }</$method>
+      <$method name="css">{
+        function css() {
+          return `
+  body, html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+  }
+
+  .editor, .container {
+    height: 100%;
+  }
+  .container {
+    display: flex;
+  }
+
+  .col {
+    flex: 1;
+    border: 1px solid #ddd;
+    overflow: auto;
+    padding: 2px;
+  }
+
+  .object_explorer, .message_log {
+    border: 1px solid #ddd;
+    overflow: auto;
+  }
+
+  .object_browser {}
+  .code_editor {}
+  .object_explorer {
+  }
+
+  .windowed {
+    background: #eee;
+    border: 1px solid #aaa;
+  }
+
+  .title {
+    border-bottom: 1px solid #aaa;
+    padding: 2px;
+    background: #ececec;
+  }
+
+  .window-body {
+    padding: 2px;
+  }
+  .message_log {}
+`;
+        }
+      }</$method>
     </$class>;
   }
 }).load();

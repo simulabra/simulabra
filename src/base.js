@@ -1083,7 +1083,6 @@ function bootstrap() {
       },
       function to_dom() {
         return this.map(it => {
-          $debug.log('array', it);
           return it.to_dom()
         });
       }

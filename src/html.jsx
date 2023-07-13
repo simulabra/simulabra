@@ -90,7 +90,6 @@ export default await base.find('class', 'module').new({
       <$method name="clear">{
         function clear() {
           const el = this.element().querySelector('.window-body');
-          this.log(el);
           while (el.firstChild) {
             el.removeChild(el.firstChild);
           }
@@ -164,6 +163,9 @@ export default await base.find('class', 'module').new({
           this.addEventListener('command', (e) => {
             this.process_command(e.target);
           });
+          const el = document.createElement('style');
+          el.innerHTML = this.css();
+          document.head.appendChild(el);
         }}
       />
       <$method name="process_command"
