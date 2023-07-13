@@ -129,7 +129,6 @@ export default await base.find('class', 'module').new({
           cmd.run(this);
         }}
       />
-    </$class>
-
+    </$class>;
   }
 }).load();

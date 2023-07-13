@@ -44,6 +44,16 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
+    <$class name="window">
+      <$$component />
+      <$var name="object" />
+      <$method name="render">{
+        function render() {
+          return <div class=""/>
+        }
+      }</$method>
+    </$class>;
+
     <$class name="object_browser">
       <$$component />
       <$var name="objects"
