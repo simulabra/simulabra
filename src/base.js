@@ -431,6 +431,7 @@ function bootstrap() {
       $base_slots.load(this.proto());
       this._proto._class = this;
       this.load(this.proto());
+      this.instances([]);
       this.proto()._reify();
       $$().mod()?.def(this)
     },
@@ -492,6 +493,7 @@ function bootstrap() {
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
+    BVar.new({ name: 'instances' }),
     BVar.new({
       name: 'slots',
       default: [],
@@ -511,6 +513,7 @@ function bootstrap() {
       parametize(props, obj);
       obj.id(this.genid());
       obj.init(this);
+      this.instances().push(obj);
       return obj;
     }
   };
@@ -525,6 +528,7 @@ function bootstrap() {
   $class._name = 'class';
   $class.proto($class);
   $class.slots($class_slots);
+  $class.init();
 
   // a missing middle
   var $var = $class.new({

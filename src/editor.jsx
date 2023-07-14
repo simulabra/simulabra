@@ -17,6 +17,11 @@ export default await base.find('class', 'module').new({
           this.dispatchEvent({ type: 'update' });
         }
       }</$method>
+      <$method name="title">{
+         function title() {
+           return 'messages';
+        }
+      }</$method>
       <$method name="render">{
         function render() {
           return <div>{this.message_list().map(m => <div>{m}</div>)}</div>;
@@ -44,11 +49,19 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
-    <$class name="object_browser">
+    <$class name="module_browser">
       <$$window />
-      <$var name="objects"
-        desc="list of object urls"
-      />
+      <$method name="objects">{
+        function objects() {
+          return this.module().classes();
+        }
+      }</$method>
+      <$method name="title">{
+        function title() {
+          return `module ${this.module().name()}`;
+        }
+      }</$method>
+      <$var name="module" />
       <$method name="render">{
         function render() {
           return <div>{
@@ -96,7 +109,7 @@ export default await base.find('class', 'module').new({
       }</$method>
       <$method name="title">{
         function title() {
-          return `object ${this.object()?.title() ?? '()'}`;
+          return `explorer of ${this.object()?.title() ?? 'nothing'}`;
         }
       }</$method>
       <$method name="render">{
@@ -143,9 +156,8 @@ export default await base.find('class', 'module').new({
         do={function init() {
           this.messages(<$message_log />);
           this.browser(
-            <$object_browser
-              // list of classes in the selected module
-              objects={_.classes()}
+            <$module_browser
+              module={_}
               parent={this}
             />
           );
@@ -167,7 +179,7 @@ export default await base.find('class', 'module').new({
         function render() {
           return <div class="container">
             <div class="col">
-              {this.browser()}
+              {$.module.instances().map(it => <$module_browser module={it} parent={this} />)}
             </div>
             <div class="col">
               {this.explorer()}
@@ -185,7 +197,9 @@ export default await base.find('class', 'module').new({
     height: 100%;
     margin: 0;
     padding: 0;
-    font-size: 12px;
+    font-size: 13px;
+    background: #282828;
+    color: #ebdbb2;
   }
 
   .editor, .container {
@@ -197,30 +211,29 @@ export default await base.find('class', 'module').new({
 
   .col {
     flex: 1;
-    border: 1px solid #ddd;
+    border: 1px solid #928374;
     overflow: auto;
     padding: 2px;
   }
 
-  .object_explorer, .message_log {
-    border: 1px solid #ddd;
-    overflow: auto;
-  }
-
-  .object_browser {}
+  .module_browser {}
   .code_editor {}
   .object_explorer {
   }
 
   .windowed {
-    background: #eee;
-    border: 1px solid #aaa;
+    background: #3c3836;
+    border: 1px solid #928374;
   }
 
   .title {
     border-bottom: 1px solid #aaa;
+    font-style: italic;
     padding: 2px;
-    background: #ececec;
+  }
+
+  a {
+    color: #d5c4a1;
   }
 
   .window-body {
