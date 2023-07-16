@@ -17,11 +17,6 @@ export default await base.find('class', 'module').new({
           return document.getElementById(this.dom_id());
         }}
       />
-      <$method name="window">{
-        function window() {
-          return false;
-        }
-      }</$method>
       <$method name="container"
         do={function container(...children) {
           return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
@@ -79,7 +74,7 @@ export default await base.find('class', 'module').new({
       <$method name="container">{
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
-            <div class="title">{this.title()}</div>
+            <div class="window-title">{this.window_title()}</div>
             <div class="window-body">
               children
               {children}
@@ -102,7 +97,12 @@ export default await base.find('class', 'module').new({
           for (const c of children) {
             this.element().querySelector('.window-body').appendChild(c);
           }
-          this.element().querySelector('.title').innerHTML = this.title();
+          this.element().querySelector('.window-title').innerHTML = this.window_title();
+        }
+      }</$method>
+      <$method name="window_title">{
+        function window_title() {
+          return this.title();
         }
       }</$method>
     </$class>;
@@ -158,6 +158,7 @@ export default await base.find('class', 'module').new({
     </$class>;
 
     <$class name="application">
+      <$var name="command_history" default={[]} />
       <$after name="init"
         do={function init() {
           this.addEventListener('command', (e) => {
@@ -171,6 +172,7 @@ export default await base.find('class', 'module').new({
       <$method name="process_command"
         do={function process_command(cmd) {
           cmd.run(this);
+          this.command_history().push(cmd);
         }}
       />
     </$class>;

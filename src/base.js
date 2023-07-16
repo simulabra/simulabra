@@ -474,10 +474,12 @@ function bootstrap() {
 
         let vars = [];
         for (const c of cls.slots()) {
-          if (c.class() === BVar || c.class().descended($var)) {
+          if (typeof c === 'function') {
+            // skip
+          } else if (c.class() === BVar || c.isa($var)) {
             vars.push(c);
-          } else if (c.class().descended($class)) {
-            vars = [...vars, ..._vars(c.class())];
+          } else if (c.isa($class)) {
+            vars = [...vars, ..._vars(c)];
           }
         }
         return vars;

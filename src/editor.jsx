@@ -102,13 +102,8 @@ export default await base.find('class', 'module').new({
           }
         }
       }</$method>
-      <$method name="window">{
-        function window() {
-          return true;
-        }
-      }</$method>
-      <$method name="title">{
-        function title() {
+      <$method name="window_title">{
+        function window_title() {
           return `explorer of ${this.object()?.title() ?? 'nothing'}`;
         }
       }</$method>
@@ -165,7 +160,7 @@ export default await base.find('class', 'module').new({
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
         }}
       />
-      <$$component />
+      <$$window />
       <$$application />
       <$var name="messages" />
       <$var name="browser" />
@@ -226,7 +221,7 @@ export default await base.find('class', 'module').new({
     border: 1px solid #928374;
   }
 
-  .title {
+  .window-title {
     border-bottom: 1px solid #aaa;
     font-style: italic;
     padding: 2px;
