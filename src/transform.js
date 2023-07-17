@@ -71,7 +71,6 @@ function jsx(node) {
       );
     }
   } else if (node.type === 'JSXText') {
-    console.log('JSXText', node.value);
     return b.literal(node.value);
   } else if (node.type === 'JSXExpressionContainer') {
     return node.expression;

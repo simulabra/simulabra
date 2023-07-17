@@ -263,6 +263,9 @@ function bootstrap() {
     description() {
       return `{~#bvar ${this.name()}}`
     }
+    isa(it) {
+      return it === BVar;
+    }
   }
 
   __._stack = new FrameStack();
@@ -294,6 +297,9 @@ function bootstrap() {
         return 'native_function';
       },
     }
+  };
+  Function.prototype.isa = function(it) {
+    return it.name() === 'function-primitive';;
   };
   Number.prototype.description = function () {
     return this.toString();
@@ -465,27 +471,30 @@ function bootstrap() {
     function title() {
       return `~${this.name()}`;
     },
-    function vars() {
-      let visited = new Set();
-
-      const _vars = (cls) => {
-        if (visited.has(cls)) return [];
-        visited.add(cls);
-
-        let vars = [];
-        for (const c of cls.slots()) {
-          if (typeof c === 'function') {
-            // skip
-          } else if (c.class() === BVar || c.isa($var)) {
-            vars.push(c);
-          } else if (c.isa($class)) {
-            vars = [...vars, ..._vars(c)];
-          }
+    function superclasses() {
+      let res = [];
+      for (const slot of this.slots()) {
+        if (slot.isa($class)) {
+          res = [slot, ...slot.superclasses(), ...res];
         }
-        return vars;
-      };
+      }
+      return res;
+    },
+    function vars(visited = new Set()) {
+      if (visited.has(this)) return [];
+      visited.add(this);
 
-      return _vars(this);
+      let vars = [];
+      for (const slot of this.slots()) {
+        if (typeof slot === 'function') {
+          // skip
+        } else if (slot.class() === BVar || slot.isa($var)) {
+          vars.push(slot);
+        } else if (slot.isa($class)) {
+          vars = [...vars, ...slot.vars()];
+        }
+      }
+      return vars;
     },
     function genid() {
       let id = this.id_ctr();
@@ -516,6 +525,7 @@ function bootstrap() {
       obj.id(this.genid());
       obj.init(this);
       this.instances().push(obj);
+      this.superclasses().forEach(it => it.instances().push(obj));
       return obj;
     }
   };
@@ -742,9 +752,6 @@ function bootstrap() {
       $var.new({ name: 'classes', default: () => [] }),
       function repo(className) {
         return this.repos()[className] || {};
-      },
-      function instances(cls) {
-        return this.classes().filter(c => c.isa(cls));
       },
       function find(className, name) {
         // totally dies to recursion!
