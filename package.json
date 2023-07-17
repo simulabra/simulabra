@@ -7,7 +7,8 @@
   },
   "type": "module",
   "devDependencies": {
-    "bun-types": "^0.1.0"
+    "bun-types": "^0.1.0",
+    "prettier": "^3.0.0"
   },
   "dependencies": {
     "acorn": "^8.8.0",
@@ -15,7 +16,6 @@
     "meriyah": "^4.3.2",
     "mitata": "^0.1.6",
     "node-fetch": "^3.3.1",
-    "recast": "^0.22.0",
-    "uvu": "^0.5.6"
+    "recast": "^0.22.0"
   }
 }

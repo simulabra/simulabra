@@ -188,13 +188,18 @@ export default await base.find('class', 'module').new({
       <$method name="css">{
         function css() {
           return `
+  :root {
+    --primary: #663C3C;
+    --secondary: #50666B;
+    --background: #EFCA9D;
+  }
   body, html {
     height: 100%;
     margin: 0;
     padding: 0;
     font-size: 13px;
-    background: #282828;
-    color: #ebdbb2;
+    background: var(--background);
+    color: var(--primary);
   }
 
   .editor, .container {
@@ -206,7 +211,6 @@ export default await base.find('class', 'module').new({
 
   .col {
     flex: 1;
-    border: 1px solid #928374;
     overflow: auto;
     padding: 2px;
   }
@@ -217,18 +221,18 @@ export default await base.find('class', 'module').new({
   }
 
   .windowed {
-    background: #3c3836;
-    border: 1px solid #928374;
+    border: 1px solid var(--primary);
+    margin-bottom: 2px;
   }
 
   .window-title {
-    border-bottom: 1px solid #aaa;
+    border-bottom: 1px solid var(--primary);
     font-style: italic;
     padding: 2px;
   }
 
   a {
-    color: #d5c4a1;
+    color: var(--secondary);
   }
 
   .window-body {
