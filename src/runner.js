@@ -52,7 +52,7 @@ export default await base.find('class', 'module').new({
               throw new Error(`no cases in module ${mod.description()}`);
             }
             for (const test_case of cases) {
-              await test_case.run();
+              await test_case.deref().run();
             }
             const n = Object.values(cases).length;
             this.log(mod.title(), `${n} test cases passed`);

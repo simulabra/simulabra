@@ -501,6 +501,10 @@ function bootstrap() {
       this.id_ctr(id + 1);
       return id;
     },
+    function register_inst(obj) {
+      this.instances().push(new WeakRef(obj));
+      this.superclasses().forEach(it => it.instances().push(new WeakRef(obj)));
+    },
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
@@ -524,8 +528,7 @@ function bootstrap() {
       parametize(props, obj);
       obj.id(this.genid());
       obj.init(this);
-      this.instances().push(obj);
-      this.superclasses().forEach(it => it.instances().push(obj));
+      this.register_inst(obj);
       return obj;
     }
   };
@@ -906,8 +909,6 @@ function bootstrap() {
     mod: _,
     base_mod: _,
     bootstrapped: true,
-    tracked: globalThis.SIMULABRA._tracked,
-    objects: globalThis.SIMULABRA._objects,
   });
 
   __.addEventListener('log', e => console.log(...e.args));
@@ -916,7 +917,12 @@ function bootstrap() {
   __.$$debug_class = $debug;
   __.start_ticking();
 
-  INTRINSICS.forEach(it => __.register(it));
+  [
+    ...INTRINSICS,
+    $.static_var,
+    $.object_registry,
+    $.simulabra_global,
+  ].forEach(it => __.register(it));
 
   $.class.new({
     name: 'deffed',

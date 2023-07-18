@@ -34,13 +34,18 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="render">{
         function render() {
+          const uri = this.object().uri();
           return <div>
             <a href="#"
               id={`link-${this.id()}`}
-              object={this.object().uri()}
-              onclick={e => this.dispatchEvent({
-                type: 'command',
-                target: <$explorer_select_command target={__.deref(e.target.attributes.object.value)} />, })}
+              object={uri}
+              onclick={e => {
+                console.log(uri, __.deref(uri));
+                return this.dispatchEvent({
+                  type: 'command',
+                  target: <$explorer_select_command target={__.deref(uri)} />,
+                });
+              }}
             >
               {this.object().title()}
             </a>
@@ -167,6 +172,7 @@ export default await base.find('class', 'module').new({
       <$var name="explorer" />
       <$before name="process_command"
         do={function process_command(cmd) {
+          console.log(cmd);
           this.messages().add('run: ' + cmd.description());
         }}
       />
@@ -174,7 +180,7 @@ export default await base.find('class', 'module').new({
         function render() {
           return <div class="container">
             <div class="col">
-              {$.module.instances().map(it => <$module_browser module={it} parent={this} />)}
+              {$.module.instances().map(it => <$module_browser module={it.deref()} parent={this} />)}
             </div>
             <div class="col">
               {this.explorer()}
