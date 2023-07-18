@@ -850,8 +850,26 @@ function bootstrap() {
   })
 
   $.class.new({
+    name: 'object_registry',
+    slots: [
+      function register(o) {
+        const u = o.uri();
+        this.refs()[u] = new WeakRef(o);
+      },
+      function deref(u) {
+        return this.refs()[u]?.deref();
+      },
+      $.var.new({
+        name: 'refs',
+        default: {},
+      }),
+    ]
+  });
+
+  $.class.new({
     name: 'simulabra_global',
     slots: [
+      $.object_registry,
       $.var.new({
         name: 'mod',
       }),
@@ -903,16 +921,6 @@ function bootstrap() {
       function base() {
         return _;
       },
-      function register(o) {
-        const u = o.uri();
-        this._tracked[u] = {};
-        this._objects.set(this._tracked[u], o);
-      },
-      function deref(u) {
-        return this.objects().get(this.tracked()[u]);
-      },
-      $.var.new({ name: 'tracked' }),
-      $.var.new({ name: 'objects' }),
     ]
   });
 
