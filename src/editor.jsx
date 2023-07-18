@@ -31,7 +31,6 @@ export default await base.find('class', 'module').new({
 
     <$class name="link">
       <$$component />
-      <$var name="object" />
       <$method name="render">{
         function render() {
           const uri = this.object().uri();
@@ -40,16 +39,25 @@ export default await base.find('class', 'module').new({
               id={`link-${this.id()}`}
               object={uri}
               onclick={e => {
-                console.log(uri, __.deref(uri));
                 return this.dispatchEvent({
                   type: 'command',
-                  target: <$explorer_select_command target={__.deref(uri)} />,
+                  target: this.command(),
                 });
               }}
             >
               {this.object().title()}
             </a>
           </div>;
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="explorer_select_link">
+      <$$link />
+      <$var name="object" />
+      <$method name="command">{
+        function command() {
+          return <$explorer_select_command target={this.object()} />
         }
       }</$method>
     </$class>;
@@ -72,7 +80,7 @@ export default await base.find('class', 'module').new({
           return <div>{
             this.objects()
               .map(c => {
-                return <$link object={c} parent={this} />;
+                return <$explorer_select_link object={c} parent={this} />;
               })
           }</div>;
         }
@@ -97,11 +105,18 @@ export default await base.find('class', 'module').new({
       <$method name="display">{
         function display(value) {
           if (typeof value === 'object' && '_id' in value) {
-            return <$link object={value} parent={this} />;
+            return <$explorer_select_link object={value} parent={this} />;
           } else if (Array.isArray(value)) {
             return value.map(it => this.display(it));
           } else if ('to_dom' in Object.getPrototypeOf(value)) {
             return value;
+          } else if (value instanceof WeakRef) {
+            const ref = value.deref();
+            if (ref !== undefined) {
+              return this.display(ref);
+            } else {
+              return <div>(empty ref)</div>
+            }
           } else {
             return <div>???</div>;
           }
@@ -118,7 +133,7 @@ export default await base.find('class', 'module').new({
             return <span>(no object)</span>;
           }
           return <>
-            <$link object={this.object().class()} parent={this} />
+            <$explorer_select_link object={this.object().class()} parent={this} />
             {this.object().state().map(v => {
               const name = v.var_ref().name();
               const value = v.value();
