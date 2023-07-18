@@ -836,93 +836,70 @@ function bootstrap() {
 
   INTRINSICS.forEach(it => _.def(it));
 
-  $.class.new({
-    name: 'static_var',
-    slots: [
-      $.var,
-      $.after.new({
-        name: 'load',
-        do(proto) {
-          proto._get_impl(this.name()).reify(proto._proto._class);
-        }
-      }),
-    ]
-  })
+  <$class name="static_var">
+    <$$var />
+    <$after name="load">{
+      function load() {
+        this._get_impl(this.name()).reify(this._proto._class);
+      }
+    }</$after>
+  </$class>;
 
-  $.class.new({
-    name: 'object_registry',
-    slots: [
+  <$class name="object_registry">
+    <$method name="register">{
       function register(o) {
         const u = o.uri();
         this.refs()[u] = new WeakRef(o);
-      },
+      }
+    }</$method>
+    <$method name="deref">{
       function deref(u) {
         return this.refs()[u]?.deref();
-      },
-      $.var.new({
-        name: 'refs',
-        default: {},
-      }),
-    ]
-  });
+      }
+    }</$method>
+    <$var name="refs" default={{}} />
+  </$class>;
 
-  $.class.new({
-    name: 'simulabra_global',
-    slots: [
-      $.object_registry,
-      $.var.new({
-        name: 'mod',
-      }),
-      $.var.new({
-        name: 'modules',
-        default: () => {},
-      }),
-      $.var.new({
-        name: 'stack',
-        debug: false,
-      }),
-      $.var.new({
-        name: 'debug',
-        default: true, // now only, how to change while running?
-      }),
-      $.var.new({
-        name: 'trace',
-        default: true,
-      }),
-      $.var.new({
-        name: 'tick',
-        default: 0,
-      }),
-      $.var.new({
-        name: 'handlers',
-        default: {},
-      }),
-      $.method.new({
-        name: 'start_ticking',
-        do() {
-          setInterval(() => {
-            this.tick(this.tick() + 1);
-          }, 16);
-        }
-      }),
-      $.method.new({
-        name: 'js_new',
-        do(className, ...args) {
-          const obj = new globalThis[className](...args);
-          return obj;
-        }
-      }),
+
+  <$class name="simulabra_global">
+    <$$object_registry />
+    <$var name="mod" />
+    <$var name="modules" default={{}} />
+    <$var name="stack" debug={false} />
+    <$var name="debug" default={true} />
+    <$var name="trace" default={true} />
+    <$var name="tick" default={0} />
+    <$var name="handlers" default={{}} />
+    <$method name="start_ticking">{
+      function start_ticking() {
+        setInterval(() => {
+          this.tick(this.tick() + 1);
+        }, 16);
+      }
+    }</$method>
+    <$method name="js_new">{
+      function js_new(className, ...args) {
+        const obj = new globalThis[className](...args);
+        return obj;
+      }
+    }</$method>
+    <$method name="js_get">{
       function js_get(obj, p) {
         return obj[p];
-      },
+      }
+    }</$method>
+    <$method name="$">{
       function $() {
         return this.mod().proxy('class');
-      },
+      }
+    }</$method>
+    <$method name="base">{
       function base() {
         return _;
-      },
-    ]
-  });
+      }
+    }</$method>
+  </$class>;
+
 
   __ = $.simulabra_global.new({
     stack: new FrameStack(),

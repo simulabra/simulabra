@@ -1,6 +1,6 @@
 import { readdir } from 'fs/promises';
 import { join, dirname, relative } from 'path';
-import base from './base.js';
+import base from './base.jsx';
 import test from './test.js';
 
 export default await base.find('class', 'module').new({

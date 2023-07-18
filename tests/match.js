@@ -1,4 +1,4 @@
-import base from '../src/base.js';
+import base from '../src/base.jsx';
 import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 

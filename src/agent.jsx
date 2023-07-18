@@ -1,4 +1,4 @@
-import base from './base.js';
+import base from './base.jsx';
 import http from './http.js';
 import transform from './transform.js';
 import { readFileSync } from 'fs';
