@@ -213,9 +213,9 @@ export default await base.find('class', 'module').new({
     --primary: #663C3C;
     --secondary: #50666B;
     --background: #EFCA9D;
+    --background-secondary: #EFB072;
   }
   body, html {
-    height: 100%;
     margin: 0;
     padding: 0;
     font-size: 13px;
@@ -244,9 +244,11 @@ export default await base.find('class', 'module').new({
   .windowed {
     border: 1px solid var(--primary);
     margin-bottom: 2px;
+    max-height: 100%;
   }
 
   .window-title {
+    background: var(--background-secondary);
     border-bottom: 1px solid var(--primary);
     font-style: italic;
     padding: 2px;
@@ -258,6 +260,7 @@ export default await base.find('class', 'module').new({
 
   .window-body {
     padding: 2px;
+    max-height: 100%;
   }
   .message_log {}
 `;
