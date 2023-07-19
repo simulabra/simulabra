@@ -11,6 +11,7 @@ export default await base.find('class', 'module').new({
       <$$command />
       <$var name="prompt"/>
       <$var name="server_url"/>
+      <$var name="n_predict" default={8} />
       <$method name="run"
         do={function run() {
           return new Promise(async (resolve, reject) => {
@@ -20,11 +21,14 @@ export default await base.find('class', 'module').new({
               response_type="stream"
               data={{
                 prompt: this.prompt(),
-                temperature: 0.7,
-                top_k: 100,
-                top_p: 2.0,
-                n_predict: 50,
+                temperature: 0.8,
+                top_k: 40,
+                top_p: 0.9,
+                n_predict: this.n_predict(),
                 stream: true,
+                /* logit_bias: [ */
+                /*   [29896, false], */
+                /* ] */
               }}
             />).run();
             let out = '';
@@ -44,12 +48,44 @@ export default await base.find('class', 'module').new({
         }} />
     </$class>;
 
-    const prompt = process.argv[2] || 'Simulabra was passed no prompt because';
-    const result = await (<$local_llama_completion_command
-                            server_url="http://localhost:3731"
-                            prompt={prompt}
-                          />).run();
-    this.log(prompt + result);
+    <$class name="local_llama_tokenize_command">
+      <$$command />
+      <$var name="prompt"/>
+      <$var name="server_url"/>
+      <$method name="run"
+        do={async function run() {
+          const res = await (<$http_request_command
+            url={`${this.server_url()}/tokenize`}
+            method="post"
+            data={{
+              content: this.prompt(),
+            }}
+          />).run();
+          return res.data.tokens;
+        }} />
+    </$class>;
+
+    let prompt = process.argv[2] || 'Simulabra was passed no prompt because';
+    let count_toks = false;
+    for (let i = 0; i < 100; i++) {
+      const start = +new Date();
+      const result = await (<$local_llama_completion_command
+        server_url="http://localhost:3731"
+        prompt={prompt}
+        n_predict={1}
+      />).run();
+      const completion_ms = +new Date() - start;
+      prompt += result;
+      if (count_toks) {
+        const tokens = await (<$local_llama_tokenize_command
+          server_url="http://localhost:3731"
+          prompt={prompt}
+        />).run();
+        this.log(`(${tokens.length} toks in ${completion_ms}ms)`, prompt);
+      } else {
+        this.log(`(${completion_ms}ms)`, prompt);
+      }
+    }
     process.exit(0);
   }
 }).load();
