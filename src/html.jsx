@@ -74,7 +74,12 @@ export default await base.find('class', 'module').new({
       <$method name="container">{
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
-            <div class="window-title">{this.window_title()}</div>
+            <div class="window-bar">
+              <span class="window-layout">
+              </span>
+              <span class="window-title">{this.window_title()}</span>
+              <span class="window-menu"></span>
+            </div>
             <div class="window-body">
               children
               {children}

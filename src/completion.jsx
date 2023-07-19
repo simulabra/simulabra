@@ -20,10 +20,10 @@ export default await base.find('class', 'module').new({
               response_type="stream"
               data={{
                 prompt: this.prompt(),
-                temperature: 0.5,
+                temperature: 0.7,
                 top_k: 100,
                 top_p: 2.0,
-                n_predict: 32,
+                n_predict: 50,
                 stream: true,
               }}
             />).run();

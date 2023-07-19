@@ -247,9 +247,31 @@ export default await base.find('class', 'module').new({
     max-height: 100%;
   }
 
-  .window-title {
+  .window-bar {
     background: var(--background-secondary);
     border-bottom: 1px solid var(--primary);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .window-layout {
+    width: 18px;
+    height: 7px;
+    display: inline-block;
+    background: var(--primary);
+    align-self: flex-start;
+  }
+
+  .window-menu {
+    width: 18px;
+    height: 6px;
+    display: inline-block;
+    border-top: 1px solid var(--primary);
+    border-bottom: 1px solid var(--primary);
+    align-self: center;
+  }
+
+  .window-title {
     font-style: italic;
     padding: 2px;
   }
