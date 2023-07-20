@@ -553,6 +553,7 @@ function bootstrap() {
       BVar.new({ name: 'mutable', default: true }),
       BVar.new({ name: 'debug', default: true }),
       BVar.new({ name: 'trace', default: false }),
+      BVar.new({ name: 'observable', default: true }),
       BVar.new({ name: 'default', }),
       BVar.new({ name: 'default_init', }),
       BVar.new({ name: 'required', }),
@@ -573,7 +574,9 @@ function bootstrap() {
           impl._primary = function mutableAccess(assign) {
             if (assign !== undefined) {
               this[pk] = assign;
-              this.dispatchEvent(new Event('update')); // best there is?
+              if (self.observable()) {
+                this.dispatchEvent(new Event('update')); // best there is?
+              }
               if (self._trace) {
                 self.log('muted to', assign);
               }

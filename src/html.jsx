@@ -71,6 +71,7 @@ export default await base.find('class', 'module').new({
 
     <$class name="window">
       <$$component />
+      <$var name="minimized" default={false} />
       <$method name="container">{
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
@@ -80,10 +81,10 @@ export default await base.find('class', 'module').new({
               <span class="window-title">{this.window_title()}</span>
               <span class="window-menu"></span>
             </div>
-            <div class="window-body">
+            {this.minimized() ? '' : <div class="window-body">
               children
               {children}
-            </div>
+            </div>}
           </div>;
         }
       }</$method>
@@ -174,6 +175,7 @@ export default await base.find('class', 'module').new({
           document.head.appendChild(el);
         }}
       />
+
       <$method name="process_command"
         do={function process_command(cmd) {
           cmd.run(this);

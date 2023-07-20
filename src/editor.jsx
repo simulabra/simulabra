@@ -1,11 +1,25 @@
 import base from './base.jsx';
 import html from './html.jsx';
+import completion from './completion.jsx';
 
 export default await base.find('class', 'module').new({
   name: 'editor',
-  imports: [base, html],
+  imports: [base, html, completion],
   on_load(_, $) {
     const __ = globalThis.SIMULABRA;
+
+    function debounce(func, wait) {
+      var timeout;
+      return function () {
+        var context = this, args = arguments;
+        var later = function () {
+          timeout = null;
+          func.apply(context, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    };
 
     <$class name="message_log">
       <$$window />
@@ -58,6 +72,93 @@ export default await base.find('class', 'module').new({
       <$method name="command">{
         function command() {
           return <$explorer_select_command target={this.object()} />
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="completor_fetch_next_command">
+      <$$command />
+      <$var name="target" />
+      <$var name="text" />
+      <$method name="run">{
+        async function run(ctx) {
+          this.log(this.text());
+          const completion = await (<$local_llama_completion_command prompt={this.text()} />).run();
+          this.log(completion);
+        }
+      }</$method>
+      <$method name="description">{
+        function description() {
+          return `<${this.title()} target={${this.target().title()}} />`;
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="completor_fetch_next_command">
+      <$$command />
+      <$var name="target" />
+      <$var name="text" />
+      <$method name="run">{
+        async function run(ctx) {
+          this.log(this.text());
+          const completion = await (<$local_llama_completion_command prompt={this.text()} />).run();
+          this.log(completion);
+          this.target().add_completion_candidate(completion);
+        }
+      }</$method>
+      <$method name="description">{
+        function description() {
+          return `<${this.title()} target={${this.target().title()}} />`;
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="completor_add_link">
+      <$$link />
+      <$var name="target" />
+      <$var name="text" />
+      <$method name="command">{
+        function command() {
+          return <$completor_add_text target={this.target()} text={this.text()} />
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="completor">
+      <$$window />
+      <$var name="text" observable={false} />
+      <$var name="completion_candidates" default={[]} />
+      <$var name="textarea" />
+      <$method name="window_title">{
+        function window_title() {
+          return `let's imagine!`;
+        }
+      }</$method>
+      <$method name="add_completion_candidate">{
+        function add_completion_candidate(c) {
+          this.completion_candidates([...this.completion_candidates(), c]);
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
+          if (!this.textarea()) {
+            this.textarea((<textarea
+              oninput={debounce(function (e) {
+                e.preventDefault();
+                self.text(this.value);
+                self.dispatchEvent({
+                  type: 'command',
+                  target: <$completor_fetch_next_command text={this.value} target={self} />
+                });
+              }, 1000)}
+              onload={function () { this.focus() }}
+                           >{this.text()}</textarea>).to_dom());
+          }
+          let self = this;
+          return <div>
+            {this.textarea()}
+            {this.completion_candidates().map(cc => <div>{cc}</div>)}
+          </div>;
         }
       }</$method>
     </$class>;
@@ -178,6 +279,7 @@ export default await base.find('class', 'module').new({
           );
           this.explorer(<$object_explorer parent={this} />);
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
+          this.completor(<$completor parent={this} text="" />);
         }}
       />
       <$$window />
@@ -185,6 +287,7 @@ export default await base.find('class', 'module').new({
       <$var name="messages" />
       <$var name="browser" />
       <$var name="explorer" />
+      <$var name="completor" />
       <$before name="process_command"
         do={function process_command(cmd) {
           console.log(cmd);
@@ -201,6 +304,7 @@ export default await base.find('class', 'module').new({
               {this.explorer()}
             </div>
             <div class="col">
+              {this.completor()}
               {this.messages()}
             </div>
           </div>;
