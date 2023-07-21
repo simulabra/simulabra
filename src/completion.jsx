@@ -6,6 +6,8 @@ export default await base.find('class', 'module').new({
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
+    // TODO: queue these so only one is running on the backend at the time, add load balancer, or make own API
+    // to prevent llama.cpp server segfaulting
     <$class name="local_llama_completion_command">
       <$$command />
       <$var name="prompt"/>
