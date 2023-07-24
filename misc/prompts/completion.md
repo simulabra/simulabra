@@ -7,9 +7,11 @@ Example code:
       <$var name="y" def={0} />
       <$method
         name="dist"
-        do={function dist(other) {
-          return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
-        }}
+        do={
+          function dist(other) {
+            return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
+          }
+        }
       />
     </$class>;
 
@@ -20,11 +22,13 @@ Example code:
 
     <$case 
       name="test_point"
-      do={function case__test_point() {
-        const p = <$color_point color="blue" y={4} />;
-        p.x(3);
-        this.assert_eq(p.dist(<$point />), 5);
-      }}
+      do={
+        function case__test_point() {
+          const p = <$color_point color="blue" y={4} />;
+          p.x(3);
+          this.assert_eq(p.dist(<$point />), 5);
+        }
+      }
     />;
 ```
 
