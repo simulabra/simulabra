@@ -571,10 +571,10 @@ function bootstrap() {
         const pk = '_' + this.name();
         const self = this;
         if (this.mutable()) {
-          impl._primary = function mutableAccess(assign) {
+          impl._primary = function mutableAccess(assign, update = true) {
             if (assign !== undefined) {
               this[pk] = assign;
-              if (self.observable()) {
+              if (self.observable() && update) {
                 this.dispatchEvent(new Event('update')); // best there is?
               }
               if (self._trace) {

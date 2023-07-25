@@ -183,5 +183,34 @@ export default await base.find('class', 'module').new({
         }}
       />
     </$class>;
+
+    <$class name="link">
+      <$$component />
+      <$var name="object" />
+      <$method name="link_text">{
+         function link_text() {
+           return this.object().title();
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
+          const uri = this.object().uri();
+          return <div>
+            <a href="#"
+              id={`link-${this.id()}`}
+              object={uri}
+              onclick={e => {
+                return this.dispatchEvent({
+                  type: 'command',
+                  target: this.command(),
+                });
+              }}
+            >
+              {this.link_text()}
+            </a>
+          </div>;
+        }
+      }</$method>
+    </$class>;
   }
 }).load();
