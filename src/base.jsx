@@ -708,6 +708,18 @@ function bootstrap() {
     slots: [
       $var.new({ name: 'name' }),
       $var.new({ name: 'do' }),
+      $static.new({
+        name: 'from_jsx',
+        do(properties, slots) {
+          if (slots !== undefined) {
+            properties.slots = slots;
+            if (!properties.do) {
+              properties.do = slots[0];
+          }
+          }
+          return this.new(properties);
+        }
+      }),
       function combine(impl) {
         impl._befores.push(this.do());
       }
@@ -719,6 +731,18 @@ function bootstrap() {
     slots: [
       $var.new({ name: 'name' }),
       $var.new({ name: 'do', debug: false }),
+      $static.new({
+        name: 'from_jsx',
+        do(properties, slots) {
+          if (slots !== undefined) {
+            properties.slots = slots;
+            if (!properties.do) {
+              properties.do = slots[0];
+          }
+          }
+          return this.new(properties);
+        }
+      }),
       function combine(impl) {
         impl._afters.push(this.do());
       }

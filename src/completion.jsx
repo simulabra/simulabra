@@ -73,7 +73,7 @@ export default await base.find('class', 'module').new({
     </$class>;
 
     <$class name="cmd_prompt">
-      <$var name="prompt" default={process.argv[2] || 'Simulabra was passed no prompt because'} />
+      <$var name="prompt" default={'Simulabra was passed no prompt because'} />
       <$var name="count_tokens" default={false} />
 
       <$method name="execute" do={ async function execute() {
@@ -116,8 +116,8 @@ export default await base.find('class', 'module').new({
       }}/>
     </$class>;
 
-    if (process.argv[1].indexOf('completion.jsx') >= 0) {
-      const cmd = <$cmd_prompt />;
+    if (window.process && process?.argv[1].indexOf('completion.jsx') >= 0) {
+      const cmd = <$cmd_prompt prompt={process.argv[2]} />;
       cmd.execute();
     }
   }

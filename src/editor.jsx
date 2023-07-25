@@ -45,6 +45,12 @@ export default await base.find('class', 'module').new({
 
     <$class name="link">
       <$$component />
+      <$var name="object" />
+      <$method name="link_text">{
+         function link_text() {
+           return this.object().title();
+        }
+      }</$method>
       <$method name="render">{
         function render() {
           const uri = this.object().uri();
@@ -59,7 +65,7 @@ export default await base.find('class', 'module').new({
                 });
               }}
             >
-              {this.object().title()}
+              {this.link_text()}
             </a>
           </div>;
         }
@@ -68,7 +74,6 @@ export default await base.find('class', 'module').new({
 
     <$class name="explorer_select_link">
       <$$link />
-      <$var name="object" />
       <$method name="command">{
         function command() {
           return <$explorer_select_command target={this.object()} />
@@ -79,12 +84,31 @@ export default await base.find('class', 'module').new({
     <$class name="completor_fetch_next_command">
       <$$command />
       <$var name="target" />
-      <$var name="text" />
       <$method name="run">{
         async function run(ctx) {
-          this.log(this.text());
-          const completion = await (<$local_llama_completion_command prompt={this.text()} />).run();
-          this.log(completion);
+          this.log(this.target());
+          this.target().completion_candidates().reset();
+          let logit_bias = [];
+          for (let i = 0; i < 4; i++) {
+            this.log(this.target().text());
+            const completion = await (<$local_llama_completion_command
+              prompt={this.target().text()}
+              logit_bias={logit_bias}
+            />).run();
+            this.log(completion);
+            this.target().completion_candidates().add(completion);
+            const tokens = await (<$local_llama_tokenize_command
+              prompt={completion}
+            />).run();
+            for (const tok of tokens) {
+              const logit = logit_bias.find(l => l[0] === tok);
+              if (logit) {
+                logit[1] -= 1.0;
+              } else {
+                logit_bias.push([tok, -1.0]);
+              }
+            }
+          }
         }
       }</$method>
       <$method name="description">{
@@ -94,21 +118,16 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
-    <$class name="completor_fetch_next_command">
-      <$$command />
-      <$var name="target" />
-      <$var name="text" />
-      <$method name="run">{
-        async function run(ctx) {
-          this.log(this.text());
-          const completion = await (<$local_llama_completion_command prompt={this.text()} />).run();
-          this.log(completion);
-          this.target().add_completion_candidate(completion);
+    <$class name="completor_fetch_next_link">
+      <$$link />
+      <$method name="link_text">{
+        function link_text() {
+          return 'think!';
         }
       }</$method>
-      <$method name="description">{
-        function description() {
-          return `<${this.title()} target={${this.target().title()}} />`;
+      <$method name="command">{
+        function command() {
+          return <$completor_fetch_next_command target={this.object()} />
         }
       }</$method>
     </$class>;
@@ -124,40 +143,61 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
+    <$class name="completion_candidates">
+      <$$component />
+      <$var name="candidates" default={[]} />
+      <$method name="render">{
+        function render() {
+          return <div>
+            {this.candidates().map(cc => <div>{cc}</div>)}
+          </div>;
+        }
+      }</$method>
+      <$method name="add">{
+        function add(it) {
+          this.candidates([...this.candidates(), it]);
+        }
+      }</$method>
+      <$method name="reset">{
+        function reset() {
+          this.candidates([]);
+        }
+      }</$method>
+    </$class>;
+
     <$class name="completor">
       <$$window />
       <$var name="text" observable={false} />
-      <$var name="completion_candidates" default={[]} />
+      <$var name="completion_candidates" />
       <$var name="textarea" />
-      <$method name="window_title">{
-        function window_title() {
-          return `let's imagine!`;
-        }
-      }</$method>
-      <$method name="add_completion_candidate">{
-        function add_completion_candidate(c) {
-          this.completion_candidates([...this.completion_candidates(), c]);
-        }
-      }</$method>
-      <$method name="render">{
-        function render() {
-          if (!this.textarea()) {
-            this.textarea((<textarea
+      <$after name="init">{
+        function init() {
+          let self = this;
+          this.textarea(<textarea
               oninput={debounce(function (e) {
                 e.preventDefault();
                 self.text(this.value);
+                return;
                 self.dispatchEvent({
                   type: 'command',
                   target: <$completor_fetch_next_command text={this.value} target={self} />
                 });
               }, 1000)}
-              onload={function () { this.focus() }}
-                           >{this.text()}</textarea>).to_dom());
-          }
-          let self = this;
+            >{this.text()}</textarea>);
+          this.completion_candidates(<$completion_candidates />);
+        }
+      }</$after>
+      <$method name="window_title">{
+        function window_title() {
+          return `let's imagine!`;
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
           return <div>
             {this.textarea()}
-            {this.completion_candidates().map(cc => <div>{cc}</div>)}
+            <$completor_fetch_next_link object={this} parent={this} />
+            {this.completion_candidates()}
           </div>;
         }
       }</$method>
