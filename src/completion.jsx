@@ -165,8 +165,7 @@ export default await base.find('class', 'module').new({
       <$var name="text" />
       <$method name="run">{
         async function run(ctx) {
-          this.log('run', this.text(), this.target().text());
-          this.target().text(this.target().text() + this.text());
+          this.target().insert(this.text());
           await (<$completor_fetch_next_command target={this.target()} />).run(ctx);
         }
       }</$method>
@@ -196,7 +195,7 @@ export default await base.find('class', 'module').new({
       <$var name="text" />
       <$method name="link_text">{
         function link_text() {
-          return `'${this.text()}'`;
+          return <><span class="completor-link-pre">{this.object().choices().slice(-2).join('')}</span>{this.text()}</>;
         }
       }</$method>
       <$method name="command">{
@@ -233,6 +232,7 @@ export default await base.find('class', 'module').new({
       <$var name="text" />
       <$var name="completion_candidates" />
       <$var name="textarea" />
+      <$var name="choices" default={[]} />
       <$after name="init">{
         function init() {
           this.completion_candidates(<$completion_candidates parent={this} />);
@@ -243,6 +243,12 @@ export default await base.find('class', 'module').new({
           return `let's imagine!`;
         }
       }</$method>
+      <$method name="insert">{
+        function insert(it) {
+          this.choices().push(it);
+          this.text(this.text() + it);
+        }
+      }</$method>
       <$method name="render">{
         function render() {
           let self = this;
@@ -251,6 +257,7 @@ export default await base.find('class', 'module').new({
               oninput={function (e) {
                 e.preventDefault();
                 self.text(this.value, false);
+                self.choices([self.text().slice(-10)], false);
               }}
             >{this.text()}</textarea>
             <$completor_fetch_next_link object={this} parent={this} />

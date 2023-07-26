@@ -190,87 +190,92 @@ export default await base.find('class', 'module').new({
       <$method name="css">{
         function css() {
           return `
-  :root {
-    --primary: #663C3C;
-    --secondary: #50666B;
-    --background: #EFCA9D;
-    --background-secondary: #EFB072;
-  }
-  body, html {
-    margin: 0;
-    padding: 0;
-    font-size: 13px;
-    background: var(--background);
-    color: var(--primary);
-  }
+:root {
+  --primary: #663C3C;
+  --secondary: #50666B;
+  --secondary-2: #72868B;
+  --background: #EFCA9D;
+  --background-secondary: #EFB072;
+}
+body, html {
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  background: var(--background);
+  color: var(--primary);
+}
 
-  .editor, .container {
-    height: 100%;
-  }
-  .container {
-    display: flex;
-  }
+.editor, .container {
+  height: 100%;
+}
+.container {
+  display: flex;
+}
 
-  .col {
-    flex: 1;
-    overflow: auto;
-    padding: 2px;
-  }
+.col {
+  flex: 1;
+  overflow: auto;
+  padding: 2px;
+}
 
-  .module_browser {}
-  .code_editor {}
-  .object_explorer {
-  }
+.module_browser {}
+.code_editor {}
+.object_explorer {
+}
 
-  .windowed {
-    border: 1px solid var(--primary);
-    margin-bottom: 2px;
-    max-height: 100%;
-  }
+.windowed {
+  border: 1px solid var(--primary);
+  margin-bottom: 2px;
+  max-height: 100%;
+}
 
-  .window-bar {
-    background: var(--background-secondary);
-    border-bottom: 1px solid var(--primary);
-    display: flex;
-    justify-content: space-between;
-  }
+.window-bar {
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--primary);
+  display: flex;
+  justify-content: space-between;
+}
 
-  .window-layout {
-    width: 18px;
-    height: 7px;
-    display: inline-block;
-    background: var(--primary);
-    align-self: flex-start;
-  }
+.window-layout {
+  width: 18px;
+  height: 7px;
+  display: inline-block;
+  background: var(--primary);
+  align-self: flex-start;
+}
 
-  .window-menu {
-    width: 18px;
-    height: 6px;
-    display: inline-block;
-    border-top: 1px solid var(--primary);
-    border-bottom: 1px solid var(--primary);
-    align-self: center;
-  }
+.window-menu {
+  width: 18px;
+  height: 6px;
+  display: inline-block;
+  border-top: 1px solid var(--primary);
+  border-bottom: 1px solid var(--primary);
+  align-self: center;
+}
 
-  .window-title {
-    font-style: italic;
-    padding: 2px;
-  }
+.window-title {
+  font-style: italic;
+  padding: 2px;
+}
 
-  a {
-    color: var(--secondary);
-  }
+a {
+  color: var(--secondary);
+}
 
-  textarea {
-    width: 100%;
-    height: 400px;
-  }
+textarea {
+  width: 100%;
+  height: 400px;
+}
 
-  .window-body {
-    padding: 2px;
-    max-height: 100%;
-  }
-  .message_log {}
+.window-body {
+  padding: 2px;
+  max-height: 100%;
+}
+.message_log {}
+
+.completor-link-pre {
+  color: var(--secondary-2);
+}
 `;
         }
       }</$method>
