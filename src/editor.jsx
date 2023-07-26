@@ -178,10 +178,8 @@ export default await base.find('class', 'module').new({
               {$.module.instances().map(it => <$module_browser module={it.deref()} parent={this} />)}
             </div>
             <div class="col">
-              {this.explorer()}
-            </div>
-            <div class="col">
               {this.completor()}
+              {this.explorer()}
               {this.messages()}
             </div>
           </div>;
@@ -196,6 +194,7 @@ export default await base.find('class', 'module').new({
   --secondary-2: #72868B;
   --background: #EFCA9D;
   --background-secondary: #EFB072;
+  --background-text: #F3DAAA;
 }
 body, html {
   margin: 0;
@@ -263,13 +262,18 @@ a {
 }
 
 textarea {
+  box-sizing: border-box;
   width: 100%;
-  height: 400px;
+  height: 30vh;
+  background: var(--background-text);
+  border: 1px solid var(--primary);
 }
 
 .window-body {
   padding: 2px;
   max-height: 100%;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 .message_log {}
 

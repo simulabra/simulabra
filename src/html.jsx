@@ -113,7 +113,6 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
-
     <$class name="html_element">
       <$$component />
       <$var name="tag" default={'div'} />
@@ -158,6 +157,7 @@ export default await base.find('class', 'module').new({
               elem.appendChild(this.domify(child));
             }
           }
+          elem.dispatchEvent(new Event('load'));
           return elem;
         }}
       />

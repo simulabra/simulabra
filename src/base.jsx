@@ -1113,9 +1113,9 @@ function bootstrap() {
         return `(${this.map(it => { return simulabra_string(it) ?? '' + it }).join(' ')})`;
       },
       function to_dom() {
-        return this.map(it => {
-          return it.to_dom()
-        });
+        const el = document.createElement('div');
+        this.forEach(it => el.appendChild(it.to_dom()));
+        return el;
       }
     ]
   });

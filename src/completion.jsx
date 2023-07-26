@@ -14,6 +14,9 @@ export default await base.find('class', 'module').new({
       <$var name="prompt"/>
       <$var name="server_url" default="http://localhost:3731" />
       <$var name="n_predict" default={4} />
+      <$var name="temperature" default={0.7} />
+      <$var name="top_k" default={200} />
+      <$var name="top_p" default={0.95} />
       <$var name="logit_bias" default={[]} />
       <$method name="run"
         do={async function run() {
@@ -24,9 +27,9 @@ export default await base.find('class', 'module').new({
             },
             body: JSON.stringify({
               prompt: this.prompt(),
-              temperature: 0.9,
-              top_k: 40,
-              top_p: 0.8,
+              temperature: this.temperature(),
+              top_k: this.top_k(),
+              top_p: this.top_p(),
               n_predict: this.n_predict(),
               stream: true,
               logit_bias: this.logit_bias(),
@@ -127,18 +130,21 @@ export default await base.find('class', 'module').new({
       <$var name="target" />
       <$method name="run">{
         async function run(ctx) {
-          this.log(this.target());
+          const server_url = `http://${window.location.hostname}:3731`;
           this.target().completion_candidates().reset();
           let logit_bias = [];
+          let temperature = 0.7;
           for (let i = 0; i < 4; i++) {
-            this.log(this.target().text());
             const completion = await (<$local_llama_completion_command
+              server_url={server_url}
               prompt={this.target().text()}
               logit_bias={logit_bias}
+              n_predict={5}
+              temperature={temperature}
             />).run();
-            this.log(completion);
             this.target().completion_candidates().add(completion);
             const tokens = await (<$local_llama_tokenize_command
+              server_url={server_url}
               prompt={completion}
             />).run();
             for (const tok of tokens) {
@@ -149,6 +155,7 @@ export default await base.find('class', 'module').new({
                 logit_bias.push([tok, -1.0]);
               }
             }
+            temperature += 0.3;
           }
         }
       }</$method>
@@ -240,7 +247,7 @@ export default await base.find('class', 'module').new({
       }</$after>
       <$method name="window_title">{
         function window_title() {
-          return `let's imagine!`;
+          return `imagine anything`;
         }
       }</$method>
       <$method name="insert">{
@@ -257,7 +264,14 @@ export default await base.find('class', 'module').new({
               oninput={function (e) {
                 e.preventDefault();
                 self.text(this.value, false);
+                self.completion_candidates().clear();
                 self.choices([self.text().slice(-10)], false);
+              }}
+              onload={function (e) {
+                self.log('textarea onload', this);
+                setTimeout(() => {
+                  this.scrollTop = this.scrollHeight;
+                }, 0);
               }}
             >{this.text()}</textarea>
             <$completor_fetch_next_link object={this} parent={this} />

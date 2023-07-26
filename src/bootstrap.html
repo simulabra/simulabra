@@ -10,15 +10,13 @@
 <script type="module">
   import base from './base.jsx';
   import editor from './editor.jsx';
+  import completion from './completion.jsx';
   await base.find('class', 'module').new({
     name: 'client',
-    imports: [base, editor],
+    imports: [base, editor, completion],
     on_load(_, $) {
       const __ = globalThis.SIMULABRA;
-      const ed = $.editor.new();
-      const elem = ed.to_dom();
-      this.log(elem);
-      document.body.appendChild(elem);
+      document.body.appendChild($.editor.new().to_dom());
     }
   }).load();
 </script>
