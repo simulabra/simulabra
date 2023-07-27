@@ -199,7 +199,7 @@ export default await base.find('class', 'module').new({
 body, html {
   margin: 0;
   padding: 0;
-  font-size: 13px;
+  font-size: 14px;
   background: var(--background);
   color: var(--primary);
 }

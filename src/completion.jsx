@@ -125,37 +125,66 @@ export default await base.find('class', 'module').new({
       cmd.execute();
     }
 
+    let completor_fetch_next_lock = null;
     <$class name="completor_fetch_next_command">
       <$$command />
       <$var name="target" />
+      <$method name="acquire_lock">{
+        function acquire_lock() {
+          if (completor_fetch_next_lock === null) {
+            // If no lock currently exists, create a new one
+            let resolveLock;
+            completor_fetch_next_lock = new Promise(resolve => resolveLock = resolve);
+
+            // Return a function that "releases" the lock
+            return async () => {
+              resolveLock();
+              await completor_fetch_next_lock;
+              completor_fetch_next_lock = null;
+            }
+          } else {
+            // If a lock already exists, wait for it to be released
+            // and then acquire a new one
+            return new Promise(async resolveOuter => {
+              await completor_fetch_next_lock;
+              resolveOuter(this.acquire_lock());
+            });
+          }
+        }
+      }</$method>
       <$method name="run">{
         async function run(ctx) {
-          const server_url = `http://${window.location.hostname}:3731`;
-          this.target().completion_candidates().reset();
-          let logit_bias = [];
-          let temperature = 0.7;
-          for (let i = 0; i < 4; i++) {
-            const completion = await (<$local_llama_completion_command
-              server_url={server_url}
-              prompt={this.target().text()}
-              logit_bias={logit_bias}
-              n_predict={5}
-              temperature={temperature}
-            />).run();
-            this.target().completion_candidates().add(completion);
-            const tokens = await (<$local_llama_tokenize_command
-              server_url={server_url}
-              prompt={completion}
-            />).run();
-            for (const tok of tokens) {
-              const logit = logit_bias.find(l => l[0] === tok);
-              if (logit) {
-                logit[1] -= 1.0;
-              } else {
-                logit_bias.push([tok, -1.0]);
+          const lock = await this.acquire_lock();
+          try {
+            const server_url = `http://${window.location.hostname}:3731`;
+            this.target().completion_candidates().reset();
+            let logit_bias = [];
+            let temperature = 0.7;
+            for (let i = 0; i < 4; i++) {
+              const completion = await (<$local_llama_completion_command
+                server_url={server_url}
+                prompt={this.target().text()}
+                logit_bias={logit_bias}
+                n_predict={5}
+                temperature={temperature}
+              />).run();
+              this.target().completion_candidates().add(completion);
+              const tokens = await (<$local_llama_tokenize_command
+                server_url={server_url}
+                prompt={completion}
+              />).run();
+              for (const tok of tokens) {
+                const logit = logit_bias.find(l => l[0] === tok);
+                if (logit) {
+                  logit[1] -= 1.0;
+                } else {
+                  logit_bias.push([tok, -1.0]);
+                }
               }
+              temperature += 0.3;
             }
-            temperature += 0.3;
+          } finally {
+            lock();
           }
         }
       }</$method>
