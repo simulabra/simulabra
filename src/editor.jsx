@@ -167,7 +167,6 @@ export default await base.find('class', 'module').new({
       <$var name="completor" />
       <$before name="process_command"
         do={function process_command(cmd) {
-          console.log(cmd);
           this.messages().add('run: ' + cmd.description());
         }}
       />

@@ -25,7 +25,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'x' }),
         $.var.new({ name: 'y' }),
         function dist() {
-          return (this.x().pow(2) + this.y().pow(2)).sqrt();
+          return Math.sqrt(this.x() ** 2 + this.y() ** 2);
         }
       ]
     });

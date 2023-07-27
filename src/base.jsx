@@ -1044,18 +1044,6 @@ function bootstrap() {
     name: 'number_primitive',
     js_prototype: Number.prototype,
     slots: [
-      function js() {
-        return this;
-      },
-      function sqrt() {
-        return Math.sqrt(this);
-      },
-      function square() {
-        return this ** 2;
-      },
-      function print() {
-        return this.toString();
-      },
       function to_dom() {
         return document.createTextNode(this.toString());
       },
@@ -1065,20 +1053,8 @@ function bootstrap() {
           return _.proxy('primitive').number_primitive;
         },
       }),
-      function expand() {
-        return this;
-      },
       function description() {
         return this.toString();
-      },
-      function add(n) {
-        return this + n;
-      },
-      function sub(n) {
-        return this - n;
-      },
-      function pow(n) {
-        return this ** n;
       },
     ]
   });
