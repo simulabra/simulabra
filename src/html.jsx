@@ -177,9 +177,14 @@ export default await base.find('class', 'module').new({
       />
 
       <$method name="process_command"
-        do={function process_command(cmd) {
-          cmd.run(this);
-          this.command_history().push(cmd);
+        do={async function process_command(cmd) {
+          try {
+            await cmd.run(this);
+            this.command_history().push(cmd);
+          } catch (err) {
+            this.log('command failed', cmd, err);
+            this.dispatchEvent({ type: 'error', cmd, err })
+          }
         }}
       />
     </$class>;

@@ -145,7 +145,7 @@ export default await base.find('class', 'module').new({
     </$class>;
 
     <$class name="editor">
-      <$before name="init"
+      <$after name="init"
         do={function init() {
           this.messages(<$message_log />);
           this.browser(
@@ -157,6 +157,9 @@ export default await base.find('class', 'module').new({
           this.explorer(<$object_explorer parent={this} />);
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
           this.completor(<$completor parent={this} text="" />);
+          this.addEventListener('error', evt => {
+            this.messages().add(`error: ${evt.err.toString()}`);
+          })
         }}
       />
       <$$window />
