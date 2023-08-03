@@ -160,7 +160,7 @@ export default await base.find('class', 'module').new({
             this.target().completion_candidates().reset();
             let logit_bias = [];
             let temperature = 0.7;
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 8; i++) {
               const completion = await (<$local_llama_completion_command
                 server_url={server_url}
                 prompt={this.target().text()}
@@ -181,7 +181,7 @@ export default await base.find('class', 'module').new({
                   logit_bias.push([tok, -1.0]);
                 }
               }
-              temperature += 0.3;
+              temperature += 0.2;
             }
           } finally {
             lock();

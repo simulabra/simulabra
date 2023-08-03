@@ -271,6 +271,7 @@ function bootstrap() {
   __._stack = new FrameStack();
 
   Object.prototype._add = function add(name, op) {
+    if (!this) return;
     this[name] = op;
   }
   // Object.prototype.eq = function (other) {

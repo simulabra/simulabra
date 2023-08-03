@@ -8,6 +8,10 @@ export default await base.find('class', 'module').new({
   on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
+    <$class name="message">
+      <$virtual name="text" />
+    </$class>;
+
     <$class name="message_log">
       <$$window />
       <$var name="message_list"
