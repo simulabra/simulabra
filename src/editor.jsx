@@ -202,6 +202,7 @@ export default await base.find('class', 'module').new({
   --background-secondary: #EFB072;
   --background-text: #F3DAAA;
 }
+
 body, html {
   margin: 0;
   padding: 0;
@@ -284,6 +285,10 @@ textarea {
 .message_log {}
 
 .completor-link-pre {
+  color: var(--secondary-2);
+}
+
+.completor-link-pre-emphasize {
   color: var(--secondary-2);
 }
 `;

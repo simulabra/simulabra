@@ -156,6 +156,7 @@ export default await base.find('class', 'module').new({
         async function run(ctx) {
           const lock = await this.acquire_lock();
           try {
+            let completions = [];
             const server_url = `http://${window.location.hostname}:3731`;
             this.target().completion_candidates().reset();
             let logit_bias = [];
@@ -163,11 +164,12 @@ export default await base.find('class', 'module').new({
             for (let i = 0; i < 8; i++) {
               const completion = await (<$local_llama_completion_command
                 server_url={server_url}
-                prompt={this.target().text()}
+                prompt={this.target().prompt()}
                 logit_bias={logit_bias}
                 n_predict={5}
                 temperature={temperature}
               />).run();
+              completions.push(completion);
               this.target().completion_candidates().add(completion);
               const tokens = await (<$local_llama_tokenize_command
                 server_url={server_url}
@@ -183,6 +185,26 @@ export default await base.find('class', 'module').new({
               }
               temperature += 0.2;
             }
+
+            const best_prompt = `
+Be an interesting, smart guide to your own latent space.
+### Instruction:
+Choose the most interesting and true completion for the prompt. Respond with only the number.
+Prompt:
+${this.target().prompt()}
+Completion choices:
+${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
+### Response:
+ `;
+            const best = await (<$local_llama_completion_command
+              server_url={server_url}
+              prompt={best_prompt}
+              logit_bias={logit_bias}
+              n_predict={1}
+              temperature={temperature}
+            />).run();
+            this.log(best_prompt, best);
+            this.target().completion_candidates().emphasized(+best);
           } finally {
             lock();
           }
@@ -229,9 +251,10 @@ export default await base.find('class', 'module').new({
     <$class name="completor_add_link">
       <$$link />
       <$var name="text" />
+      <$var name="emphasize" />
       <$method name="link_text">{
         function link_text() {
-          return <><span class="completor-link-pre">{this.object().choices().slice(-2).join('')}</span>{this.text()}</>;
+          return <>{this.emphasize() ? '> ' : ''}<span class="completor-link-pre">{this.object().choices().slice(-2).join('')}</span>{this.text()}</>;
         }
       }</$method>
       <$method name="command">{
@@ -244,10 +267,11 @@ export default await base.find('class', 'module').new({
     <$class name="completion_candidates">
       <$$component />
       <$var name="candidates" default={[]} />
+      <$var name="emphasized" />
       <$method name="render">{
         function render() {
           return <div>
-            {this.candidates().map(cc => <$completor_add_link object={this.parent()} text={cc} parent={this} />)}
+            {this.candidates().map((cc, i) => <$completor_add_link object={this.parent()} text={cc} parent={this} emphasize={i === this.emphasized()} />)}
           </div>;
         }
       }</$method>
@@ -258,6 +282,7 @@ export default await base.find('class', 'module').new({
       }</$method>
       <$method name="reset">{
         function reset() {
+          this.emphasized(null);
           this.candidates([]);
         }
       }</$method>
@@ -283,6 +308,11 @@ export default await base.find('class', 'module').new({
         function insert(it) {
           this.choices().push(it);
           this.text(this.text() + it);
+        }
+      }</$method>
+      <$method name="prompt">{
+        function prompt() {
+          return this.text();
         }
       }</$method>
       <$method name="render">{

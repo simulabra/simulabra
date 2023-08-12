@@ -148,7 +148,6 @@ export default await base.find('class', 'module').new({
             }
           }
           for (const child of this.children()) {
-            // TODO: handle nested arrays
             if (Array.isArray(child)) {
               for (const n of child) {
                 elem.appendChild(this.domify(n));
