@@ -147,6 +147,75 @@ export default await base.find('class', 'module').new({
         }
       }</$method>
     </$class>;
+    <$class name="task">
+      <$var name="title" default={''} />
+      <$var name="completed" default={false} />
+      <$method name="toggle_completion">
+        do={function toggle_completion() {
+          this.completed(!this.completed());
+        }}
+      </$method>
+    </$class>;
+
+    <$class name="todo_list">
+      <$$component />
+      <$var name="tasks" default={[]} />
+      <$method name="add_task">
+        do={function add_task(title) {
+          const task = <$task title={title} />;
+          this.tasks([...this.tasks(), task]);
+        }}
+      </$method>
+      <$method name="remove_task">
+        do={function remove_task(task) {
+          this.tasks(this.tasks().filter(t => t !== task));
+        }}
+      </$method>
+      <$method name="render">
+        do={function render() {
+          return <div>
+            <h2>Todo List</h2>
+            <input type="text" id="new-task-title" />
+            <button onclick={() => {
+              const title = document.getElementById('new-task-title').value;
+              console.log(title);
+              if (title) {
+                this.add_task(title);
+                document.getElementById('new-task-title').value = '';
+              }
+            }}>
+              Add Task
+            </button>
+            <ul>
+              {this.tasks().map(task =>
+                <li>
+                  <span>{task.title()}</span>
+                  <button onclick={() => task.toggle_completion()}>
+                    {task.completed() ? 'Undo' : 'Complete'}
+                  </button>
+                  <button onclick={() => this.remove_task(task)}>Delete</button>
+                </li>
+              )}
+            </ul>
+          </div>;
+        }}
+      </$method>
+    </$class>;
+
+    <$class name="todos">
+      <$$window />
+      <$var name="todo_list" default={<$todo_list />} />
+      <$method name="window_title">
+        do={function window_title() {
+          return 'Todo List Application';
+        }}
+      </$method>
+      <$method name="render">
+        do={function render() {
+          return this.todo_list().render();
+        }}
+      </$method>
+    </$class>;
 
     <$class name="editor">
       <$after name="init"
@@ -161,6 +230,7 @@ export default await base.find('class', 'module').new({
           this.explorer(<$object_explorer parent={this} />);
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
           this.completor(<$completor parent={this} text="" />);
+          this.todos(<$todos parent={this} />);
           this.addEventListener('error', evt => {
             this.messages().add(`error: ${evt.err.toString()}`);
           })
@@ -172,6 +242,7 @@ export default await base.find('class', 'module').new({
       <$var name="browser" />
       <$var name="explorer" />
       <$var name="completor" />
+      <$var name="todos" />
       <$before name="process_command"
         do={function process_command(cmd) {
           this.messages().add('run: ' + cmd.description());
@@ -184,6 +255,7 @@ export default await base.find('class', 'module').new({
               {$.module.instances().map(it => <$module_browser module={it.deref()} parent={this} />)}
             </div>
             <div class="col">
+              {this.todos()}
               {this.completor()}
               {this.explorer()}
               {this.messages()}

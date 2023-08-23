@@ -48,7 +48,8 @@ export default await base.find('class', 'module').new({
         do={function init() {
           this.addEventListener('update', function() {
             if (this.element()) {
-              this.swap(this.render());
+              console.log('morphin');
+              Idiomorph.morph(this.element(), this.to_dom());
             }
           });
         }}
