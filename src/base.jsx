@@ -629,9 +629,22 @@ function bootstrap() {
     name: 'static',
     slots: [
       $var.new({ name: 'do' }),
+      $static.new({
+        name: 'from_jsx',
+        do(properties, slots) {
+          if (slots !== undefined) {
+            properties.slots = slots;
+            if (!properties.do) {
+              properties.do = slots[0];
+          }
+          }
+          return this.new(properties);
+        }
+      }),
       function load(proto) {
         const impl = new MethodImpl({ _name: this.name() });
         let fn = this.do();
+        this.log(fn);
         if (typeof fn !== 'function') {
           fn = fn.fn();
         }
@@ -665,6 +678,8 @@ function bootstrap() {
         if (impl._name !== this.name()) {
           throw new Error('tried to combine method on non-same named impl');
         }
+        console.log('hello?')
+        console.log(this);
         let fn = this.do();
         if (typeof fn !== 'function') {
           fn = fn.fn();
@@ -872,6 +887,21 @@ function bootstrap() {
     <$after name="load">{
       function load() {
         this._get_impl(this.name()).reify(this._proto._class);
+      }
+    }</$after>
+  </$class>;
+
+  <$class name="event">
+    <$var name="callback" />
+    <$static name="from_jsx">{
+      function from_jsx(props, slots) {
+        props.callback = slots[0];
+        return this.new(props);
+      }
+    }</$static>
+    <$after name="init">{
+      function init() {
+        this.addEventListener('update', this.callback().bind(this));
       }
     }</$after>
   </$class>;
@@ -1122,6 +1152,13 @@ function bootstrap() {
   return _;
 }
 
-const base = bootstrap();
+let base;
+try {
+  base = bootstrap();
+} catch (e) {
+  // TODO: sourcemap for jsx
+  console.error(e);
+  process.exit(1);
+}
 
 export default base;
