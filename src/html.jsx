@@ -28,19 +28,11 @@ export default await base.find('class', 'module').new({
           return this.container(this.render()).to_dom();
         }}
       />
-      <$method name="clear"
-        do={function clear() {
-          while (this.element().firstChild) {
-            this.element().removeChild(this.element().firstChild);
-          }
-        }}
-      />
-      <$method name="swap"
-        do={function swap(content) {
-          this.clear();
-          const children = [content.to_dom()].flat(Infinity);
-          for (const c of children) {
-            this.element().appendChild(c);
+      <$event name="update"
+        do={function () {
+          if (this.element()) {
+            console.log('morphin');
+            Idiomorph.morph(this.element(), this.to_dom());
           }
         }}
       />
@@ -48,7 +40,6 @@ export default await base.find('class', 'module').new({
         do={function init() {
           this.addEventListener('update', function() {
             if (this.element()) {
-              console.log('morphin');
               Idiomorph.morph(this.element(), this.to_dom());
             }
           });
@@ -87,24 +78,6 @@ export default await base.find('class', 'module').new({
               {children}
             </div>}
           </div>;
-        }
-      }</$method>
-      <$method name="clear">{
-        function clear() {
-          const el = this.element().querySelector('.window-body');
-          while (el.firstChild) {
-            el.removeChild(el.firstChild);
-          }
-        }
-      }</$method>
-      <$method name="swap">{
-        function swap(content) {
-          this.clear();
-          const children = [content.to_dom()].flat(Infinity);
-          for (const c of children) {
-            this.element().querySelector('.window-body').appendChild(c);
-          }
-          this.element().querySelector('.window-title').innerHTML = this.window_title();
         }
       }</$method>
       <$method name="window_title">{
