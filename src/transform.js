@@ -1,5 +1,5 @@
 import { parseScript as meriyahParse } from "meriyah";
-import { prettyPrint, types } from 'recast';
+import { prettyPrint, types, parse as recastParse } from 'recast';
 const b = types.builders;
 import { readFileSync } from 'fs';
 
@@ -85,6 +85,9 @@ function jsx(node) {
 
 function nodemap(node) {
   let newnode;
+  if ('token' in node || 'sourceLines' in node || 'infos' in node) {
+    return node;
+  }
   if ('type' in node && node.type.indexOf('JSX') === 0) {
     newnode = jsx(node);
   } else if (Array.isArray(node)) {
@@ -103,20 +106,46 @@ function nodemap(node) {
 
 export default function transform(path) {
   const source = readFileSync(path).toString();
-  const estree = meriyahParse(source, {
-    module: true,
-    jsx: true,
-    // loc: true,
-  });
-  // const estree = parse(source.toString(), {
-  //   parser: {
-  //     parse(source) {
-  //       return ;
-  //     }
-  //   }
-  // });
 
-  const mapped = nodemap(estree);
-  const res = prettyPrint(mapped);
-  return res.code;
+  try {
+    const estree = recastParse(source, {
+      parser: {
+        parse(source) {
+          const toks = [];
+          const mest = meriyahParse(source, {
+            module: true,
+            jsx: true,
+            onToken: toks,
+            loc: true,
+            source: true,
+          });
+          return {
+            tokens: toks,
+            ...mest
+          };
+        }
+      },
+      sourceFileName: path,
+      jsx: true,
+      module: true,
+    });
+    // const estree = parse(source.toString(), {
+    //   parser: {
+    //     parse(source) {
+    //       return ;
+    //     }
+    //   }
+    // });
+
+    const mapped = nodemap(estree);
+    const res = prettyPrint(mapped, {
+      sourceMapName: path + '.map',
+    });
+    console.log('map', res);
+    return res.code;
+  } catch (e) {
+    console.log('>>> error transforming jsx <<<');
+    console.log(source);
+    throw e;
+  }
 }
