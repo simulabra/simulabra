@@ -161,14 +161,15 @@ export default await base.find('class', 'module').new({
             this.target().completion_candidates().reset();
             let logit_bias = [];
             let temperature = 0.7;
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 6; i++) {
               const completion = await (<$local_llama_completion_command
                 server_url={server_url}
                 prompt={this.target().prompt()}
                 logit_bias={logit_bias}
-                n_predict={5}
+                n_predict={8}
                 temperature={temperature}
               />).run();
+
               completions.push(completion);
               this.target().completion_candidates().add(completion);
               const tokens = await (<$local_llama_tokenize_command

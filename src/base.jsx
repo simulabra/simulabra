@@ -340,8 +340,11 @@ function bootstrap() {
         const line = stack.split('\n')[2];
         this.src_line(line);
       }
-
       globalThis.SIMULABRA.register(this);
+
+      for (const ev of (this.class().events() ?? [])) {
+        this.addEventListener(ev.name(), ev.do().bind(this));
+      }
     },
     function description(seen) { //TODO: add depth
       const vars = this.state().filter(v => v.value() !== v.var_ref().defval());
@@ -432,6 +435,7 @@ function bootstrap() {
 
   const $class_slots = [
     function init() {
+      this.events([]);
       $base_slots[0].apply(this);
       this.id_ctr(0);
       this.proto(new ClassPrototype(this));
@@ -510,6 +514,7 @@ function bootstrap() {
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
     BVar.new({ name: 'instances' }),
+    BVar.new({ name: 'events' }),
     BVar.new({
       name: 'slots',
       default: [],
@@ -963,6 +968,16 @@ function bootstrap() {
       })
     ]
   });
+
+  <$class name="event">
+    <$var name="type" />
+    <$var name="do" />
+    <$method name="load">{
+      function load(proto) {
+        proto._proto._class.events().push(this);
+      }
+    }</$method>
+  </$class>
 
   $.class.new({
     name: 'primitive',
