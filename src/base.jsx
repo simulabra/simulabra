@@ -646,14 +646,10 @@ function bootstrap() {
     ]
   })
 
-  const $method = $class.new({
-    name: 'method',
+  const $fn = $class.new({
+    name: 'fn',
     slots: [
       $var.new({ name: 'do' }), // fn, meat and taters
-      $var.new({ name: 'message' }),
-      $var.new({ name: 'name' }),
-      $var.new({ name: 'override', default: false }),
-      $var.new({ name: 'debug', default: true }),
       $static.new({
         name: 'from_jsx',
         do(properties, slots) {
@@ -666,6 +662,16 @@ function bootstrap() {
           return this.new(properties);
         }
       }),
+    ]
+  });
+  const $method = $class.new({
+    name: 'method',
+    slots: [
+      $fn,
+      $var.new({ name: 'message' }),
+      $var.new({ name: 'name' }),
+      $var.new({ name: 'override', default: false }),
+      $var.new({ name: 'debug', default: true }),
       function combine(impl) {
         if (impl._name !== this.name()) {
           throw new Error('tried to combine method on non-same named impl');
@@ -712,20 +718,8 @@ function bootstrap() {
   const $before = $class.new({
     name: 'before',
     slots: [
+      $fn,
       $var.new({ name: 'name' }),
-      $var.new({ name: 'do' }),
-      $static.new({
-        name: 'from_jsx',
-        do(properties, slots) {
-          if (slots !== undefined) {
-            properties.slots = slots;
-            if (!properties.do) {
-              properties.do = slots[0];
-          }
-          }
-          return this.new(properties);
-        }
-      }),
       function combine(impl) {
         impl._befores.push(this.do());
       }
@@ -735,20 +729,8 @@ function bootstrap() {
   const $after = $class.new({
     name: 'after',
     slots: [
+      $fn,
       $var.new({ name: 'name' }),
-      $var.new({ name: 'do', debug: false }),
-      $static.new({
-        name: 'from_jsx',
-        do(properties, slots) {
-          if (slots !== undefined) {
-            properties.slots = slots;
-            if (!properties.do) {
-              properties.do = slots[0];
-          }
-          }
-          return this.new(properties);
-        }
-      }),
       function combine(impl) {
         impl._afters.push(this.do());
       }
@@ -860,6 +842,7 @@ function bootstrap() {
   const INTRINSICS = [
     $class,
     $var,
+    $fn,
     $method,
     $static,
     $debug,
@@ -970,6 +953,7 @@ function bootstrap() {
   });
 
   <$class name="event">
+    <$$fn />
     <$var name="type" />
     <$var name="do" />
     <$method name="load">{

@@ -7,43 +7,42 @@ export default await base.find('class', 'module').new({
     const __ = globalThis.SIMULABRA;
 
     <$class name="component">
-      <$method name="dom_id"
-        do={function dom_id() {
+      <$method name="dom_id">{
+        function dom_id() {
           return `${this.class().name()}--${this.id()}`;
-        }}
-      />
-      <$method name="element"
-        do={function element() {
+        }
+      }</$method>
+      <$method name="element">{
+        function element() {
           return document.getElementById(this.dom_id());
-        }}
-      />
-      <$method name="container"
-        do={function container(...children) {
+        }
+      }</$method>
+      <$method name="container">{
+        function container(...children) {
           return <span id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</span>
-        }}
-      />
+        }
+      }</$method>
       <$var name="parent" def={null} />
-      <$method name="to_dom"
-        do={function to_dom() {
+      <$method name="to_dom">{
+        function to_dom() {
           return this.container(this.render()).to_dom();
-        }}
-      />
+        }
+      }</$method>
       <$method name="morph">{
         function morph() {
           Idiomorph.morph(this.element(), this.to_dom());
         }
       }</$method>
-      <$event name="update"
-        do={function () {
+      <$event name="update">{
+        function () {
           if (this.element()) {
             this.morph();
           }
-        }}
-      />
-      <$method name="dispatchEvent"
-        do={function dispatchEvent(event) {
+        }
+      }</$event>
+      <$method name="dispatchEvent">{
+        function dispatchEvent(event) {
           const observers = this.message_observers(event.type);
-          /* this.log('dispatchEvent', event.type, observers.length, this.parent()); */
           if (observers.length === 0) {
             return this.parent()?.dispatchEvent(event);
           }
@@ -52,8 +51,8 @@ export default await base.find('class', 'module').new({
             handled = handled || ob(event);
           }
           return handled;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="window">
@@ -63,14 +62,11 @@ export default await base.find('class', 'module').new({
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
             <div class="window-bar">
-              <span class="window-layout">
-              </span>
+              <span class="window-layout"></span>
               <span class="window-title">{this.window_title()}</span>
               <span class="window-menu"></span>
             </div>
-            {this.minimized() ? '' : <div class="window-body">
-              {children}
-            </div>}
+            {this.minimized() ? '' : <div class="window-body">{children}</div>}
           </div>;
         }
       }</$method>
@@ -87,8 +83,8 @@ export default await base.find('class', 'module').new({
       <$var name="properties" default={{}} />
       <$var name="events" default={{}} />
       <$var name="children" default={[]} />
-      <$method name="domify"
-        do={function domify(node) {
+      <$method name="domify">{
+        function domify(node) {
           if (typeof node === 'object' && 'type' in node && typeof node.type === 'string') {
             return node;
           } else if (typeof node === 'string') {
@@ -96,10 +92,10 @@ export default await base.find('class', 'module').new({
           } else {
             return node.to_dom();
           }
-        }}
-      />
-      <$method name="to_dom" override={true}
-        do={function to_dom() {
+        }
+      }</$method>
+      <$method name="to_dom" override={true}>{
+        function to_dom() {
           const elem = document.createElement(this.tag());
           for (const pkey of Object.keys(this.properties())) {
             const prop = this.properties()[pkey];
@@ -126,8 +122,8 @@ export default await base.find('class', 'module').new({
           }
           elem.dispatchEvent(new Event('load'));
           return elem;
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="application">
@@ -142,9 +138,8 @@ export default await base.find('class', 'module').new({
           document.head.appendChild(el);
         }
       }</$after>
-
-      <$method name="process_command"
-        do={async function process_command(cmd) {
+      <$method name="process_command">{
+        async function process_command(cmd) {
           try {
             await cmd.run(this);
             this.command_history().push(cmd);
@@ -152,8 +147,8 @@ export default await base.find('class', 'module').new({
             this.log('command failed', cmd, err);
             this.dispatchEvent({ type: 'error', cmd, err })
           }
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="link">
