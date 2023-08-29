@@ -147,74 +147,93 @@ export default await base.find('class', 'module').new({
         }
       }</$method>
     </$class>;
+
     <$class name="task">
-      <$var name="title" default={''} />
+      <$$component />
+      <$var name="description" default={''} />
       <$var name="completed" default={false} />
-      <$method name="toggle_completion">
-        do={function toggle_completion() {
-          this.completed(!this.completed());
-        }}
-      </$method>
+      <$method name="finish">{
+        function finish() {
+          this.completed(true);
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
+          return <span>
+            <span class={`completed-${this.completed()}`}>{this.description()}</span>
+            <$if when={!this.completed()}>
+              <button onclick={() => this.finish()}>finish</button>
+            </$if>
+          </span>;
+        }
+      }</$method>
     </$class>;
 
     <$class name="todo_list">
       <$$component />
       <$var name="tasks" default={[]} />
       <$method name="add_task">
-        do={function add_task(title) {
-          const task = <$task title={title} />;
+        do={function add_task(description) {
+          const task = <$task description={description} />;
           this.tasks([...this.tasks(), task]);
         }}
       </$method>
-      <$method name="remove_task">
-        do={function remove_task(task) {
+      <$method name="submit">{
+        function submit() {
+          const description = document.getElementById('new-task-description').value;
+          if (description) {
+            this.add_task(description);
+            document.getElementById('new-task-description').value = '';
+          }
+        }
+      }</$method>
+      <$method name="remove_task">{
+        function remove_task(task) {
           this.tasks(this.tasks().filter(t => t !== task));
-        }}
-      </$method>
-      <$method name="render">
-        do={function render() {
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
           return <div>
-            <h2>Todo List</h2>
-            <input type="text" id="new-task-title" />
+            <h4>what needs to be done?</h4>
+            <input type="text" id="new-task-description"
+              onkeydown={e => {
+                if (e.key === 'Enter') {
+                  this.submit();
+                }
+              }}
+            />
             <button onclick={() => {
-              const title = document.getElementById('new-task-title').value;
-              console.log(title);
-              if (title) {
-                this.add_task(title);
-                document.getElementById('new-task-title').value = '';
-              }
+              this.submit();
             }}>
-              Add Task
+              add
             </button>
             <ul>
               {this.tasks().map(task =>
                 <li>
-                  <span>{task.title()}</span>
-                  <button onclick={() => task.toggle_completion()}>
-                    {task.completed() ? 'Undo' : 'Complete'}
-                  </button>
-                  <button onclick={() => this.remove_task(task)}>Delete</button>
+                  {task}
+                  <button onclick={() => this.remove_task(task)}>delete</button>
                 </li>
               )}
             </ul>
           </div>;
-        }}
-      </$method>
+        }
+      }</$method>
     </$class>;
 
     <$class name="todos">
       <$$window />
       <$var name="todo_list" default={<$todo_list />} />
-      <$method name="window_title">
-        do={function window_title() {
-          return 'Todo List Application';
-        }}
-      </$method>
-      <$method name="render">
-        do={function render() {
-          return this.todo_list().render();
-        }}
-      </$method>
+      <$method name="window_title">{
+        function window_title() {
+          return 'todos';
+        }
+      }</$method>
+      <$method name="render">{
+        function render() {
+          return this.todo_list();
+        }
+      }</$method>
     </$class>;
 
     <$class name="editor">
@@ -348,6 +367,11 @@ textarea {
   border: 1px solid var(--primary);
 }
 
+input {
+  background: var(--background-text);
+  border: 1px solid var(--primary);
+}
+
 .window-body {
   padding: 2px;
   max-height: 100%;
@@ -362,6 +386,23 @@ textarea {
 
 .completor-link-pre-emphasize {
   color: var(--secondary-2);
+}
+
+.completed-true {
+  text-decoration: line-through;
+}
+
+button {
+  background: var(--background-secondary);
+  border: 1px solid var(--primary);
+}
+
+button:hover {
+  border: 1px solid var(--secondary);
+}
+
+button:active {
+  background: var(--background);
 }
 `;
         }

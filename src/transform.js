@@ -14,7 +14,6 @@ function jsxAttribute(node) {
 function jsx(node) {
   if (node.type === 'JSXElement') {
     const children = node.children
-      .filter(c => !(c.type === 'JSXText' && /\n +/.test(c.value)))
       .map(c => nodemap(c));
     const tag = node.openingElement.name.name;
     const props = node.openingElement.attributes.map(p => b.property('init', b.identifier(p.name.name), jsxAttribute(p.value)));

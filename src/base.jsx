@@ -1096,11 +1096,11 @@ function bootstrap() {
           return _.proxy('primitive').array_primitive;
         },
       }),
-      function description(seen = {}) {
+      function description() {
         return `(${this.map(it => { return simulabra_string(it) ?? '' + it }).join(' ')})`;
       },
       function to_dom() {
-        const el = document.createElement('div');
+        const el = document.createElement('span');
         this.forEach(it => el.appendChild(it.to_dom()));
         return el;
       }

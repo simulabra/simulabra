@@ -19,7 +19,7 @@ export default await base.find('class', 'module').new({
       />
       <$method name="container"
         do={function container(...children) {
-          return <div id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</div>
+          return <span id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</span>
         }}
       />
       <$var name="parent" def={null} />
@@ -28,10 +28,15 @@ export default await base.find('class', 'module').new({
           return this.container(this.render()).to_dom();
         }}
       />
+      <$method name="morph">{
+        function morph() {
+          Idiomorph.morph(this.element(), this.to_dom());
+        }
+      }</$method>
       <$event name="update"
         do={function () {
           if (this.element()) {
-            Idiomorph.morph(this.element(), this.to_dom());
+            this.morph();
           }
         }}
       />
@@ -64,7 +69,6 @@ export default await base.find('class', 'module').new({
               <span class="window-menu"></span>
             </div>
             {this.minimized() ? '' : <div class="window-body">
-              children
               {children}
             </div>}
           </div>;
@@ -128,16 +132,16 @@ export default await base.find('class', 'module').new({
 
     <$class name="application">
       <$var name="command_history" default={[]} />
-      <$after name="init"
-        do={function init() {
+      <$after name="init">{
+        function init() {
           this.addEventListener('command', (e) => {
             this.process_command(e.target);
           });
           const el = document.createElement('style');
           el.innerHTML = this.css();
           document.head.appendChild(el);
-        }}
-      />
+        }
+      }</$after>
 
       <$method name="process_command"
         do={async function process_command(cmd) {
@@ -180,5 +184,19 @@ export default await base.find('class', 'module').new({
         }
       }</$method>
     </$class>;
+
+    <$class name="if">
+      <$var name="when" />
+      <$var name="slots" default={[]} />
+      <$method name="to_dom">{
+        function to_dom() {
+          if (this.when()) {
+            return this.slots().to_dom();
+          } else {
+            return ''.to_dom();
+          }
+        }
+      }</$method>
+    </$class>
   }
 }).load();
