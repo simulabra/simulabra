@@ -22,7 +22,7 @@ export default await base.find('class', 'module').new({
           return <span id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</span>
         }
       }</$method>
-      <$var name="parent" def={null} />
+      <$var name="parent" default={null} />
       <$method name="to_dom">{
         function to_dom() {
           return this.container(this.render()).to_dom();
@@ -62,11 +62,13 @@ export default await base.find('class', 'module').new({
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
             <div class="window-bar">
-              <span class="window-layout"></span>
+              <span class="window-layout" onclick={e => {}}></span>
               <span class="window-title">{this.window_title()}</span>
               <span class="window-menu"></span>
             </div>
-            {this.minimized() ? '' : <div class="window-body">{children}</div>}
+            <$if when={!this.minimized()}>
+              <div class="window-body">{children}</div>
+            </$if>
           </div>;
         }
       }</$method>

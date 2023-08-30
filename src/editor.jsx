@@ -172,18 +172,19 @@ export default await base.find('class', 'module').new({
     <$class name="todo_list">
       <$$component />
       <$var name="tasks" default={[]} />
-      <$method name="add_task">
-        do={function add_task(description) {
+      <$method name="add_task">{
+        function add_task(description) {
           const task = <$task description={description} />;
           this.tasks([...this.tasks(), task]);
-        }}
-      </$method>
+        }
+      }</$method>
       <$method name="submit">{
         function submit() {
-          const description = document.getElementById('new-task-description').value;
+          const input = this.element().querySelector('input');
+          const description = input.value;
           if (description) {
             this.add_task(description);
-            document.getElementById('new-task-description').value = '';
+            input.value = '';
           }
         }
       }</$method>
@@ -196,18 +197,16 @@ export default await base.find('class', 'module').new({
         function render() {
           return <div>
             <h4>what needs to be done?</h4>
-            <input type="text" id="new-task-description"
+            <input
+              type="text"
+              id="new-task-description"
               onkeydown={e => {
                 if (e.key === 'Enter') {
                   this.submit();
                 }
               }}
             />
-            <button onclick={() => {
-              this.submit();
-            }}>
-              add
-            </button>
+            <button onclick={() => this.submit()}>add</button>
             <ul>
               {this.tasks().map(task =>
                 <li>
@@ -237,8 +236,8 @@ export default await base.find('class', 'module').new({
     </$class>;
 
     <$class name="editor">
-      <$after name="init"
-        do={function init() {
+      <$after name="init">{
+        function init() {
           this.messages(<$message_log />);
           this.browser(
             <$module_browser
@@ -252,9 +251,9 @@ export default await base.find('class', 'module').new({
           this.todos(<$todos parent={this} />);
           this.addEventListener('error', evt => {
             this.messages().add(`error: ${evt.err.toString()}`);
-          })
-        }}
-      />
+          });
+        }
+      }</$after>
       <$$window />
       <$$application />
       <$var name="messages" />
@@ -262,11 +261,11 @@ export default await base.find('class', 'module').new({
       <$var name="explorer" />
       <$var name="completor" />
       <$var name="todos" />
-      <$before name="process_command"
-        do={function process_command(cmd) {
+      <$before name="process_command">{
+        function process_command(cmd) {
           this.messages().add('run: ' + cmd.description());
-        }}
-      />
+        }
+      }</$before>
       <$method name="render">{
         function render() {
           return <div class="container">
