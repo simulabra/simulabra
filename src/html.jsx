@@ -58,11 +58,23 @@ export default await base.find('class', 'module').new({
     <$class name="window">
       <$$component />
       <$var name="minimized" default={false} />
+      <$method name="toggle">{
+        function toggle() {
+          this.minimized(!this.minimized());
+        }
+      }</$method>
       <$method name="container">{
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
             <div class="window-bar">
-              <span class="window-layout" onclick={e => {}}></span>
+              <span
+                class="window-layout"
+                onclick={e => {
+                  e.preventDefault();
+                  this.toggle();
+                }}
+                onmousedown={e => e.preventDefault()}
+              ></span>
               <span class="window-title">{this.window_title()}</span>
               <span class="window-menu"></span>
             </div>

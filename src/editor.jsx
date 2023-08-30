@@ -340,6 +340,10 @@ body, html {
   align-self: flex-start;
 }
 
+.window-layout:hover {
+  background: var(--secondary);
+}
+
 .window-menu {
   width: 18px;
   height: 6px;
