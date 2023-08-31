@@ -87,19 +87,7 @@ export default await base.find('class', 'module').new({
 
     <$class name="object_explorer">
       <$$window />
-      <$var name="history" default={[]} />
       <$var name="object" />
-      <$method name="select">{
-        function select(value) {
-          this.history().push(this.object());
-          this.object(value);
-        }
-      }</$method>
-      <$method name="back">{
-        function back() {
-          this.object(this.history().pop());
-        }
-      }</$method>
       <$method name="display">{
         function display(value) {
           if (typeof value === 'object' && '_id' in value) {
@@ -359,6 +347,10 @@ body, html {
 
 a {
   color: var(--secondary);
+}
+
+ul {
+  margin: 0;
 }
 
 textarea {

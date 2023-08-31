@@ -1084,6 +1084,9 @@ function bootstrap() {
         const el = document.createElement('span');
         this.forEach(it => el.appendChild(it.to_dom()));
         return el;
+      },
+      function last() {
+        return this[this.length - 1];
       }
     ]
   });
