@@ -196,7 +196,7 @@ export default await base.find('class', 'module').new({
       <$method name="render">{
         function render() {
           return <div>
-            <h4>what needs to be done?</h4>
+            <div>what needs to be done?</div>
             <input
               type="text"
               id="new-task-description"
@@ -286,11 +286,16 @@ export default await base.find('class', 'module').new({
           return `
 :root {
   --primary: #663C3C;
-  --secondary: #50666B;
+  --secondary: #50668B;
   --secondary-2: #72868B;
   --background: #EFCA9D;
   --background-secondary: #EFB072;
   --background-text: #F3DAAA;
+}
+
+::selection {
+  background-color: var(--secondary);
+  color: var(--background);
 }
 
 body, html {
@@ -308,6 +313,10 @@ body, html {
   display: flex;
 }
 
+.nil {
+  display: none;
+}
+
 .col {
   flex: 1;
   overflow: auto;
@@ -321,6 +330,7 @@ body, html {
 
 .windowed {
   border: 1px solid var(--primary);
+  border-bottom: 0px;
   margin-bottom: 2px;
   max-height: 100%;
 }
@@ -366,13 +376,16 @@ textarea {
   box-sizing: border-box;
   width: 100%;
   height: 30vh;
+}
+
+input, textarea {
   background: var(--background-text);
   border: 1px solid var(--primary);
 }
 
-input {
-  background: var(--background-text);
-  border: 1px solid var(--primary);
+input:focus, textarea:focus {
+  outline: solid var(--secondary) 1px;
+  box-shadow: 0 0 0px var(--secondary);
 }
 
 .window-body {
@@ -380,6 +393,7 @@ input {
   max-height: 100%;
   overflow-wrap: break-word;
   word-break: break-all;
+  border-bottom: 1px solid var(--primary);
 }
 .message_log {}
 
