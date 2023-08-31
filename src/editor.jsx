@@ -22,11 +22,6 @@ export default await base.find('class', 'module').new({
           this.dispatchEvent({ type: 'update' });
         }
       }</$method>
-      <$method name="title">{
-         function title() {
-           return 'messages';
-        }
-      }</$method>
       <$method name="render">{
         function render() {
           return <div>{this.message_list().map(m => <div>{m}</div>)}</div>;
@@ -43,6 +38,27 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
+    <$class name="explorer_select_command">
+      <$$command />
+      <$var name="target" />
+      <$var name="previous" />
+      <$method name="run">{
+        function run(ctx) {
+          this.previous(ctx.explorer().object());
+          ctx.explorer().object(this.target());
+        }
+      }</$method>
+      <$method name="undo">{
+        function undo(ctx) {
+          ctx.explorer().object(this.previous());
+        }
+      }</$method>
+      <$method name="description">{
+        function description() {
+          return `~explorer_select_command target=${this.target().title()}`;
+        }
+      }</$method>
+    </$class>;
 
     <$class name="module_browser">
       <$$window />
@@ -51,9 +67,9 @@ export default await base.find('class', 'module').new({
           return this.module().classes();
         }
       }</$method>
-      <$method name="title">{
-        function title() {
-          return `module ${this.module().name()}`;
+      <$method name="window_title">{
+        function window_title() {
+          return `${this.title()} (${this.module().name()})`;
         }
       }</$method>
       <$var name="module" />
@@ -106,7 +122,7 @@ export default await base.find('class', 'module').new({
       }</$method>
       <$method name="window_title">{
         function window_title() {
-          return `explorer of ${this.object()?.title() ?? 'nothing'}`;
+          return `${this.title()} (${this.object()?.title() ?? 'nothing'})`;
         }
       }</$method>
       <$method name="render">{
@@ -122,28 +138,6 @@ export default await base.find('class', 'module').new({
               return <div>{name}={this.display(value)}</div>;
             })}
           </>;
-        }
-      }</$method>
-    </$class>;
-
-    <$class name="explorer_select_command">
-      <$$command />
-      <$var name="target" />
-      <$var name="previous" />
-      <$method name="run">{
-        function run(ctx) {
-          this.previous(ctx.explorer().object());
-          ctx.explorer().object(this.target());
-        }
-      }</$method>
-      <$method name="undo">{
-        function undo(ctx) {
-          ctx.explorer().object(this.previous());
-        }
-      }</$method>
-      <$method name="description">{
-        function description() {
-          return `~explorer_select_command target=${this.target().title()}`;
         }
       }</$method>
     </$class>;
@@ -223,11 +217,6 @@ export default await base.find('class', 'module').new({
     <$class name="todos">
       <$$window />
       <$var name="todo_list" default={<$todo_list />} />
-      <$method name="window_title">{
-        function window_title() {
-          return 'todos';
-        }
-      }</$method>
       <$method name="render">{
         function render() {
           return this.todo_list();

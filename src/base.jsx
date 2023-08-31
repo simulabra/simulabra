@@ -47,12 +47,10 @@ function bootstrap() {
     } else if (typeof obj === 'object') {
       const ps = [];
       for (const [k, v] of Object.entries(obj)) {
-        // console.log('ss recur', k)
         ps.push(`:${k}=${simulabra_string(v, seen)}`)
       }
       return '{' + ps.join(' ') + '}';
     } else {
-      // console.log('ss was', obj);
       return obj.toString();
     }
   }
@@ -73,7 +71,6 @@ function bootstrap() {
       this._args = args;
     }
     description() {
-      console.log('frame desc')
       return `${pry(this._receiver)}.${this._method_impl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
     }
   }
@@ -154,7 +151,6 @@ function bootstrap() {
           try {
             self._befores.forEach(b => b.apply(this, args));
             let res = self._primary.apply(this, args);
-            // console.log('in reified', self.name, self.primary, res)
             self._afters.forEach(a => a.apply(this, args)); // res too?
             if (self._debug) {
               __._stack.pop();
@@ -210,7 +206,7 @@ function bootstrap() {
     }
 
     _get_impl(name) {
-      if (!(name in this._impls)) {
+      if (!this._impls.hasOwnProperty(name)) {
         this._impls[name] = new MethodImpl({ _name: name });
       }
       return this._impls[name];
@@ -470,6 +466,9 @@ function bootstrap() {
     function description() {
       return `~${this.name()}`;
     },
+    function toString() {
+      return this.description();
+    },
     function descended(target) {
       return this.name() === target.name() || !!this.slots().find(c => c.class() !== BVar && c.class().name() === 'class' && c.descended(target));
     },
@@ -529,7 +528,6 @@ function bootstrap() {
   const $class_proto = new ClassPrototype(null);
   const newObj = {
     new(props = {}) {
-      // console.log('class new ' + props.name);
       const obj = Object.create(this.proto()._proto);
       parametize(props, obj);
       obj.id(this.genid());
@@ -624,7 +622,6 @@ function bootstrap() {
         } else {
           d = simulabra_string(this.value(), seen);
         }
-        // console.log('description!!', this.var_ref().name(), typeof this.value(), typeof this.value()._class);
         return `:${this.var_ref().name()}=${d}`;
       }
     ]

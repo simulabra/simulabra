@@ -17,9 +17,14 @@ export default await base.find('class', 'module').new({
           return document.getElementById(this.dom_id());
         }
       }</$method>
+      <$method name="swap_target">{
+        function swap_target() {
+          return this.element().querySelector('.swap-target');
+        }
+      }</$method>
       <$method name="container">{
         function container(...children) {
-          return <span id={this.dom_id()} class={this.class().name()} ref={this.uri()}>{children}</span>
+          return <span id={this.dom_id()} class={this.class().name()} ref={this.uri()}><span class="swap-target">{children}</span></span>
         }
       }</$method>
       <$var name="parent" default={null} />
@@ -28,15 +33,26 @@ export default await base.find('class', 'module').new({
           return this.container(this.render()).to_dom();
         }
       }</$method>
-      <$method name="morph">{
-        function morph() {
-          Idiomorph.morph(this.element(), this.to_dom());
-        }
-      }</$method>
+      <$method name="clear"
+        do={function clear() {
+          this.log(this.element());
+          const st = this.swap_target();
+          st.innerHTML = '';
+        }}
+      />
+      <$method name="swap"
+        do={function swap() {
+          this.clear();
+          const children = [this.render().to_dom()].flat(Infinity);
+          for (const c of children) {
+            this.swap_target().appendChild(c);
+          }
+        }}
+      />
       <$event name="update">{
         function () {
           if (this.element()) {
-            this.morph();
+            this.swap();
           }
         }
       }</$event>
@@ -79,7 +95,7 @@ export default await base.find('class', 'module').new({
               <span class="window-menu"></span>
             </div>
             <$if when={!this.minimized()}>
-              <div class="window-body">{children}</div>
+              <div class="window-body swap-target">{children}</div>
             </$if>
           </div>;
         }
