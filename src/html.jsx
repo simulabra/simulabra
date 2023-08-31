@@ -33,24 +33,26 @@ export default await base.find('class', 'module').new({
           return this.container(this.render()).to_dom();
         }
       }</$method>
-      <$method name="clear"
-        do={function clear() {
-          this.log(this.element());
+      <$method name="clear">{
+        function clear() {
           const st = this.swap_target();
+          this.log('clear', st);
           st.innerHTML = '';
-        }}
-      />
-      <$method name="swap"
-        do={function swap() {
+        }
+      }</$method>
+      <$method name="swap">{
+        function swap() {
+          this.log('swap');
           this.clear();
+          this.log(this);
           const children = [this.render().to_dom()].flat(Infinity);
           for (const c of children) {
             this.swap_target().appendChild(c);
           }
-        }}
-      />
+        }
+      }</$method>
       <$event name="update">{
-        function () {
+        function update() {
           if (this.element()) {
             this.swap();
           }
@@ -76,7 +78,11 @@ export default await base.find('class', 'module').new({
       <$var name="minimized" default={false} />
       <$method name="toggle">{
         function toggle() {
+          this.log('toggle');
           this.minimized(!this.minimized());
+          if (this.minimized()) {
+            this.clear();
+          }
         }
       }</$method>
       <$method name="container">{
@@ -94,9 +100,11 @@ export default await base.find('class', 'module').new({
               <span class="window-title">{this.window_title()}</span>
               <span class="window-menu"></span>
             </div>
-            <$if when={!this.minimized()}>
-              <div class="window-body swap-target">{children}</div>
-            </$if>
+            <span class="swap-target">
+              <$if when={!this.minimized()}>
+                <div class="window-body">{children}</div>
+              </$if>
+            </span>
           </div>;
         }
       }</$method>

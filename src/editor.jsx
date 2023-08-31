@@ -216,12 +216,6 @@ export default await base.find('class', 'module').new({
       <$after name="init">{
         function init() {
           this.messages(<$message_log />);
-          this.browser(
-            <$module_browser
-              module={_}
-              parent={this}
-            />
-          );
           this.explorer(<$object_explorer parent={this} />);
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
           this.completor(<$completor parent={this} text="" />);
@@ -234,7 +228,6 @@ export default await base.find('class', 'module').new({
       <$$window />
       <$$application />
       <$var name="messages" />
-      <$var name="browser" />
       <$var name="explorer" />
       <$var name="completor" />
       <$var name="todos" />
