@@ -258,8 +258,8 @@ export default await base.find('class', 'module').new({
   --primary: #663C3C;
   --secondary: #50668B;
   --secondary-2: #72868B;
-  --background: #EFCA9D;
-  --background-secondary: #EFB072;
+  --background: #E9CA9D;
+  --background-secondary: #E2B072;
   --background-text: #F3DAAA;
 }
 
@@ -276,26 +276,14 @@ body, html {
   color: var(--primary);
 }
 
-.editor, .container {
-  height: 100%;
-}
 .container {
   display: flex;
-}
-
-.nil {
-  display: none;
 }
 
 .col {
   flex: 1;
   overflow: auto;
   padding: 2px;
-}
-
-.module_browser {}
-.code_editor {}
-.object_explorer {
 }
 
 .windowed {

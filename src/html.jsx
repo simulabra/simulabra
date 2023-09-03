@@ -36,15 +36,12 @@ export default await base.find('class', 'module').new({
       <$method name="clear">{
         function clear() {
           const st = this.swap_target();
-          this.log('clear', st);
           st.innerHTML = '';
         }
       }</$method>
       <$method name="swap">{
         function swap() {
-          this.log('swap');
           this.clear();
-          this.log(this);
           const children = [this.render().to_dom()].flat(Infinity);
           for (const c of children) {
             this.swap_target().appendChild(c);
@@ -78,7 +75,6 @@ export default await base.find('class', 'module').new({
       <$var name="minimized" default={false} />
       <$method name="toggle">{
         function toggle() {
-          this.log('toggle');
           this.minimized(!this.minimized());
           if (this.minimized()) {
             this.clear();
@@ -100,11 +96,13 @@ export default await base.find('class', 'module').new({
               <span class="window-title">{this.window_title()}</span>
               <span class="window-menu"></span>
             </div>
-            <span class="swap-target">
-              <$if when={!this.minimized()}>
-                <div class="window-body">{children}</div>
-              </$if>
-            </span>
+            <div class="window-body">
+              <span class="swap-target">
+                <$if when={!this.minimized()}>
+                  {children}
+                </$if>
+              </span>
+            </div>
           </div>;
         }
       }</$method>
