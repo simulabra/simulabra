@@ -181,7 +181,6 @@ export default await base.find('class', 'module').new({
             <div>what needs to be done?</div>
             <input
               type="text"
-              id="new-task-description"
               onkeydown={e => {
                 if (e.key === 'Enter') {
                   this.submit();
@@ -296,6 +295,11 @@ body, html {
 .window-bar {
   background: var(--background-secondary);
   border-bottom: 1px solid var(--primary);
+  display: flex;
+  justify-content: space-between;
+}
+
+.window-info {
   display: flex;
   justify-content: space-between;
 }

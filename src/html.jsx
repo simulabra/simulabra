@@ -85,15 +85,17 @@ export default await base.find('class', 'module').new({
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
             <div class="window-bar">
-              <span
-                class="window-layout"
-                onclick={e => {
-                  e.preventDefault();
-                  this.toggle();
-                }}
-                onmousedown={e => e.preventDefault()}
-              ></span>
-              <span class="window-title">{this.window_title()}</span>
+              <span class="window-info">
+                <span
+                  class="window-layout"
+                  onclick={e => {
+                    e.preventDefault();
+                    this.toggle();
+                  }}
+                  onmousedown={e => e.preventDefault()}
+                ></span>
+                <span class="window-title">{this.window_title()}</span>
+              </span>
               <span class="window-menu"></span>
             </div>
             <div class="window-body">
