@@ -22,7 +22,7 @@ function jsx(node) {
     } else if (tag[0] === '$') {
       const args = [b.objectExpression(props)];
       if (node.children.length > 0) {
-        args.push(b.arrayExpression(children.filter(c => c.type !== 'Literal')));
+        args.push(b.arrayExpression(children.filter(c => !(c.type === 'Literal' && c.value.indexOf('\n') === 0))));
       }
       return b.callExpression(
         b.memberExpression(

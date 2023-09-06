@@ -55,19 +55,11 @@ export default await base.find('class', 'module').new({
           }
         }
       }</$event>
-      <$method name="dispatchEvent">{
+      <$after name="dispatchEvent">{
         function dispatchEvent(event) {
-          const observers = this.message_observers(event.type);
-          if (observers.length === 0) {
-            return this.parent()?.dispatchEvent(event);
-          }
-          let handled = false;
-          for (const ob of observers) {
-            handled = handled || ob(event);
-          }
-          return handled;
+          this.parent()?.dispatchEvent(event);
         }
-      }</$method>
+      }</$after>
     </$class>;
 
     <$class name="window">
@@ -185,6 +177,28 @@ export default await base.find('class', 'module').new({
             this.log('command failed', cmd, err);
             this.dispatchEvent({ type: 'error', cmd, err })
           }
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="button">
+      <$$component />
+      <$var name="command" />
+      <$var name="slots" />
+      <$method name="render">{
+        function render() {
+          this.log(this.slots());
+          return <button
+            id={`button-${this.id()}`}
+            parent={this}
+            onclick={e => {
+              this.log(e, this.command());
+              return this.dispatchEvent({
+                type: 'command',
+                target: this.command(),
+              });
+            }}
+          >{this.slots()[0]}</button>;
         }
       }</$method>
     </$class>;

@@ -130,21 +130,32 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
+    <$class name="task_finish_command">
+      <$$command />
+      <$var name="target" />
+      <$method name="run">{
+        function run(ctx) {
+          this.log('run');
+          this.target().completed(true);
+        }
+      }</$method>
+      <$method name="undo">{
+        function undo(ctx) {
+          this.target().completed(false);
+        }
+      }</$method>
+    </$class>;
+
     <$class name="task">
       <$$component />
       <$var name="description" default={''} />
       <$var name="completed" default={false} />
-      <$method name="finish">{
-        function finish() {
-          this.completed(true);
-        }
-      }</$method>
       <$method name="render">{
         function render() {
           return <span>
             <span class={`completed-${this.completed()}`}>{this.description()}</span>
             <$if when={!this.completed()}>
-              <button onclick={() => this.finish()}>finish</button>
+              <$button command={<$task_finish_command target={this} parent={this} />}>{"finish"}</$button>
             </$if>
           </span>;
         }
@@ -156,7 +167,7 @@ export default await base.find('class', 'module').new({
       <$var name="tasks" default={[]} />
       <$method name="add_task">{
         function add_task(description) {
-          const task = <$task description={description} />;
+          const task = <$task description={description} parent={this} />;
           this.tasks([...this.tasks(), task]);
         }
       }</$method>
@@ -203,7 +214,12 @@ export default await base.find('class', 'module').new({
 
     <$class name="todos">
       <$$window />
-      <$var name="todo_list" default={<$todo_list />} />
+      <$var name="todo_list" />
+      <$after name="init">{
+        function init() {
+          this.todo_list(<$todo_list parent={this} />);
+        }
+      }</$after>
       <$method name="render">{
         function render() {
           return this.todo_list();

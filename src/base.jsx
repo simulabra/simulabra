@@ -170,7 +170,7 @@ function bootstrap() {
   }
 
   function nativePassthrough(name) {
-    return (typeof name === 'symbol') || ['then', 'fetch'].includes(name);
+    return (typeof name === 'symbol') || ['then', 'fetch', 'toSource'].includes(name);
   }
 
   function DebugProto() {
@@ -444,7 +444,9 @@ function bootstrap() {
     },
     function load(target) {
       for (const v of this.slots()) {
-        v.load(target);
+        if (typeof v !== 'string') {
+          v.load(target);
+        }
       }
     },
     function extend(comp) {
@@ -478,7 +480,7 @@ function bootstrap() {
     function superclasses() {
       let res = [];
       for (const slot of this.slots()) {
-        if (slot.isa($class)) {
+        if (typeof slot !== 'string' && slot.isa($class)) {
           res = [slot, ...slot.superclasses(), ...res];
         }
       }
@@ -974,6 +976,9 @@ function bootstrap() {
           c.load(this.js_prototype());
         }
         this.dlog('primitive init', this);
+      },
+      function descended(cls) {
+        return cls === $.primitive;
       },
       function extend(methods) {
         methods.map(m => m.load(this.js_prototype())); // wee-woo!
