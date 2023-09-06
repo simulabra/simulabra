@@ -200,11 +200,8 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
             const best = await (<$local_llama_completion_command
               server_url={server_url}
               prompt={best_prompt}
-              logit_bias={logit_bias}
               n_predict={1}
-              temperature={temperature}
             />).run();
-            this.log(best_prompt, best);
             this.target().completion_candidates().emphasized(+best);
           } finally {
             lock();

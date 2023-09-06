@@ -170,6 +170,7 @@ export default await base.find('class', 'module').new({
       }</$after>
       <$method name="process_command">{
         async function process_command(cmd) {
+          this.log('process_command', cmd);
           try {
             await cmd.run(this);
             this.command_history().push(cmd);
@@ -190,7 +191,6 @@ export default await base.find('class', 'module').new({
           this.log(this.slots());
           return <button
             id={`button-${this.id()}`}
-            parent={this}
             onclick={e => {
               this.log(e, this.command());
               return this.dispatchEvent({
@@ -205,6 +205,7 @@ export default await base.find('class', 'module').new({
 
     <$class name="link">
       <$$component />
+      <$var name="command" />
       <$var name="object" />
       <$method name="link_text">{
          function link_text() {

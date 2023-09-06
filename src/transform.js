@@ -20,7 +20,9 @@ function jsx(node) {
     if (tag.indexOf('$$') === 0) {
       return b.memberExpression(b.identifier('$'), b.identifier(tag.slice(2)), false);
     } else if (tag[0] === '$') {
+      props.push(b.property('init', b.identifier('parent'), b.thisExpression()));
       const args = [b.objectExpression(props)];
+
       if (node.children.length > 0) {
         args.push(b.arrayExpression(children.filter(c => !(c.type === 'Literal' && c.value.indexOf('\n') === 0))));
       }

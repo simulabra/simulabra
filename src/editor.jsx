@@ -78,7 +78,7 @@ export default await base.find('class', 'module').new({
           return <div>{
             this.objects()
               .map(c => {
-                return <$explorer_select_link object={c} parent={this} />;
+                return <$link object={c} command={<$explorer_select_command target={c} />} />;
               })
           }</div>;
         }
@@ -90,11 +90,11 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="display">{
         function display(value) {
-          if (typeof value === 'object' && '_id' in value) {
-            return <$explorer_select_link object={value} parent={this} />;
+          if (value !== null && typeof value === 'object' && '_id' in value) {
+            return <$explorer_select_link object={value} />;
           } else if (Array.isArray(value)) {
             return value.map(it => this.display(it));
-          } else if ('to_dom' in Object.getPrototypeOf(value)) {
+          } else if (value !== null && 'to_dom' in (Object.getPrototypeOf(value) || {})) {
             return value;
           } else if (value instanceof WeakRef) {
             const ref = value.deref();
@@ -119,7 +119,7 @@ export default await base.find('class', 'module').new({
             return <span>(no object)</span>;
           }
           return <>
-            <$explorer_select_link object={this.object().class()} parent={this} />
+            <$explorer_select_link object={this.object().class()} />
             {this.object().state().map(v => {
               const name = v.var_ref().name();
               const value = v.value();
@@ -155,7 +155,7 @@ export default await base.find('class', 'module').new({
           return <span>
             <span class={`completed-${this.completed()}`}>{this.description()}</span>
             <$if when={!this.completed()}>
-              <$button command={<$task_finish_command target={this} parent={this} />}>{"finish"}</$button>
+              <$button command={<$task_finish_command target={this} />}>{"finish"}</$button>
             </$if>
           </span>;
         }
@@ -167,7 +167,7 @@ export default await base.find('class', 'module').new({
       <$var name="tasks" default={[]} />
       <$method name="add_task">{
         function add_task(description) {
-          const task = <$task description={description} parent={this} />;
+          const task = <$task description={description} />;
           this.tasks([...this.tasks(), task]);
         }
       }</$method>
@@ -217,7 +217,7 @@ export default await base.find('class', 'module').new({
       <$var name="todo_list" />
       <$after name="init">{
         function init() {
-          this.todo_list(<$todo_list parent={this} />);
+          this.todo_list(<$todo_list />);
         }
       }</$after>
       <$method name="render">{
@@ -231,10 +231,11 @@ export default await base.find('class', 'module').new({
       <$after name="init">{
         function init() {
           this.messages(<$message_log />);
-          this.explorer(<$object_explorer parent={this} />);
+          this.explorer(<$object_explorer />);
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
-          this.completor(<$completor parent={this} text="" />);
-          this.todos(<$todos parent={this} />);
+          this.completor(<$completor text="" />);
+          this.todos(<$todos />);
+          this.modules($.module.instances().map(it => <$module_browser module={it.deref()} />));
           this.addEventListener('error', evt => {
             this.messages().add(`error: ${evt.err.toString()}`);
           });
@@ -245,6 +246,7 @@ export default await base.find('class', 'module').new({
       <$var name="messages" />
       <$var name="explorer" />
       <$var name="completor" />
+      <$var name="modules" />
       <$var name="todos" />
       <$before name="process_command">{
         function process_command(cmd) {
@@ -255,11 +257,13 @@ export default await base.find('class', 'module').new({
         function render() {
           return <div class="container">
             <div class="col">
-              {$.module.instances().map(it => <$module_browser module={it.deref()} parent={this} />)}
+              {this.modules()}
             </div>
             <div class="col">
-              {this.todos()}
               {this.completor()}
+              {this.todos()}
+            </div>
+            <div class="col">
               {this.explorer()}
               {this.messages()}
             </div>
