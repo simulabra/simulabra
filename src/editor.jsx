@@ -135,7 +135,6 @@ export default await base.find('class', 'module').new({
       <$var name="target" />
       <$method name="run">{
         function run(ctx) {
-          this.log('run');
           this.target().completed(true);
         }
       }</$method>
@@ -158,6 +157,16 @@ export default await base.find('class', 'module').new({
               <$button command={<$task_finish_command target={this} />}>{"finish"}</$button>
             </$if>
           </span>;
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="task_submit_command">
+      <$$command />
+      <$var name="target" />
+      <$method name="run">{
+        function run(ctx) {
+          this.target().submit();
         }
       }</$method>
     </$class>;
@@ -194,11 +203,14 @@ export default await base.find('class', 'module').new({
               type="text"
               onkeydown={e => {
                 if (e.key === 'Enter') {
-                  this.submit();
+                  return this.dispatchEvent({
+                    type: 'command',
+                    target: <$task_submit_command target={this} />,
+                  });
                 }
               }}
             />
-            <button onclick={() => this.submit()}>add</button>
+            <$button command={<$task_submit_command target={this} />}>add</$button>
             <ul>
               {this.tasks().map(task =>
                 <li>

@@ -49,9 +49,10 @@ export default await base.find('class', 'module').new({
         }
       }</$method>
       <$event name="update">{
-        function update() {
-          if (this.element()) {
+        function update(e) {
+          if (this.element() && !e.swapped) {
             this.swap();
+            e.swapped = true;
           }
         }
       }</$event>
@@ -188,7 +189,6 @@ export default await base.find('class', 'module').new({
       <$var name="slots" />
       <$method name="render">{
         function render() {
-          this.log(this.slots());
           return <button
             id={`button-${this.id()}`}
             onclick={e => {
