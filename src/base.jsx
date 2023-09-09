@@ -336,7 +336,7 @@ function bootstrap() {
         const line = stack.split('\n')[2];
         this.src_line(line);
       }
-      globalThis.SIMULABRA.register(this);
+      globalThis.SIMULABRA.mod()?.register(this);
 
       for (const ev of (this.class().events() ?? [])) {
         this.addEventListener(ev.name(), ev.do().bind(this));
@@ -438,7 +438,6 @@ function bootstrap() {
       $base_slots.load(this.proto());
       this._proto._class = this;
       this.load(this.proto());
-      this.instances([]);
       this.proto()._reify();
       $$().mod()?.def(this)
     },
@@ -507,14 +506,9 @@ function bootstrap() {
       this.id_ctr(id + 1);
       return id;
     },
-    function register_inst(obj) {
-      this.instances().push(new WeakRef(obj));
-      this.superclasses().forEach(it => it.instances().push(new WeakRef(obj)));
-    },
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
-    BVar.new({ name: 'instances' }),
     BVar.new({ name: 'events' }),
     BVar.new({
       name: 'slots',
@@ -534,7 +528,6 @@ function bootstrap() {
       parametize(props, obj);
       obj.id(this.genid());
       obj.init(this);
-      this.register_inst(obj);
       return obj;
     }
   };
@@ -565,6 +558,8 @@ function bootstrap() {
       BVar.new({ name: 'required', }),
       function defval(ctx) {
         if (this.default() instanceof Function) {
+          // console.log('fn', this.name());
+          // console.log(this.default());
           return this.default().apply(ctx);
         } else {
           return this.default();
@@ -752,6 +747,31 @@ function bootstrap() {
     ]
   });
 
+  const $object_registry = $class.new({
+    name: 'object_registry',
+    slots: [
+      $var.new({ name: 'class_instances', default: () => ({}) }),
+      $var.new({ name: 'refs', default: () => ({}) }),
+      function register(o) {
+        this.add_instance(o);
+        const u = o.uri();
+        this.refs()[u] = new WeakRef(o);
+      },
+      function deref(u) {
+        return this.refs()[u]?.deref();
+      },
+      function add_instance(obj) {
+        if (this.class_instances()[obj.class().name()] === undefined) {
+          this.class_instances()[obj.class().name()] = [];
+        }
+        this.class_instances()[obj.class().name()].push(obj.uri());
+      },
+      function instances(cls) {
+        return (this.class_instances()[cls.name()] ?? []).map(u => this.deref(u)).filter(o => o !== undefined);
+      },
+    ]
+  });
+
   const $module = $class.new({
     name: 'module',
     // debug: true,
@@ -764,9 +784,16 @@ function bootstrap() {
         debug: false,
       }),
       $var.new({ name: 'on_load' }),
+      $var.new({ name: 'registry' }),
       $var.new({ name: 'loaded', default: false }),
       $var.new({ name: 'repos', default: () => ({}) }),
       $var.new({ name: 'classes', default: () => [] }),
+      function instances(cls) {
+        return this.registry()?.instances(cls);
+      },
+      function register(obj) {
+        return this.registry()?.register(obj);
+      },
       function repo(className) {
         return this.repos()[className] || {};
       },
@@ -835,7 +862,10 @@ function bootstrap() {
     ]
   });
 
-  var _ = $module.new({ name: 'base' });
+  var _ = $module.new({
+    name: 'base',
+    registry: $object_registry.new(),
+  });
   var $ = _.proxy('class');
   __._mod = _;
   const INTRINSICS = [
@@ -849,6 +879,7 @@ function bootstrap() {
     $virtual,
     $before,
     $after,
+    $object_registry,
     $module,
   ];
 
@@ -863,24 +894,7 @@ function bootstrap() {
     }</$after>
   </$class>;
 
-  <$class name="object_registry">
-    <$method name="register">{
-      function register(o) {
-        const u = o.uri();
-        this.refs()[u] = new WeakRef(o);
-      }
-    }</$method>
-    <$method name="deref">{
-      function deref(u) {
-        return this.refs()[u]?.deref();
-      }
-    }</$method>
-    <$var name="refs" default={{}} />
-  </$class>;
-
-
   <$class name="simulabra_global">
-    <$$object_registry />
     <$var name="mod" />
     <$var name="modules" default={{}} />
     <$var name="stack" debug={false} />
@@ -888,6 +902,7 @@ function bootstrap() {
     <$var name="trace" default={true} />
     <$var name="tick" default={0} />
     <$var name="handlers" default={{}} />
+    <$var name="registry" />
     <$method name="start_ticking">{
       function start_ticking() {
         setInterval(() => {
@@ -916,6 +931,11 @@ function bootstrap() {
         return _;
       }
     }</$method>
+    <$method name="register">{
+      function register(o) {
+        return this.registry().register(o);
+      }
+    }</$method>
   </$class>;
 
 
@@ -924,6 +944,7 @@ function bootstrap() {
     mod: _,
     base_mod: _,
     bootstrapped: true,
+    registry: $.object_registry.new(),
   });
 
   __.addEventListener('log', e => console.log(...e.args));
@@ -946,6 +967,18 @@ function bootstrap() {
         name: 'init',
         do() {
           $$().mod().def(this);
+        }
+      })
+    ]
+  });
+
+  $.class.new({
+    name: 'registered',
+    slots: [
+      $.after.new({
+        name: 'init',
+        do() {
+          $$().mod().register(this);
         }
       })
     ]

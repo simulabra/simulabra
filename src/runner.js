@@ -47,12 +47,12 @@ export default await base.find('class', 'module').new({
           async do(mod) {
             this.log(`run ${mod.title()}`);
             globalThis.SIMULABRA.mod(mod);
-            const cases = $.case.instances();
+            const cases = mod.instances($.case);
             if (cases === undefined) {
               throw new Error(`no cases in module ${mod.description()}`);
             }
             for (const test_case of cases) {
-              await test_case.deref().run();
+              await test_case.run();
             }
             const n = Object.values(cases).length;
             this.log(mod.title(), `${n} test cases passed`);

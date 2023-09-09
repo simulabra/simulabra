@@ -7,6 +7,7 @@ const __ = globalThis.SIMULABRA;
 export default await base.find('class', 'module').new({
   name: 'test_http',
   imports: [test, http],
+  registry: base.find('class', 'object_registry').new(),
   on_load(_, $) {
     $.async_case.new({
       name: 'server_creation',
