@@ -761,10 +761,13 @@ function bootstrap() {
         return this.refs()[u]?.deref();
       },
       function add_instance(obj) {
-        if (this.class_instances()[obj.class().name()] === undefined) {
-          this.class_instances()[obj.class().name()] = [];
+        for (const cls of [obj.class(), ...obj.class().superclasses()]) {
+          const className = cls.name();
+          if (this.class_instances()[className] === undefined) {
+            this.class_instances()[className] = [];
+          }
+          this.class_instances()[className].push(obj.uri());
         }
-        this.class_instances()[obj.class().name()].push(obj.uri());
       },
       function instances(cls) {
         return (this.class_instances()[cls.name()] ?? []).map(u => this.deref(u)).filter(o => o !== undefined);
