@@ -886,7 +886,12 @@ function bootstrap() {
     $module,
   ];
 
-  INTRINSICS.forEach(it => _.def(it));
+  INTRINSICS.forEach(it => {
+    _.def(it);
+    _.register(it);
+  });
+
+  _.register(_);
 
   <$class name="static_var">
     <$$var />

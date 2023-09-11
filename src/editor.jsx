@@ -247,7 +247,7 @@ export default await base.find('class', 'module').new({
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
           this.completor(<$completor text="" />);
           this.todos(<$todos />);
-          this.modules($.module.instances().map(it => <$module_browser module={it.deref()} />));
+          this.modules(__.base().instances($.module).map(it => <$module_browser module={it} />));
           this.addEventListener('error', evt => {
             this.messages().add(`error: ${evt.err.toString()}`);
           });
