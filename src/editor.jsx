@@ -171,6 +171,17 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
+    <$class name="task_remove_command">
+      <$$command />
+      <$var name="target" />
+      <$var name="task" />
+      <$method name="run">{
+        function run(ctx) {
+          this.target().remove_task(this.task());
+        }
+      }</$method>
+    </$class>;
+
     <$class name="todo_list">
       <$$component />
       <$var name="tasks" default={[]} />
@@ -215,7 +226,7 @@ export default await base.find('class', 'module').new({
               {this.tasks().map(task =>
                 <li>
                   {task}
-                  <button onclick={() => this.remove_task(task)}>delete</button>
+                  <$button command={<$task_remove_command target={this} task={task} />}>delete</$button>
                 </li>
               )}
             </ul>
