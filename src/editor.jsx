@@ -118,6 +118,8 @@ export default await base.find('class', 'module').new({
           if (!this.object()) {
             return <span>(no object)</span>;
           }
+          __.base().instances($.module).map(m => this.log(m.instances(this.object())));
+          this.log(this.object().instances());
           return <>
             <$explorer_select_link object={this.object().class()} />
             {this.object().state().map(v => {
@@ -125,6 +127,7 @@ export default await base.find('class', 'module').new({
               const value = v.value();
               return <div>{name}={this.display(value)}</div>;
             })}
+            {this.object().class() === $.class ? <div>instances={this.object().instances().map(it => it.title())}</div> : ''}
           </>;
         }
       }</$method>

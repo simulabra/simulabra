@@ -476,6 +476,9 @@ function bootstrap() {
     function title() {
       return `~${this.name()}`;
     },
+    function instances() {
+      return __.base().instances($.module).map(m => m.instances(this)).flat();
+    },
     function superclasses() {
       let res = [];
       for (const slot of this.slots()) {
@@ -788,11 +791,12 @@ function bootstrap() {
       }),
       $var.new({ name: 'on_load' }),
       $var.new({ name: 'registry' }),
+      $var.new({ name: 'parent' }),
       $var.new({ name: 'loaded', default: false }),
       $var.new({ name: 'repos', default: () => ({}) }),
       $var.new({ name: 'classes', default: () => [] }),
       function instances(cls) {
-        return this.registry()?.instances(cls);
+        return this.registry()?.instances(cls) ?? [];
       },
       function register(obj) {
         return this.registry()?.register(obj);
