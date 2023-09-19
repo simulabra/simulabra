@@ -260,7 +260,7 @@ export default await base.find('class', 'module').new({
           this.messages(<$message_log />);
           this.explorer(<$object_explorer />);
           this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
-          this.completor(<$completor text="" />);
+          this.completor(<$completor />);
           this.todos(<$todos />);
           this.modules(__.base().instances($.module).map(it => <$module_browser module={it} />));
           this.addEventListener('error', evt => {

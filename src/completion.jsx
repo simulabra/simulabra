@@ -129,6 +129,9 @@ export default await base.find('class', 'module').new({
     <$class name="completor_fetch_next_command">
       <$$command />
       <$var name="target" />
+      <$var name="count" />
+      <$var name="n_predict" />
+      <$var name="server_host" default="100.64.172.3" />
       <$method name="acquire_lock">{
         function acquire_lock() {
           if (completor_fetch_next_lock === null) {
@@ -157,16 +160,18 @@ export default await base.find('class', 'module').new({
           const lock = await this.acquire_lock();
           try {
             let completions = [];
-            const server_url = `http://${window.location.hostname}:3731`;
+            const server_url = `http://${this.server_host()}:3731`;
             this.target().completion_candidates().reset();
             let logit_bias = [];
+            let count = this.count() ?? this.target().count();
+            let n_predict = this.n_predict() ?? this.target().n_predict();
             let temperature = 0.7;
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < count; i++) {
               const completion = await (<$local_llama_completion_command
                 server_url={server_url}
                 prompt={this.target().prompt()}
                 logit_bias={logit_bias}
-                n_predict={8}
+                n_predict={n_predict}
                 temperature={temperature}
               />).run();
 
@@ -188,7 +193,6 @@ export default await base.find('class', 'module').new({
             }
 
             const best_prompt = `
-Be an interesting, smart guide to your own latent space.
 ### Instruction:
 Choose the most interesting and true completion for the prompt. Respond with only the number.
 Prompt:
@@ -227,7 +231,7 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
       }</$method>
       <$method name="description">{
         function description() {
-          return `<${this.title()} target={${this.target().title()}} />`;
+          return `<${this.title()} target={${this.target().title()}} text={'${this.text()}'} />`;
         }
       }</$method>
     </$class>;
@@ -288,9 +292,11 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
 
     <$class name="completor">
       <$$window />
-      <$var name="text" />
+      <$var name="text" default={'### Instruction:\n\n### Response:'} />
       <$var name="completion_candidates" />
       <$var name="textarea" />
+      <$var name="count" default={6} />
+      <$var name="n_predict" default={8} />
       <$var name="choices" default={[]} />
       <$after name="init">{
         function init() {
@@ -316,13 +322,14 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
       <$method name="render">{
         function render() {
           let self = this;
+          this.log(this.text());
           return <div>
             <textarea
-              oninput={function (e) {
+              oninput={e => {
                 e.preventDefault();
-                self.text(this.value, false);
-                self.completion_candidates().clear();
-                self.choices([self.text().slice(-10)], false);
+                this.text(e.target.value, false);
+                this.completion_candidates().clear();
+                this.choices([this.text().slice(-10)], false);
               }}
               onload={function (e) {
                 self.log('textarea onload', this);
@@ -331,6 +338,12 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
                 }, 0);
               }}
             >{this.text()}</textarea>
+            count:<input type="number" value={this.count()} onchange={e => {
+              this.count(+e.target.value, false);
+            }} />
+            n_predict::<input type="number" value={this.n_predict()} onchange={e => {
+              this.n_predict(+e.target.value, false);
+            }} />
             <$completor_fetch_next_link object={this} parent={this} />
             {this.completion_candidates()}
           </div>;
