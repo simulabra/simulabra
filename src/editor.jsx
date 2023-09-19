@@ -31,31 +31,11 @@ export default await base.find('class', 'module').new({
 
     <$class name="explorer_select_link">
       <$$link />
+      <$var name="target" />
+      <$var name="object" />
       <$method name="command">{
         function command() {
-          return <$explorer_select_command target={this.object()} />
-        }
-      }</$method>
-    </$class>;
-
-    <$class name="explorer_select_command">
-      <$$command />
-      <$var name="target" />
-      <$var name="previous" />
-      <$method name="run">{
-        function run(ctx) {
-          this.previous(ctx.explorer().object());
-          ctx.explorer().object(this.target());
-        }
-      }</$method>
-      <$method name="undo">{
-        function undo(ctx) {
-          ctx.explorer().object(this.previous());
-        }
-      }</$method>
-      <$method name="description">{
-        function description() {
-          return `~explorer_select_command target=${this.target().title()}`;
+          return <$explorer_select_command target={this.target()} object={this.object()} />
         }
       }</$method>
     </$class>;
@@ -78,7 +58,7 @@ export default await base.find('class', 'module').new({
           return <div>{
             this.objects()
               .map(c => {
-                return <$link object={c} command={<$explorer_select_command target={c} />} />;
+                return <$explorer_select_link object={c} target={this.parent().explorer()}/>;
               })
           }</div>;
         }
@@ -91,7 +71,7 @@ export default await base.find('class', 'module').new({
       <$method name="display">{
         function display(value) {
           if (value !== null && typeof value === 'object' && '_id' in value) {
-            return <$explorer_select_link object={value} />;
+            return <$explorer_select_link target={this} object={value} />;
           } else if (Array.isArray(value)) {
             return value.map(it => this.display(it));
           } else if (value !== null && 'to_dom' in (Object.getPrototypeOf(value) || {})) {
@@ -118,17 +98,38 @@ export default await base.find('class', 'module').new({
           if (!this.object()) {
             return <span>(no object)</span>;
           }
-          __.base().instances($.module).map(m => this.log(m.instances(this.object())));
-          this.log(this.object().instances());
           return <>
-            <$explorer_select_link object={this.object().class()} />
-            {this.object().state().map(v => {
-              const name = v.var_ref().name();
-              const value = v.value();
-              return <div>{name}={this.display(value)}</div>;
-            })}
-            {this.object().class() === $.class ? <div>instances={this.object().instances().map(it => it.title())}</div> : ''}
+                   <$explorer_select_link target={this} object={this.object().class()} />
+                   {this.object().state().map(v => {
+                     const name = v.var_ref().name();
+                     const value = v.value();
+                     return <div>{name}={this.display(value)}</div>;
+                   })}
+            {this.object().class() === $.class ?
+             <div>instances={
+               this.object().instances().map(it => <$explorer_select_link object={it} target={this}/>)
+             }</div>
+             : ''
+            }
           </>;
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="explorer_select_command">
+      <$$command />
+      <$var name="target" />
+      <$var name="object" />
+      <$var name="previous" />
+      <$method name="run">{
+        function run() {
+          this.previous(this.target().object());
+          this.target().object(this.object());
+        }
+      }</$method>
+      <$method name="description">{
+        function description() {
+          return `~explorer_select_command target=${this.target().title()}`;
         }
       }</$method>
     </$class>;
@@ -137,12 +138,12 @@ export default await base.find('class', 'module').new({
       <$$command />
       <$var name="target" />
       <$method name="run">{
-        function run(ctx) {
+        function run() {
           this.target().completed(true);
         }
       }</$method>
       <$method name="undo">{
-        function undo(ctx) {
+        function undo() {
           this.target().completed(false);
         }
       }</$method>
@@ -168,7 +169,7 @@ export default await base.find('class', 'module').new({
       <$$command />
       <$var name="target" />
       <$method name="run">{
-        function run(ctx) {
+        function run() {
           this.target().submit();
         }
       }</$method>
@@ -179,7 +180,7 @@ export default await base.find('class', 'module').new({
       <$var name="target" />
       <$var name="task" />
       <$method name="run">{
-        function run(ctx) {
+        function run() {
           this.target().remove_task(this.task());
         }
       }</$method>
