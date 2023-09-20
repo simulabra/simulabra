@@ -189,10 +189,37 @@ export default await base.find('class', 'module').new({
     <$class name="todo_list">
       <$$component />
       <$var name="tasks" default={[]} />
+      <$method name="load_tasks_from_storage">{
+        function load_tasks_from_storage() {
+          const storedTasks = JSON.parse(localStorage.getItem('tasks'));
+          if (storedTasks) {
+            this.tasks(storedTasks.map(taskData => {
+              const task = <$task description={taskData.description} completed={taskData.completed} />;
+              return task;
+            }));
+          }
+        }
+      }</$method>
+      <$method name="save_tasks_to_storage">{
+        function save_tasks_to_storage() {
+          const taskData = this.tasks().map(task => ({
+            description: task.description(),
+            completed: task.completed(),
+          }));
+          localStorage.setItem('tasks', JSON.stringify(taskData));
+        }
+      }</$method>
       <$method name="add_task">{
         function add_task(description) {
           const task = <$task description={description} />;
           this.tasks([...this.tasks(), task]);
+          this.save_tasks_to_storage();
+        }
+      }</$method>
+      <$method name="remove_task">{
+        function remove_task(task) {
+          this.tasks(this.tasks().filter(t => t !== task));
+          this.save_tasks_to_storage();
         }
       }</$method>
       <$method name="submit">{
@@ -205,38 +232,38 @@ export default await base.find('class', 'module').new({
           }
         }
       }</$method>
-      <$method name="remove_task">{
-        function remove_task(task) {
-          this.tasks(this.tasks().filter(t => t !== task));
-        }
-      }</$method>
       <$method name="render">{
         function render() {
           return <div>
-            <div>what needs to be done?</div>
-            <input
-              type="text"
-              onkeydown={e => {
-                if (e.key === 'Enter') {
-                  return this.dispatchEvent({
-                    type: 'command',
-                    target: <$task_submit_command target={this} />,
-                  });
-                }
-              }}
-            />
-            <$button command={<$task_submit_command target={this} />}>add</$button>
-            <ul>
-              {this.tasks().map(task =>
-                <li>
-                  {task}
-                  <$button command={<$task_remove_command target={this} task={task} />}>delete</$button>
-                </li>
-              )}
-            </ul>
-          </div>;
+                     <div>what needs to be done?</div>
+                     <input
+                       type="text"
+                       onkeydown={e => {
+                         if (e.key === 'Enter') {
+                           return this.dispatchEvent({
+                             type: 'command',
+                             target: <$task_submit_command target={this} />,
+                           });
+                         }
+                       }}
+                     />
+                     <$button command={<$task_submit_command target={this} />}>add</$button>
+                     <ul>
+                       {this.tasks().map(task =>
+                         <li>
+                           {task}
+                           <$button command={<$task_remove_command target={this} task={task} />}>delete</$button>
+                         </li>
+                       )}
+                     </ul>
+                   </div>;
         }
       }</$method>
+      <$after name="init">{
+        function init() {
+          this.load_tasks_from_storage();
+        }
+      }</$after>
     </$class>;
 
     <$class name="todos">

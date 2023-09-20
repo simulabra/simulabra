@@ -292,10 +292,10 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
 
     <$class name="completor">
       <$$window />
-      <$var name="text" default={'### Instruction:\n\n### Response:'} />
+      <$var name="text" default={'### Instruction:\n\n### Response:\n'} />
       <$var name="completion_candidates" />
       <$var name="textarea" />
-      <$var name="count" default={6} />
+      <$var name="count" default={4} />
       <$var name="n_predict" default={8} />
       <$var name="choices" default={[]} />
       <$after name="init">{
