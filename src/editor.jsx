@@ -52,12 +52,10 @@ export default await base.find('class', 'module').new({
         function render() {
           return <div>
             <div class="intro-title">SIMULABRA: INFINITE SOFTWARE</div>
-            <br />
-            <div>A software construction kit for the web (IDE, Javascript framework, and platform)</div>
-            <br />
-            <div>Try exploring some classes or adding some todos</div>
-            <br />
-            <div>Coming next: modifying values in the explorer, drag and drop, basic code editing</div>
+            <div>a software construction kit for the web (IDE, Javascript framework, and platform)</div>
+            <div>try exploring some classes or adding some todos</div>
+            <div>soon: modifying values in the explorer, drag and drop, basic code editing</div>
+            <div>behold the source at the <a href="https://github.com/simulabra/simulabra">github repo</a></div>
           </div>;
         }
       }</$method>
