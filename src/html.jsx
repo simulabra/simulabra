@@ -89,7 +89,6 @@ export default await base.find('class', 'module').new({
                 ></span>
                 <span class="window-title">{this.window_title()}</span>
               </span>
-              <span class="window-menu"></span>
             </div>
             <div class="window-body">
               <span class="swap-target">

@@ -1,15 +1,21 @@
 import base from './base.jsx';
 import html from './html.jsx';
-import completion from './completion.jsx';
 
 export default await base.find('class', 'module').new({
   name: 'editor',
-  imports: [base, html, completion],
+  imports: [base, html],
   on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
     <$class name="message">
-      <$virtual name="text" />
+      <$$component />
+      <$var name="text" />
+      <$var name="time" />
+      <$method name="render">{
+        function render() {
+          return <div><span class="time">{this.time().toISOString()}</span> {this.text()}</div>;
+        }
+      }</$method>
     </$class>;
 
     <$class name="message_log">
@@ -17,14 +23,14 @@ export default await base.find('class', 'module').new({
       <$var name="message_list"
             default={[]} />
       <$method name="add">{
-        function add(message) {
-          this.message_list().push(message);
+        function add(mstr) {
+          this.message_list().push(<$message text={mstr} time={new Date()} />);
           this.dispatchEvent({ type: 'update' });
         }
       }</$method>
       <$method name="render">{
         function render() {
-          return <div>{this.message_list().map(m => <div>{m}</div>)}</div>;
+          return <div>{this.message_list().map(m => m.render())}</div>;
         }
       }</$method>
     </$class>;
@@ -36,6 +42,23 @@ export default await base.find('class', 'module').new({
       <$method name="command">{
         function command() {
           return <$explorer_select_command target={this.target()} object={this.object()} />
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="intro">
+      <$$window />
+      <$method name="render">{
+        function render() {
+          return <div>
+            <div class="intro-title">SIMULABRA: INFINITE SOFTWARE</div>
+            <br />
+            <div>A software construction kit for the web (IDE, Javascript framework, and platform)</div>
+            <br />
+            <div>Try exploring some classes or adding some todos</div>
+            <br />
+            <div>Coming next: modifying values in the explorer, drag and drop, basic code editing</div>
+          </div>;
         }
       }</$method>
     </$class>;
@@ -286,8 +309,7 @@ export default await base.find('class', 'module').new({
         function init() {
           this.messages(<$message_log />);
           this.explorer(<$object_explorer />);
-          this.messages().add('STARTING SIMULABRA: INFINITE SOFTWARE');
-          this.completor(<$completor />);
+          this.messages().add('STARTING SIMULABRA');
           this.todos(<$todos />);
           this.modules(__.base().instances($.module).map(it => <$module_browser module={it} />));
           this.addEventListener('error', evt => {
@@ -299,7 +321,6 @@ export default await base.find('class', 'module').new({
       <$$application />
       <$var name="messages" />
       <$var name="explorer" />
-      <$var name="completor" />
       <$var name="modules" />
       <$var name="todos" />
       <$before name="process_command">{
@@ -311,13 +332,11 @@ export default await base.find('class', 'module').new({
         function render() {
           return <div class="container">
             <div class="col">
+              <$intro />
               {this.modules()}
             </div>
             <div class="col">
-              {this.completor()}
               {this.todos()}
-            </div>
-            <div class="col">
               {this.explorer()}
               {this.messages()}
             </div>
@@ -437,6 +456,11 @@ input:focus, textarea:focus {
 }
 .message_log {}
 
+.time {
+  font-style: italic;
+  font-size: 11px;
+}
+
 .completor-link-pre {
   color: var(--secondary-2);
 }
@@ -447,6 +471,11 @@ input:focus, textarea:focus {
 
 .completed-true {
   text-decoration: line-through;
+}
+
+.intro-title {
+  font-style: italic;
+  font-size: 20px;
 }
 
 button {
