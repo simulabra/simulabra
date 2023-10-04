@@ -94,7 +94,7 @@ export default await base.find('class', 'module').new({
           if (value !== null && typeof value === 'object' && '_id' in value) {
             return <$explorer_select_link target={this} object={value} />;
           } else if (Array.isArray(value)) {
-            return value.map(it => this.display(it));
+            return <div>{value.map(it => <div class="array-item"> - {this.display(it)}</div>)}</div>;
           } else if (value !== null && 'to_dom' in (Object.getPrototypeOf(value) || {})) {
             return value;
           } else if (value instanceof WeakRef) {
@@ -120,7 +120,7 @@ export default await base.find('class', 'module').new({
             return <span>(no object)</span>;
           }
           return <>
-                   <$explorer_select_link target={this} object={this.object().class()} />
+                   class <$explorer_select_link target={this} object={this.object().class()} />
                    {this.object().state().map(v => {
                      const name = v.var_ref().name();
                      const value = v.value();
@@ -344,119 +344,15 @@ export default await base.find('class', 'module').new({
       <$method name="css">{
         function css() {
           return `
-:root {
-  --primary: #663C3C;
-  --secondary: #50668B;
-  --secondary-2: #72868B;
-  --background: #E9CA9D;
-  --background-secondary: #E2B072;
-  --background-text: #F3DAAA;
-}
-
-::selection {
-  background-color: var(--secondary);
-  color: var(--background);
-}
-
-body, html {
-  margin: 0;
-  padding: 0;
-  font-size: 14px;
-  background: var(--background);
-  color: var(--primary);
-}
-
-.container {
-  display: flex;
-}
-
-.col {
-  flex: 1;
-  overflow: auto;
-  padding: 2px;
-}
-
-.windowed {
-  border: 1px solid var(--primary);
-  border-bottom: 0px;
-  margin-bottom: 2px;
-  max-height: 100%;
-}
-
-.window-bar {
-  background: var(--background-secondary);
-  border-bottom: 1px solid var(--primary);
-  display: flex;
-  justify-content: space-between;
-}
-
-.window-info {
-  display: flex;
-  justify-content: space-between;
-}
-
-.window-layout {
-  width: 18px;
-  height: 7px;
-  display: inline-block;
-  background: var(--primary);
-  align-self: flex-start;
-}
-
-.window-layout:hover {
-  background: var(--secondary);
-}
-
-.window-menu {
-  width: 18px;
-  height: 6px;
-  display: inline-block;
-  border-top: 1px solid var(--primary);
-  border-bottom: 1px solid var(--primary);
-  align-self: center;
-}
-
-.window-title {
-  font-style: italic;
-  padding: 2px;
-}
-
-a {
-  color: var(--secondary);
-}
-
-ul {
-  margin: 0;
-}
-
-textarea {
-  box-sizing: border-box;
-  width: 100%;
-  height: 30vh;
-}
-
-input, textarea {
-  background: var(--background-text);
-  border: 1px solid var(--primary);
-}
-
-input:focus, textarea:focus {
-  outline: solid var(--secondary) 1px;
-  box-shadow: 0 0 0px var(--secondary);
-}
-
-.window-body {
-  padding: 2px;
-  max-height: 100%;
-  overflow-wrap: break-word;
-  word-break: break-all;
-  border-bottom: 1px solid var(--primary);
-}
 .message_log {}
 
 .time {
   font-style: italic;
   font-size: 11px;
+}
+
+.explorer_select_link {
+  margin: 2px;
 }
 
 .completor-link-pre {
@@ -474,19 +370,6 @@ input:focus, textarea:focus {
 .intro-title {
   font-style: italic;
   font-size: 20px;
-}
-
-button {
-  background: var(--background-secondary);
-  border: 1px solid var(--primary);
-}
-
-button:hover {
-  border: 1px solid var(--secondary);
-}
-
-button:active {
-  background: var(--background);
 }
 `;
         }

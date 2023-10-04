@@ -273,7 +273,7 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
       <$method name="render">{
         function render() {
           return <div>
-            {this.candidates().map((cc, i) => <$completor_add_link object={this.parent()} text={cc} parent={this} emphasize={i === this.emphasized()} />)}
+            {this.candidates().map((cc, i) => <div><$completor_add_link object={this.parent()} text={cc} parent={this} emphasize={i === this.emphasized()} /></div>)}
           </div>;
         }
       }</$method>
@@ -292,11 +292,12 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
 
     <$class name="completor">
       <$$window />
-      <$var name="text" default={'### Instruction:\n\n### Response:\n'} />
+      <$$application />
+      <$var name="text" default={'A chat.\nUSER: \nASSISTANT:'} />
       <$var name="completion_candidates" />
       <$var name="textarea" />
       <$var name="count" default={4} />
-      <$var name="n_predict" default={8} />
+      <$var name="n_predict" default={32} />
       <$var name="choices" default={[]} />
       <$after name="init">{
         function init() {
@@ -347,6 +348,23 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
             <$completor_fetch_next_link object={this} parent={this} />
             {this.completion_candidates()}
           </div>;
+        }
+      }</$method>
+      <$method name="css">{
+        function css() {
+          return `
+.completor-link-pre {
+  color: var(--secondary-2);
+}
+
+.completor-link-pre-emphasize {
+  color: var(--secondary-2);
+}
+
+.completed-true {
+  text-decoration: line-through;
+}
+`;
         }
       }</$method>
     </$class>;

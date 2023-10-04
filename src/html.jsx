@@ -214,20 +214,18 @@ export default await base.find('class', 'module').new({
       <$method name="render">{
         function render() {
           const uri = this.object().uri();
-          return <div>
-            <a href="#"
-              id={`link-${this.id()}`}
-              object={uri}
-              onclick={e => {
-                return this.dispatchEvent({
-                  type: 'command',
-                  target: this.command(),
-                });
-              }}
-            >
-              {this.link_text()}
-            </a>
-          </div>;
+          return <a href="#"
+            id={`link-${this.id()}`}
+            object={uri}
+            onclick={e => {
+              return this.dispatchEvent({
+                type: 'command',
+                target: this.command(),
+              });
+            }}
+          >
+            {this.link_text()}
+          </a>;
         }
       }</$method>
     </$class>;
