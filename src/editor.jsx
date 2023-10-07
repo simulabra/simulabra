@@ -51,8 +51,9 @@ export default await base.find('class', 'module').new({
       <$method name="render">{
         function render() {
           return <div>
-            <div class="intro-title">SIMULABRA: INFINITE SOFTWARE</div>
-            <div>a software construction kit for the web (IDE, Javascript framework, and platform)</div>
+            <div class="intro-title">SIMULABRA</div>
+            <div class="intro-infinite">alpha - "infinite software"</div>
+            <div>a software construction kit for the web</div>
             <div>try exploring some classes or adding some todos</div>
             <div>soon: modifying values in the explorer, drag and drop, basic code editing</div>
             <div>behold the source at the <a href="https://github.com/simulabra/simulabra">github repo</a></div>
@@ -377,8 +378,13 @@ export default await base.find('class', 'module').new({
 }
 
 .intro-title {
+  font-weight: bold;
   font-style: italic;
-  font-size: 20px;
+  font-size: 24px;
+}
+
+.intro-infinite {
+  font-style: italic;
 }
 `;
         }
