@@ -95,7 +95,7 @@ export default await base.find('class', 'module').new({
           if (this.value() !== null && typeof this.value() === 'object' && '_id' in this.value()) {
             return <$explorer_select_link target={this.parent()} object={this.value()} />;
           } else if (Array.isArray(this.value())) {
-            return <div>{this.value().map(it => <div class="array-item"> - <$explorer_select_link object={it} target={this.parent()} /></div>)}</div>;
+            return <span>list({this.value().length}){this.value().map(it => <div class="array-item">  <$explorer_select_link object={it} target={this.parent()} /></div>)}</span>;
           } else if (this.value() !== null && 'to_dom' in (Object.getPrototypeOf(this.value()) || {})) {
             return this.value();
           } else if (this.value() instanceof WeakRef) {
@@ -103,10 +103,10 @@ export default await base.find('class', 'module').new({
             if (ref !== undefined) {
               return (<$slot_value slot_name={this.slot_name()} value={value} />).display();
             } else {
-              return <div>(empty ref)</div>
+              return <span>(empty ref)</span>
             }
           } else {
-            return <div>???</div>;
+            return <span>{this.value().toString()}</span>;
           }
         }
       }</$method>
@@ -138,9 +138,7 @@ export default await base.find('class', 'module').new({
                      return <$slot_value slot_name={name} value={value} />
                    })}
             {this.object().class() === $.class ?
-             <div>instances={
-               this.object().instances().map(it => <$explorer_select_link object={it} target={this}/>)
-             }</div>
+             <$slot_value slot_name="instances" value={this.object().instances()} />
              : ''
             }
           </>;
