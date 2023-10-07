@@ -298,6 +298,12 @@ function bootstrap() {
   Function.prototype.isa = function(it) {
     return it.name() === 'function-primitive';;
   };
+  Function.prototype.uri = function() {
+    return `simulabra://localhost/native_function/${this.name}`;
+  };
+  Function.prototype.title = function() {
+    return `~native_function#${this.name}`;
+  };
   Number.prototype.description = function () {
     return this.toString();
   };

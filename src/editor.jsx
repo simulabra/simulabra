@@ -86,21 +86,22 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
-    <$class name="object_explorer">
-      <$$window />
-      <$var name="object" />
+    <$class name="slot_value">
+      <$$component />
+      <$var name="slot_name" />
+      <$var name="value" />
       <$method name="display">{
-        function display(value) {
-          if (value !== null && typeof value === 'object' && '_id' in value) {
-            return <$explorer_select_link target={this} object={value} />;
-          } else if (Array.isArray(value)) {
-            return <div>{value.map(it => <div class="array-item"> - {this.display(it)}</div>)}</div>;
-          } else if (value !== null && 'to_dom' in (Object.getPrototypeOf(value) || {})) {
-            return value;
-          } else if (value instanceof WeakRef) {
-            const ref = value.deref();
+        function display() {
+          if (this.value() !== null && typeof this.value() === 'object' && '_id' in this.value()) {
+            return <$explorer_select_link target={this.parent()} object={this.value()} />;
+          } else if (Array.isArray(this.value())) {
+            return <div>{this.value().map(it => <div class="array-item"> - <$explorer_select_link object={it} target={this.parent()} /></div>)}</div>;
+          } else if (this.value() !== null && 'to_dom' in (Object.getPrototypeOf(this.value()) || {})) {
+            return this.value();
+          } else if (this.value() instanceof WeakRef) {
+            const ref = this.value().deref();
             if (ref !== undefined) {
-              return this.display(ref);
+              return (<$slot_value slot_name={this.slot_name()} value={value} />).display();
             } else {
               return <div>(empty ref)</div>
             }
@@ -109,6 +110,16 @@ export default await base.find('class', 'module').new({
           }
         }
       }</$method>
+      <$method name="render">{
+        function render() {
+          return <div>{this.slot_name()}: {this.display()}</div>;
+        }
+      }</$method>
+    </$class>;
+
+    <$class name="object_explorer">
+      <$$window />
+      <$var name="object" />
       <$method name="window_title">{
         function window_title() {
           return `${this.title()} (${this.object()?.title() ?? 'nothing'})`;
@@ -124,7 +135,7 @@ export default await base.find('class', 'module').new({
                    {this.object().state().map(v => {
                      const name = v.var_ref().name();
                      const value = v.value();
-                     return <div>{name}={this.display(value)}</div>;
+                     return <$slot_value slot_name={name} value={value} />
                    })}
             {this.object().class() === $.class ?
              <div>instances={

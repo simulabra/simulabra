@@ -213,6 +213,7 @@ export default await base.find('class', 'module').new({
       }</$method>
       <$method name="render">{
         function render() {
+          this.log(this.object());
           const uri = this.object().uri();
           return <a href="#"
             id={`link-${this.id()}`}

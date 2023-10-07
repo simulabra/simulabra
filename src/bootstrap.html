@@ -145,6 +145,7 @@
     on_load(_, $) {
       const __ = globalThis.SIMULABRA;
       document.body.appendChild($.editor.new().to_dom());
+      document.body.appendChild($.completor.new().to_dom());
     }
   }).load();
 </script>
