@@ -242,6 +242,9 @@ function bootstrap() {
       return `~bvar#${this._name}`;
     }
     state() {
+      return $fake_state.list_from_map({
+        name: this._name,
+      });
     }
     load(proto) {
       const key = '_' + this.name();
@@ -319,10 +322,10 @@ function bootstrap() {
     return `~native_function#${this.name}`;
   };
   Function.prototype.state = function() {
-    return [
-      $fake_state.new({ name: 'name', value: this.name }),
-      $fake_state.new({ name: 'fn', value: this.toString() }),
-    ];
+    return $fake_state.list_from_map({
+      name: this.name,
+      fn: this.toString()
+    });
   }
   Number.prototype.description = function () {
     return this.toString();
@@ -634,9 +637,33 @@ function bootstrap() {
     ]
   });
 
+  const $static = $class.new({
+    name: 'static',
+    slots: [
+      $var.new({ name: 'do' }),
+      function load(proto) {
+        const impl = new MethodImpl({ _name: this.name() });
+        let fn = this.do();
+        if (typeof fn !== 'function') {
+          fn = fn.fn();
+        }
+        impl._primary = fn;
+        impl.reify(proto._proto._class);
+      }
+    ]
+  });
+
   const $fake_state = $class.new({
     name: 'fake_state',
     slots: [
+      $static.new({
+        name: 'list_from_map',
+        do: function list_from_map(map) {
+          const list = Object.entries(map).map(([k, v]) => this.new({ name: k, value: v }));
+          this.log(list);
+          return list;
+        }
+      }),
       $var.new({ name: 'value' }),
       function kv() {
         return [this.name(), this.value()];
@@ -674,22 +701,6 @@ function bootstrap() {
       }
     ]
   });
-
-  const $static = $class.new({
-    name: 'static',
-    slots: [
-      $var.new({ name: 'do' }),
-      function load(proto) {
-        const impl = new MethodImpl({ _name: this.name() });
-        let fn = this.do();
-        if (typeof fn !== 'function') {
-          fn = fn.fn();
-        }
-        impl._primary = fn;
-        impl.reify(proto._proto._class);
-      }
-    ]
-  })
 
   const $fn = $class.new({
     name: 'fn',
