@@ -134,8 +134,7 @@ export default await base.find('class', 'module').new({
           return <>
                    class <$explorer_select_link target={this} object={this.object().class()} />
                    {this.object().state().map(v => {
-                     const name = v.var_ref().name();
-                     const value = v.value();
+                     const [name, value] = v.kv();
                      return <$slot_value slot_name={name} value={value} />
                    })}
             {this.object().class() === $.class ?

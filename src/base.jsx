@@ -235,6 +235,14 @@ function bootstrap() {
     name() {
       return this._name;
     }
+    uri() {
+      return `simulabra://localhost/bvar/${this._name}`;
+    }
+    title() {
+      return `~bvar#${this._name}`;
+    }
+    state() {
+    }
     load(proto) {
       const key = '_' + this.name();
       const self = this;
@@ -293,6 +301,12 @@ function bootstrap() {
       name() {
         return 'native_function';
       },
+      uri() {
+        return 'simulabra://localhost/native_classes/function';
+      },
+      title() {
+        return '~native_class#function';
+      }
     }
   };
   Function.prototype.isa = function(it) {
@@ -304,6 +318,12 @@ function bootstrap() {
   Function.prototype.title = function() {
     return `~native_function#${this.name}`;
   };
+  Function.prototype.state = function() {
+    return [
+      $fake_state.new({ name: 'name', value: this.name }),
+      $fake_state.new({ name: 'fn', value: this.toString() }),
+    ];
+  }
   Number.prototype.description = function () {
     return this.toString();
   };
@@ -614,11 +634,33 @@ function bootstrap() {
     ]
   });
 
+  const $fake_state = $class.new({
+    name: 'fake_state',
+    slots: [
+      $var.new({ name: 'value' }),
+      function kv() {
+        return [this.name(), this.value()];
+      },
+      function description(seen) {
+        let d;
+        if (this.value().title instanceof Function) {
+          d = this.value().title();
+        } else {
+          d = simulabra_string(this.value(), seen);
+        }
+        return `:${this.name()}=${d}`;
+      }
+    ]
+  });
+
   const $var_state = $class.new({
     name: 'var_state',
     slots: [
       $var.new({ name: 'var_ref' }),
       $var.new({ name: 'value' }),
+      function kv() {
+        return [this.var_ref().name(), this.value()];
+      },
       function description(seen) {
         let d;
         if (this.value().title instanceof Function) {
