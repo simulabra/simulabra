@@ -137,17 +137,8 @@
   <body>
     <script type="module">
       import base from './base.jsx';
-  import editor from './editor.jsx';
-  import completion from './completion.jsx';
-  await base.find('class', 'module').new({
-    name: 'client',
-    imports: [base, editor, completion],
-    on_load(_, $) {
-      const __ = globalThis.SIMULABRA;
-      document.body.appendChild($.editor.new().to_dom());
-      document.body.appendChild($.completor.new().to_dom());
-    }
-  }).load();
+      import editor from './editor.jsx';
+      import completion from './completion.jsx';
 </script>
 </body>
 </html>

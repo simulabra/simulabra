@@ -191,7 +191,6 @@ export default await base.find('class', 'module').new({
           return <button
             id={`button-${this.id()}`}
             onclick={e => {
-              this.log(e, this.command());
               return this.dispatchEvent({
                 type: 'command',
                 target: this.command(),
@@ -213,7 +212,6 @@ export default await base.find('class', 'module').new({
       }</$method>
       <$method name="render">{
         function render() {
-          this.log(this.object());
           const uri = this.object().uri();
           return <a href="#"
             id={`link-${this.id()}`}

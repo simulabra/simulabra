@@ -368,5 +368,7 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
         }
       }</$method>
     </$class>;
+
+    document.body.appendChild($.completor.new().to_dom());
   }
 }).load();

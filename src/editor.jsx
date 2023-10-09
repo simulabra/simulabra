@@ -56,7 +56,7 @@ export default await base.find('class', 'module').new({
             <div>a software construction kit for the web</div>
             <div>try exploring some classes or adding some todos</div>
             <div>soon: modifying values in the explorer, drag and drop, basic code editing</div>
-            <div>behold the source at the <a href="https://github.com/simulabra/simulabra">github repo</a></div>
+            <div>behold the source at the <a href="https://github.com/simulabra/simulabra">github repo&#128279;</a></div>
           </div>;
         }
       }</$method>
@@ -389,5 +389,7 @@ export default await base.find('class', 'module').new({
         }
       }</$method>
     </$class>;
+
+    document.body.appendChild($.editor.new().to_dom());
   }
 }).load();

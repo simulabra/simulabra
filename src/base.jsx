@@ -20,6 +20,9 @@ function bootstrap() {
       this._tracked[u] = {};
       this._objects.set(this._tracked[u], o);
     },
+    stack() {
+      return [];
+    },
     _tracked: {},
     _objects: new WeakMap(),
   };
@@ -506,7 +509,10 @@ function bootstrap() {
       return `~${this.name()}`;
     },
     function instances() {
-      return __.base().instances($.module).map(m => m.instances(this)).flat();
+      const mods = globalThis.SIMULABRA.base().instances($.module);
+      this.log(mods);
+      const instances = mods.map(m => m.instances(this)).flat();
+      return instances;
     },
     function superclasses() {
       let res = [];
@@ -854,7 +860,14 @@ function bootstrap() {
       $var.new({ name: 'loaded', default: false }),
       $var.new({ name: 'repos', default: () => ({}) }),
       $var.new({ name: 'classes', default: () => [] }),
+      $before.new({
+        name: 'init',
+        do: function init() {
+          this.registry($object_registry.new());
+        }
+      }),
       function instances(cls) {
+        this.log(this.registry());
         return this.registry()?.instances(cls) ?? [];
       },
       function register(obj) {
