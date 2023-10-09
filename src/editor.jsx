@@ -41,7 +41,7 @@ export default await base.find('class', 'module').new({
       <$var name="object" />
       <$method name="command">{
         function command() {
-          return <$explorer_select_command target={this.target()} object={this.object()} />
+          return <$explorer_select_command object={this.object()} />
         }
       }</$method>
     </$class>;
@@ -80,7 +80,7 @@ export default await base.find('class', 'module').new({
           return <div>{
             this.objects()
               .map(c => {
-                return <$explorer_select_link object={c} target={this.parent().explorer()}/>;
+                return <$explorer_select_link object={c} />;
               })
           }</div>;
         }
@@ -94,15 +94,15 @@ export default await base.find('class', 'module').new({
       <$method name="display">{
         function display() {
           if (this.value() !== null && typeof this.value() === 'object' && '_id' in this.value()) {
-            return <$explorer_select_link target={this.parent()} object={this.value()} />;
+            return <$explorer_select_link object={this.value()} />;
           } else if (Array.isArray(this.value())) {
-            return <span>list({this.value().length}){this.value().map(it => <div class="array-item">  <$explorer_select_link object={it} target={this.parent()} /></div>)}</span>;
+            return <span>list({this.value().length}){this.value().map((it, idx) => <div class="array-item">{(<$slot_value slot_name={idx} value={it} parent={this.parent()} />).display()}</div>)}</span>;
           } else if (this.value() !== null && 'to_dom' in (Object.getPrototypeOf(this.value()) || {})) {
             return this.value();
           } else if (this.value() instanceof WeakRef) {
             const ref = this.value().deref();
             if (ref !== undefined) {
-              return (<$slot_value slot_name={this.slot_name()} value={value} />).display();
+              return (<$slot_value slot_name={this.slot_name()} value={ref} />).display();
             } else {
               return <span>(empty ref)</span>
             }
@@ -132,7 +132,7 @@ export default await base.find('class', 'module').new({
             return <span>(no object)</span>;
           }
           return <>
-                   class <$explorer_select_link target={this} object={this.object().class()} />
+                   class <$explorer_select_link object={this.object().class()} />
                    {this.object().state().map(v => {
                      const [name, value] = v.kv();
                      return <$slot_value slot_name={name} value={value} />
@@ -148,9 +148,13 @@ export default await base.find('class', 'module').new({
 
     <$class name="explorer_select_command">
       <$$command />
-      <$var name="target" />
       <$var name="object" />
       <$var name="previous" />
+      <$method name="target">{
+        function target() {
+          return $editor.explorer();
+        }
+      }</$method>
       <$method name="run">{
         function run() {
           this.previous(this.target().object());
@@ -159,7 +163,7 @@ export default await base.find('class', 'module').new({
       }</$method>
       <$method name="description">{
         function description() {
-          return `~explorer_select_command target=${this.target().title()}`;
+          return `~explorer_select_command object=${this.object().title()}`;
         }
       }</$method>
     </$class>;
@@ -390,6 +394,7 @@ export default await base.find('class', 'module').new({
       }</$method>
     </$class>;
 
-    document.body.appendChild($.editor.new().to_dom());
+    const $editor = $.editor.new();
+    document.body.appendChild($editor.to_dom());
   }
 }).load();

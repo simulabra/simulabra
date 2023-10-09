@@ -510,7 +510,6 @@ function bootstrap() {
     },
     function instances() {
       const mods = globalThis.SIMULABRA.base().instances($.module);
-      this.log(mods);
       const instances = mods.map(m => m.instances(this)).flat();
       return instances;
     },
@@ -867,7 +866,6 @@ function bootstrap() {
         }
       }),
       function instances(cls) {
-        this.log(this.registry());
         return this.registry()?.instances(cls) ?? [];
       },
       function register(obj) {
