@@ -107,7 +107,7 @@ export default await base.find('class', 'module').new({
               return <span>(empty ref)</span>
             }
           } else {
-            return <span>{this.value().toString()}</span>;
+            return <span>{this.value()?.toString() ?? JSON.stringify(this.value())}</span>;
           }
         }
       }</$method>
