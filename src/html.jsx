@@ -77,7 +77,7 @@ export default await base.find('class', 'module').new({
       <$method name="container">{
         function container(...children) {
           return <div id={this.dom_id()} class={`windowed ${this.class().name()}`} ref={this.uri()}>
-            <div class="window-bar">
+            <span class="window-bar">
               <span class="window-info">
                 <span
                   class="window-layout"
@@ -89,7 +89,7 @@ export default await base.find('class', 'module').new({
                 ></span>
                 <span class="window-title">{this.window_title()}</span>
               </span>
-            </div>
+            </span>
             <div class="window-body">
               <span class="swap-target">
                 <$if when={!this.minimized()}>

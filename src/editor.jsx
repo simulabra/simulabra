@@ -69,11 +69,6 @@ export default await base.find('class', 'module').new({
           return this.module().classes();
         }
       }</$method>
-      <$method name="window_title">{
-        function window_title() {
-          return `${this.title()} (${this.module().name()})`;
-        }
-      }</$method>
       <$var name="module" />
       <$method name="render">{
         function render() {
@@ -121,18 +116,14 @@ export default await base.find('class', 'module').new({
     <$class name="object_explorer">
       <$$window />
       <$var name="object" />
-      <$method name="window_title">{
-        function window_title() {
-          return `${this.title()} (${this.object()?.title() ?? 'nothing'})`;
-        }
-      }</$method>
       <$method name="render">{
         function render() {
           if (!this.object()) {
             return <span>(no object)</span>;
           }
           return <>
-                   class <$explorer_select_link object={this.object().class()} />
+                   <div class="explorer-title">{this.object().title()}</div>
+                   class: <$explorer_select_link object={this.object().class()} />
                    {this.object().state().map(v => {
                      const [name, value] = v.kv();
                      return <$slot_value slot_name={name} value={value} />
@@ -322,7 +313,7 @@ export default await base.find('class', 'module').new({
           this.explorer(<$object_explorer />);
           this.messages().add('STARTING SIMULABRA');
           this.todos(<$todos />);
-          this.modules(__.base().instances($.module).map(it => <$module_browser module={it} />));
+          this.modules(__.base().instances($.module).map(it => <$module_browser name={it.name()} module={it} />));
           this.addEventListener('error', evt => {
             this.messages().add(`error: ${evt.err.toString()}`);
           });
@@ -366,6 +357,10 @@ export default await base.find('class', 'module').new({
 
 .explorer_select_link {
   margin: 2px;
+}
+
+.explorer-title {
+  font-weight: bold;
 }
 
 .completor-link-pre {
