@@ -560,7 +560,10 @@ function bootstrap() {
 
   const $class_proto = new ClassPrototype(null);
   const newObj = {
-    new(props = {}) {
+    new(props = {}, ...slots) {
+      if (!props.hasOwnProperty('slots')) {
+        props.slots = slots;
+      }
       const obj = Object.create(this.proto()._proto);
       parametize(props, obj);
       obj.id(this.genid());

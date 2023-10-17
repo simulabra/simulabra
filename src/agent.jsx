@@ -15,10 +15,10 @@ export default await base.find('class', 'module').new({
         }}
       />
       <$filetype_request_handler
-        filetypes={['js', 'jsx']}
+        filetypes={['js']}
         handler={function (req, res) {
             const fileName = './src/' + req.inner().url;
-            res.ok(transform(fileName), 'application/javascript');
+          res.ok(readFileSync(fileName).toString(), 'application/javascript');
         }}
       />
     </$http_server>

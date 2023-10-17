@@ -5,8 +5,8 @@ Simulabra is an object-oriented extension of Javascript.
 $.class.new({
  name: 'point',
  slots: [
-  $.var.new({ name: 'x', def: 0 }),
-  $.var.new({ name: 'y', def: 0 }),
+  $.var.new({ name: 'x', default: 0 }),
+  $.var.new({ name: 'y', default: 0 }),
   $.method.new({
    name: 'dist',
    do: function dist(other) {
@@ -24,7 +24,7 @@ $.class.new({
   $.method.new({
    name: 'render',
    do: function render() {
-    return $.el('div', { style: `color: ${this.color().css()}` }, `(${this.x()}, ${this.y()})`);
+    return $.el('div', { style: `color: ${this.color().css()}` }, '(', $.el('span', {}, this.x()), ',', $.el('span', {}, this.y()), ')');
    }
   }),
  ]
@@ -41,8 +41,8 @@ $.case.new({
 
 // new style
 <$class name="point">
- <$var name="x" def={0} />
- <$var name="y" def={0} />
+ <$var name="x" default={0} />
+ <$var name="y" default={0} />
  <$method name="dist">{
   function dist(other) {
    return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
