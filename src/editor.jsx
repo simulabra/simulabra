@@ -1,5 +1,5 @@
 import base from './base.js';
-import html from './html.jsx';
+import html from './html.js';
 
 export default await base.find('class', 'module').new({
   name: 'editor',

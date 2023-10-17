@@ -24,11 +24,7 @@ $.class.new({
   $.method.new({
    name: 'render',
    do: function render() {
-    return $.html_element.new({
-     tag: 'div',
-     properties: { style: `color: ${this.color().css()}` }, 
-     children: [`(${this.x()}, ${this.y()})`]
-    });
+    return $.el('div', { style: `color: ${this.color().css()}` }, `(${this.x()}, ${this.y()})`);
    }
   }),
  ]
@@ -74,4 +70,4 @@ $.case.new({
 ```
 
 
-Based on this, convert the following code to the old style. Do not skip any :
+Based on this, convert the following code to the old style. Do not skip any methods or lines:

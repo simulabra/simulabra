@@ -471,7 +471,7 @@ function bootstrap() {
       this._proto._class = this;
       this.load(this.proto());
       this.proto()._reify();
-      $$().mod()?.def(this)
+      $$().mod()?.def(this.name(), this)
     },
     function load(target) {
       for (const v of this.slots()) {
@@ -909,9 +909,9 @@ function bootstrap() {
           }
         })
       },
-      function def(obj) {
-        const className = obj.class().name();
-        const name = obj.name();
+      function def(name, obj) {
+        // const className = obj.class().name();
+        const className = 'class';
         // this.log('def', className, name);
         if (!this.repos().hasOwnProperty(className)) {
           this.repos()[className] = {};
@@ -961,7 +961,7 @@ function bootstrap() {
   ];
 
   INTRINSICS.forEach(it => {
-    _.def(it);
+    _.def(it.name(), it);
     _.register(it);
   });
 
@@ -1041,7 +1041,7 @@ function bootstrap() {
       $.after.new({
         name: 'init',
         do() {
-          $$().mod().def(this);
+          $$().mod().def(this.name(), this);
         }
       })
     ]
@@ -1095,6 +1095,19 @@ function bootstrap() {
       function description() {
         return `primitive ${this.name()}`;
       },
+    ]
+  });
+
+  $.class.new({
+    name: 'function',
+    slots: [
+      $.after.new({
+        name: 'init',
+        do() {
+          $$().mod().def(this.name(), this.do().bind($$().mod()));
+        }
+      }),
+      $.var.new({ name: 'do' }),
     ]
   });
 

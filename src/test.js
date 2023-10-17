@@ -8,7 +8,6 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'case',
       slots: [
-        $.deffed,
         $.method.new({
           name: 'run',
           do() {

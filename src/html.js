@@ -6,6 +6,17 @@ export default await base.find('class', 'module').new({
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
+    $.function.new({
+      name: 'el',
+      do: function el(tag, properties, ...children) {
+        return $.html_element.new({
+          tag,
+          properties,
+          children
+        });
+      }
+    });
+
     $.class.new({
       name: 'component',
       slots: [
@@ -30,22 +41,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'container',
           do: function container(...children) {
-            // return $.el('span', { id: this.dom_id(), class: this.class().name(), ref: this.uri() }, $.el('span', { class: 'swap-target' }, ...children));
-            return $.html_element.new({
-              tag: 'span',
-              properties: {
-                id: this.dom_id(),
-                class: this.class().name(),
-                ref: this.uri()
-              },
-              children: [
-                $.html_element.new({
-                  tag: 'span',
-                  properties: { class: 'swap-target' },
-                  children: children
-                })
-              ]
-            });
+            return $.el('span', { id: this.dom_id(), class: this.class().name(), ref: this.uri() }, $.el('span', { class: 'swap-target' }, ...children));
           }
         }),
         $.var.new({
@@ -109,55 +105,38 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'container',
           do: function container(...children) {
-            return $.html_element.new({
-              tag: 'div',
-              properties: {
-                id: this.dom_id(),
-                class: `windowed ${this.class().name()}`,
-                ref: this.uri()
-              },
-              children: [
-                $.html_element.new({
-                  tag: 'span',
-                  properties: { class: 'window-bar' },
-                  children: [
-                    $.html_element.new({
-                      tag: 'span',
-                      properties: { class: 'window-info' },
-                      children: [
-                        $.html_element.new({
-                          tag: 'span',
-                          properties: {
-                            class: 'window-layout',
-                            onclick: e => {
-                              e.preventDefault();
-                              this.toggle();
-                            },
-                            onmousedown: e => e.preventDefault()
-                          }
-                        }),
-                        $.html_element.new({
-                          tag: 'span',
-                          properties: { class: 'window-title' },
-                          children: [this.window_title()]
-                        })
-                      ]
-                    })
-                  ]
-                }),
-                $.html_element.new({
-                  tag: 'div',
-                  properties: { class: 'window-body' },
-                  children: [
-                    $.html_element.new({
-                      tag: 'span',
-                      properties: { class: 'swap-target' },
-                      children: !this.minimized() ? children : []
-                    })
-                  ]
-                })
-              ]
-            });
+            return $.el('div', {
+              id: this.dom_id(),
+              class: `windowed ${this.class().name()}`,
+              ref: this.uri()
+            }, [
+              $.el('span', {
+                class: 'window-bar'
+              }, [
+                $.el('span', {
+                  class: 'window-info'
+                }, [
+                  $.el('span', {
+                    class: 'window-layout',
+                    onclick: e => {
+                      e.preventDefault();
+                      this.toggle();
+                    },
+                    onmousedown: e => e.preventDefault()
+                  }),
+                  $.el('span', {
+                    class: 'window-title'
+                  }, this.window_title())
+                ])
+              ]),
+              $.el('div', {
+                class: 'window-body'
+              }, [
+                $.el('span', {
+                  class: 'swap-target'
+                }, !this.minimized() ? children : [])
+              ])
+            ]);
           }
         }),
         $.method.new({
@@ -263,19 +242,15 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.html_element.new({
-              tag: 'button',
-              properties: {
-                id: `button-${this.id()}`,
-                onclick: e => {
-                  return this.dispatchEvent({
-                    type: 'command',
-                    target: this.command(),
-                  });
-                }
-              },
-              children: [this.slots()[0]]
-            });
+            return $.el('button', {
+              id: `button-${this.id()}`,
+              onclick: e => {
+                return this.dispatchEvent({
+                  type: 'command',
+                  target: this.command(),
+                });
+              }
+            }, this.slots()[0]);
           }
         })
       ]
@@ -297,21 +272,17 @@ export default await base.find('class', 'module').new({
           name: 'render',
           do: function render() {
             const uri = this.object().uri();
-            return $.html_element.new({
-              tag: 'a',
-              properties: {
-                href: '#',
-                id: `link-${this.id()}`,
-                object: uri,
-                onclick: e => {
-                  return this.dispatchEvent({
-                    type: 'command',
-                    target: this.command(),
-                  });
-                }
-              },
-              children: [this.link_text()]
-            });
+            return $.el('a', {
+              href: '#',
+              id: `link-${this.id()}`,
+              object: uri,
+              onclick: e => {
+                return this.dispatchEvent({
+                  type: 'command',
+                  target: this.command(),
+                });
+              }
+            }, this.link_text());
           }
         })
       ]
