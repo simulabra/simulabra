@@ -1,4 +1,4 @@
-import base from './base.jsx';
+import base from './base.js';
 
 export default await base.find('class', 'module').new({
   name: 'html',

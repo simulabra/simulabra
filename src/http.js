@@ -1,4 +1,4 @@
-import base from './base.jsx';
+import base from './base.js';
 import { createServer } from 'http';
 import axios from 'axios';
 

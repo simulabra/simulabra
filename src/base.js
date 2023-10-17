@@ -966,60 +966,53 @@ function bootstrap() {
   });
 
   _.register(_);
+  $.class.new({
+    name: 'static_var',
+    slots: [
+      $.var,
+      $.after.new({
+        name: 'load',
+        do: function load() {
+          this._get_impl(this.name()).reify(this._proto._class);
+        }
+      })
+    ]
+  });
 
-  <$class name="static_var">
-    <$$var />
-    <$after name="load">{
-      function load() {
-        this._get_impl(this.name()).reify(this._proto._class);
-      }
-    }</$after>
-  </$class>;
-
-  <$class name="simulabra_global">
-    <$var name="mod" />
-    <$var name="modules" default={{}} />
-    <$var name="stack" debug={false} />
-    <$var name="debug" default={true} />
-    <$var name="trace" default={true} />
-    <$var name="tick" default={0} />
-    <$var name="handlers" default={{}} />
-    <$var name="registry" />
-    <$method name="start_ticking">{
+  $.class.new({
+    name: 'simulabra_global',
+    slots: [
+      $.var.new({ name: 'mod' }),
+      $.var.new({ name: 'modules', default: {} }),
+      $.var.new({ name: 'stack', debug: false }),
+      $.var.new({ name: 'debug', default: true }),
+      $.var.new({ name: 'trace', default: true }),
+      $.var.new({ name: 'tick', default: 0 }),
+      $.var.new({ name: 'handlers', default: {} }),
+      $.var.new({ name: 'registry' }),
       function start_ticking() {
         setInterval(() => {
           this.tick(this.tick() + 1);
         }, 16);
-      }
-    }</$method>
-    <$method name="js_new">{
+      },
       function js_new(className, ...args) {
         const obj = new globalThis[className](...args);
         return obj;
-      }
-    }</$method>
-    <$method name="js_get">{
+      },
       function js_get(obj, p) {
         return obj[p];
-      }
-    }</$method>
-    <$method name="$">{
+      },
       function $() {
         return this.mod().proxy('class');
-      }
-    }</$method>
-    <$method name="base">{
+      },
       function base() {
         return _;
-      }
-    }</$method>
-    <$method name="register">{
+      },
       function register(o) {
         return this.registry().register(o);
       }
-    }</$method>
-  </$class>;
-
+    ]
+  });
 
   __ = $.simulabra_global.new({
     stack: new FrameStack(),
@@ -1066,16 +1059,17 @@ function bootstrap() {
     ]
   });
 
-  <$class name="event">
-    <$$fn />
-    <$var name="type" />
-    <$var name="do" />
-    <$method name="load">{
+  $.class.new({
+    name: 'event',
+    slots: [
+      $.fn,
+      $.var.new({ name: 'type' }),
+      $.var.new({ name: 'do' }),
       function load(proto) {
         proto._proto._class.events().push(this);
       }
-    }</$method>
-  </$class>
+    ]
+  });
 
   $.class.new({
     name: 'primitive',

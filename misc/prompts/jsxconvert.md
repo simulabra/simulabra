@@ -20,6 +20,12 @@ Simulabra is an object system for Javascript that has an elegant JSX notation li
       slots: [
         $.point,
         $.var.new({ name: 'color' }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return $.html.div({ style: `color: ${this.color().css()}` }, `(${this.x()}, ${this.y()})`);
+          }
+        }),
       ]
     });
     
@@ -36,27 +42,30 @@ Simulabra is an object system for Javascript that has an elegant JSX notation li
     <$class name="point">
       <$var name="x" def={0} />
       <$var name="y" def={0} />
-      <$method
-        name="dist"
-        do={function dist(other) {
+      <$method name="dist">{
+        function dist(other) {
           return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
-        }}
-      />
+        }
+      }</$method>
     </$class>;
 
     <$class name="color_point">
       <$$point />
       <$var name="color" />
+      <$method name="render">{
+        function render() {
+          return <div style={`color: ${this.color().css()}`}>({this.x()}, {this.y()})</div>
+        }
+      }</$method>
     </$class>;
 
-    <$case 
-      name="test_point"
-      do={function case__test_point() {
+    <$case name="test_point">{
+      function case__test_point() {
         const p = <$color_point color="blue" y={4} />;
         p.x(3);
         this.assert_eq(p.dist(<$point />), 5);
-      }}
-    />;
+      }
+    }</$case>;
 
 
-Based on this, convert the following code to the new style:
+Based on this, convert the following code to the old style:

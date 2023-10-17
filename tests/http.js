@@ -1,5 +1,5 @@
 import { fetch } from 'node-fetch';
-import base from '../src/base.jsx';
+import base from '../src/base.js';
 import test from '../src/test.js';
 import http from '../src/http.js';
 const __ = globalThis.SIMULABRA;

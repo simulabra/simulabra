@@ -1,4 +1,4 @@
-import base from './base.jsx';
+import base from './base.js';
 var __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({
