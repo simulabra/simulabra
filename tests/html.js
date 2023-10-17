@@ -1,6 +1,6 @@
 import base from '../src/base';
 import test from '../src/test.js';
-import html from '../src/html.jsx';
+import html from '../src/html.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('class', 'module').new({

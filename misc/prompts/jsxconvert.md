@@ -1,71 +1,77 @@
-Simulabra is an object system for Javascript that has an elegant JSX notation like below.
+Simulabra is an object-oriented extension of Javascript.
 
-    // old style
-    $.class.new({
-      name: 'point',
-      slots: [
-        $.var.new({ name: 'x', def: 0 }),
-        $.var.new({ name: 'y', def: 0 }),
-        $.method.new({
-          name: 'dist',
-          do: function dist(other) {
-            return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
-          }
-        }),
-      ]
+```
+// old style
+$.class.new({
+ name: 'point',
+ slots: [
+  $.var.new({ name: 'x', def: 0 }),
+  $.var.new({ name: 'y', def: 0 }),
+  $.method.new({
+   name: 'dist',
+   do: function dist(other) {
+    return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
+   }
+  }),
+ ]
+});
+
+$.class.new({
+ name: 'color_point',
+ slots: [
+  $.point,
+  $.var.new({ name: 'color' }),
+  $.method.new({
+   name: 'render',
+   do: function render() {
+    return $.html_element.new({
+     tag: 'div',
+     properties: { style: `color: ${this.color().css()}` }, 
+     children: [`(${this.x()}, ${this.y()})`]
     });
-    
-    $.class.new({
-      name: 'color_point',
-      slots: [
-        $.point,
-        $.var.new({ name: 'color' }),
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return $.html.div({ style: `color: ${this.color().css()}` }, `(${this.x()}, ${this.y()})`);
-          }
-        }),
-      ]
-    });
-    
-    $.case.new({
-      name: 'test_point',
-      do: function case__test_point() {
-        const p = $.color_point.new({ color: 'blue', y: 4 });
-        p.x(3);
-        this.assert_eq(p.dist($.point.new()), 5);
-      }
-    });
-    
-    // new style
-    <$class name="point">
-      <$var name="x" def={0} />
-      <$var name="y" def={0} />
-      <$method name="dist">{
-        function dist(other) {
-          return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
-        }
-      }</$method>
-    </$class>;
+   }
+  }),
+ ]
+});
 
-    <$class name="color_point">
-      <$$point />
-      <$var name="color" />
-      <$method name="render">{
-        function render() {
-          return <div style={`color: ${this.color().css()}`}>({this.x()}, {this.y()})</div>
-        }
-      }</$method>
-    </$class>;
+$.case.new({
+ name: 'test_point',
+ do: function case__test_point() {
+  const p = $.color_point.new({ color: 'blue', y: 4 });
+  p.x(3);
+  this.assert_eq(p.dist($.point.new()), 5);
+ }
+});
 
-    <$case name="test_point">{
-      function case__test_point() {
-        const p = <$color_point color="blue" y={4} />;
-        p.x(3);
-        this.assert_eq(p.dist(<$point />), 5);
-      }
-    }</$case>;
+// new style
+<$class name="point">
+ <$var name="x" def={0} />
+ <$var name="y" def={0} />
+ <$method name="dist">{
+  function dist(other) {
+   return Math.sqrt((this.x() - other.x()) ** 2 + (this.y() - other.y()) ** 2);
+  }
+ }</$method>
+</$class>;
+
+<$class name="color_point">
+ <$$point />
+ <$var name="color" />
+ <$method name="render">{
+  function render() {
+   return <div style={`color: ${this.color().css()}`}>({this.x()}, {this.y()})</div>
+  }
+ }</$method>
+</$class>;
+
+<$case name="test_point">{
+ function case__test_point() {
+  const p = <$color_point color="blue" y={4} />;
+  p.x(3);
+  this.assert_eq(p.dist(<$point />), 5);
+ }
+}</$case>;
+```
 
 
-Based on this, convert the following code to the old style:
+Based on this, convert the following code to the old style. Do not skip any :
