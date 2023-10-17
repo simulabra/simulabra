@@ -3,7 +3,7 @@ Description=Simulabra
 After=network.target
 
 [Service]
-ExecStart=/root/.bun/bin/bun run src/agent.jsx
+ExecStart=/root/.bun/bin/bun run src/agent.js
 WorkingDirectory=/opt/simulabra
 StandardOutput=file:/var/log/simulabra.log
 StandardError=file:/var/log/simulabra.log

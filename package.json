@@ -2,9 +2,9 @@
   "name": "simulabra",
   "module": "simulabra-core",
   "scripts": {
-    "test": "watchexec -w . -e js,jsx -r -- bun run src/runner.js",
-    "agent": "watchexec -w . -e js,jsx -r -- bun run src/agent.jsx",
-    "serve": "bun run src/agent.jsx"
+    "test": "watchexec -w . -e js -r -- bun run src/runner.js",
+    "agent": "watchexec -w . -e js -r -- bun run src/agent.js",
+    "serve": "bun run src/agent.js"
   },
   "type": "module",
   "devDependencies": {

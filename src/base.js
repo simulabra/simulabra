@@ -490,12 +490,6 @@ function bootstrap() {
         this[pk] = dval;
       }
     },
-    function from_jsx(properties, slots) {
-      if (slots !== undefined) {
-        properties.slots = slots;
-      }
-      return this.new(properties);
-    },
     function description() {
       return `~${this.name()}`;
     },
@@ -714,20 +708,9 @@ function bootstrap() {
     name: 'fn',
     slots: [
       $var.new({ name: 'do' }), // fn, meat and taters
-      $static.new({
-        name: 'from_jsx',
-        do(properties, slots) {
-          if (slots !== undefined) {
-            properties.slots = slots;
-            if (!properties.do) {
-              properties.do = slots[0];
-          }
-          }
-          return this.new(properties);
-        }
-      }),
     ]
   });
+
   const $method = $class.new({
     name: 'method',
     slots: [

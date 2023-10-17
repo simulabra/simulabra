@@ -52,7 +52,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'explorer_select_link',
       slots: [
-        $.link,  // Assuming that `$$link` refers to a previously defined class named 'link'
+        $.link,
         $.var.new({ name: 'target' }),
         $.var.new({ name: 'object' }),
         $.method.new({
@@ -67,7 +67,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'intro',
       slots: [
-        $.window,  // Assuming that `$$window` refers to a previously defined class named 'window'
+        $.window,
         $.method.new({
           name: 'render',
           do: function render() {
@@ -79,7 +79,7 @@ export default await base.find('class', 'module').new({
               $.el('div', {}, 'soon: modifying values in the explorer, drag and drop, basic code editing'),
               $.el('div', {}, [
                 'behold the source at the ',
-                $.el('a', { href: 'https://github.com/simulabra/simulabra' }, 'github repo&#128279;')
+                $.el('a', { href: 'https://github.com/simulabra/simulabra' }, '-> github repo')
               ])
             ]);
           }
@@ -90,7 +90,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'module_browser',
       slots: [
-        $.window,  // Assuming that `$$window` refers to a previously defined class named 'window'
+        $.window,
         $.method.new({
           name: 'objects',
           do: function objects() {

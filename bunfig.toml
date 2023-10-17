@@ -1,3 +1,0 @@
-preload = ["./bun-loader.js"]
-# jsx = "react-jsx"
-# jsxImportSource = "./"
