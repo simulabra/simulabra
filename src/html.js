@@ -6,7 +6,7 @@ export default await base.find('class', 'module').new({
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
-    $.function.new({
+    $.proc.new({
       name: 'el',
       do: function el(tag, properties, ...children) {
         return $.html_element.new({

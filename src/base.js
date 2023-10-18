@@ -516,6 +516,9 @@ function bootstrap() {
       }
       return res;
     },
+    function proxied(ctx) {
+      return this;
+    },
     function vars(visited = new Set()) {
       if (visited.has(this)) return [];
       visited.add(this);
@@ -891,7 +894,8 @@ function bootstrap() {
                 throw err;
               }
             }
-            return v;
+
+            return v.proxied(this);
           }
         })
       },
@@ -1085,15 +1089,13 @@ function bootstrap() {
   });
 
   $.class.new({
-    name: 'function',
+    name: 'proc',
     slots: [
-      $.after.new({
-        name: 'init',
-        do() {
-          $$().mod().def(this.name(), this.do().bind($$().mod()));
-        }
-      }),
-      $.var.new({ name: 'do' }),
+      $.fn,
+      $.deffed,
+      function proxied(ctx) {
+        return this.do().bind(ctx);
+      }
     ]
   });
 
