@@ -16,10 +16,11 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, [
+            return $.el('div', {},
               $.el('span', { class: 'time' }, this.time().toISOString()),
+              ' ',
               this.text()
-            ]);
+            );
           }
         }),
       ]
@@ -43,7 +44,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, this.message_list().map(m => m.render()));
+            return $.el('div', {}, ...this.message_list().map(m => m.render()));
           }
         }),
       ]
@@ -77,10 +78,10 @@ export default await base.find('class', 'module').new({
               $.el('div', {}, 'a software construction kit for the web'),
               $.el('div', {}, 'try exploring some classes or adding some todos'),
               $.el('div', {}, 'soon: modifying values in the explorer, drag and drop, basic code editing'),
-              $.el('div', {}, [
+              $.el('div', {},
                 'behold the source at the ',
                 $.el('a', { href: 'https://github.com/simulabra/simulabra' }, '-> github repo')
-              ])
+              )
             ]);
           }
         }),
@@ -101,7 +102,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, this.objects().map(c => {
+            return $.el('div', {}, ...this.objects().map(c => {
               return $.explorer_select_link.new({ object: c, parent: this });
             }));
           }
@@ -118,7 +119,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'display',
           do: function display() {
-            if (this.value() !== null && typeof this.value() === 'object' && '_id' in this.value()) {
+            if (this.value() !== null && (typeof this.value() === 'function' || typeof this.value() === 'object' && '_id' in this.value())) {
               return $.explorer_select_link.new({ object: this.value(), parent: this });
             } else if (Array.isArray(this.value())) {
               return $.el('span', {},
@@ -134,7 +135,8 @@ export default await base.find('class', 'module').new({
                 return $.el('span', {}, '(empty ref)');
               }
             } else {
-              return $.el('span', {}, this.value()?.toString() ?? JSON.stringify(this.value()));
+              this.log(this.value());
+              return $.el('span', {}, this.value()?.description() ?? JSON.stringify(this.value()));
             }
           }
         }),

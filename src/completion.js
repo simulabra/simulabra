@@ -285,9 +285,7 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
         $.method.new({
           name: 'link_text',
           do: function link_text() {
-            const preText = this.emphasize() ? '> ' : '';
-            const choicesText = this.object().choices().slice(-2).join('');
-            return `${preText}<span class='completor-link-pre'>${choicesText}</span>${this.text()}`;
+            return this.text();
           }
         }),
         $.method.new({

@@ -215,13 +215,9 @@ function bootstrap() {
       return this._impls[name];
     }
 
-    toString() {
-      return `~class-prototype#${this._proto._class.name()}`;
+    description() {
+      return `!class-prototype#${this._proto._class.name()}`;
     }
-
-    // to_dom() {
-    //   return document.createTextNode(this.toString());
-    // }
   }
 
   class BVar {
@@ -242,7 +238,7 @@ function bootstrap() {
       return `simulabra://localhost/bvar/${this._name}`;
     }
     title() {
-      return `~bvar#${this._name}`;
+      return `!bvar#${this._name}`;
     }
     state() {
       return $fake_state.list_from_map({
@@ -271,7 +267,7 @@ function bootstrap() {
       return this._desc.debug || false;
     }
     description() {
-      return `{~#bvar ${this.name()}}`
+      return this.title();
     }
     isa(it) {
       return it === BVar;
@@ -642,10 +638,17 @@ function bootstrap() {
     ]
   });
 
+  const $fn = $class.new({
+    name: 'fn',
+    slots: [
+      $var.new({ name: 'do' }), // fn, meat and taters
+    ]
+  });
+
   const $static = $class.new({
     name: 'static',
     slots: [
-      $var.new({ name: 'do' }),
+      $fn,
       function load(proto) {
         const impl = new MethodImpl({ _name: this.name() });
         let fn = this.do();
@@ -704,13 +707,6 @@ function bootstrap() {
         }
         return `:${this.var_ref().name()}=${d}`;
       }
-    ]
-  });
-
-  const $fn = $class.new({
-    name: 'fn',
-    slots: [
-      $var.new({ name: 'do' }), // fn, meat and taters
     ]
   });
 
