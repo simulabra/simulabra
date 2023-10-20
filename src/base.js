@@ -550,7 +550,6 @@ function bootstrap() {
     })
   ];
 
-
   const $class_proto = new ClassPrototype(null);
   const newObj = {
     new(props = {}, ...slots) {
@@ -569,13 +568,21 @@ function bootstrap() {
   manload($base_slots, $class_proto);
   manload($class_slots, $class_proto);
   $class_proto._reify();
-  var $class = Object.create($class_proto._proto);
+  const $class = Object.create($class_proto._proto);
   $class._class = $class;
-
   $class._name = 'class';
   $class.proto($class);
   $class.slots($class_slots);
   $class.init();
+
+  const $base_proto = new ClassPrototype(null);
+  manload($base_slots, $base_proto);
+  manload($class_slots, $base_proto);
+  $base_proto._reify();
+  const $base = Object.create($base_proto._proto);
+  $base._class = $class;
+  $base._name = 'base';
+  $base.init();
 
   // a missing middle
   var $var = $class.new({
@@ -932,6 +939,7 @@ function bootstrap() {
   var $ = _.proxy('class');
   __._mod = _;
   const INTRINSICS = [
+    $base,
     $class,
     $var,
     $fn,
