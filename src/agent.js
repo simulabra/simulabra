@@ -18,7 +18,15 @@ export default await base.find('class', 'module').new({
         $.filetype_request_handler.new({
           filetypes: ['js'],
           handler(req, res) {
-            const fileName = './src/' + req.inner().url;
+            const path = req.inner().url;
+            let fileName;
+
+            // Regex to match if the filename ends with '.demo.js'
+            if (/\.demo\.js$/.test(path)) {
+              fileName = './demos' + path.replace(`.demo`, '');
+            } else {
+              fileName = './src' + path;
+            }
             res.ok(readFileSync(fileName).toString(), 'application/javascript');
           }
         })
