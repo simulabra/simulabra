@@ -329,11 +329,43 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
     });
 
     $.class.new({
+      name: 'chatml_model',
+      slots: [
+        $.method.new({
+          name: 'prompt',
+          do: function prompt() {
+            return `<|im_start|>system
+You are a helpful, intelligent assistant.<|im_end|>
+<|im_start|>user
+<|im_end|>
+<|im_start|>assistant`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'zephyr_model',
+      slots: [
+        $.method.new({
+          name: 'prompt',
+          do: function prompt() {
+            return `<|system|>
+You are a helpful, intelligent assistant.</s>
+<|user|>
+</s>
+<|assistant|>`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor',
       slots: [
         $.window,
         $.application,
-        $.var.new({ name: 'text', default: 'A chat.\nUSER: \nASSISTANT:' }),
+        $.var.new({ name: 'text', default: '' }),
         $.var.new({ name: 'completion_candidates' }),
         $.var.new({ name: 'textarea' }),
         $.var.new({ name: 'count', default: 4 }),
@@ -343,6 +375,7 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
+            this.text($.zephyr_model.new().prompt());
           }
         }),
         $.method.new({
