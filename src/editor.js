@@ -111,6 +111,22 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'codemirror',
+      slots: [
+        $.window,
+        $.var.new({ name: 'module' }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return $.el('div', {}, ...this.objects().map(c => {
+              return $.explorer_select_link.new({ object: c, parent: this });
+            }));
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'slot_value',
       slots: [
         $.component,
@@ -233,7 +249,8 @@ export default await base.find('class', 'module').new({
           name: 'render',
           do: function render() {
             return $.el('div', { class: 'container' }, [
-              $.el('div', { class: 'col' }, [$.intro.new(), this.modules()]),
+              $.el('div', { class: 'col' }, [this.modules()]),
+              $.el('div', { class: 'col' }, [$.intro.new()]),
               $.el('div', { class: 'col' }, [this.explorer(), this.messages()])
             ]);
           }

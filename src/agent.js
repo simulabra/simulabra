@@ -24,6 +24,8 @@ export default await base.find('class', 'module').new({
             // Regex to match if the filename ends with '.demo.js'
             if (/\.demo\.js$/.test(path)) {
               fileName = './demos' + path.replace(`.demo`, '');
+            } else if (path.includes('/vendor/')) {
+              fileName = '.' + path;
             } else {
               fileName = './src' + path;
             }
