@@ -114,13 +114,16 @@ export default await base.find('class', 'module').new({
       name: 'codemirror',
       slots: [
         $.window,
-        $.var.new({ name: 'module' }),
+        $.var.new({ name: 'editor' }),
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, ...this.objects().map(c => {
-              return $.explorer_select_link.new({ object: c, parent: this });
-            }));
+            return $.el('div', {
+              onload: e => {
+                this.log(e.target);
+                this.editor(CodeMirror(e.target));
+              }
+            });
           }
         }),
       ]
@@ -227,11 +230,13 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'messages' }),
         $.var.new({ name: 'explorer' }),
         $.var.new({ name: 'modules' }),
+        $.var.new({ name: 'codemirror' }),
         $.after.new({
           name: 'init',
           do: function init() {
             this.messages($.message_log.new({ parent: this }));
             this.explorer($.object_explorer.new({ parent: this }));
+            this.codemirror($.codemirror.new());
             this.messages().add('STARTING SIMULABRA');
             this.modules(__.base().instances($.module).map(it => $.module_browser.new({ name: it.name(), module: it, parent: this })));
             this.addEventListener('error', evt => {
@@ -250,7 +255,7 @@ export default await base.find('class', 'module').new({
           do: function render() {
             return $.el('div', { class: 'container' }, [
               $.el('div', { class: 'col' }, [this.modules()]),
-              $.el('div', { class: 'col' }, [$.intro.new()]),
+              $.el('div', { class: 'col' }, [$.intro.new(), this.codemirror()]),
               $.el('div', { class: 'col' }, [this.explorer(), this.messages()])
             ]);
           }

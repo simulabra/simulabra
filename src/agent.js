@@ -31,6 +31,14 @@ export default await base.find('class', 'module').new({
             }
             res.ok(readFileSync(fileName).toString(), 'application/javascript');
           }
+        }),
+        $.filetype_request_handler.new({
+          filetypes: ['css'],
+          handler(req, res) {
+            const path = req.inner().url;
+            let fileName = '.' + path;
+            res.ok(readFileSync(fileName).toString(), 'text/css');
+          }
         })
       ]
     });
