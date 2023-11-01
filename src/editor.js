@@ -119,11 +119,29 @@ export default await base.find('class', 'module').new({
           name: 'render',
           do: function render() {
             return $.el('div', {
-              onload: e => {
+              onload: async e => {
                 this.log(e.target);
-                this.editor(CodeMirror(e.target));
+                this.editor(CodeMirror(e.target, {
+                  mode: 'javascript'
+                }));
+                const todos = await fetch('/todos.demo.js');
+                const text = await todos.text();
+                this.editor().setValue(text);
+                const todo_mod = await this.import_module();
+                this.log(todo_mod);
               }
             });
+          }
+        }),
+        $.method.new({
+          name: 'import_module',
+          do: function import_module() {
+            const code = this.editor().getValue();
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.textContext = code;
+            document.head.appendChild(script);
+            return script;
           }
         }),
       ]
