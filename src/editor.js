@@ -6,6 +6,7 @@ export default await base.find('class', 'module').new({
   imports: [base, html],
   on_load(_, $) {
     const __ = globalThis.SIMULABRA;
+    const $el = $.html_element.proxy();
 
     $.class.new({
       name: 'message',
@@ -16,8 +17,8 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {},
-              $.el('span', { class: 'time' }, this.time().toISOString()),
+            return $el.div({},
+              $el.span({ class: 'time' }, this.time().toISOString()),
               ' ',
               this.text()
             );
@@ -44,7 +45,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, ...this.message_list().map(m => m.render()));
+            return $el.div({}, ...this.message_list().map(m => m.render()));
           }
         }),
       ]
@@ -72,15 +73,15 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, [
-              $.el('div', { class: 'intro-title' }, 'SIMULABRA'),
-              $.el('div', { class: 'intro-infinite' }, 'alpha - "infinite software"'),
-              $.el('div', {}, 'a software construction kit for the web'),
-              $.el('div', {}, 'try exploring some classes or adding some todos'),
-              $.el('div', {}, 'soon: modifying values in the explorer, drag and drop, basic code editing'),
-              $.el('div', {},
+            return $el.div({}, [
+              $el.div({ class: 'intro-title' }, 'SIMULABRA'),
+              $el.div({ class: 'intro-infinite' }, 'alpha - "infinite software"'),
+              $el.div({}, 'a software construction kit for the web'),
+              $el.div({}, 'try exploring some classes or adding some todos'),
+              $el.div({}, 'soon: modifying values in the explorer, drag and drop, basic code editing'),
+              $el.div({},
                 'behold the source at the ',
-                $.el('a', { href: 'https://github.com/simulabra/simulabra' }, '-> github repo')
+                $el.a({ href: 'https://github.com/simulabra/simulabra' }, '-> github repo')
               )
             ]);
           }
@@ -102,7 +103,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, ...this.objects().map(c => {
+            return $el.div({}, ...this.objects().map(c => {
               return $.explorer_select_link.new({ object: c, parent: this });
             }));
           }
@@ -118,30 +119,37 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {
-              onload: async e => {
-                this.log(e.target);
-                this.editor(CodeMirror(e.target, {
-                  mode: 'javascript'
-                }));
-                const todos = await fetch('/todos.demo.js');
-                const text = await todos.text();
-                this.editor().setValue(text);
-                const todo_mod = await this.import_module();
-                this.log(todo_mod);
-              }
-            });
+            return $el.div(
+              {},
+              $el.div({
+                onload: async e => {
+                  this.log(e.target);
+                  this.editor(CodeMirror(e.target, {
+                    mode: 'javascript'
+                  }));
+                  const todos = await fetch('/todos.demo.js');
+                  const text = await todos.text();
+                  this.editor().setValue(text);
+                }
+              }),
+              $el.button({
+                onclick: async e => {
+                  const todo_mod = await this.import_module();
+                  this.log(todo_mod);
+                }
+              },
+                'run!'
+              )
+            );
           }
         }),
         $.method.new({
           name: 'import_module',
           do: function import_module() {
             const code = this.editor().getValue();
-            const script = document.createElement('script');
-            script.type = 'module';
-            script.textContext = code;
-            document.head.appendChild(script);
-            return script;
+            const blob = new Blob([code], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            return import(url);
           }
         }),
       ]
@@ -159,9 +167,9 @@ export default await base.find('class', 'module').new({
             if (this.value() !== null && (typeof this.value() === 'function' || typeof this.value() === 'object' && '_id' in this.value())) {
               return $.explorer_select_link.new({ object: this.value(), parent: this });
             } else if (Array.isArray(this.value())) {
-              return $.el('span', {},
+              return $el.span({},
                 'list(' + this.value().length + ')',
-                this.value().map((it, idx) => $.el('div', { class: 'array-item' }, $.slot_value.new({ slot_name: idx, value: it, parent: this }).display())));
+                this.value().map((it, idx) => $el.div({ class: 'array-item' }, $.slot_value.new({ slot_name: idx, value: it, parent: this }).display())));
             } else if (this.value() !== null && 'to_dom' in (Object.getPrototypeOf(this.value()) || {})) {
               return this.value();
             } else if (this.value() instanceof WeakRef) {
@@ -169,18 +177,18 @@ export default await base.find('class', 'module').new({
               if (ref !== undefined) {
                 return $.slot_value.new({ slot_name: this.slot_name(), value: ref }).display();
               } else {
-                return $.el('span', {}, '(empty ref)');
+                return $el.span({}, '(empty ref)');
               }
             } else {
               this.log(this.value());
-              return $.el('span', {}, this.value()?.description() ?? JSON.stringify(this.value()));
+              return $el.span({}, this.value()?.description() ?? JSON.stringify(this.value()));
             }
           }
         }),
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, this.slot_name() + ':', this.display());
+            return $el.div({}, this.slot_name() + ':', this.display());
           }
         })
       ]
@@ -195,16 +203,16 @@ export default await base.find('class', 'module').new({
           name: 'render',
           do: function render() {
             if (!this.object()) {
-              return $.el('span', {}, '(no object)');
+              return $el.span({}, '(no object)');
             }
             return [
-              $.el('div', { class: 'explorer-title' }, this.object().title()),
+              $el.div({ class: 'explorer-title' }, this.object().title()),
               $.explorer_select_link.new({ object: this.object().class(), parent: this }),
               ...this.object().state().map(v => {
                 const [name, value] = v.kv();
                 return $.slot_value.new({ slot_name: name, value: value, parent: this });
               }),
-              this.object().class() === $.class ? $.slot_value.new({ slot_name: 'instances', value: this.object().instances(), parent: this }) : $.el('span', {}, '-')
+              this.object().class() === $.class ? $.slot_value.new({ slot_name: 'instances', value: this.object().instances(), parent: this }) : $el.span({}, '-')
             ];
           }
         })
@@ -271,10 +279,10 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', { class: 'container' }, [
-              $.el('div', { class: 'col' }, [this.modules()]),
-              $.el('div', { class: 'col' }, [$.intro.new(), this.codemirror()]),
-              $.el('div', { class: 'col' }, [this.explorer(), this.messages()])
+            return $el.div({ class: 'container' }, [
+              $el.div({ class: 'col' }, [this.modules()]),
+              $el.div({ class: 'col' }, [$.intro.new(), this.codemirror()]),
+              $el.div({ class: 'col' }, [this.explorer(), this.messages()])
             ]);
           }
         }),

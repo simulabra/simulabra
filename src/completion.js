@@ -6,6 +6,7 @@ export default await base.find('class', 'module').new({
   imports: [base, html],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
+    const $el = $.html_element.proxy();
 
     // TODO: queue these so only one is running on the backend at the time, add load balancer, or make own API
     // to prevent llama.cpp server segfaulting
@@ -307,9 +308,9 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
           name: 'render',
           do: function render() {
             const candidatesElements = this.candidates().map((cc, i) =>
-              $.el('div', {}, $.completor_add_link.new({ object: this.parent(), text: cc, parent: this, emphasize: i === this.emphasized() }))
+              $el.div({}, $.completor_add_link.new({ object: this.parent(), text: cc, parent: this, emphasize: i === this.emphasized() }))
             );
-            return $.el('div', {}, ...candidatesElements);
+            return $el.div({}, ...candidatesElements);
           }
         }),
         $.method.new({
@@ -402,8 +403,8 @@ You are a helpful, intelligent assistant.</s>
           do: function render() {
             let self = this;
             this.log(this.text());
-            return $.el('div', {}, [
-              $.el('textarea', {
+            return $el.div({}, [
+              $el.textarea({
                 oninput: (e) => {
                   e.preventDefault();
                   this.text(e.target.value, false);
@@ -418,13 +419,13 @@ You are a helpful, intelligent assistant.</s>
                 }
               }, this.text()),
               'count:',
-              $.el('input', {
+              $el.input({
                 type: 'number', value: this.count(), onchange: function (e) {
                   this.count(+e.target.value, false);
                 }
               }),
               'n_predict:',
-              $.el('input', {
+              $el.input({
                 type: 'number', value: this.n_predict(), onchange: function (e) {
                   this.n_predict(+e.target.value, false);
                 }

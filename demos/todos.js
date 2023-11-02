@@ -1,12 +1,16 @@
-import base from './base.js';
-import html from './html.js';
+// import base from './base.js';
+// import html from './html.js';
 
+const __ = globalThis.SIMULABRA;
+const base = __.base();
+const html = base.find('module', 'html');
+
+console.log('html', html);
 export default await base.find('class', 'module').new({
   name: 'todos',
   imports: [base, html],
   on_load(_, $) {
-    const __ = globalThis.SIMULABRA;
-
+    const $el = $.html_element.proxy();
     $.class.new({
       name: 'task_finish_command',
       slots: [
@@ -31,8 +35,8 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('span', {},
-              $.el('span', { class: `completed-${this.completed()}` }, this.description()),
+            return $el.span({},
+              $el.span({ class: `completed-${this.completed()}` }, this.description()),
               ' ',
               $.button.new({ command: $.task_finish_command.new({ target: this }), slots: [this.completed() ? 'undo' : 'finish'], parent: this })
             );
@@ -126,9 +130,9 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('div', {}, [
-              $.el('div', {}, 'what needs to be done?'),
-              $.el('input', {
+            return $el.div({}, [
+              $el.div({}, 'what needs to be done?'),
+              $el.input({
                 type: 'text',
                 onkeydown: e => {
                   if (e.key === 'Enter') {
@@ -140,8 +144,8 @@ export default await base.find('class', 'module').new({
                 }
               }),
               $.button.new({ command: $.task_submit_command.new({ target: this }), parent: this }, 'add'),
-              $.el('ul', {}, this.tasks().map(task =>
-                $.el('li', {}, [
+              $el.ul({}, this.tasks().map(task =>
+                $el.li({}, [
                   task,
                   $.button.new({ command: $.task_remove_command.new({ target: this, task: task }), parent: this }, 'delete')
                 ])

@@ -834,10 +834,35 @@ function bootstrap() {
     ]
   });
 
+  const $deffed = $class.new({
+    name: 'deffed',
+    slots: [
+      $after.new({
+        name: 'init',
+        do() {
+          $$().mod()?.def(this.name(), this);
+        }
+      })
+    ]
+  });
+
+  const $registered = $class.new({
+    name: 'registered',
+    slots: [
+      $after.new({
+        name: 'init',
+        do() {
+          $$().mod()?.register(this);
+        }
+      })
+    ]
+  });
+
   const $module = $class.new({
     name: 'module',
     // debug: true,
     slots: [
+      $deffed,
       $var.new({ name: 'name' }),
       $var.new({
         name: 'imports',
@@ -903,8 +928,8 @@ function bootstrap() {
         })
       },
       function def(name, obj) {
-        // const className = obj.class().name();
-        const className = 'class';
+        const className = obj.class().name();
+        // const className = 'class';
         // this.log('def', className, name);
         if (!this.repos().hasOwnProperty(className)) {
           this.repos()[className] = {};
@@ -952,6 +977,7 @@ function bootstrap() {
     $after,
     $object_registry,
     $module,
+    $deffed,
   ];
 
   INTRINSICS.forEach(it => {
@@ -1028,30 +1054,6 @@ function bootstrap() {
     $.object_registry,
     $.simulabra_global,
   ].forEach(it => __.register(it));
-
-  $.class.new({
-    name: 'deffed',
-    slots: [
-      $.after.new({
-        name: 'init',
-        do() {
-          $$().mod().def(this.name(), this);
-        }
-      })
-    ]
-  });
-
-  $.class.new({
-    name: 'registered',
-    slots: [
-      $.after.new({
-        name: 'init',
-        do() {
-          $$().mod().register(this);
-        }
-      })
-    ]
-  });
 
   $.class.new({
     name: 'event',

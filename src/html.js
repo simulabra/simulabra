@@ -6,17 +6,6 @@ export default await base.find('class', 'module').new({
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
-    $.proc.new({
-      name: 'el',
-      do: function el(tag, properties, ...children) {
-        return $.html_element.new({
-          tag,
-          properties,
-          children
-        });
-      }
-    });
-
     $.class.new({
       name: 'component',
       slots: [
@@ -41,7 +30,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'container',
           do: function container(...children) {
-            return $.el('span', { id: this.dom_id(), class: this.class().name(), ref: this.uri() }, $.el('span', { class: 'swap-target' }, ...children));
+            return $el.span({ id: this.dom_id(), class: this.class().name(), ref: this.uri() }, $el.span({ class: 'swap-target' }, ...children));
           }
         }),
         $.var.new({
@@ -105,18 +94,18 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'container',
           do: function container(...children) {
-            return $.el('div', {
+            return $el.div({
               id: this.dom_id(),
               class: `windowed ${this.class().name()}`,
               ref: this.uri()
             }, [
-              $.el('span', {
+              $el.span({
                 class: 'window-bar'
               }, [
-                $.el('span', {
+                $el.span({
                   class: 'window-info'
                 }, [
-                  $.el('span', {
+                  $el.span({
                     class: 'window-layout',
                     onclick: e => {
                       e.preventDefault();
@@ -124,15 +113,15 @@ export default await base.find('class', 'module').new({
                     },
                     onmousedown: e => e.preventDefault()
                   }),
-                  $.el('span', {
+                  $el.span({
                     class: 'window-title'
                   }, this.window_title())
                 ])
               ]),
-              $.el('div', {
+              $el.div({
                 class: 'window-body'
               }, [
-                $.el('span', {
+                $el.span({
                   class: 'swap-target'
                 }, !this.minimized() ? children : [])
               ])
@@ -199,8 +188,25 @@ export default await base.find('class', 'module').new({
             return elem;
           }
         }),
+        $.static.new({
+          name: 'proxy',
+          do: function proxy() {
+            return new Proxy({}, {
+              get(target, p) {
+                return function(properties, ...children) {
+                  return $.html_element.new({
+                    tag: p,
+                    properties,
+                    children
+                  });
+                };
+              }
+            });
+          }
+        }),
       ]
     });
+    const $el = $.html_element.proxy();
 
     $.class.new({
       name: 'application',
@@ -242,7 +248,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $.el('button', {
+            return $el.button({
               id: `button-${this.id()}`,
               onclick: e => {
                 return this.dispatchEvent({
@@ -272,7 +278,7 @@ export default await base.find('class', 'module').new({
           name: 'render',
           do: function render() {
             const uri = this.object().uri();
-            return $.el('a', {
+            return $el.a({
               href: '#',
               id: `link-${this.id()}`,
               object: uri,
