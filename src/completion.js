@@ -376,7 +376,7 @@ You are a helpful, intelligent assistant.</s>
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.text($.zephyr_model.new().prompt());
+            this.text($.chatml_model.new().prompt());
           }
         }),
         $.method.new({

@@ -1,6 +1,3 @@
-// import base from './base.js';
-// import html from './html.js';
-
 const __ = globalThis.SIMULABRA;
 const base = __.base();
 const html = base.find('module', 'html');
@@ -80,40 +77,16 @@ export default await base.find('class', 'module').new({
         $.component,
         $.var.new({ name: 'tasks', default: [] }),
         $.method.new({
-          name: 'load_tasks_from_storage',
-          do: function load_tasks_from_storage() {
-            const storedTasks = JSON.parse(localStorage.getItem('tasks'));
-            if (storedTasks) {
-              this.tasks(storedTasks.map(taskData => {
-                const task = $.task.new({ description: taskData.description, completed: taskData.completed, parent: this });
-                return task;
-              }));
-            }
-          }
-        }),
-        $.method.new({
-          name: 'save_tasks_to_storage',
-          do: function save_tasks_to_storage() {
-            const taskData = this.tasks().map(task => ({
-              description: task.description(),
-              completed: task.completed(),
-            }));
-            localStorage.setItem('tasks', JSON.stringify(taskData));
-          }
-        }),
-        $.method.new({
           name: 'add_task',
           do: function add_task(description) {
             const task = $.task.new({ description: description, parent: this });
             this.tasks([...this.tasks(), task]);
-            this.save_tasks_to_storage();
           }
         }),
         $.method.new({
           name: 'remove_task',
           do: function remove_task(task) {
             this.tasks(this.tasks().filter(t => t !== task));
-            this.save_tasks_to_storage();
           }
         }),
         $.method.new({
@@ -152,12 +125,6 @@ export default await base.find('class', 'module').new({
               ))
             ]);
           }
-        }),
-        $.after.new({
-          name: 'init',
-          do: function init() {
-            this.load_tasks_from_storage();
-          }
         })
       ]
     });
@@ -191,6 +158,8 @@ export default await base.find('class', 'module').new({
     });
 
     const $todos = $.todos.new();
-    document.body.appendChild($todos.to_dom());
+    const container = document.getElementById('todos-container');
+    container.innerHTML = '';
+    container.appendChild($todos.to_dom());
   }
 }).load();

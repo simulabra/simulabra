@@ -125,7 +125,8 @@ export default await base.find('class', 'module').new({
                 onload: async e => {
                   this.log(e.target);
                   this.editor(CodeMirror(e.target, {
-                    mode: 'javascript'
+                    mode: 'javascript',
+                    theme: 'gruvbox-dark',
                   }));
                   const todos = await fetch('/todos.demo.js');
                   const text = await todos.text();
@@ -134,7 +135,7 @@ export default await base.find('class', 'module').new({
               }),
               $el.button({
                 onclick: async e => {
-                  const todo_mod = await this.import_module();
+                  const todo_mod = (await this.import_module()).default;
                   this.log(todo_mod);
                 }
               },
@@ -262,9 +263,9 @@ export default await base.find('class', 'module').new({
           do: function init() {
             this.messages($.message_log.new({ parent: this }));
             this.explorer($.object_explorer.new({ parent: this }));
-            this.codemirror($.codemirror.new());
+            this.codemirror($.codemirror.new({ parent: this }));
+            this.load_modules();
             this.messages().add('STARTING SIMULABRA');
-            this.modules(__.base().instances($.module).map(it => $.module_browser.new({ name: it.name(), module: it, parent: this })));
             this.addEventListener('error', evt => {
               this.messages().add(`error: ${evt.err.toString()}`);
             });
@@ -277,11 +278,17 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'load_modules',
+          do: function load_modules() {
+            this.modules(__.base().instances($.module).map(it => $.module_browser.new({ name: it.name(), module: it, parent: this })));
+          }
+        }),
+        $.method.new({
           name: 'render',
           do: function render() {
             return $el.div({ class: 'container' }, [
-              $el.div({ class: 'col' }, [this.modules()]),
-              $el.div({ class: 'col' }, [$.intro.new(), this.codemirror()]),
+              $el.div({ class: 'col' }, [$.intro.new(), this.modules()]),
+              $el.div({ class: 'col' }, [this.codemirror(), $el.div({ id: 'todos-container' })]),
               $el.div({ class: 'col' }, [this.explorer(), this.messages()])
             ]);
           }
