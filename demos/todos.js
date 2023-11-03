@@ -1,13 +1,73 @@
 const __ = globalThis.SIMULABRA;
 const base = __.base();
 const html = base.find('module', 'html');
-
-console.log('html', html);
 export default await base.find('class', 'module').new({
   name: 'todos',
   imports: [base, html],
   on_load(_, $) {
     const $el = $.html_element.proxy();
+    $.class.new({
+      name: 'todo_list',
+      slots: [
+        $.component,
+        $.var.new({
+          name: 'prompt',
+          default: 'what to do?' // change me!
+        }),
+        $.var.new({ name: 'tasks', default: [] }),
+        $.method.new({
+          name: 'add_task',
+          do: function add_task(description) {
+            const task = $.task.new({ description: description, parent: this });
+            this.tasks([...this.tasks(), task]);
+          }
+        }),
+        $.method.new({
+          name: 'remove_task',
+          do: function remove_task(task) {
+            this.tasks(this.tasks().filter(t => t !== task));
+          }
+        }),
+        $.method.new({
+          name: 'submit',
+          do: function submit() {
+            const input = this.element().querySelector('input');
+            const description = input.value;
+            if (description) {
+              this.add_task(description);
+              input.value = '';
+            }
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return $el.div({}, [
+              $el.div({}, this.prompt()),
+              $el.input({
+                type: 'text',
+                onkeydown: e => {
+                  if (e.key === 'Enter') {
+                    return this.dispatchEvent({
+                      type: 'command',
+                      target: $.task_submit_command.new({ target: this }),
+                    });
+                  }
+                }
+              }),
+              $.button.new({ command: $.task_submit_command.new({ target: this }), parent: this }, 'add'),
+              $el.ul({}, this.tasks().map(task =>
+                $el.li({}, [
+                  task,
+                  $.button.new({ command: $.task_remove_command.new({ target: this, task: task }), parent: this }, 'delete')
+                ])
+              ))
+            ]);
+          }
+        })
+      ]
+    });
+
     $.class.new({
       name: 'task_finish_command',
       slots: [
@@ -68,64 +128,6 @@ export default await base.find('class', 'module').new({
             this.target().remove_task(this.task());
           }
         }),
-      ]
-    });
-
-    $.class.new({
-      name: 'todo_list',
-      slots: [
-        $.component,
-        $.var.new({ name: 'tasks', default: [] }),
-        $.method.new({
-          name: 'add_task',
-          do: function add_task(description) {
-            const task = $.task.new({ description: description, parent: this });
-            this.tasks([...this.tasks(), task]);
-          }
-        }),
-        $.method.new({
-          name: 'remove_task',
-          do: function remove_task(task) {
-            this.tasks(this.tasks().filter(t => t !== task));
-          }
-        }),
-        $.method.new({
-          name: 'submit',
-          do: function submit() {
-            const input = this.element().querySelector('input');
-            const description = input.value;
-            if (description) {
-              this.add_task(description);
-              input.value = '';
-            }
-          }
-        }),
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return $el.div({}, [
-              $el.div({}, 'what needs to be done?'),
-              $el.input({
-                type: 'text',
-                onkeydown: e => {
-                  if (e.key === 'Enter') {
-                    return this.dispatchEvent({
-                      type: 'command',
-                      target: $.task_submit_command.new({ target: this }),
-                    });
-                  }
-                }
-              }),
-              $.button.new({ command: $.task_submit_command.new({ target: this }), parent: this }, 'add'),
-              $el.ul({}, this.tasks().map(task =>
-                $el.li({}, [
-                  task,
-                  $.button.new({ command: $.task_remove_command.new({ target: this, task: task }), parent: this }, 'delete')
-                ])
-              ))
-            ]);
-          }
-        })
       ]
     });
 
