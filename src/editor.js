@@ -3,6 +3,7 @@ import html from './html.js';
 
 export default await base.find('class', 'module').new({
   name: 'editor',
+  doc: 'classes for the simulabra editor',
   imports: [base, html],
   on_load(_, $) {
     const __ = globalThis.SIMULABRA;
@@ -76,12 +77,9 @@ export default await base.find('class', 'module').new({
             return $el.div({}, [
               $el.div({ class: 'intro-title' }, 'SIMULABRA'),
               $el.div({ class: 'intro-infinite' }, 'alpha - "infinite software"'),
-              $el.div({}, 'a software construction kit for the web'),
-              $el.div({}, 'try exploring some classes or adding some todos'),
-              $el.div({}, 'soon: modifying values in the explorer, drag and drop, basic code editing'),
               $el.div({},
                 'behold the source at the ',
-                $el.a({ href: 'https://github.com/simulabra/simulabra' }, '-> github repo')
+                $el.a({ href: 'https://github.com/simulabra/simulabra' }, 'github repo')
               )
             ]);
           }
@@ -103,9 +101,13 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return $el.div({}, ...this.objects().map(c => {
-              return $.explorer_select_link.new({ object: c, parent: this });
-            }));
+            return $el.div(
+              {},
+              $el.div({ class: 'module-doc', }, this.module().doc()),
+              ...this.objects().map(c => {
+                return $.explorer_select_link.new({ object: c, parent: this });
+              })
+            );
           }
         }),
       ]
@@ -331,6 +333,10 @@ export default await base.find('class', 'module').new({
 }
 
 .intro-infinite {
+  font-style: italic;
+}
+
+.module-doc {
   font-style: italic;
 }
 `;

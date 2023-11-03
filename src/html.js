@@ -2,6 +2,7 @@ import base from './base.js';
 
 export default await base.find('class', 'module').new({
   name: 'html',
+  doc: 'html component classes for building applications',
   imports: [base],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;

@@ -873,6 +873,7 @@ function bootstrap() {
       $var.new({ name: 'on_load' }),
       $var.new({ name: 'registry' }),
       $var.new({ name: 'parent' }),
+      $var.new({ name: 'doc', default: '-' }),
       $var.new({ name: 'loaded', default: false }),
       $var.new({ name: 'repos', default: () => ({}) }),
       $var.new({ name: 'classes', default: () => [] }),
@@ -960,6 +961,7 @@ function bootstrap() {
   var _ = $module.new({
     name: 'base',
     registry: $object_registry.new(),
+    doc: 'simulabra core system classes'
   });
   var $ = _.proxy('class');
   __._mod = _;
