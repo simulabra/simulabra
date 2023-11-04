@@ -8,7 +8,6 @@ export default await __.base().find('class', 'module').new({
       name: 'todo_list',
       slots: [
         $.window,
-        $.application,
         $.var.new({
           name: 'prompt',
           default: 'what to do?' // change me!
@@ -63,7 +62,16 @@ export default await __.base().find('class', 'module').new({
               ))
             ]);
           }
-        })
+        }),
+        $.static.new({
+          name: 'mount',
+          do: function mount(parent) {
+            const $todos = this.new({ parent });
+            const container = document.getElementById('todos-container');
+            container.innerHTML = '';
+            container.appendChild($todos.to_dom());
+          }
+        }),
       ]
     });
 
@@ -129,10 +137,5 @@ export default await __.base().find('class', 'module').new({
         }),
       ]
     });
-
-    const $todos = $.todo_list.new();
-    const container = document.getElementById('todos-container');
-    container.innerHTML = '';
-    container.appendChild($todos.to_dom());
   }
 }).load();

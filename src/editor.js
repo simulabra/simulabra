@@ -53,6 +53,34 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'explorer_select_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'object' }),
+        $.var.new({ name: 'previous' }),
+        $.method.new({
+          name: 'target',
+          do: function target() {
+            return $editor.explorer();
+          }
+        }),
+        $.method.new({
+          name: 'run',
+          do: function run() {
+            this.previous(this.target().object());
+            this.target().object(this.object());
+          }
+        }),
+        $.method.new({
+          name: 'description',
+          do: function description() {
+            return `~explorer_select_command object=${this.object().title()}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'explorer_select_link',
       slots: [
         $.link,
@@ -62,97 +90,6 @@ export default await base.find('class', 'module').new({
           name: 'command',
           do: function command() {
             return $.explorer_select_command.new({ object: this.object() });
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'intro',
-      slots: [
-        $.window,
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return $el.div({}, [
-              $el.div({ class: 'intro-title' }, 'SIMULABRA'),
-              $el.div({ class: 'intro-infinite' }, 'alpha - "infinite software"'),
-              $el.div({},
-                'behold the source at the ',
-                $el.a({ href: 'https://github.com/simulabra/simulabra' }, 'github repo')
-              )
-            ]);
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'module_browser',
-      slots: [
-        $.window,
-        $.method.new({
-          name: 'objects',
-          do: function objects() {
-            return this.module().classes();
-          }
-        }),
-        $.var.new({ name: 'module' }),
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return $el.div(
-              {},
-              $el.div({ class: 'module-doc', }, this.module().doc()),
-              ...this.objects().map(c => {
-                return $.explorer_select_link.new({ object: c, parent: this });
-              })
-            );
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'codemirror',
-      slots: [
-        $.window,
-        $.var.new({ name: 'editor' }),
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return $el.div(
-              {},
-              $el.div({
-                onload: async e => {
-                  this.log(e.target);
-                  this.editor(CodeMirror(e.target, {
-                    mode: 'javascript',
-                    theme: 'gruvbox-dark',
-                  }));
-                  const todos = await fetch('/todos.demo.js');
-                  const text = await todos.text();
-                  this.editor().setValue(text);
-                }
-              }),
-              $el.button({
-                onclick: async e => {
-                  const todo_mod = (await this.import_module()).default;
-                  this.log(todo_mod);
-                }
-              },
-                'run!'
-              )
-            );
-          }
-        }),
-        $.method.new({
-          name: 'import_module',
-          do: function import_module() {
-            const code = this.editor().getValue();
-            const blob = new Blob([code], { type: 'text/javascript' });
-            const url = URL.createObjectURL(blob);
-            return import(url);
           }
         }),
       ]
@@ -223,33 +160,112 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'explorer_select_command',
+      name: 'intro',
       slots: [
-        $.command,
-        $.var.new({ name: 'object' }),
-        $.var.new({ name: 'previous' }),
+        $.window,
         $.method.new({
-          name: 'target',
-          do: function target() {
-            return $editor.explorer();
-          }
-        }),
-        $.method.new({
-          name: 'run',
-          do: function run() {
-            this.previous(this.target().object());
-            this.target().object(this.object());
-          }
-        }),
-        $.method.new({
-          name: 'description',
-          do: function description() {
-            return `~explorer_select_command object=${this.object().title()}`;
+          name: 'render',
+          do: function render() {
+            return $el.div({}, [
+              $el.div({ class: 'intro-title' }, 'SIMULABRA'),
+              $el.div({ class: 'intro-infinite' }, 'alpha - "infinite software"'),
+              $el.div({},
+                'behold the source at the ',
+                $el.a({ href: 'https://github.com/simulabra/simulabra' }, 'github repo')
+              )
+            ]);
           }
         }),
       ]
     });
 
+    $.class.new({
+      name: 'module_browser',
+      slots: [
+        $.window,
+        $.method.new({
+          name: 'objects',
+          do: function objects() {
+            return this.module().classes();
+          }
+        }),
+        $.var.new({ name: 'module' }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return $el.div(
+              {},
+              $el.div({ class: 'module-doc', }, this.module().doc()),
+              ...this.objects().map(c => {
+                return $.explorer_select_link.new({ object: c, parent: this });
+              })
+            );
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'codemirror_run_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'codemirror' }),
+        $.method.new({
+          name: 'run',
+          do: async function run() {
+            const todo_mod = (await this.import_module()).default;
+            todo_mod.$().todo_list.mount(this.codemirror().parent());
+          }
+        }),
+        $.method.new({
+          name: 'import_module',
+          do: function import_module() {
+            const code = this.codemirror().editor().getValue();
+            const blob = new Blob([code], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            return import(url);
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'codemirror',
+      slots: [
+        $.window,
+        $.var.new({ name: 'editor' }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return $el.div(
+              {},
+              $el.div({
+                onload: async e => {
+                  this.log(e.target);
+                  this.editor(CodeMirror(e.target, {
+                    mode: 'javascript',
+                    theme: 'gruvbox-dark',
+                  }));
+                  const todos = await fetch('/todos.demo.js');
+                  const text = await todos.text();
+                  this.editor().setValue(text);
+                }
+              }),
+              $el.button({
+                onclick: async e => {
+                  this.dispatchEvent({
+                    type: 'command',
+                    target: $.codemirror_run_command.new({ codemirror: this })
+                  });
+                }
+              },
+                'run!'
+              )
+            );
+          }
+        }),
+      ]
+    });
 
     $.class.new({
       name: 'editor',
