@@ -1,15 +1,14 @@
 const __ = globalThis.SIMULABRA;
-const base = __.base();
-const html = base.find('module', 'html');
-export default await base.find('class', 'module').new({
+export default await __.base().find('class', 'module').new({
   name: 'todos',
-  imports: [base, html],
+  imports: [__.base(), __.base().find('module', 'html')],
   on_load(_, $) {
     const $el = $.html_element.proxy();
     $.class.new({
       name: 'todo_list',
       slots: [
-        $.component,
+        $.window,
+        $.application,
         $.var.new({
           name: 'prompt',
           default: 'what to do?' // change me!
@@ -131,35 +130,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'todos',
-      slots: [
-        $.window,
-        $.application,
-        $.var.new({ name: 'todo_list' }),
-        $.after.new({
-          name: 'init',
-          do: function init() {
-            this.todo_list($.todo_list.new({ parent: this }));
-          }
-        }),
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return this.todo_list();
-          }
-        }),
-        $.method.new({
-          name: 'css',
-          do: function css() {
-            return `
-`;
-          }
-        })
-      ]
-    });
-
-    const $todos = $.todos.new();
+    const $todos = $.todo_list.new();
     const container = document.getElementById('todos-container');
     container.innerHTML = '';
     container.appendChild($todos.to_dom());

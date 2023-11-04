@@ -290,7 +290,7 @@ export default await base.find('class', 'module').new({
           do: function render() {
             return $el.div({ class: 'container' }, [
               $el.div({ class: 'col' }, [$.intro.new(), this.modules()]),
-              $el.div({ class: 'col' }, [this.codemirror(), $el.div({ id: 'todos-container' })]),
+              $el.div({ class: 'col col-wide' }, [this.codemirror(), $el.div({ id: 'todos-container' })]),
               $el.div({ class: 'col' }, [this.explorer(), this.messages()])
             ]);
           }

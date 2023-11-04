@@ -236,7 +236,13 @@ export default await base.find('class', 'module').new({
               this.dispatchEvent({ type: 'error', cmd, err })
             }
           }
-        })
+        }),
+        $.method.new({
+          name: 'css',
+          do: function css() {
+            return '';
+          }
+        }),
       ]
     });
 
