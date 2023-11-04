@@ -355,6 +355,10 @@ export default await base.find('class', 'module').new({
 .module-doc {
   font-style: italic;
 }
+
+.CodeMirror {
+  min-height: 60vh;
+}
 `;
           }
         })

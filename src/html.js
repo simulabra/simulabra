@@ -106,14 +106,14 @@ export default await base.find('class', 'module').new({
                 $el.span({
                   class: 'window-info'
                 }, [
-                  $el.span({
-                    class: 'window-layout',
-                    onclick: e => {
-                      e.preventDefault();
-                      this.toggle();
-                    },
-                    onmousedown: e => e.preventDefault()
-                  }),
+                  // $el.span({
+                  //   class: 'window-layout',
+                  //   onclick: e => {
+                  //     e.preventDefault();
+                  //     this.toggle();
+                  //   },
+                  //   onmousedown: e => e.preventDefault()
+                  // }),
                   $el.span({
                     class: 'window-title'
                   }, this.window_title())
