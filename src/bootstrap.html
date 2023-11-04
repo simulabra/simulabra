@@ -13,7 +13,101 @@
         --background: #E9CA9D;
         --background-secondary: #E2B072;
         --background-text: #F3DAAA;
+
+        /* Additional Foreground Colors */
+        --foreground-1: #885A5A; /* Lighter shade of primary */
+        --foreground-2: #441F1F; /* Darker shade of primary */
+        --foreground-3: #6B82A8; /* Lighter shade of secondary */
+        --foreground-4: #334D6E; /* Darker shade of secondary */
+        --foreground-5: #4F6A48; /* Muted tone for secondary-2 */
+        --foreground-6: #A67C52; /* Complementary tone for backgrounds */
       }
+      .cm-s-simulabra.CodeMirror, .cm-s-simulabra .CodeMirror-gutters {
+        background-color: var(--background); /* Beige background */
+        color: var(--foreground-1); /* Lighter primary for text */
+      }
+      .cm-s-simulabra .CodeMirror-gutters {
+        background: var(--primary); /* Dark primary for gutters */
+        border-right: 0px;
+      }
+      .cm-s-simulabra .CodeMirror-linenumber {
+        color: var(--foreground-2); /* Darker primary for line numbers */
+      }
+      .cm-s-simulabra .CodeMirror-cursor {
+        border-left: 1px solid var(--foreground-1); /* Lighter primary for cursor */
+      }
+      .cm-s-simulabra.cm-fat-cursor .CodeMirror-cursor {
+        background-color: var(--background-secondary) !important; /* Secondary background for fat cursor */
+      }
+      .cm-s-simulabra .cm-animate-fat-cursor {
+        background-color: var(--background-secondary) !important;
+      }
+      .cm-s-simulabra div.CodeMirror-selected {
+        background: var(--secondary-2); /* Muted secondary for selection */
+      }
+      .cm-s-simulabra span.cm-meta {
+        color: var(--foreground-5); /* Muted tone for secondary-2 */
+      }
+
+      .cm-s-simulabra span.cm-comment {
+        color: var(--secondary); /* Secondary color for comments */
+      }
+      .cm-s-simulabra span.cm-number, span.cm-atom {
+        color: var(--foreground-6); /* Complementary tone for numbers and atoms */
+      }
+      .cm-s-simulabra span.cm-keyword {
+        color: var(--primary); /* Primary color for keywords */
+      }
+
+      .cm-s-simulabra span.cm-variable {
+        color: var(--foreground-4); /* Text on background for variables */
+      }
+      .cm-s-simulabra span.cm-variable-2 {
+        color: var(--foreground-4);
+      }
+      .cm-s-simulabra span.cm-variable-3, .cm-s-simulabra span.cm-type {
+        color: var(--secondary-2); /* Muted secondary for type annotations */
+      }
+      .cm-s-simulabra span.cm-operator {
+        color: var(--foreground-4); /* Text on background for operators */
+      }
+      .cm-s-simulabra span.cm-callee {
+        color: var(--foreground-6);
+      }
+      .cm-s-simulabra span.cm-def {
+        color: var(--foreground-2);
+      }
+      .cm-s-simulabra span.cm-property {
+        color: var(--foreground-4);
+      }
+      .cm-s-simulabra span.cm-string {
+        color: var(--foreground-5); /* Lighter secondary for strings */
+      }
+      .cm-s-simulabra span.cm-string-2 {
+        color: var(--foreground-3);
+      }
+      .cm-s-simulabra span.cm-qualifier {
+        color: var(--foreground-3);
+      }
+      .cm-s-simulabra span.cm-attribute {
+        color: var(--foreground-3);
+      }
+
+      .cm-s-simulabra .CodeMirror-activeline-background {
+        background: var(--secondary-2); /* Muted secondary for active line */
+      }
+      .cm-s-simulabra .CodeMirror-matchingbracket {
+        background: var(--foreground-4); /* Darker secondary for matching brackets */
+        color: var(--background) !important; /* Inverted color for contrast */
+      }
+
+      .cm-s-simulabra span.cm-builtin {
+        color: var(--secondary); /* Secondary color for built-ins */
+      }
+      .cm-s-simulabra span.cm-tag {
+        color: var(--secondary); /* Secondary color for tags */
+      }
+
 
       ::selection {
         background-color: var(--secondary);
