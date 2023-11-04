@@ -1,2 +1,15 @@
-# SIMULABRA: INFINITE SOFTWARE
-Simulabra is a combination of an object system, application framework, and development environment, built on modified yet familiar Web technologies. It's not really working yet but I'll let you know when it is.
+### SIMULABRA
+The web programming system, composed of:
+
+1) a new class system for Javascript
+
+2) a standard library of classes for building applications
+
+3) a self-hosted/cloud software platform
+
+
+``` sh
+bun install
+bun run agent
+```
+then visit http://localhost:3031
