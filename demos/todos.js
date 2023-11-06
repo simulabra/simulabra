@@ -1,6 +1,7 @@
 const __ = globalThis.SIMULABRA;
 export default await __.base().find('class', 'module').new({
   name: 'todos',
+  doc: 'every framework needs a todo demo',
   imports: [__.base(), __.base().find('module', 'html')],
   on_load(_, $) {
     const $el = $.html_element.proxy();

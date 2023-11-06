@@ -214,8 +214,8 @@ export default await base.find('class', 'module').new({
           name: 'run',
           do: async function run() {
             const todo_mod = (await this.import_module()).default;
+            this.codemirror().parent().add_module(todo_mod);
             todo_mod.$().todo_list.mount(this.codemirror().parent());
-            this.codemirror().parent().modules().add(todo_mod);
           }
         }),
         $.method.new({
@@ -242,11 +242,10 @@ export default await base.find('class', 'module').new({
               {},
               $el.div({
                 onload: async e => {
-                  this.log('load', e.target);
                   this.editor(CodeMirror(e.target, {
                     mode: 'javascript',
                     theme: 'simulabra',
-                  }));
+                  }), false);
                   const todos = await fetch('/todos.demo.js');
                   const text = await todos.text();
                   this.editor().setValue(text);
@@ -300,6 +299,12 @@ export default await base.find('class', 'module').new({
           name: 'load_modules',
           do: function load_modules() {
             this.modules(__.base().instances($.module).map(it => $.module_browser.new({ name: it.name(), module: it, parent: this })));
+          }
+        }),
+        $.method.new({
+          name: 'add_module',
+          do: function add_module(mod) {
+            this.modules([...this.modules(), $.module_browser.new({ name: mod.name(), module: mod, parent: this })]);
           }
         }),
         $.method.new({
