@@ -186,7 +186,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'objects',
           do: function objects() {
-            return this.module().classes();
+            return this.module().instances($.class);
           }
         }),
         $.var.new({ name: 'module' }),
@@ -304,7 +304,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'add_module',
           do: function add_module(mod) {
-            this.modules([...this.modules(), $.module_browser.new({ name: mod.name(), module: mod, parent: this })]);
+            this.modules([...this.modules().filter(m => m.name() !== mod.name()), $.module_browser.new({ name: mod.name(), module: mod, parent: this })]);
           }
         }),
         $.method.new({
