@@ -246,7 +246,7 @@ export default await base.find('class', 'module').new({
                     mode: 'javascript',
                     theme: 'simulabra',
                   }), false);
-                  const todos = await fetch('/todos.demo.js');
+                  const todos = await fetch('/demos/todos.js');
                   const text = await todos.text();
                   this.editor().setValue(text);
                 }

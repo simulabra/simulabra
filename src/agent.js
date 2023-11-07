@@ -12,23 +12,20 @@ export default await base.find('class', 'module').new({
         $.path_request_handler.new({
           path: '/',
           handler(req, res) {
-            res.ok(readFileSync('./src/bootstrap.html').toString());
+            res.ok(readFileSync('./src/index.html').toString());
+          }
+        }),
+        $.path_request_handler.new({
+          path: '/completion',
+          handler(req, res) {
+            res.ok(readFileSync('./src/completion.html').toString());
           }
         }),
         $.filetype_request_handler.new({
           filetypes: ['js'],
           handler(req, res) {
             const path = req.inner().url;
-            let fileName;
-
-            // Regex to match if the filename ends with '.demo.js'
-            if (/\.demo\.js$/.test(path)) {
-              fileName = './demos' + path.replace(`.demo`, '');
-            } else if (path.includes('/vendor/')) {
-              fileName = '.' + path;
-            } else {
-              fileName = './src' + path;
-            }
+            let fileName = '.' + path;
             res.ok(readFileSync(fileName).toString(), 'application/javascript');
           }
         }),
