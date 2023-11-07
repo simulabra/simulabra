@@ -338,6 +338,7 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
             return `<|im_start|>system
 You are a helpful, intelligent assistant.<|im_end|>
 <|im_start|>user
+
 <|im_end|>
 <|im_start|>assistant`;
           }
@@ -361,14 +362,54 @@ You are a helpful, intelligent assistant.</s>
       ]
     });
 
+    // show preview on hover with markText
+    $.class.new({
+      name: 'codemirror',
+      slots: [
+        $.window,
+        $.var.new({ name: 'instance' }),
+        $.var.new({ name: 'init_text', default: '' }),
+        $.method.new({
+          name: 'text',
+          do: function text(value) {
+            if (value !== undefined) {
+              this.instance().setValue(value);
+              this.instance().refresh();
+            }
+            return this.instance().getValue();
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return $el.div({
+              onload: async e => {
+                this.instance(CodeMirror(e.target, {
+                  theme: 'simulabra',
+                  mode: 'null',
+                  autofocus: true,
+                  lineWrapping: true,
+                }), false);
+                this.text(this.init_text());
+                this.instance().setCursor(3, 0);
+                setTimeout(() => {
+                  this.instance().refresh();
+                  this.instance().focus();
+                }, 0);
+              }
+            });
+          }
+        }),
+      ]
+    });
+
     $.class.new({
       name: 'completor',
       slots: [
         $.window,
         $.application,
-        $.var.new({ name: 'text', default: '' }),
         $.var.new({ name: 'completion_candidates' }),
-        $.var.new({ name: 'textarea' }),
+        $.var.new({ name: 'codemirror' }),
         $.var.new({ name: 'count', default: 4 }),
         $.var.new({ name: 'n_predict', default: 32 }),
         $.var.new({ name: 'choices', default: [] }),
@@ -376,7 +417,7 @@ You are a helpful, intelligent assistant.</s>
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.text($.chatml_model.new().prompt());
+            this.codemirror($.codemirror.new({ init_text: $.chatml_model.new().prompt() }));
           }
         }),
         $.method.new({
@@ -389,35 +430,35 @@ You are a helpful, intelligent assistant.</s>
           name: 'insert',
           do: function insert(it) {
             this.choices().push(it);
-            this.text(this.text() + it);
+            this.codemirror().text(this.codemirror().text() + it);
           }
         }),
         $.method.new({
           name: 'prompt',
           do: function prompt() {
-            return this.text();
+            return this.codemirror().text();
           }
         }),
         $.method.new({
           name: 'render',
           do: function render() {
             let self = this;
-            this.log(this.text());
             return $el.div({}, [
-              $el.textarea({
-                oninput: (e) => {
-                  e.preventDefault();
-                  this.text(e.target.value, false);
-                  this.completion_candidates().clear();
-                  this.choices([this.text().slice(-10)], false);
-                },
-                onload: (e) => {
-                  self.log('textarea onload', e.target);
-                  setTimeout(() => {
-                    e.target.scrollTop = e.target.scrollHeight;
-                  }, 0);
-                }
-              }, this.text()),
+              this.codemirror(),
+              // $el.textarea({
+              //   oninput: (e) => {
+              //     e.preventDefault();
+              //     this.text(e.target.value, false);
+              //     this.completion_candidates().clear();
+              //     this.choices([this.text().slice(-10)], false);
+              //   },
+              //   onload: (e) => {
+              //     self.log('textarea onload', e.target);
+              //     setTimeout(() => {
+              //       e.target.scrollTop = e.target.scrollHeight;
+              //     }, 0);
+              //   }
+              // }, this.text()),
               'count:',
               $el.input({
                 type: 'number', value: this.count(), onchange: function (e) {
