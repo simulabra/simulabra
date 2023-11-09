@@ -312,8 +312,8 @@ export default await base.find('class', 'module').new({
           do: function render() {
             return $el.div({ class: 'container' }, [
               $el.div({ class: 'col' }, [$.intro.new(), this.modules()]),
-              $el.div({ class: 'col col-wide' }, [this.codemirror(), $el.div({ id: 'todos-container' })]),
-              $el.div({ class: 'col' }, [this.explorer(), this.messages()])
+              $el.div({ class: 'col col-wide' }, [this.codemirror()]),
+              $el.div({ class: 'col' }, [$el.div({ id: 'todos-container' }), this.explorer(), this.messages()])
             ]);
           }
         }),
@@ -326,6 +326,10 @@ export default await base.find('class', 'module').new({
 .time {
   font-style: italic;
   font-size: 11px;
+}
+
+.object_explorer > .window-body {
+  max-height: 50vh;
 }
 
 .explorer_select_link {
@@ -363,7 +367,7 @@ export default await base.find('class', 'module').new({
 }
 
 .CodeMirror {
-  min-height: 60vh;
+  height: 90vh;
 }
 `;
           }
