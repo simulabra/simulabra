@@ -58,6 +58,10 @@ function bootstrap() {
     }
   }
 
+  Object.prototype.display = function display() {
+    return simulabra_display(this);
+  }
+
   function debug(...args) {
     let __ = globalThis.SIMULABRA;
     if (__.$$debug_class) {

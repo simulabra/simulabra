@@ -102,33 +102,57 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'slot_name' }),
         $.var.new({ name: 'value' }),
         $.method.new({
+          name: 'display_function_or_object',
+          do: function display_function_or_object() {
+            return $.explorer_select_link.new({ object: this.value(), parent: this });
+          }
+        }),
+        $.method.new({
+          name: 'display_array',
+          do: function display_array() {
+            return $el.span({},
+              'list(' + this.value().length + ')',
+              this.value().map((it, idx) => $el.div({ class: 'array-item' }, $.slot_value.new({ slot_name: idx, value: it, parent: this }).display())));
+          }
+        }),
+        $.method.new({
+          name: 'display_weak_ref',
+          do: function display_weak_ref() {
+            const ref = this.value().deref();
+            if (ref !== undefined) {
+              return $.slot_value.new({ slot_name: this.slot_name(), value: ref }).display();
+            } else {
+              return $el.span({}, '(empty ref)');
+            }
+          }
+        }),
+        $.method.new({
+          name: 'display_primitive',
+          do: function display_primitive() {
+            this.log(this.value());
+            return $el.span({}, this.value()?.display() ?? JSON.stringify(this.value()));
+          }
+        }),
+        $.method.new({
           name: 'display',
           do: function display() {
             if (this.value() !== null && (typeof this.value() === 'function' || typeof this.value() === 'object' && '_id' in this.value())) {
-              return $.explorer_select_link.new({ object: this.value(), parent: this });
+              return this.display_function_or_object();
             } else if (Array.isArray(this.value())) {
-              return $el.span({},
-                'list(' + this.value().length + ')',
-                this.value().map((it, idx) => $el.div({ class: 'array-item' }, $.slot_value.new({ slot_name: idx, value: it, parent: this }).display())));
+              return this.display_array();
             } else if (this.value() !== null && 'to_dom' in (Object.getPrototypeOf(this.value()) || {})) {
-              return this.value();
+              return this.value().to_dom();
             } else if (this.value() instanceof WeakRef) {
-              const ref = this.value().deref();
-              if (ref !== undefined) {
-                return $.slot_value.new({ slot_name: this.slot_name(), value: ref }).display();
-              } else {
-                return $el.span({}, '(empty ref)');
-              }
+              return this.display_weak_ref();
             } else {
-              this.log(this.value());
-              return $el.span({}, this.value()?.description() ?? JSON.stringify(this.value()));
+              return this.display_primitive();
             }
           }
         }),
         $.method.new({
           name: 'render',
           do: function render() {
-            return $el.div({}, this.slot_name() + ':', this.display());
+            return $el.div({ class: 'slot-value' }, [$el.span({}, this.slot_name() + ': '), this.display()]);
           }
         })
       ]

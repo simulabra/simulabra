@@ -153,8 +153,15 @@ export default await base.find('class', 'module').new({
               return node;
             } else if (typeof node === 'string') {
               return document.createTextNode(node);
+            } else if (node instanceof Node) {
+              return node;
             } else {
-              return node.to_dom();
+              try {
+                return node.to_dom();
+              } catch (e) {
+                this.log('failed to domify node', node);
+                throw e;
+              }
             }
           }
         }),
