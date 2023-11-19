@@ -439,8 +439,8 @@ ${output}`;
               }),
               $.completor_fetch_next_link.new({ object: this, parent: this }),
               this.completion_candidates(),
-              $el.span({}, this.output()),
-              $el.span({ class: 'completor-preview' }, this.preview()),
+              $el.span({ class: 'completor-output' }, this.output()),
+              $el.span({ class: 'completor-output completor-preview' }, this.preview()),
             ]);
           }
         }),
@@ -458,6 +458,10 @@ ${output}`;
 
 .completed-true {
   text-decoration: line-through;
+}
+
+.completor-output {
+  white-space: pre;
 }
 
 .completor-preview {
