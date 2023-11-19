@@ -45,6 +45,7 @@ export default await base.find('class', 'module').new({
 
             t.split('\n').forEach(l => {
               if (l.startsWith('data: ')) {
+                this.log(l);
                 const message = JSON.parse(l.substring(6));
                 out += message.content;
               }
@@ -206,22 +207,6 @@ export default await base.find('class', 'module').new({
                 }
                 temperature += 0.2;
               }
-
-              const best_prompt = `
-### Instruction:
-Choose the most interesting and true completion for the prompt. Respond with only the number.
-Prompt:
-${this.target().prompt()}
-Completion choices:
-${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
-### Response:
-`;
-              const best = await $.local_llama_completion_command.new({
-                server_url: server_url,
-                prompt: best_prompt,
-                n_predict: 1
-              }).run();
-              this.target().completion_candidates().emphasized(+best);
             } finally {
               lock();
             }
@@ -348,11 +333,13 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
     $.class.new({
       name: 'chatml_model',
       slots: [
+        $.var.new({ name: 'system', default: 'You are a smart, creative, and helpful AI assistant.', }),
         $.method.new({
           name: 'prompt',
           do: function prompt(user, output) {
             return `<|im_start|>system
-You are a helpful, intelligent assistant.<|im_end|>
+${this.system()}
+<|im_end|>
 <|im_start|>user
 ${user}
 <|im_end|>
@@ -398,7 +385,7 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.zephyr_model.new());
+            this.prompt_format($.chatml_model.new());
           }
         }),
         $.method.new({
