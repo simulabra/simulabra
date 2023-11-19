@@ -292,6 +292,7 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
         $.method.new({
           name: 'command',
           do: function command() {
+            this.log('add', this.text());
             return $.completor_insert_command.new({ target: this.object(), text: this.text() });
           }
         }),
@@ -307,8 +308,23 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
         $.method.new({
           name: 'render',
           do: function render() {
+            const self = this;
             const candidatesElements = this.candidates().map((cc, i) =>
-              $el.div({}, $.completor_add_link.new({ object: this.parent(), text: cc, parent: this, emphasize: i === this.emphasized() }))
+              $el.div({}, $.completor_add_link.new({
+                object: this.parent(),
+                text: cc,
+                parent: this,
+                properties: {
+                  onmouseover: e => {
+                    e.preventDefault();
+                    this.parent().preview(cc);
+                  },
+                  onmouseleave: e => {
+                    e.preventDefault();
+                    this.parent().preview('');
+                  },
+                }
+              }))
             );
             return $el.div({}, ...candidatesElements);
           }
@@ -365,47 +381,6 @@ ${output}`;
       ]
     });
 
-    // show preview on hover with markText
-    $.class.new({
-      name: 'codemirror',
-      slots: [
-        $.window,
-        $.var.new({ name: 'instance' }),
-        $.var.new({ name: 'init_text', default: '' }),
-        $.method.new({
-          name: 'text',
-          do: function text(value) {
-            if (value !== undefined) {
-              this.instance().setValue(value);
-              this.instance().refresh();
-            }
-            return this.instance().getValue();
-          }
-        }),
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return $el.div({
-              onload: async e => {
-                this.instance(CodeMirror(e.target, {
-                  theme: 'simulabra',
-                  mode: 'null',
-                  autofocus: true,
-                  lineWrapping: true,
-                }), false);
-                this.text(this.init_text());
-                this.instance().setCursor(3, 0);
-                setTimeout(() => {
-                  this.instance().refresh();
-                  this.instance().focus();
-                }, 0);
-              }
-            });
-          }
-        }),
-      ]
-    });
-
     $.class.new({
       name: 'completor',
       slots: [
@@ -415,8 +390,9 @@ ${output}`;
         $.var.new({ name: 'prompt_format' }),
         $.var.new({ name: 'instruction', default: '' }),
         $.var.new({ name: 'output', default: '' }),
+        $.var.new({ name: 'preview', default: '' }),
         $.var.new({ name: 'count', default: 4 }),
-        $.var.new({ name: 'n_predict', default: 32 }),
+        $.var.new({ name: 'n_predict', default: 20 }),
         $.var.new({ name: 'choices', default: [] }),
         $.after.new({
           name: 'init',
@@ -449,30 +425,18 @@ ${output}`;
           do: function render() {
             let self = this;
             return $el.div({}, [
-              // this.codemirror(),
-              // $el.textarea({
-              //   oninput: (e) => {
-              //     e.preventDefault();
-              //     this.text(e.target.value, false);
-              //     this.completion_candidates().clear();
-              //     this.choices([this.text().slice(-10)], false);
-              //   },
-              //   onload: (e) => {
-              //     self.log('textarea onload', e.target);
-              //     setTimeout(() => {
-              //       e.target.scrollTop = e.target.scrollHeight;
-              //     }, 0);
-              //   }
-              // }, this.text()),
               $el.textarea({
                 onchange: e => {
                   this.instruction(e.target.value, false);
                 },
                 onload: e => {
                   e.target.value = this.instruction();
+                  setTimeout(() => {
+                    e.target.scrollTop = e.target.scrollHeight;
+                  }, 0);
                 },
+                placeholder: 'instruction',
               }),
-              $el.div({}, this.output()),
               'count:',
               $el.input({
                 type: 'number', value: this.count(), onchange: e => {
@@ -487,7 +451,9 @@ ${output}`;
                 }
               }),
               $.completor_fetch_next_link.new({ object: this, parent: this }),
-              this.completion_candidates()
+              this.completion_candidates(),
+              $el.span({}, this.output()),
+              $el.span({ class: 'completor-preview' }, this.preview()),
             ]);
           }
         }),
@@ -505,6 +471,11 @@ ${output}`;
 
 .completed-true {
   text-decoration: line-through;
+}
+
+.completor-preview {
+  color: var(--foreground-1);
+  font-style: italic;
 }
 `;
           }

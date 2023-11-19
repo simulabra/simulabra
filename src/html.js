@@ -282,6 +282,7 @@ export default await base.find('class', 'module').new({
         $.component,
         $.var.new({ name: 'command' }),
         $.var.new({ name: 'object' }),
+        $.var.new({ name: 'properties', default: {} }),
         $.method.new({
           name: 'link_text',
           do: function link_text() {
@@ -297,11 +298,13 @@ export default await base.find('class', 'module').new({
               id: `link-${this.id()}`,
               object: uri,
               onclick: e => {
+                this.log('click');
                 return this.dispatchEvent({
                   type: 'command',
                   target: this.command(),
                 });
-              }
+              },
+              ...this.properties()
             }, this.link_text());
           }
         })
