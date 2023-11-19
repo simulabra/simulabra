@@ -334,13 +334,14 @@ ${completions.map((c, i) => `[${i}] ${c}`).join('\n')}
       slots: [
         $.method.new({
           name: 'prompt',
-          do: function prompt() {
+          do: function prompt(user, output) {
             return `<|im_start|>system
 You are a helpful, intelligent assistant.<|im_end|>
 <|im_start|>user
-
+${user}
 <|im_end|>
-<|im_start|>assistant`;
+<|im_start|>assistant
+${output}`;
           }
         }),
       ]
@@ -351,12 +352,14 @@ You are a helpful, intelligent assistant.<|im_end|>
       slots: [
         $.method.new({
           name: 'prompt',
-          do: function prompt() {
+          do: function prompt(user, output) {
             return `<|system|>
 You are a helpful, intelligent assistant.</s>
 <|user|>
+${user}
 </s>
-<|assistant|>`;
+<|assistant|>
+${output}`;
           }
         }),
       ]
@@ -409,7 +412,9 @@ You are a helpful, intelligent assistant.</s>
         $.window,
         $.application,
         $.var.new({ name: 'completion_candidates' }),
-        $.var.new({ name: 'codemirror' }),
+        $.var.new({ name: 'prompt_format' }),
+        $.var.new({ name: 'instruction', default: '' }),
+        $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'count', default: 4 }),
         $.var.new({ name: 'n_predict', default: 32 }),
         $.var.new({ name: 'choices', default: [] }),
@@ -417,7 +422,7 @@ You are a helpful, intelligent assistant.</s>
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.codemirror($.codemirror.new({ init_text: $.chatml_model.new().prompt() }));
+            this.prompt_format($.zephyr_model.new());
           }
         }),
         $.method.new({
@@ -430,13 +435,13 @@ You are a helpful, intelligent assistant.</s>
           name: 'insert',
           do: function insert(it) {
             this.choices().push(it);
-            this.codemirror().text(this.codemirror().text() + it);
+            this.output(this.output() + it);
           }
         }),
         $.method.new({
           name: 'prompt',
           do: function prompt() {
-            return this.codemirror().text();
+            return this.prompt_format().prompt(this.instruction(), this.output());
           }
         }),
         $.method.new({
@@ -444,7 +449,7 @@ You are a helpful, intelligent assistant.</s>
           do: function render() {
             let self = this;
             return $el.div({}, [
-              this.codemirror(),
+              // this.codemirror(),
               // $el.textarea({
               //   oninput: (e) => {
               //     e.preventDefault();
@@ -459,15 +464,25 @@ You are a helpful, intelligent assistant.</s>
               //     }, 0);
               //   }
               // }, this.text()),
+              $el.textarea({
+                onchange: e => {
+                  this.instruction(e.target.value, false);
+                },
+                onload: e => {
+                  e.target.value = this.instruction();
+                },
+              }),
+              $el.div({}, this.output()),
               'count:',
               $el.input({
-                type: 'number', value: this.count(), onchange: function (e) {
+                type: 'number', value: this.count(), onchange: e => {
                   this.count(+e.target.value, false);
+                  this.log('count', this.count());
                 }
               }),
               'n_predict:',
               $el.input({
-                type: 'number', value: this.n_predict(), onchange: function (e) {
+                type: 'number', value: this.n_predict(), onchange: e => {
                   this.n_predict(+e.target.value, false);
                 }
               }),
