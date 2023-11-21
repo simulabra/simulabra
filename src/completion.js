@@ -374,6 +374,32 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'completor_instruction_focus_command',
+      slots: [
+        $.command,
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            document.getElementById('instruction-input').focus();
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'completor_instruction_unfocus_command',
+      slots: [
+        $.command,
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            document.getElementById('instruction-input').blur();
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor',
       slots: [
         $.window,
@@ -393,6 +419,7 @@ ${output}`;
             this.completion_candidates($.completion_candidates.new({ parent: this }));
             this.prompt_format($.chatml_model.new());
             this.instruction_textarea($el.textarea({
+              id: 'instruction-input',
               oninput: e => {
                 this.log('change', this.instruction(), e.target.value);
                 this.instruction(e.target.value, false);
@@ -407,7 +434,23 @@ ${output}`;
             }, this.instruction()));
 
             document.addEventListener('keydown', e => {
-              this.log(e);
+              const instructionInput = document.getElementById('instruction-input');
+              if (instructionInput !== document.activeElement) {
+                e.preventDefault();
+                if (e.key === 'i') {
+                  this.dispatchEvent({
+                    type: 'command',
+                    target: $.completor_instruction_focus_command.new(),
+                  });
+                }
+              } else {
+                if (e.key === 'Escape') {
+                  this.dispatchEvent({
+                    type: 'command',
+                    target: $.completor_instruction_unfocus_command.new(),
+                  });
+                }
+              }
             });
           }
         }),
