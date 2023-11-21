@@ -1242,6 +1242,15 @@ function bootstrap() {
     name: 'command',
     slots: [
       $.virtual.new({ name: 'run' }),
+      $.method.new({
+        name: 'dispatchTo',
+        do: function dispatchTo(o) {
+          o.dispatchEvent({
+            type: 'command',
+            target: this,
+          });
+        }
+      }),
     ],
   });
 

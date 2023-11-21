@@ -288,7 +288,6 @@ export default await base.find('class', 'module').new({
       slots: [
         $.component,
         $.var.new({ name: 'candidates', default: [] }),
-        $.var.new({ name: 'emphasized' }),
         $.method.new({
           name: 'render',
           do: function render() {
@@ -328,7 +327,6 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'reset',
           do: function reset() {
-            this.emphasized(null);
             this.candidates([]);
           }
         }),
@@ -400,6 +398,21 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'completor_set_n_predict_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'target' }),
+        $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            this.target().n_predict(this.value());
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor',
       slots: [
         $.window,
@@ -410,8 +423,8 @@ ${output}`;
         $.var.new({ name: 'instruction_textarea' }),
         $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'preview', default: '' }),
-        $.var.new({ name: 'count', default: 4 }),
-        $.var.new({ name: 'n_predict', default: 20 }),
+        $.var.new({ name: 'count', default: 3 }),
+        $.var.new({ name: 'n_predict', default: 10 }),
         $.var.new({ name: 'choices', default: [] }),
         $.after.new({
           name: 'init',
@@ -437,12 +450,8 @@ ${output}`;
               const instructionInput = document.getElementById('instruction-input');
               if (instructionInput !== document.activeElement) {
                 e.preventDefault();
-                if (e.key === 'i') {
-                  this.dispatchEvent({
-                    type: 'command',
-                    target: $.completor_instruction_focus_command.new(),
-                  });
-                }
+                const cmd = this.key_command(e.key);
+                cmd?.dispatchTo(this);
               } else {
                 if (e.key === 'Escape') {
                   this.dispatchEvent({
@@ -452,6 +461,25 @@ ${output}`;
                 }
               }
             });
+          }
+        }),
+        $.method.new({
+          name: 'key_command',
+          do: function key_command(key) {
+            if (key === 'i') {
+              return $.completor_instruction_focus_command.new()
+            } else if (key === ' ') {
+              return $.completor_fetch_next_command.new({ target: this })
+            } else if (key === '[') {
+              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() - 1 })
+            } else if (key === ']') {
+              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() + 1 })
+            } else if (['1', '2', '3', '4'].includes(key)) {
+              return $.completor_insert_command.new({ target: this, text: this.completion_candidates().candidates()[+key - 1] });
+            } else {
+              this.log('no match', key);
+              return null;
+            }
           }
         }),
         $.method.new({
