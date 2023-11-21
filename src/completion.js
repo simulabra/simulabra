@@ -45,7 +45,6 @@ export default await base.find('class', 'module').new({
 
             t.split('\n').forEach(l => {
               if (l.startsWith('data: ')) {
-                this.log(l);
                 const message = JSON.parse(l.substring(6));
                 out += message.content;
               }
@@ -266,18 +265,18 @@ export default await base.find('class', 'module').new({
       name: 'completor_add_link',
       slots: [
         $.link,
+        $.var.new({ name: 'choice' }),
         $.var.new({ name: 'text' }),
         $.var.new({ name: 'emphasize' }),
         $.method.new({
           name: 'link_text',
           do: function link_text() {
-            return this.text();
+            return `${this.choice() ?? '?'}: ${this.text()}`;
           }
         }),
         $.method.new({
           name: 'command',
           do: function command() {
-            this.log('add', this.text());
             return $.completor_insert_command.new({ target: this.object(), text: this.text() });
           }
         }),
@@ -294,19 +293,25 @@ export default await base.find('class', 'module').new({
           name: 'render',
           do: function render() {
             const self = this;
+            let hovering = false;
             const candidatesElements = this.candidates().map((cc, i) =>
               $el.div({}, $.completor_add_link.new({
                 object: this.parent(),
                 text: cc,
+                choice: i + 1,
                 parent: this,
                 properties: {
                   onmouseover: e => {
-                    e.preventDefault();
-                    this.parent().preview(cc);
+                    if (!hovering) {
+                      hovering = true;
+                      e.preventDefault();
+                      this.parent().preview(cc);
+                    }
                   },
                   onmouseleave: e => {
                     e.preventDefault();
                     this.parent().preview('');
+                    hovering = false;
                   },
                 }
               }))
@@ -376,6 +381,7 @@ ${output}`;
         $.var.new({ name: 'completion_candidates' }),
         $.var.new({ name: 'prompt_format' }),
         $.var.new({ name: 'instruction', default: '' }),
+        $.var.new({ name: 'instruction_textarea' }),
         $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'preview', default: '' }),
         $.var.new({ name: 'count', default: 4 }),
@@ -386,6 +392,23 @@ ${output}`;
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
             this.prompt_format($.chatml_model.new());
+            this.instruction_textarea($el.textarea({
+              oninput: e => {
+                this.log('change', this.instruction(), e.target.value);
+                this.instruction(e.target.value, false);
+              },
+              onload: e => {
+                e.target.value = this.instruction();
+                setTimeout(() => {
+                  e.target.scrollTop = e.target.scrollHeight;
+                }, 0);
+              },
+              placeholder: 'instruction',
+            }, this.instruction()));
+
+            document.addEventListener('keydown', e => {
+              this.log(e);
+            });
           }
         }),
         $.method.new({
@@ -412,18 +435,7 @@ ${output}`;
           do: function render() {
             let self = this;
             return $el.div({}, [
-              $el.textarea({
-                onchange: e => {
-                  this.instruction(e.target.value, false);
-                },
-                onload: e => {
-                  e.target.value = this.instruction();
-                  setTimeout(() => {
-                    e.target.scrollTop = e.target.scrollHeight;
-                  }, 0);
-                },
-                placeholder: 'instruction',
-              }),
+              this.instruction_textarea(),
               'count:',
               $el.input({
                 type: 'number', value: this.count(), onchange: e => {
