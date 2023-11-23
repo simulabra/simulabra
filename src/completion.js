@@ -522,7 +522,13 @@ ${output}`;
               }),
               $.completor_fetch_next_link.new({ object: this, parent: this }),
               this.completion_candidates(),
-              $el.span({ class: 'completor-output' }, this.output()),
+              $el.span({
+                class: 'completor-output',
+                oncontextmenu: e => {
+                  this.log('right click?');
+                  e.preventDefault();
+                }
+              }, this.output()),
               $el.span({ class: 'completor-output completor-preview' }, this.preview()),
             ]);
           }
