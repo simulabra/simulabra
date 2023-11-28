@@ -140,7 +140,6 @@ export default await base.find('class', 'module').new({
       cmd.execute();
     }
 
-    let completor_fetch_next_lock = null;
     $.class.new({
       name: 'completor_fetch_next_command',
       slots: [
@@ -150,47 +149,26 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'n_predict' }),
         $.var.new({ name: 'server_host', default: "100.64.172.3" }),
         $.method.new({
-          name: 'acquire_lock',
-          do: function acquire_lock() {
-            if (completor_fetch_next_lock === null) {
-              let resolveLock;
-              completor_fetch_next_lock = new Promise(resolve => resolveLock = resolve);
-
-              return async () => {
-                resolveLock();
-                await completor_fetch_next_lock;
-                completor_fetch_next_lock = null;
-              }
-            } else {
-              return new Promise(async resolveOuter => {
-                await completor_fetch_next_lock;
-                resolveOuter(this.acquire_lock());
-              });
-            }
-          }
-        }),
-        $.method.new({
           name: 'run',
           do: async function run(ctx) {
-            const lock = await this.acquire_lock();
-            try {
-              let completions = [];
-              const server_url = `http://${this.server_host()}:3731`;
-              this.target().completion_candidates().reset();
-              let logit_bias = [];
-              let count = this.count() ?? this.target().count();
-              let n_predict = this.n_predict() ?? this.target().n_predict();
-              let temperature = 0.7;
-              for (let i = 0; i < count; i++) {
-                const completion = await $.local_llama_completion_command.new({
-                  server_url: server_url,
-                  prompt: this.target().prompt(),
-                  logit_bias: logit_bias,
-                  n_predict: n_predict,
-                  temperature: temperature
-                }).run();
+            let completions = [];
+            const server_url = `http://${this.server_host()}:3731`;
+            this.target().completion_candidates().reset();
+            let logit_bias = [];
+            let count = this.count() ?? this.target().count();
+            let n_predict = this.n_predict() ?? this.target().n_predict();
+            let temperature = 0.7;
+            for (let i = 0; i < count; i++) {
+              const completion = await $.local_llama_completion_command.new({
+                server_url: server_url,
+                prompt: this.target().prompt(),
+                logit_bias: logit_bias,
+                n_predict: n_predict,
+                temperature: temperature
+              }).run();
 
-                completions.push(completion);
+              completions.push(completion);
+              if (completion !== '') {
                 this.target().completion_candidates().add(completion);
                 const tokens = await $.local_llama_tokenize_command.new({
                   server_url: server_url,
@@ -204,10 +182,8 @@ export default await base.find('class', 'module').new({
                     logit_bias.push([tok, -1.0]);
                   }
                 }
-                temperature += 0.2;
               }
-            } finally {
-              lock();
+              temperature += 0.2;
             }
           }
         }),
@@ -449,7 +425,6 @@ ${output}`;
             document.addEventListener('keydown', e => {
               const instructionInput = document.getElementById('instruction-input');
               if (instructionInput !== document.activeElement) {
-                e.preventDefault();
                 const cmd = this.key_command(e.key);
                 cmd?.dispatchTo(this);
               } else {
@@ -475,7 +450,12 @@ ${output}`;
             } else if (key === ']') {
               return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() + 1 })
             } else if (['1', '2', '3', '4'].includes(key)) {
-              return $.completor_insert_command.new({ target: this, text: this.completion_candidates().candidates()[+key - 1] });
+              const text = this.completion_candidates().candidates()[+key - 1];
+              if (text !== undefined) {
+                return $.completor_insert_command.new({ target: this, text });
+              } else {
+                return null;
+              }
             } else {
               this.log('no match', key);
               return null;
