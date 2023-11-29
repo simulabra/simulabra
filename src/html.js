@@ -226,6 +226,7 @@ export default await base.find('class', 'module').new({
             this.addEventListener('command', (e) => {
               this.process_command(e.target);
             });
+            this.log('append css');
             const el = document.createElement('style');
             el.innerHTML = this.css();
             document.head.appendChild(el);

@@ -620,7 +620,11 @@ function bootstrap() {
             if (assign !== undefined) {
               this[pk] = assign;
               if (self.observable() && update) {
-                this.dispatchEvent(new Event('update')); // best there is?
+                const ev = new Event('update');
+                ev._var = self;
+                ev._value = assign;
+                ev._target = this;
+                this.dispatchEvent(ev); // best there is?
               }
               if (self._trace) {
                 self.log('muted to', assign);

@@ -37,6 +37,7 @@ export default await base.find('class', 'module').new({
                 n_predict: this.n_predict(),
                 stream: true,
                 logit_bias: this.logit_bias(),
+                stop: ['<|im_end|>'],
               })
             });
 
@@ -348,6 +349,22 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'alpaca_model',
+      slots: [
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output) {
+            return `You are a helpful, intelligent agent.
+### Instruction:
+${user}
+### Response:
+${output}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor_instruction_focus_command',
       slots: [
         $.command,
@@ -389,6 +406,21 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'completor_set_count_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'target' }),
+        $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            this.target().count(this.value());
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor',
       slots: [
         $.window,
@@ -402,15 +434,25 @@ ${output}`;
         $.var.new({ name: 'count', default: 3 }),
         $.var.new({ name: 'n_predict', default: 10 }),
         $.var.new({ name: 'choices', default: [] }),
+        $.event.new({
+          name: 'update',
+          when: {
+            name: 'count',
+          },
+          do: function update(e) {
+            if (e._var.name() === 'count') {
+              document.querySelector('.completion_candidates').style['min-height'] = `${this.count() * 1.5}em`;
+            }
+          }
+        }),
         $.after.new({
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.chatml_model.new());
+            this.prompt_format($.alpaca_model.new());
             this.instruction_textarea($el.textarea({
               id: 'instruction-input',
               oninput: e => {
-                this.log('change', this.instruction(), e.target.value);
                 this.instruction(e.target.value, false);
               },
               onload: e => {
@@ -425,7 +467,7 @@ ${output}`;
             document.addEventListener('keydown', e => {
               const instructionInput = document.getElementById('instruction-input');
               if (instructionInput !== document.activeElement) {
-                const cmd = this.key_command(e.key);
+                const cmd = this.key_command(e.key, e);
                 cmd?.dispatchTo(this);
               } else {
                 if (e.key === 'Escape') {
@@ -440,8 +482,9 @@ ${output}`;
         }),
         $.method.new({
           name: 'key_command',
-          do: function key_command(key) {
+          do: function key_command(key, e) {
             if (key === 'i') {
+              e.preventDefault();
               return $.completor_instruction_focus_command.new()
             } else if (key === ' ') {
               return $.completor_fetch_next_command.new({ target: this })
@@ -449,6 +492,10 @@ ${output}`;
               return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() - 1 })
             } else if (key === ']') {
               return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() + 1 })
+            } else if (key === ',') {
+              return $.completor_set_count_command.new({ target: this, value: this.count() - 1 })
+            } else if (key === '.') {
+              return $.completor_set_count_command.new({ target: this, value: this.count() + 1 })
             } else if (['1', '2', '3', '4'].includes(key)) {
               const text = this.completion_candidates().candidates()[+key - 1];
               if (text !== undefined) {
@@ -491,7 +538,7 @@ ${output}`;
               $el.input({
                 type: 'number', value: this.count(), onchange: e => {
                   this.count(+e.target.value, false);
-                  this.log('count', this.count());
+                  document.querySelector('.completion_candidates').style['min-height'] = `${this.count() * 1.5}em`;
                 }
               }),
               'n_predict:',
@@ -536,6 +583,11 @@ ${output}`;
 .completor-preview {
   color: var(--foreground-1);
   font-style: italic;
+}
+
+.completion_candidates {
+  min-height: 4.5em;
+  display: block;
 }
 `;
           }
