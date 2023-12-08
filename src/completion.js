@@ -17,9 +17,9 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'prompt' }),
         $.var.new({ name: 'server_url', default: 'http://localhost:3731' }),
         $.var.new({ name: 'n_predict', default: 4 }),
-        $.var.new({ name: 'temperature', default: 0.7 }),
+        $.var.new({ name: 'temperature', default: 5.0 }),
         $.var.new({ name: 'top_k', default: 200 }),
-        $.var.new({ name: 'top_p', default: 0.95 }),
+        $.var.new({ name: 'top_p', default: 1.00 }),
         $.var.new({ name: 'logit_bias', default: [] }),
         $.method.new({
           name: 'run',
@@ -147,6 +147,7 @@ export default await base.find('class', 'module').new({
         $.command,
         $.var.new({ name: 'target' }),
         $.var.new({ name: 'count' }),
+        $.var.new({ name: 'temperature' }),
         $.var.new({ name: 'n_predict' }),
         $.var.new({ name: 'server_host', default: "100.64.172.3" }),
         $.method.new({
@@ -158,14 +159,14 @@ export default await base.find('class', 'module').new({
             let logit_bias = [];
             let count = this.count() ?? this.target().count();
             let n_predict = this.n_predict() ?? this.target().n_predict();
-            let temperature = 0.7;
+            let temperature = this.temperature() ?? this.target().temperature();;
             for (let i = 0; i < count; i++) {
               const completion = await $.local_llama_completion_command.new({
-                server_url: server_url,
+                server_url,
                 prompt: this.target().prompt(),
-                logit_bias: logit_bias,
-                n_predict: n_predict,
-                temperature: temperature
+                logit_bias,
+                n_predict,
+                temperature
               }).run();
 
               completions.push(completion);
@@ -313,7 +314,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'chatml_model',
       slots: [
-        $.var.new({ name: 'system', default: 'You are a smart, creative, and helpful AI assistant.', }),
+        $.var.new({ name: 'system', default: 'Assist the user however you can.', }),
         $.method.new({
           name: 'prompt',
           do: function prompt(user, output) {
@@ -421,6 +422,50 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'completor_set_temperature_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'target' }),
+        $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            this.target().temperature(this.value());
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'number_input',
+      slots: [
+        $.component,
+        $.var.new({ name: 'element' }),
+        $.var.new({ name: 'value' }),
+        $.var.new({ name: 'command' }),
+        $.after.new({
+          name: 'init',
+          do: function init() {
+            this.element($el.input({
+              type: 'number',
+              value: this.value(),
+              onchange: e => {
+                this.value(+e.target.value, false);
+                this.command().new({ target: this.parent(), value: this.value() }).dispatchTo(this);
+              }
+            }), false);
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render(ctx) {
+            return $el.div({}, this.name(), this.element());
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor',
       slots: [
         $.window,
@@ -432,13 +477,11 @@ ${output}`;
         $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'preview', default: '' }),
         $.var.new({ name: 'count', default: 3 }),
+        $.var.new({ name: 'temperature', default: 2.0 }),
         $.var.new({ name: 'n_predict', default: 10 }),
         $.var.new({ name: 'choices', default: [] }),
         $.event.new({
           name: 'update',
-          when: {
-            name: 'count',
-          },
           do: function update(e) {
             if (e._var.name() === 'count') {
               document.querySelector('.completion_candidates').style['min-height'] = `${this.count() * 1.5}em`;
@@ -449,7 +492,7 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.alpaca_model.new());
+            this.prompt_format($.chatml_model.new());
             this.instruction_textarea($el.textarea({
               id: 'instruction-input',
               oninput: e => {
@@ -485,17 +528,21 @@ ${output}`;
           do: function key_command(key, e) {
             if (key === 'i') {
               e.preventDefault();
-              return $.completor_instruction_focus_command.new()
+              return $.completor_instruction_focus_command.new();
             } else if (key === ' ') {
-              return $.completor_fetch_next_command.new({ target: this })
+              return $.completor_fetch_next_command.new({ target: this });
             } else if (key === '[') {
-              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() - 1 })
+              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() - 1 });
             } else if (key === ']') {
-              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() + 1 })
+              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() + 1 });
+            } else if (key === '<') {
+              return $.completor_set_temperature_command.new({ target: this, value: this.temperature() - 1 });
+            } else if (key === '>') {
+              return $.completor_set_temperature_command.new({ target: this, value: this.temperature() + 1 });
             } else if (key === ',') {
-              return $.completor_set_count_command.new({ target: this, value: this.count() - 1 })
+              return $.completor_set_count_command.new({ target: this, value: this.count() - 1 });
             } else if (key === '.') {
-              return $.completor_set_count_command.new({ target: this, value: this.count() + 1 })
+              return $.completor_set_count_command.new({ target: this, value: this.count() + 1 });
             } else if (['1', '2', '3', '4'].includes(key)) {
               const text = this.completion_candidates().candidates()[+key - 1];
               if (text !== undefined) {
@@ -531,30 +578,34 @@ ${output}`;
         $.method.new({
           name: 'render',
           do: function render() {
-            let self = this;
             return $el.div({}, [
               this.instruction_textarea(),
-              'count:',
-              $el.input({
-                type: 'number', value: this.count(), onchange: e => {
-                  this.count(+e.target.value, false);
-                  document.querySelector('.completion_candidates').style['min-height'] = `${this.count() * 1.5}em`;
-                }
-              }),
-              'n_predict:',
-              $el.input({
-                type: 'number', value: this.n_predict(), onchange: e => {
-                  this.n_predict(+e.target.value, false);
-                }
-              }),
+              $.number_input.new({
+                name: 'count',
+                parent: this,
+                value: this.count(),
+                command: $.completor_set_count_command,
+              }).render(),
+              $.number_input.new({
+                name: 'temperature',
+                parent: this,
+                value: this.temperature(),
+                command: $.completor_set_temperature_command,
+              }).render(),
+              $.number_input.new({
+                name: 'n_predict',
+                parent: this,
+                value: this.n_predict(),
+                command: $.completor_set_n_predict_command,
+              }).render(),
               $.completor_fetch_next_link.new({ object: this, parent: this }),
               this.completion_candidates(),
               $el.span({
                 class: 'completor-output',
-                oncontextmenu: e => {
-                  this.log('right click?');
-                  e.preventDefault();
-                }
+                // oncontextmenu: e => {
+                //   this.log('right click?');
+                //   e.preventDefault();
+                // }
               }, this.output()),
               $el.span({ class: 'completor-output completor-preview' }, this.preview()),
             ]);
