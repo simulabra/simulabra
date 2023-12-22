@@ -88,60 +88,6 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'cmd_prompt',
-      slots: [
-        $.var.new({ name: 'prompt', default: 'Simulabra was passed no prompt because' }),
-        $.var.new({ name: 'count_tokens', default: false }),
-        $.method.new({
-          name: 'execute',
-          do: async function execute() {
-            for (let j = 0; j < 5; j++) {
-              let res = '';
-              let logit_bias = [];
-              const start = +new Date();
-              for (let i = 0; i < 10; i++) {
-                const result = await ($.local_llama_completion_command.new({
-                  server_url: "http://localhost:3731",
-                  prompt: this.prompt() + res,
-                  n_predict: 1,
-                  logit_bias: logit_bias
-                })).run();
-                res += result;
-                if (this.count_tokens()) {
-                  const tokens = await ($.local_llama_tokenize_command.new({
-                    server_url: "http://localhost:3731",
-                    prompt: res
-                  })).run();
-                  this.log(`(${tokens.length} toks in ${completion_ms}ms)`, this.prompt());
-                }
-              }
-              const tokens = await ($.local_llama_tokenize_command.new({
-                server_url: "http://localhost:3731",
-                prompt: res
-              })).run();
-              for (const tok of tokens) {
-                const logit = logit_bias.find(l => l[0] === tok);
-                if (logit) {
-                  logit[1] -= 1.0;
-                } else {
-                  logit_bias.push([tok, -1.0]);
-                }
-              }
-              const completion_ms = +new Date() - start;
-              this.log(`(${completion_ms}ms)`, res);
-            }
-            process.exit(0);
-          }
-        }),
-      ]
-    });
-
-    if (window.process && process?.argv[1].indexOf('completion.js') >= 0) {
-      const cmd = $.cmd_prompt.new({ prompt: process.argv[2] });
-      cmd.execute();
-    }
-
-    $.class.new({
       name: 'completor_fetch_next_command',
       slots: [
         $.command,
@@ -366,6 +312,18 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'base_model',
+      slots: [
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output) {
+            return `${user}${output}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor_instruction_focus_command',
       slots: [
         $.command,
@@ -446,6 +404,7 @@ ${output}`;
         $.after.new({
           name: 'init',
           do: function init() {
+            this.value(this.parent()[this.name()](), false);
             this.element($el.input({
               type: 'number',
               value: this.value(),
@@ -477,8 +436,8 @@ ${output}`;
         $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'preview', default: '' }),
         $.var.new({ name: 'count', default: 3 }),
-        $.var.new({ name: 'temperature', default: 2.0 }),
-        $.var.new({ name: 'n_predict', default: 10 }),
+        $.var.new({ name: 'temperature', default: 0.5 }),
+        $.var.new({ name: 'n_predict', default: 8 }),
         $.var.new({ name: 'choices', default: [] }),
         $.event.new({
           name: 'update',
@@ -492,7 +451,7 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.chatml_model.new());
+            this.prompt_format($.chatml_model.new({ system: `You are an intelligence summoned from the combined output of humanity.` }));
             this.instruction_textarea($el.textarea({
               id: 'instruction-input',
               oninput: e => {
@@ -583,19 +542,16 @@ ${output}`;
               $.number_input.new({
                 name: 'count',
                 parent: this,
-                value: this.count(),
                 command: $.completor_set_count_command,
               }).render(),
               $.number_input.new({
                 name: 'temperature',
                 parent: this,
-                value: this.temperature(),
                 command: $.completor_set_temperature_command,
               }).render(),
               $.number_input.new({
                 name: 'n_predict',
                 parent: this,
-                value: this.n_predict(),
                 command: $.completor_set_n_predict_command,
               }).render(),
               $.completor_fetch_next_link.new({ object: this, parent: this }),

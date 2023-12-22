@@ -1,7 +1,3 @@
-Simulabra is an object-oriented Lisp that translates to Javascript.
-
-Example code:
-```
 ~class:completor-fetch-next-command{
   :slots [
     ~var:target{ :type ~completor }
@@ -32,14 +28,25 @@ Example code:
             }.run@await)
             %tokens@for-each(%tok
               %logit(%logit-bias.find(&(%it@el(0)@eq(%tok))))
-            )  
+            )
           )
         )
       )
     }
   ]
 }
-```
 
-Write a todo-list application using Simulabra.
-
+~class:completor[
+  ~method:render{
+    :returns ~html
+    $do(
+      <div>
+        (.instruction_textarea)
+        (~number-input:count{
+          :command ~completor-set-count-command
+        })
+        (~completor-fetch-next-link{})
+      </div>
+    )
+  }
+]
