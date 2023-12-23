@@ -186,6 +186,45 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'completor_clear_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'target' }),
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            this.target().clear();
+          }
+        }),
+        $.method.new({
+          name: 'description',
+          do: function description() {
+            return `<${this.title()} target=${this.target().title()} />`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'completor_clear_link',
+      slots: [
+        $.link,
+        $.method.new({
+          name: 'link_text',
+          do: function link_text() {
+            return 'clear';
+          }
+        }),
+        $.method.new({
+          name: 'command',
+          do: function command() {
+            return $.completor_clear_command.new({ target: this.object() });
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor_add_link',
       slots: [
         $.link,
@@ -502,6 +541,8 @@ ${output}`;
               return $.completor_set_count_command.new({ target: this, value: this.count() - 1 });
             } else if (key === '.') {
               return $.completor_set_count_command.new({ target: this, value: this.count() + 1 });
+            } else if (key === 'c') {
+              return $.completor_clear_command.new({ target: this });
             } else if (['1', '2', '3', '4'].includes(key)) {
               const text = this.completion_candidates().candidates()[+key - 1];
               if (text !== undefined) {
@@ -526,6 +567,21 @@ ${output}`;
           do: function insert(it) {
             this.choices().push(it);
             this.output(this.output() + it);
+          }
+        }),
+        $.method.new({
+          name: 'clear',
+          do: function clear() {
+            this.output('');
+            if (this.instruction() !== '') {
+              this.fetch_next();
+            }
+          }
+        }),
+        $.method.new({
+          name: 'fetch_next',
+          do: function fetch_next() {
+            return $.completor_fetch_next_command.new({ target: this, parent: this }).run();
           }
         }),
         $.method.new({
@@ -555,6 +611,8 @@ ${output}`;
                 command: $.completor_set_n_predict_command,
               }).render(),
               $.completor_fetch_next_link.new({ object: this, parent: this }),
+              ' ',
+              $.completor_clear_link.new({ object: this, parent: this }),
               this.completion_candidates(),
               $el.span({
                 class: 'completor-output',

@@ -45,8 +45,8 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
-          name: 'clear',
-          do: function clear() {
+          name: 'clear_swap_target',
+          do: function clear_swap_target() {
             const st = this.swap_target();
             st.innerHTML = '';
           }
@@ -54,7 +54,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'swap',
           do: function swap() {
-            this.clear();
+            this.clear_swap_target();
             const children = [this.render().to_dom()].flat(Infinity);
             for (const c of children) {
               this.swap_target().appendChild(c);
@@ -88,7 +88,7 @@ export default await base.find('class', 'module').new({
           do: function toggle() {
             this.minimized(!this.minimized());
             if (this.minimized()) {
-              this.clear();
+              this.clear_swap_target();
             }
           }
         }),

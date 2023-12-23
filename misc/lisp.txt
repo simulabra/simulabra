@@ -36,6 +36,25 @@
   ]
 }
 
+~class:number-input[
+  ~component
+  ~var:element{ :type ~html }
+  ~var:value{ :type ~number :bind &(.parent.var(.name)) }
+  ~var:command{ :type ~command }
+  ~after:init&(
+    .element(~ht-input{
+      :type 'number'
+      :value .value
+      :onchange &[e](
+        .command{ :target .parent :value .value }.dispatch-to(@this)
+      )
+    })
+  )
+  ~method:render&(
+    ~ht-div[.name .element]
+  )
+]
+
 ~class:completor[
   ~method:render{
     :returns ~html
