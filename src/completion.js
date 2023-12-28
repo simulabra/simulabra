@@ -490,7 +490,7 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.chatml_model.new({ system: `You are an intelligence summoned from the combined output of humanity.` }));
+            this.prompt_format($.chatml_model.new({ system: `Assist the user with intelligence and grace.` }));
             this.instruction_textarea($el.textarea({
               id: 'instruction-input',
               oninput: e => {
