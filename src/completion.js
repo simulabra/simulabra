@@ -381,7 +381,7 @@ ${output}`;
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
-            document.getElementById('instruction-input').focus();
+            ctx.instruction().focus();
           }
         }),
       ]
@@ -514,9 +514,15 @@ ${output}`;
           }
         }),
         $.method.new({
+          name: 'element',
+          do: function element() {
+            return document.getElementById(this.inputID());
+          }
+        }),
+        $.method.new({
           name: 'active',
           do: function active() {
-            return document.getElementById(this.inputID()) === document.activeElement;
+            return this.element() === document.activeElement;
           }
         }),
         $.method.new({
@@ -528,7 +534,13 @@ ${output}`;
         $.method.new({
           name: 'blur',
           do: function blur() {
-            document.getElementById(this.inputID()).blur();
+            this.element().blur();
+          }
+        }),
+        $.method.new({
+          name: 'focus',
+          do: function focus() {
+            this.element().focus();
           }
         }),
       ]
@@ -567,7 +579,7 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.chatml_model.new());
+            this.prompt_format($.base_model.new());
 
             document.addEventListener('keydown', e => {
               if (!(this.instruction().active() || this.system().active())) {
