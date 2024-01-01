@@ -262,7 +262,7 @@ function bootstrap() {
       });
     }
     defval() {
-      return typeof this._desc.default === 'function' ? this._desc.default() : this._desc.default;
+      return typeof this._desc.default === 'function' ? this._desc.default.apply(this) : this._desc.default;
     }
     class() {
       return BVar;

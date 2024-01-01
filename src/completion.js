@@ -317,6 +317,18 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'mistral_model',
+      slots: [
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output) {
+            return `[INST]${user}[\INST]${output}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'zephyr_model',
       slots: [
         $.method.new({
@@ -376,13 +388,15 @@ ${output}`;
     });
 
     $.class.new({
-      name: 'completor_instruction_unfocus_command',
+      name: 'completor_unfocus_command',
       slots: [
         $.command,
+        $.var.new({ name: 'target' }),
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
-            document.getElementById('instruction-input').blur();
+            this.target().instruction().blur();
+            this.target().system().blur();
           }
         }),
       ]
@@ -464,14 +478,77 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'input',
+      slots: [
+        $.component,
+        $.var.new({ name: 'value', default: '' }),
+        $.var.new({ name: 'textarea' }),
+        $.after.new({
+          name: 'init',
+          do: function init() {
+            this.textarea($el.textarea({
+              id: this.inputID(),
+              oninput: e => {
+                this.value(e.target.value, false);
+              },
+              onload: e => {
+                e.target.value = this.value();
+                setTimeout(() => {
+                  e.target.scrollTop = e.target.scrollHeight;
+                }, 0);
+              },
+              placeholder: this.placeholder(),
+            }, this.value()));
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return this.textarea();
+          }
+        }),
+        $.method.new({
+          name: 'inputID',
+          do: function inputID() {
+            return `input-${this.name()}`;
+          }
+        }),
+        $.method.new({
+          name: 'active',
+          do: function active() {
+            return document.getElementById(this.inputID()) === document.activeElement;
+          }
+        }),
+        $.method.new({
+          name: 'placeholder',
+          do: function placeholder() {
+            return `${this.name()}...`;
+          }
+        }),
+        $.method.new({
+          name: 'blur',
+          do: function blur() {
+            document.getElementById(this.inputID()).blur();
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor',
       slots: [
         $.window,
         $.application,
         $.var.new({ name: 'completion_candidates' }),
         $.var.new({ name: 'prompt_format' }),
-        $.var.new({ name: 'instruction', default: '' }),
-        $.var.new({ name: 'instruction_textarea' }),
+        $.var.new({
+          name: 'instruction',
+          default: () => $.input.new({ name: 'instruction', parent: this })
+        }),
+        $.var.new({
+          name: 'system',
+          default: () => $.input.new({ name: 'system', parent: this })
+        }),
         $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'preview', default: '' }),
         $.var.new({ name: 'count', default: 3 }),
@@ -490,31 +567,17 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.chatml_model.new({ system: `Assist the user with intelligence and grace.` }));
-            this.instruction_textarea($el.textarea({
-              id: 'instruction-input',
-              oninput: e => {
-                this.instruction(e.target.value, false);
-              },
-              onload: e => {
-                e.target.value = this.instruction();
-                setTimeout(() => {
-                  e.target.scrollTop = e.target.scrollHeight;
-                }, 0);
-              },
-              placeholder: 'instruction',
-            }, this.instruction()));
+            this.prompt_format($.chatml_model.new());
 
             document.addEventListener('keydown', e => {
-              const instructionInput = document.getElementById('instruction-input');
-              if (instructionInput !== document.activeElement) {
+              if (!(this.instruction().active() || this.system().active())) {
                 const cmd = this.key_command(e.key, e);
                 cmd?.dispatchTo(this);
               } else {
                 if (e.key === 'Escape') {
                   this.dispatchEvent({
                     type: 'command',
-                    target: $.completor_instruction_unfocus_command.new(),
+                    target: $.completor_unfocus_command.new({ target: this }),
                   });
                 }
               }
@@ -573,7 +636,7 @@ ${output}`;
           name: 'clear',
           do: function clear() {
             this.output('');
-            if (this.instruction() !== '') {
+            if (this.instruction().value() !== '') {
               this.fetch_next();
             }
           }
@@ -587,14 +650,15 @@ ${output}`;
         $.method.new({
           name: 'prompt',
           do: function prompt() {
-            return this.prompt_format().prompt(this.instruction(), this.output());
+            return this.prompt_format().prompt(this.instruction().value(), this.output());
           }
         }),
         $.method.new({
           name: 'render',
           do: function render() {
             return $el.div({}, [
-              this.instruction_textarea(),
+              this.system(),
+              this.instruction(),
               $.number_input.new({
                 name: 'count',
                 parent: this,
