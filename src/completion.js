@@ -91,7 +91,6 @@ export default await base.find('class', 'module').new({
       name: 'completor_fetch_next_command',
       slots: [
         $.command,
-        $.var.new({ name: 'target' }),
         $.var.new({ name: 'count' }),
         $.var.new({ name: 'temperature' }),
         $.var.new({ name: 'n_predict' }),
@@ -101,15 +100,15 @@ export default await base.find('class', 'module').new({
           do: async function run(ctx) {
             let completions = [];
             const server_url = `http://${this.server_host()}:3731`;
-            this.target().completion_candidates().reset();
+            ctx.completion_candidates().reset();
             let logit_bias = [];
-            let count = this.count() ?? this.target().count();
-            let n_predict = this.n_predict() ?? this.target().n_predict();
-            let temperature = this.temperature() ?? this.target().temperature();;
+            let count = this.count() ?? ctx.count();
+            let n_predict = this.n_predict() ?? ctx.n_predict();
+            let temperature = this.temperature() ?? ctx.temperature();;
             for (let i = 0; i < count; i++) {
               const completion = await $.local_llama_completion_command.new({
                 server_url,
-                prompt: this.target().prompt(),
+                prompt: ctx.prompt(),
                 logit_bias,
                 n_predict,
                 temperature
@@ -117,7 +116,7 @@ export default await base.find('class', 'module').new({
 
               completions.push(completion);
               if (completion !== '') {
-                this.target().completion_candidates().add(completion);
+                ctx.completion_candidates().add(completion);
                 const tokens = await $.local_llama_tokenize_command.new({
                   server_url: server_url,
                   prompt: completion
@@ -135,12 +134,6 @@ export default await base.find('class', 'module').new({
             }
           }
         }),
-        $.method.new({
-          name: 'description',
-          do: function description() {
-            return `<${this.title()} target={${this.target().title()}} />`;
-          }
-        })
       ]
     });
 
@@ -148,19 +141,12 @@ export default await base.find('class', 'module').new({
       name: 'completor_insert_command',
       slots: [
         $.command,
-        $.var.new({ name: 'target' }),
         $.var.new({ name: 'text' }),
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
-            this.target().insert(this.text());
-            await $.completor_fetch_next_command.new({ target: this.target() }).run(ctx);
-          }
-        }),
-        $.method.new({
-          name: 'description',
-          do: function description() {
-            return `<${this.title()} target=${this.target().title()} text='${this.text()}' />`;
+            ctx.insert(this.text());
+            await $.completor_fetch_next_command.new().run(ctx);
           }
         }),
       ]
@@ -177,9 +163,15 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'subtext',
+          do: function subtext() {
+            return '[ ]';
+          }
+        }),
+        $.method.new({
           name: 'command',
           do: function command() {
-            return $.completor_fetch_next_command.new({ target: this.object() });
+            return $.completor_fetch_next_command.new();
           }
         }),
       ]
@@ -189,17 +181,10 @@ export default await base.find('class', 'module').new({
       name: 'completor_clear_command',
       slots: [
         $.command,
-        $.var.new({ name: 'target' }),
         $.method.new({
           name: 'run',
-          do: async function run(ctx) {
-            this.target().clear();
-          }
-        }),
-        $.method.new({
-          name: 'description',
-          do: function description() {
-            return `<${this.title()} target=${this.target().title()} />`;
+          do: function run(ctx) {
+            ctx.clear();
           }
         }),
       ]
@@ -216,9 +201,15 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'subtext',
+          do: function subtext() {
+            return 'c';
+          }
+        }),
+        $.method.new({
           name: 'command',
           do: function command() {
-            return $.completor_clear_command.new({ target: this.object() });
+            return $.completor_clear_command.new();
           }
         }),
       ]
@@ -234,13 +225,19 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'link_text',
           do: function link_text() {
-            return `${this.choice() ?? '?'}: ${this.text()}`;
+            return this.text();
+          }
+        }),
+        $.method.new({
+          name: 'subtext',
+          do: function subtext() {
+            return this.choice();
           }
         }),
         $.method.new({
           name: 'command',
           do: function command() {
-            return $.completor_insert_command.new({ target: this.object(), text: this.text() });
+            return $.completor_insert_command.new({ text: this.text() });
           }
         }),
       ]
@@ -254,7 +251,6 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            const self = this;
             let hovering = false;
             const candidatesElements = this.candidates().map((cc, i) =>
               $el.div({}, $.completor_add_link.new({
@@ -391,12 +387,11 @@ ${output}`;
       name: 'completor_unfocus_command',
       slots: [
         $.command,
-        $.var.new({ name: 'target' }),
         $.method.new({
           name: 'run',
-          do: async function run(ctx) {
-            this.target().instruction().blur();
-            this.target().system().blur();
+          do: function run(ctx) {
+            ctx.instruction().blur();
+            ctx.system().blur();
           }
         }),
       ]
@@ -406,12 +401,11 @@ ${output}`;
       name: 'completor_set_n_predict_command',
       slots: [
         $.command,
-        $.var.new({ name: 'target' }),
         $.var.new({ name: 'value' }),
         $.method.new({
           name: 'run',
-          do: async function run(ctx) {
-            this.target().n_predict(this.value());
+          do: function run(ctx) {
+            ctx.n_predict(this.value());
           }
         }),
       ]
@@ -421,12 +415,11 @@ ${output}`;
       name: 'completor_set_count_command',
       slots: [
         $.command,
-        $.var.new({ name: 'target' }),
         $.var.new({ name: 'value' }),
         $.method.new({
           name: 'run',
-          do: async function run(ctx) {
-            this.target().count(this.value());
+          do: function run(ctx) {
+            ctx.count(this.value());
           }
         }),
       ]
@@ -436,111 +429,11 @@ ${output}`;
       name: 'completor_set_temperature_command',
       slots: [
         $.command,
-        $.var.new({ name: 'target' }),
         $.var.new({ name: 'value' }),
         $.method.new({
           name: 'run',
-          do: async function run(ctx) {
-            this.target().temperature(this.value());
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'number_input',
-      slots: [
-        $.component,
-        $.var.new({ name: 'element' }),
-        $.var.new({ name: 'value' }),
-        $.var.new({ name: 'command' }),
-        $.after.new({
-          name: 'init',
-          do: function init() {
-            this.value(this.parent()[this.name()](), false);
-            this.element($el.input({
-              type: 'number',
-              value: this.value(),
-              onchange: e => {
-                this.value(+e.target.value, false);
-                this.command().new({ target: this.parent(), value: this.value() }).dispatchTo(this);
-              }
-            }), false);
-          }
-        }),
-        $.method.new({
-          name: 'render',
-          do: function render(ctx) {
-            return $el.div({}, this.name(), this.element());
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'input',
-      slots: [
-        $.component,
-        $.var.new({ name: 'value', default: '' }),
-        $.var.new({ name: 'textarea' }),
-        $.after.new({
-          name: 'init',
-          do: function init() {
-            this.textarea($el.textarea({
-              id: this.inputID(),
-              oninput: e => {
-                this.value(e.target.value, false);
-              },
-              onload: e => {
-                e.target.value = this.value();
-                setTimeout(() => {
-                  e.target.scrollTop = e.target.scrollHeight;
-                }, 0);
-              },
-              placeholder: this.placeholder(),
-            }, this.value()));
-          }
-        }),
-        $.method.new({
-          name: 'render',
-          do: function render() {
-            return this.textarea();
-          }
-        }),
-        $.method.new({
-          name: 'inputID',
-          do: function inputID() {
-            return `input-${this.name()}`;
-          }
-        }),
-        $.method.new({
-          name: 'element',
-          do: function element() {
-            return document.getElementById(this.inputID());
-          }
-        }),
-        $.method.new({
-          name: 'active',
-          do: function active() {
-            return this.element() === document.activeElement;
-          }
-        }),
-        $.method.new({
-          name: 'placeholder',
-          do: function placeholder() {
-            return `${this.name()}...`;
-          }
-        }),
-        $.method.new({
-          name: 'blur',
-          do: function blur() {
-            this.element().blur();
-          }
-        }),
-        $.method.new({
-          name: 'focus',
-          do: function focus() {
-            this.element().focus();
+          do: function run(ctx) {
+            ctx.temperature(this.value());
           }
         }),
       ]
@@ -589,7 +482,7 @@ ${output}`;
                 if (e.key === 'Escape') {
                   this.dispatchEvent({
                     type: 'command',
-                    target: $.completor_unfocus_command.new({ target: this }),
+                    target: $.completor_unfocus_command.new(),
                   });
                 }
               }
@@ -603,25 +496,25 @@ ${output}`;
               e.preventDefault();
               return $.completor_instruction_focus_command.new();
             } else if (key === ' ') {
-              return $.completor_fetch_next_command.new({ target: this });
+              return $.completor_fetch_next_command.new();
             } else if (key === '[') {
-              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() - 1 });
+              return $.completor_set_n_predict_command.new({ value: this.n_predict() - 1 });
             } else if (key === ']') {
-              return $.completor_set_n_predict_command.new({ target: this, value: this.n_predict() + 1 });
+              return $.completor_set_n_predict_command.new({ value: this.n_predict() + 1 });
             } else if (key === '<') {
-              return $.completor_set_temperature_command.new({ target: this, value: this.temperature() - 1 });
+              return $.completor_set_temperature_command.new({ value: this.temperature() - 1 });
             } else if (key === '>') {
-              return $.completor_set_temperature_command.new({ target: this, value: this.temperature() + 1 });
+              return $.completor_set_temperature_command.new({ value: this.temperature() + 1 });
             } else if (key === ',') {
-              return $.completor_set_count_command.new({ target: this, value: this.count() - 1 });
+              return $.completor_set_count_command.new({ value: this.count() - 1 });
             } else if (key === '.') {
-              return $.completor_set_count_command.new({ target: this, value: this.count() + 1 });
+              return $.completor_set_count_command.new({ value: this.count() + 1 });
             } else if (key === 'c') {
-              return $.completor_clear_command.new({ target: this });
-            } else if (['1', '2', '3', '4'].includes(key)) {
+              return $.completor_clear_command.new();
+            } else if (!isNaN(+key)) {
               const text = this.completion_candidates().candidates()[+key - 1];
               if (text !== undefined) {
-                return $.completor_insert_command.new({ target: this, text });
+                return $.completor_insert_command.new({ text });
               } else {
                 return null;
               }
@@ -656,7 +549,7 @@ ${output}`;
         $.method.new({
           name: 'fetch_next',
           do: function fetch_next() {
-            return $.completor_fetch_next_command.new({ target: this, parent: this }).run();
+            return $.completor_fetch_next_command.new({ parent: this }).run();
           }
         }),
         $.method.new({

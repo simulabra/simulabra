@@ -58,6 +58,9 @@ export default await base.find('class', 'module').new({
         $.command,
         $.var.new({ name: 'object' }),
         $.var.new({ name: 'previous' }),
+        // (~var #object)
+        // ~method#target(%editor.explorer)
+        // $method(:target %editor.explorer)
         $.method.new({
           name: 'target',
           do: function target() {

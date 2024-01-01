@@ -291,22 +291,32 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'subtext',
+          do: function subtext() {
+            return '';
+          }
+        }),
+        $.method.new({
           name: 'render',
           do: function render() {
             const uri = this.object().uri();
-            return $el.a({
-              href: '#',
-              id: `link-${this.id()}`,
-              object: uri,
-              onclick: e => {
-                this.log('click');
-                return this.dispatchEvent({
-                  type: 'command',
-                  target: this.command(),
-                });
-              },
-              ...this.properties()
-            }, this.link_text());
+            return $el.span(
+              {},
+              $el.a({
+                href: '#',
+                id: `link-${this.id()}`,
+                object: uri,
+                onclick: e => {
+                  this.log('click');
+                  return this.dispatchEvent({
+                    type: 'command',
+                    target: this.command(),
+                  });
+                },
+                ...this.properties()
+              }, this.link_text()),
+              $el.span({ class: 'link-subtext' }, this.subtext())
+            );
           }
         })
       ]
@@ -327,6 +337,105 @@ export default await base.find('class', 'module').new({
             }
           }
         })
+      ]
+    });
+
+    $.class.new({
+      name: 'number_input',
+      slots: [
+        $.component,
+        $.var.new({ name: 'element' }),
+        $.var.new({ name: 'value' }),
+        $.var.new({ name: 'command' }),
+        $.after.new({
+          name: 'init',
+          do: function init() {
+            this.value(this.parent()[this.name()](), false);
+            this.element($el.input({
+              type: 'number',
+              value: this.value(),
+              onchange: e => {
+                this.value(+e.target.value, false);
+                this.command().new({ target: this.parent(), value: this.value() }).dispatchTo(this);
+              }
+            }), false);
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render(ctx) {
+            return $el.div({}, this.name(), this.element());
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'input',
+      slots: [
+        $.component,
+        $.var.new({ name: 'value', default: '' }),
+        $.var.new({ name: 'textarea' }),
+        $.after.new({
+          name: 'init',
+          do: function init() {
+            this.textarea($el.textarea({
+              id: this.inputID(),
+              oninput: e => {
+                this.value(e.target.value, false);
+              },
+              onload: e => {
+                e.target.value = this.value();
+                setTimeout(() => {
+                  e.target.scrollTop = e.target.scrollHeight;
+                }, 0);
+              },
+              placeholder: this.placeholder(),
+            }, this.value()));
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return this.textarea();
+          }
+        }),
+        $.method.new({
+          name: 'inputID',
+          do: function inputID() {
+            return `input-${this.name()}`;
+          }
+        }),
+        $.method.new({
+          name: 'element',
+          do: function element() {
+            return document.getElementById(this.inputID());
+          }
+        }),
+        $.method.new({
+          name: 'active',
+          do: function active() {
+            return this.element() === document.activeElement;
+          }
+        }),
+        $.method.new({
+          name: 'placeholder',
+          do: function placeholder() {
+            return `${this.name()}...`;
+          }
+        }),
+        $.method.new({
+          name: 'blur',
+          do: function blur() {
+            this.element().blur();
+          }
+        }),
+        $.method.new({
+          name: 'focus',
+          do: function focus() {
+            this.element().focus();
+          }
+        }),
       ]
     });
   }

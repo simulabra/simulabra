@@ -139,6 +139,12 @@ button:active {
     height: 100%;
 }
 
+.link-subtext {
+    font-size: 0.6em;
+    font-color: var(--foreground-1);
+    margin-left: 2px;
+}
+
 .cm-s-simulabra.CodeMirror, .cm-s-simulabra .CodeMirror-gutters {
     background-color: var(--background); /* Beige background */
     color: var(--foreground-1); /* Lighter primary for text */
