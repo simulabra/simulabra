@@ -8,6 +8,28 @@ export default await base.find('class', 'module').new({
     const __ = globalThis.SIMULABRA;
     const $el = $.html_element.proxy();
 
+    $.class.new({
+      name: 'llamacpp_completion_results',
+      slots: [
+        $.var.new({ name: 'output', default: '' }),
+        $.var.new({ name: 'probs', default: () => [] }),
+        $.method.new({
+          name: 'sum_prob',
+          do: function sum_prob() {
+            let sum = 0.0;
+            for (const p of this.probs()) {
+              const tok = p.content;
+              const prob = p.probs.find(pp => pp.tok_str === tok);
+              if (prob) {
+                sum += prob.prob;
+              }
+            }
+            return sum;
+          }
+        })
+      ]
+    });
+
     // TODO: queue these so only one is running on the backend at the time, add load balancer, or make own API
     // to prevent llama.cpp server segfaulting
     $.class.new({
@@ -34,23 +56,20 @@ export default await base.find('class', 'module').new({
                 temperature: this.temperature(),
                 top_k: this.top_k(),
                 top_p: this.top_p(),
+                // this seems to be breaking sampling with such a big number!!
+                // n_probs: 1000,
                 n_predict: this.n_predict(),
-                stream: true,
                 logit_bias: this.logit_bias(),
                 stop: ['<|im_end|>'],
               })
             });
 
-            let t = await res.text();
-            let out = '';
-
-            t.split('\n').forEach(l => {
-              if (l.startsWith('data: ')) {
-                const message = JSON.parse(l.substring(6));
-                out += message.content;
-              }
+            let t = await res.json();
+            const completion = $.llamacpp_completion_results.new({
+              output: t.content,
+              probs: t.completion_probabilities ?? []
             });
-            return out;
+            return completion;
           }
         }),
       ]
@@ -115,7 +134,6 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
-            let completions = [];
             const server_url = `http://${this.server_host()}:3731`;
             ctx.completion_candidates().reset();
             let logit_bias = [];
@@ -131,12 +149,11 @@ export default await base.find('class', 'module').new({
                 temperature
               }).run();
 
-              completions.push(completion);
               if (completion !== '') {
                 ctx.completion_candidates().add(completion);
                 const tokens = await $.local_llama_tokenize_command.new({
                   server_url: server_url,
-                  prompt: completion
+                  prompt: completion.output()
                 }).run();
                 for (const tok of tokens) {
                   const logit = logit_bias.find(l => l[0] === tok);
@@ -220,7 +237,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'subtext',
           do: function subtext() {
-            return 'c';
+            return 'Esc';
           }
         }),
         $.method.new({
@@ -269,10 +286,10 @@ export default await base.find('class', 'module').new({
           name: 'render',
           do: function render() {
             let hovering = false;
-            const candidatesElements = this.candidates().map((cc, i) =>
-              $el.div({}, $.completor_add_link.new({
+            const candidatesElements = this.candidates().map((cc, i) => {
+              return $el.div({}, $.completor_add_link.new({
                 object: this.parent(),
-                text: cc,
+                text: cc.output(),
                 choice: i + 1,
                 parent: this,
                 properties: {
@@ -280,7 +297,7 @@ export default await base.find('class', 'module').new({
                     if (!hovering) {
                       hovering = true;
                       e.preventDefault();
-                      this.parent().preview(cc);
+                      this.parent().preview(cc.output());
                     }
                   },
                   onmouseleave: e => {
@@ -289,8 +306,9 @@ export default await base.find('class', 'module').new({
                     hovering = false;
                   },
                 }
-              }))
-            );
+              }));
+            });
+
             return $el.div({}, ...candidatesElements);
           }
         }),
@@ -473,10 +491,14 @@ ${output}`;
         }),
         $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'preview', default: '' }),
-        $.var.new({ name: 'count', default: 3 }),
-        $.var.new({ name: 'temperature', default: 0.5 }),
-        $.var.new({ name: 'n_predict', default: 8 }),
+        $.var.new({ name: 'count', default: 9 }),
+        $.var.new({ name: 'temperature', default: 2.5 }),
+        $.var.new({ name: 'n_predict', default: 2 }),
         $.var.new({ name: 'choices', default: [] }),
+        // $.number_input.new({
+        //   name: 'count',
+        //   command: $.completor_set_count_command,
+        // }),
         $.event.new({
           name: 'update',
           do: function update(e) {
@@ -526,10 +548,10 @@ ${output}`;
               return $.completor_set_count_command.new({ value: this.count() - 1 });
             } else if (key === '.') {
               return $.completor_set_count_command.new({ value: this.count() + 1 });
-            } else if (key === 'c') {
+            } else if (key === 'Escape') {
               return $.completor_clear_command.new();
             } else if (!isNaN(+key)) {
-              const text = this.completion_candidates().candidates()[+key - 1];
+              const text = this.completion_candidates().candidates()[+key - 1]?.output();
               if (text !== undefined) {
                 return $.completor_insert_command.new({ text });
               } else {
@@ -566,7 +588,7 @@ ${output}`;
         $.method.new({
           name: 'fetch_next',
           do: function fetch_next() {
-            return $.completor_fetch_next_command.new({ parent: this }).run();
+            return $.completor_fetch_next_command.new().run(this);
           }
         }),
         $.method.new({
