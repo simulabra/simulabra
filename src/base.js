@@ -593,7 +593,6 @@ function bootstrap() {
     name: 'var',
     slots: [
       BVar.new({ name: 'name', }),
-      BVar.new({ name: 'mutable', default: true }),
       BVar.new({ name: 'debug', default: true }),
       BVar.new({ name: 'trace', default: false }),
       BVar.new({ name: 'observable', default: true }),
@@ -615,39 +614,24 @@ function bootstrap() {
       function combine(impl) {
         const pk = '_' + this.name();
         const self = this;
-        if (this.mutable()) {
-          impl._primary = function mutableAccess(assign, update = true) {
-            if (assign !== undefined) {
-              this[pk] = assign;
-              if (self.observable() && update) {
-                const ev = new Event('update');
-                ev._var = self;
-                ev._value = assign;
-                ev._target = this;
-                this.dispatchEvent(ev); // best there is?
-              }
-              if (self._trace) {
-                self.log('muted to', assign);
-              }
-            } else if (!(pk in this)) {
-              this[pk] = self.defval(this);
+        impl._primary = function mutableAccess(assign, update = true) {
+          if (assign !== undefined) {
+            this[pk] = assign;
+            if (self.observable() && update) {
+              const ev = new Event('update');
+              ev._var = self;
+              ev._value = assign;
+              ev._target = this;
+              this.dispatchEvent(ev); // best there is?
             }
-            return this[pk];
-          };
-        } else {
-          impl._primary = function immutableAccess(self) {
-            return function (assign) {
-              if (assign !== undefined) {
-                throw new Error(`Attempt to set immutable variable ${self.name()} ${pk}`);
-              }
-              if (!(pk in this)) {
-                // should this not be set?
-                this[pk] = self.defval(this);
-              }
-              return this[pk];
+            if (self._trace) {
+              self.log('muted to', assign);
             }
-          };
-        }
+          } else if (!(pk in this)) {
+            this[pk] = self.defval(this);
+          }
+          return this[pk];
+        };
         impl._direct = true;
       },
     ]

@@ -88,6 +88,23 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'context_var',
+      slots: [
+        $.var,
+      ]
+    });
+
+    $.class.new({
+      name: 'fetch_context',
+      slots: [
+        $.var.new({ name: 'context' }),
+        $.var.new({ name: 'count' }),
+        $.var.new({ name: 'temperature' }),
+        $.var.new({ name: 'n_predict' }),
+      ]
+    });
+
+    $.class.new({
       name: 'completor_fetch_next_command',
       slots: [
         $.command,
@@ -475,7 +492,7 @@ ${output}`;
             this.prompt_format($.base_model.new());
 
             document.addEventListener('keydown', e => {
-              if (!(this.instruction().active() || this.system().active())) {
+              if (!(this.instruction().active() || this.system().active() || e.ctrlKey)) {
                 const cmd = this.key_command(e.key, e);
                 cmd?.dispatchTo(this);
               } else {
