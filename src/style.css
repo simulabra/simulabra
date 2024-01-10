@@ -69,6 +69,11 @@ button:active {
     background: var(--background);
 }
 
+select {
+    background: var(--background-secondary);
+    border: 1px solid var(--primary);
+}
+
 .container {
     display: flex;
     height: 100%;

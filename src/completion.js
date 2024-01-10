@@ -491,14 +491,10 @@ ${output}`;
         }),
         $.var.new({ name: 'output', default: '' }),
         $.var.new({ name: 'preview', default: '' }),
-        $.var.new({ name: 'count', default: 9 }),
-        $.var.new({ name: 'temperature', default: 2.5 }),
-        $.var.new({ name: 'n_predict', default: 2 }),
+        $.var.new({ name: 'count', default: 5 }),
+        $.var.new({ name: 'temperature', default: 2.0 }),
+        $.var.new({ name: 'n_predict', default: 4 }),
         $.var.new({ name: 'choices', default: [] }),
-        // $.number_input.new({
-        //   name: 'count',
-        //   command: $.completor_set_count_command,
-        // }),
         $.event.new({
           name: 'update',
           do: function update(e) {
@@ -511,7 +507,7 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.prompt_format($.base_model.new());
+            this.set_model('chatml');
 
             document.addEventListener('keydown', e => {
               if (!(this.instruction().active() || this.system().active() || e.ctrlKey)) {
@@ -598,11 +594,34 @@ ${output}`;
           }
         }),
         $.method.new({
+          name: 'set_model',
+          do: function set_model(modelName) {
+            this.log('set_model', modelName);
+            this.prompt_format($[modelName + '_model'].new());
+          }
+        }),
+        $.method.new({
+          name: 'model_option',
+          do: function model_option(name, selectedName) {
+            this.log('model_option', name, selectedName);
+            return $el.option({ value: name, selected: name + '_model' === selectedName }, name);
+          }
+        }),
+        $.method.new({
           name: 'render',
           do: function render() {
             return $el.div({}, [
               this.system(),
               this.instruction(),
+              $el.select({
+                onchange: (e) => {
+                  this.set_model(e.target.value);
+                }
+              }, [
+                ...['chatml', 'mistral', 'zephyr', 'alpaca', 'base'].map(modelName => {
+                  return this.model_option(modelName, this.prompt_format().class().name());
+                }),
+              ]),
               $.number_input.new({
                 name: 'count',
                 parent: this,
