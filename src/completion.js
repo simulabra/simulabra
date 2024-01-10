@@ -507,7 +507,8 @@ ${output}`;
           name: 'init',
           do: function init() {
             this.completion_candidates($.completion_candidates.new({ parent: this }));
-            this.set_model('chatml');
+            const model = localStorage.getItem('selected_model') ?? 'chatml';
+            this.set_model(model);
 
             document.addEventListener('keydown', e => {
               if (!(this.instruction().active() || this.system().active() || e.ctrlKey)) {
@@ -596,14 +597,13 @@ ${output}`;
         $.method.new({
           name: 'set_model',
           do: function set_model(modelName) {
-            this.log('set_model', modelName);
+            localStorage.setItem('selected_model', modelName);
             this.prompt_format($[modelName + '_model'].new());
           }
         }),
         $.method.new({
           name: 'model_option',
           do: function model_option(name, selectedName) {
-            this.log('model_option', name, selectedName);
             return $el.option({ value: name, selected: name + '_model' === selectedName }, name);
           }
         }),
