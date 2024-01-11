@@ -30,14 +30,12 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    // TODO: queue these so only one is running on the backend at the time, add load balancer, or make own API
-    // to prevent llama.cpp server segfaulting
     $.class.new({
       name: 'local_llama_completion_command',
       slots: [
         $.command,
         $.var.new({ name: 'prompt' }),
-        $.var.new({ name: 'server_url', default: 'http://localhost:3731' }),
+        $.var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
         $.var.new({ name: 'n_predict', default: 4 }),
         $.var.new({ name: 'temperature', default: 5.0 }),
         $.var.new({ name: 'top_k', default: 200 }),
@@ -60,7 +58,7 @@ export default await base.find('class', 'module').new({
                 // n_probs: 1000,
                 n_predict: this.n_predict(),
                 logit_bias: this.logit_bias(),
-                stop: ['<|im_end|>'],
+                stop: ['<|im_end|>', '</s>'],
               })
             });
 
@@ -80,7 +78,7 @@ export default await base.find('class', 'module').new({
       slots: [
         $.command,
         $.var.new({ name: 'prompt' }),
-        $.var.new({ name: 'server_url', default: 'http://localhost:3731' }),
+        $.var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
         $.method.new({
           name: 'run',
           do: async function run() {
@@ -130,11 +128,9 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'count' }),
         $.var.new({ name: 'temperature' }),
         $.var.new({ name: 'n_predict' }),
-        $.var.new({ name: 'server_host', default: "100.64.172.3" }),
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
-            const server_url = `http://${this.server_host()}:3731`;
             ctx.completion_candidates().reset();
             let logit_bias = [];
             let count = this.count() ?? ctx.count();
@@ -142,17 +138,15 @@ export default await base.find('class', 'module').new({
             let temperature = this.temperature() ?? ctx.temperature();;
             for (let i = 0; i < count; i++) {
               const completion = await $.local_llama_completion_command.new({
-                server_url,
                 prompt: ctx.prompt(),
                 logit_bias,
                 n_predict,
                 temperature
               }).run();
 
-              if (completion !== '') {
+              if (completion.output() !== '') {
                 ctx.completion_candidates().add(completion);
                 const tokens = await $.local_llama_tokenize_command.new({
-                  server_url: server_url,
                   prompt: completion.output()
                 }).run();
                 for (const tok of tokens) {
@@ -206,6 +200,61 @@ export default await base.find('class', 'module').new({
           name: 'command',
           do: function command() {
             return $.completor_fetch_next_command.new();
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'completor_complete_command',
+      slots: [
+        $.command,
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            async function chunk(depth = 0) {
+              if (depth > 100) {
+                this.log('hit chunky ceiling!');
+                return;
+              }
+              const completion = await $.local_llama_completion_command.new({
+                prompt: ctx.prompt(),
+                n_predict: 1,
+                temperature: 0.8,
+                count: 8
+              }).run();
+              if (completion.output() !== '') {
+                ctx.insert(completion.output());
+                return chunk(depth + 1);
+              }
+            }
+
+            await chunk();
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'completor_complete_link',
+      slots: [
+        $.link,
+        $.method.new({
+          name: 'link_text',
+          do: function link_text() {
+            return 'complete';
+          }
+        }),
+        $.method.new({
+          name: 'subtext',
+          do: function subtext() {
+            return '[RET]';
+          }
+        }),
+        $.method.new({
+          name: 'command',
+          do: function command() {
+            return $.completor_complete_command.new();
           }
         }),
       ]
@@ -547,6 +596,8 @@ ${output}`;
               return $.completor_set_count_command.new({ value: this.count() + 1 });
             } else if (key === 'Escape') {
               return $.completor_clear_command.new();
+            } else if (key === 'Enter') {
+              return $.completor_complete_command.new();
             } else if (!isNaN(+key)) {
               const text = this.completion_candidates().candidates()[+key - 1]?.output();
               if (text !== undefined) {
@@ -638,6 +689,8 @@ ${output}`;
                 command: $.completor_set_n_predict_command,
               }).render(),
               $.completor_fetch_next_link.new({ object: this, parent: this }),
+              ' ',
+              $.completor_complete_link.new({ object: this, parent: this }),
               ' ',
               $.completor_clear_link.new({ object: this, parent: this }),
               this.completion_candidates(),
