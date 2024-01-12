@@ -379,7 +379,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'chatml_model',
       slots: [
-        $.var.new({ name: 'system', default: 'Assist the user however you can.', }),
+        $.var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
         $.method.new({
           name: 'prompt',
           do: function prompt(user, output) {
@@ -733,6 +733,14 @@ ${output}`;
 .completion_candidates {
   min-height: 4.5em;
   display: block;
+}
+
+#input-instruction {
+  height: 20vh;
+}
+
+input[type="number"] {
+  width: 3rem;
 }
 `;
           }
