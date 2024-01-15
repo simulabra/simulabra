@@ -401,6 +401,13 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'set',
+          do: function set(value) {
+            this.value(value);
+            this.textarea().children([value]);
+          }
+        }),
+        $.method.new({
           name: 'inputID',
           do: function inputID() {
             return `input-${this.name()}`;

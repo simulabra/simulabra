@@ -382,9 +382,9 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
         $.method.new({
           name: 'prompt',
-          do: function prompt(user, output) {
+          do: function prompt(user, output, system) {
             return `<|im_start|>system
-${this.system()}
+${system}
 <|im_end|>
 <|im_start|>user
 ${user}
@@ -642,7 +642,7 @@ ${output}`;
         $.method.new({
           name: 'prompt',
           do: function prompt() {
-            return this.prompt_format().prompt(this.instruction().value(), this.output());
+            return this.prompt_format().prompt(this.instruction().value(), this.output(), this.system().value());
           }
         }),
         $.method.new({
@@ -650,6 +650,7 @@ ${output}`;
           do: function set_model(modelName) {
             localStorage.setItem('selected_model', modelName);
             this.prompt_format($[modelName + '_model'].new());
+            this.system().set(this.prompt_format().system());
           }
         }),
         $.method.new({
