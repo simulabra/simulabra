@@ -40,6 +40,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'temperature', default: 5.0 }),
         $.var.new({ name: 'top_k', default: 200 }),
         $.var.new({ name: 'top_p', default: 1.00 }),
+        $.var.new({ name: 'n_probs', default: 0 }),
         $.var.new({ name: 'logit_bias', default: [] }),
         $.method.new({
           name: 'run',
@@ -55,7 +56,7 @@ export default await base.find('class', 'module').new({
                 top_k: this.top_k(),
                 top_p: this.top_p(),
                 // this seems to be breaking sampling with such a big number!!
-                // n_probs: 1000,
+                n_probs: this.n_probs(),
                 n_predict: this.n_predict(),
                 logit_bias: this.logit_bias(),
                 stop: ['<|im_end|>', '</s>'],
@@ -377,8 +378,27 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'base_model',
+      slots: [
+        $.method.new({
+          name: 'system',
+          do: function system() {
+            return 'You are an intelligent assistant.';
+          }
+        }),
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output) {
+            return `${user}${output}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'chatml_model',
       slots: [
+        $.base_model,
         $.var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
         $.method.new({
           name: 'prompt',
@@ -399,6 +419,7 @@ ${output}`;
     $.class.new({
       name: 'mistral_model',
       slots: [
+        $.base_model,
         $.method.new({
           name: 'prompt',
           do: function prompt(user, output) {
@@ -411,6 +432,7 @@ ${output}`;
     $.class.new({
       name: 'zephyr_model',
       slots: [
+        $.base_model,
         $.method.new({
           name: 'prompt',
           do: function prompt(user, output) {
@@ -429,26 +451,15 @@ ${output}`;
     $.class.new({
       name: 'alpaca_model',
       slots: [
+        $.base_model,
         $.method.new({
           name: 'prompt',
-          do: function prompt(user, output) {
-            return `You are a helpful, intelligent agent.
+          do: function prompt(user, output, system) {
+            return `${system}
 ### Instruction:
 ${user}
 ### Response:
 ${output}`;
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'base_model',
-      slots: [
-        $.method.new({
-          name: 'prompt',
-          do: function prompt(user, output) {
-            return `${user}${output}`;
           }
         }),
       ]
