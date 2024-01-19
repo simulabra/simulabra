@@ -368,25 +368,6 @@ ${output}`;
     });
 
     $.class.new({
-      name: 'zephyr_model',
-      slots: [
-        $.base_model,
-        $.method.new({
-          name: 'prompt',
-          do: function prompt(user, output) {
-            return `<|system|>
-You are a helpful, intelligent assistant.</s>
-<|user|>
-${user}
-</s>
-<|assistant|>
-${output}`;
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
       name: 'alpaca_model',
       slots: [
         $.base_model,
@@ -648,10 +629,6 @@ ${output}`;
               this.completion_candidates(),
               $el.span({
                 class: 'completor-output',
-                // oncontextmenu: e => {
-                //   this.log('right click?');
-                //   e.preventDefault();
-                // }
               }, this.output()),
               $el.span({ class: 'completor-output completor-preview' }, this.preview()),
             ]);
@@ -693,12 +670,11 @@ ${output}`;
   margin: 2px;
   line-height: 200%;
   background: var(--background-text);
-  color: var(--foreground-1);
 }
 
 .prob_sub {
   font-size: 0.5em;
-  color: var(--primary);
+  color: var(--foreground-1);
 }
 
 #input-instruction {
