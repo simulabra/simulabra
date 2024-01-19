@@ -1,109 +1,13 @@
 import base from './base.js';
 import html from './html.js';
+import llm from './llm.js';
 
 export default await base.find('class', 'module').new({
   name: 'completion',
-  imports: [base, html],
+  imports: [base, html, llm],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
     const $el = $.html_element.proxy();
-
-    $.class.new({
-      name: 'llamacpp_completion_results',
-      slots: [
-        $.var.new({ name: 'output', default: '' }),
-        $.var.new({ name: 'probs', default: () => [] }),
-        $.method.new({
-          name: 'sum_prob',
-          do: function sum_prob() {
-            let sum = 0.0;
-            for (const p of this.probs()) {
-              const tok = p.content;
-              const prob = p.probs.find(pp => pp.tok_str === tok);
-              if (prob) {
-                sum += prob.prob;
-              }
-            }
-            return sum;
-          }
-        })
-      ]
-    });
-
-    $.class.new({
-      name: 'local_llama_completion_command',
-      slots: [
-        $.command,
-        $.var.new({ name: 'prompt' }),
-        $.var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
-        $.var.new({ name: 'n_predict', default: 4 }),
-        $.var.new({ name: 'temperature', default: 5.0 }),
-        $.var.new({ name: 'top_k', default: 200 }),
-        $.var.new({ name: 'top_p', default: 1.00 }),
-        $.var.new({ name: 'n_probs', default: 0 }),
-        $.var.new({ name: 'logit_bias', default: [] }),
-        $.method.new({
-          name: 'run',
-          do: async function run() {
-            const res = await fetch(`${this.server_url()}/completion`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                prompt: this.prompt(),
-                temperature: this.temperature(),
-                top_k: this.top_k(),
-                top_p: this.top_p(),
-                // this seems to be breaking sampling with such a big number!!
-                n_probs: this.n_probs(),
-                n_predict: this.n_predict(),
-                logit_bias: this.logit_bias(),
-                stop: ['<|im_end|>', '</s>'],
-              })
-            });
-
-            let t = await res.json();
-            const completion = $.llamacpp_completion_results.new({
-              output: t.content,
-              probs: t.completion_probabilities ?? []
-            });
-            return completion;
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'local_llama_tokenize_command',
-      slots: [
-        $.command,
-        $.var.new({ name: 'prompt' }),
-        $.var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
-        $.method.new({
-          name: 'run',
-          do: async function run() {
-            const res = await fetch(`${this.server_url()}/tokenize`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                content: this.prompt(),
-              })
-            });
-
-            if (!res.ok) {
-              console.error('Error:', res.status, res.statusText);
-              return;
-            }
-
-            let result = await res.json();
-            return result.tokens;
-          }
-        }),
-      ]
-    });
 
     $.class.new({
       name: 'context_var',
@@ -134,18 +38,31 @@ export default await base.find('class', 'module').new({
           do: async function run(ctx) {
             ctx.completion_candidates().reset();
             let logit_bias = [];
+            const prompt = ctx.prompt();
+            function valid() {
+              return ctx.prompt() === prompt;
+            }
             let count = this.count() ?? ctx.count();
             let n_predict = this.n_predict() ?? ctx.n_predict();
             let temperature = this.temperature() ?? ctx.temperature();;
+            const probs = await $.local_llama_completion_command.new({
+              prompt,
+              n_probs: 200,
+              n_predict: 1,
+            }).run();
+            ctx.probs(probs.probs()[0].probs.map(p => $.token_prob.new(p)));
             for (let i = 0; i < count; i++) {
+              if (!valid()) {
+                return;
+              }
               const completion = await $.local_llama_completion_command.new({
-                prompt: ctx.prompt(),
+                prompt,
                 logit_bias,
                 n_predict,
                 temperature
               }).run();
 
-              if (completion.output() !== '') {
+              if (completion.output() !== '' && valid()) {
                 ctx.completion_candidates().add(completion);
                 const tokens = await $.local_llama_tokenize_command.new({
                   prompt: completion.output()
@@ -378,6 +295,27 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'token_prob',
+    },
+      $.component,
+      $.var.new({ name: 'tok_str' }),
+      $.var.new({ name: 'prob' }),
+      $.method.new({
+        name: 'render',
+        do: function render() {
+          return [
+            this.tok_str(),
+            $el.span({
+              class: 'prob_sub',
+            },
+              `${this.prob().toPrecision(4)}`
+            ),
+          ];
+        }
+      }),
+    );
+
+    $.class.new({
       name: 'base_model',
       slots: [
         $.method.new({
@@ -555,6 +493,7 @@ ${output}`;
         $.var.new({ name: 'temperature', default: 2.0 }),
         $.var.new({ name: 'n_predict', default: 4 }),
         $.var.new({ name: 'choices', default: [] }),
+        $.var.new({ name: 'probs', default: [] }),
         $.event.new({
           name: 'update',
           do: function update(e) {
@@ -705,6 +644,7 @@ ${output}`;
               $.completor_complete_link.new({ object: this, parent: this }),
               ' ',
               $.completor_clear_link.new({ object: this, parent: this }),
+              $el.div({ class: 'prob-box' }, ...this.probs()),
               this.completion_candidates(),
               $el.span({
                 class: 'completor-output',
@@ -745,6 +685,20 @@ ${output}`;
 .completion_candidates {
   min-height: 4.5em;
   display: block;
+}
+
+.token_prob {
+  border: 1px solid var(--primary);
+  padding: 2px;
+  margin: 2px;
+  line-height: 200%;
+  background: var(--background-text);
+  color: var(--foreground-1);
+}
+
+.prob_sub {
+  font-size: 0.5em;
+  color: var(--primary);
 }
 
 #input-instruction {
