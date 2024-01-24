@@ -51,7 +51,8 @@ export default await base.find('class', 'module').new({
               body: JSON.stringify({
                 prompt: this.prompt(),
                 temperature: this.temperature(),
-                microstat: 2,
+                mirostat: 2,
+                mirostat_tau: 10,
                 // this seems to be breaking sampling with such a big number!!
                 n_probs: this.n_probs(),
                 n_predict: this.n_predict(),

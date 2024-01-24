@@ -33,6 +33,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'count' }),
         $.var.new({ name: 'temperature' }),
         $.var.new({ name: 'n_predict' }),
+        $.var.new({ name: 'n_probs' }),
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
@@ -45,9 +46,10 @@ export default await base.find('class', 'module').new({
             let count = this.count() ?? ctx.count();
             let n_predict = this.n_predict() ?? ctx.n_predict();
             let temperature = this.temperature() ?? ctx.temperature();;
+            let n_probs = this.n_probs() ?? ctx.n_probs();;
             const probs = await $.local_llama_completion_command.new({
               prompt,
-              n_probs: 200,
+              n_probs,
               n_predict: 1,
             }).run();
             ctx.probs(probs.probs()[0].probs.map(p => $.token_prob.new(p)));
@@ -130,16 +132,17 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
-            async function chunk(depth = 0) {
+            let n_predict = ctx.n_predict();
+            let temperature = ctx.temperature();;
+            const chunk = async (depth = 0) => {
               if (depth > 100) {
                 this.log('hit chunky ceiling!');
                 return;
               }
               const completion = await $.local_llama_completion_command.new({
                 prompt: ctx.prompt(),
-                n_predict: 1,
-                temperature: 0.8,
-                count: 8
+                n_predict,
+                temperature,
               }).run();
               if (completion.output() !== '') {
                 ctx.insert(completion.output());
@@ -473,6 +476,7 @@ ${output}`;
         $.var.new({ name: 'count', default: 5 }),
         $.var.new({ name: 'temperature', default: 2.0 }),
         $.var.new({ name: 'n_predict', default: 4 }),
+        $.var.new({ name: 'n_probs', default: 50 }),
         $.var.new({ name: 'choices', default: [] }),
         $.var.new({ name: 'probs', default: [] }),
         $.event.new({
