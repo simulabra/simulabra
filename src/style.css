@@ -49,6 +49,7 @@ textarea {
 input, textarea {
     background: var(--background-text);
     border: 1px solid var(--primary);
+    font-family: inherit;
 }
 
 input:focus, textarea:focus {
@@ -144,10 +145,25 @@ select {
     height: 100%;
 }
 
-.link-subtext {
+.subtext {
     font-size: 0.6em;
-    font-color: var(--foreground-1);
+    color: var(--foreground-1);
     margin-left: 2px;
+}
+
+.toggly_input {
+  white-space: pre;
+}
+
+.toggly_input_name {
+    color: var(--foreground-5);
+    font-style: italic;
+    margin-right: 6px;
+}
+
+.toggly_input_preview {
+    color: var(--foreground-1);
+    font-style: italic;
 }
 
 .cm-s-simulabra.CodeMirror, .cm-s-simulabra .CodeMirror-gutters {

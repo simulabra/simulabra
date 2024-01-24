@@ -297,9 +297,20 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'hover',
+          do: function hover() {
+          }
+        }),
+        $.method.new({
+          name: 'unhover',
+          do: function unhover() {
+          }
+        }),
+        $.method.new({
           name: 'render',
           do: function render() {
             const uri = this.object().uri();
+            let hovering = false;
             return $el.span(
               {},
               $el.a({
@@ -313,9 +324,21 @@ export default await base.find('class', 'module').new({
                     target: this.command(),
                   });
                 },
+                onmouseover: e => {
+                  if (!hovering) {
+                    hovering = true;
+                    e.preventDefault();
+                    this.hover();
+                  }
+                },
+                onmouseleave: e => {
+                  e.preventDefault();
+                  hovering = false;
+                  this.unhover();
+                },
                 ...this.properties()
               }, this.link_text()),
-              $el.span({ class: 'link-subtext' }, this.subtext())
+              $el.span({ class: 'subtext' }, this.subtext())
             );
           }
         })
@@ -441,6 +464,62 @@ export default await base.find('class', 'module').new({
           name: 'focus',
           do: function focus() {
             this.element().focus();
+          }
+        }),
+        $.method.new({
+          name: 'move_to_end',
+          do: function move_to_end() {
+            const endp = this.value().length;
+            this.element().setSelectionRange(endp, endp);
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'toggly_input',
+      slots: [
+        $.component,
+        $.var.new({ name: 'input', default() { return $.input.new({ name: this.name(), parent: this }) } }),
+        $.var.new({ name: 'active', default: false }),
+        $.var.new({ name: 'preview', default: '' }),
+        $.method.new({
+          name: 'value',
+          do: function value() {
+            return this.input().value();
+          }
+        }),
+        $.method.new({
+          name: 'set',
+          do: function set(value) {
+            this.input().set(value);
+          }
+        }),
+        $.method.new({
+          name: 'blur',
+          do: function blur() {
+            if (this.active()) {
+              this.input().blur();
+              this.active(false);
+            }
+          }
+        }),
+        $.method.new({
+          name: 'focus',
+          do: function focus() {
+            this.active(true);
+            this.input().focus();
+            this.input().move_to_end();
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            if (this.active()) {
+              return this.input().render();
+            } else {
+              return $el.div({}, $el.span({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)), this.value(), $el.span({ class: 'toggly_input_preview' }, this.preview()));
+            }
           }
         }),
       ]

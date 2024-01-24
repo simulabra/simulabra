@@ -249,6 +249,18 @@ export default await base.find('class', 'module').new({
             return $.completor_insert_command.new({ text: this.text() });
           }
         }),
+        $.method.new({
+          name: 'hover',
+          do: function hover() {
+            completor.preview(this.text());
+          }
+        }),
+        $.method.new({
+          name: 'unhover',
+          do: function unhover() {
+            completor.preview('');
+          }
+        }),
       ]
     });
 
@@ -260,27 +272,12 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            let hovering = false;
             const candidatesElements = this.candidates().map((cc, i) => {
               return $el.div({}, $.completor_add_link.new({
                 object: this.parent(),
                 text: cc.output(),
                 choice: i + 1,
                 parent: this,
-                properties: {
-                  onmouseover: e => {
-                    if (!hovering) {
-                      hovering = true;
-                      e.preventDefault();
-                      this.parent().preview(cc.output());
-                    }
-                  },
-                  onmouseleave: e => {
-                    e.preventDefault();
-                    this.parent().preview('');
-                    hovering = false;
-                  },
-                }
               }));
             });
 
@@ -325,6 +322,18 @@ export default await base.find('class', 'module').new({
         do: function command() {
           this.log('issue command');
           return $.completor_insert_command.new({ text: this.tok_str() });
+        }
+      }),
+      $.method.new({
+        name: 'hover',
+        do: function hover() {
+          completor.preview(this.tok_str());
+        }
+      }),
+      $.method.new({
+        name: 'unhover',
+        do: function unhover() {
+          completor.preview('');
         }
       }),
     );
@@ -419,7 +428,6 @@ ${output}`;
           name: 'run',
           do: function run(ctx) {
             ctx.instruction().blur();
-            ctx.system().blur();
           }
         }),
       ]
@@ -476,14 +484,8 @@ ${output}`;
         $.var.new({ name: 'prompt_format' }),
         $.var.new({
           name: 'instruction',
-          default: () => $.input.new({ name: 'instruction', parent: this })
+          default() { return $.toggly_input.new({ name: 'instruction', parent: this }); }
         }),
-        $.var.new({
-          name: 'system',
-          default: () => $.input.new({ name: 'system', parent: this })
-        }),
-        $.var.new({ name: 'output', default: '' }),
-        $.var.new({ name: 'preview', default: '' }),
         $.var.new({ name: 'count', default: 5 }),
         $.var.new({ name: 'temperature', default: 2.0 }),
         $.var.new({ name: 'n_predict', default: 4 }),
@@ -506,7 +508,8 @@ ${output}`;
             this.set_model(model);
 
             document.addEventListener('keydown', e => {
-              if (!(this.instruction().active() || this.system().active() || e.ctrlKey)) {
+              this.log(this.instruction(), this.instruction().active());
+              if (!(this.instruction().active() || e.ctrlKey)) {
                 const cmd = this.key_command(e.key, e);
                 cmd?.dispatchTo(this);
               } else {
@@ -564,19 +567,24 @@ ${output}`;
           }
         }),
         $.method.new({
+          name: 'preview',
+          do: function preview(text) {
+            this.instruction().preview(text);
+          }
+        }),
+        $.method.new({
           name: 'insert',
           do: function insert(it) {
             this.choices().push(it);
-            this.output(this.output() + it);
+            this.instruction().blur();
+            this.instruction().set(this.instruction().value() + it);
+            this.preview('');
           }
         }),
         $.method.new({
           name: 'clear',
           do: function clear() {
-            this.output('');
-            if (this.instruction().value() !== '') {
-              this.fetch_next();
-            }
+            this.instruction().set('');
           }
         }),
         $.method.new({
@@ -588,7 +596,7 @@ ${output}`;
         $.method.new({
           name: 'prompt',
           do: function prompt() {
-            return this.prompt_format().prompt(this.instruction().value(), this.output(), this.system().value());
+            return this.instruction().value();
           }
         }),
         $.method.new({
@@ -596,7 +604,6 @@ ${output}`;
           do: function set_model(modelName) {
             localStorage.setItem('selected_model', modelName);
             this.prompt_format($[modelName + '_model'].new());
-            this.system().set(this.prompt_format().system());
           }
         }),
         $.method.new({
@@ -609,7 +616,6 @@ ${output}`;
           name: 'render',
           do: function render() {
             return $el.div({}, [
-              this.system(),
               this.instruction(),
               $el.select({
                 onchange: (e) => {
@@ -642,10 +648,6 @@ ${output}`;
               $.completor_clear_link.new({ object: this, parent: this }),
               $el.div({ class: 'prob-box' }, ...this.probs()),
               this.completion_candidates(),
-              $el.span({
-                class: 'completor-output',
-              }, this.output()),
-              $el.span({ class: 'completor-output completor-preview' }, this.preview()),
             ]);
           }
         }),
@@ -705,6 +707,7 @@ input[type="number"] {
       ]
     });
 
-    document.body.appendChild($.completor.new().to_dom());
+    let completor = $.completor.new();
+    document.body.appendChild(completor.to_dom());
   }
 }).load();
