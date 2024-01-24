@@ -52,7 +52,7 @@ export default await base.find('class', 'module').new({
               n_probs,
               n_predict: 1,
             }).run();
-            ctx.probs(probs.probs()[0].probs.map(p => $.token_prob.new(p)));
+            ctx.probs(probs.probs()[0].probs.map(p => $.token_prob.new({ object: ctx, parent: ctx, ...p })));
             for (let i = 0; i < count; i++) {
               if (!valid()) {
                 return;
@@ -129,13 +129,18 @@ export default await base.find('class', 'module').new({
       name: 'completor_complete_command',
       slots: [
         $.command,
+        $.var.new({
+          name: 'length',
+          default: 100,
+        }),
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
             let n_predict = ctx.n_predict();
+            const chunks = this.length() / n_predict;
             let temperature = ctx.temperature();;
             const chunk = async (depth = 0) => {
-              if (depth > 100) {
+              if (depth > chunks) {
                 this.log('hit chunky ceiling!');
                 return;
               }
@@ -300,20 +305,26 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'token_prob',
     },
-      $.component,
+      $.link,
       $.var.new({ name: 'tok_str' }),
       $.var.new({ name: 'prob' }),
       $.method.new({
-        name: 'render',
-        do: function render() {
-          return [
-            this.tok_str(),
-            $el.span({
-              class: 'prob_sub',
-            },
-              `${this.prob().toPrecision(4)}`
-            ),
-          ];
+        name: 'link_text',
+        do: function link_text() {
+          return this.tok_str();
+        }
+      }),
+      $.method.new({
+        name: 'subtext',
+        do: function subtext() {
+          return this.prob().toPrecision(2);
+        }
+      }),
+      $.method.new({
+        name: 'command',
+        do: function command() {
+          this.log('issue command');
+          return $.completor_insert_command.new({ text: this.tok_str() });
         }
       }),
     );
