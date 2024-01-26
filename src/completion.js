@@ -477,6 +477,21 @@ ${output}`;
     });
 
     $.class.new({
+      name: 'instruction_input',
+      slots: [
+        $.toggly_input,
+        $.before.new({
+          name: 'blur',
+          do: function blur() {
+            if (this.active()) {
+              completor.save();
+            }
+          }
+        })
+      ]
+    })
+
+    $.class.new({
       name: 'completor',
       slots: [
         $.window,
@@ -485,7 +500,7 @@ ${output}`;
         $.var.new({ name: 'prompt_format' }),
         $.var.new({
           name: 'instruction',
-          default() { return $.toggly_input.new({ name: 'instruction', parent: this }); }
+          default() { return $.instruction_input.new({ name: 'instruction', parent: this }); }
         }),
         $.var.new({ name: 'count', default: 5 }),
         $.var.new({ name: 'temperature', default: 2.0 }),
@@ -507,9 +522,10 @@ ${output}`;
             this.completion_candidates($.completion_candidates.new({ parent: this }));
             const model = localStorage.getItem('selected_model') ?? 'chatml';
             this.set_model(model);
+            const instruction = localStorage.getItem('instruction_value') ?? '';
+            this.instruction().set(instruction);
 
             document.addEventListener('keydown', e => {
-              this.log(this.instruction(), this.instruction().active());
               if (!(this.instruction().active() || e.ctrlKey)) {
                 const cmd = this.key_command(e.key, e);
                 cmd?.dispatchTo(this);
@@ -580,12 +596,19 @@ ${output}`;
             this.instruction().blur();
             this.instruction().set(this.instruction().value() + it);
             this.preview('');
+            this.save();
           }
         }),
         $.method.new({
           name: 'clear',
           do: function clear() {
             this.instruction().set('');
+          }
+        }),
+        $.method.new({
+          name: 'save',
+          do: function save() {
+            localStorage.setItem('instruction_value', this.instruction().value());
           }
         }),
         $.method.new({
@@ -616,32 +639,33 @@ ${output}`;
         $.method.new({
           name: 'render',
           do: function render() {
-            return $el.div({}, [
+            return $el.div({},
               this.instruction(),
-              $el.select({
-                onchange: (e) => {
-                  this.set_model(e.target.value);
-                }
-              }, [
-                ...['chatml', 'mistral', 'zephyr', 'alpaca', 'base'].map(modelName => {
-                  return this.model_option(modelName, this.prompt_format().class().name());
-                }),
-              ]),
+              // $el.select({
+              //   onchange: (e) => {
+              //     this.set_model(e.target.value);
+              //   }
+              // }, [
+              //   ...['chatml', 'mistral', 'zephyr', 'alpaca', 'base'].map(modelName => {
+              //     return this.model_option(modelName, this.prompt_format().class().name());
+              //   }),
+              // ]),
               $.number_input.new({
                 name: 'count',
                 parent: this,
                 command: $.completor_set_count_command,
-              }).render(),
+              }),
               $.number_input.new({
                 name: 'temperature',
                 parent: this,
                 command: $.completor_set_temperature_command,
-              }).render(),
+              }),
               $.number_input.new({
                 name: 'n_predict',
                 parent: this,
                 command: $.completor_set_n_predict_command,
-              }).render(),
+              }),
+              $el.div({}),
               $.completor_fetch_next_link.new({ object: this, parent: this }),
               ' ',
               $.completor_complete_link.new({ object: this, parent: this }),
@@ -649,7 +673,7 @@ ${output}`;
               $.completor_clear_link.new({ object: this, parent: this }),
               $el.div({ class: 'prob-box' }, ...this.probs()),
               this.completion_candidates(),
-            ]);
+            );
           }
         }),
         $.method.new({

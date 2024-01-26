@@ -55,6 +55,8 @@ export default await base.find('class', 'module').new({
                 // mirostat_tau: 5,
                 // frequency_penalty: 0.5,
                 // this seems to be breaking sampling with such a big number!!
+                top_k: this.top_k(),
+                top_p: this.top_p(),
                 n_probs: this.n_probs(),
                 n_predict: this.n_predict(),
                 logit_bias: this.logit_bias(),

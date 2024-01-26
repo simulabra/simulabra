@@ -151,8 +151,19 @@ select {
     margin-left: 2px;
 }
 
-.toggly_input {
+.toggly_input_container {
   white-space: pre;
+  max-height: 50vh;
+  overflow-y: scroll;
+  border: 1px solid var(--primary);
+  background: var(--background-text);
+}
+
+#input-instruction {
+  max-height: 50vh;
+  resize: none;
+  color: var(--primary);
+  font-size: 14px;
 }
 
 .toggly_input_name {
@@ -164,6 +175,11 @@ select {
 .toggly_input_preview {
     color: var(--foreground-1);
     font-style: italic;
+}
+
+.number_input {
+    padding: 2px;
+    border: 1px solid var(--primary);
 }
 
 .cm-s-simulabra.CodeMirror, .cm-s-simulabra .CodeMirror-gutters {

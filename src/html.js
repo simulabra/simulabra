@@ -387,7 +387,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render(ctx) {
-            return $el.div({}, this.name(), this.element());
+            return $el.span({}, this.name(), this.element());
           }
         }),
       ]
@@ -406,15 +406,25 @@ export default await base.find('class', 'module').new({
               id: this.inputID(),
               oninput: e => {
                 this.value(e.target.value, false);
+                this.autoheight();
               },
               onload: e => {
                 e.target.value = this.value();
                 setTimeout(() => {
+                  this.autoheight();
                   e.target.scrollTop = e.target.scrollHeight;
                 }, 0);
               },
               placeholder: this.placeholder(),
             }, this.value()));
+          }
+        }),
+        $.method.new({
+          name: 'autoheight',
+          do: function autoheight() {
+            const el = this.element();
+            // el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
           }
         }),
         $.method.new({
@@ -482,7 +492,7 @@ export default await base.find('class', 'module').new({
         $.component,
         $.var.new({ name: 'input', default() { return $.input.new({ name: this.name(), parent: this }) } }),
         $.var.new({ name: 'active', default: false }),
-        $.var.new({ name: 'preview', default: '' }),
+        $.var.new({ name: 'preview_text', default: '' }),
         $.method.new({
           name: 'value',
           do: function value() {
@@ -493,6 +503,15 @@ export default await base.find('class', 'module').new({
           name: 'set',
           do: function set(value) {
             this.input().set(value);
+          }
+        }),
+        $.method.new({
+          name: 'preview',
+          do: function preview(text) {
+            if (text !== undefined) {
+              this.preview_text(text, !this.active());
+            }
+            return this.preview_text();
           }
         }),
         $.method.new({
@@ -515,11 +534,17 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            if (this.active()) {
-              return this.input().render();
-            } else {
-              return $el.div({}, $el.span({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)), this.value(), $el.span({ class: 'toggly_input_preview' }, this.preview()));
-            }
+            const inner = this.active() ?
+                  this.input().render() :
+                  $el.div({
+                    class: 'toggly_input_container',
+                    onload: e => {
+                      setTimeout(() => {
+                        e.target.scrollTop = e.target.scrollHeight;
+                      }, 0);
+                    },
+                  }, this.value(), $el.span({ class: 'toggly_input_preview' }, this.preview()));
+            return $el.div({}, $el.div({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)), inner)
           }
         }),
       ]
