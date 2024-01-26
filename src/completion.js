@@ -34,6 +34,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'temperature' }),
         $.var.new({ name: 'n_predict' }),
         $.var.new({ name: 'n_probs' }),
+        $.var.new({ name: 'repeat_penalty', default: 0.3 }),
         $.method.new({
           name: 'run',
           do: async function run(ctx) {
@@ -72,9 +73,9 @@ export default await base.find('class', 'module').new({
                 for (const tok of tokens) {
                   const logit = logit_bias.find(l => l[0] === tok);
                   if (logit) {
-                    logit[1] -= 1.0;
+                    logit[1] -= this.repeat_penalty();
                   } else {
-                    logit_bias.push([tok, -1.0]);
+                    logit_bias.push([tok, -this.repeat_penalty()]);
                   }
                 }
               }
