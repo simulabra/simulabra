@@ -153,6 +153,7 @@ select {
 
 .toggly_input_container {
   white-space: pre;
+  min-height: 1.5em;
   max-height: 50vh;
   overflow-y: scroll;
   border: 1px solid var(--primary);

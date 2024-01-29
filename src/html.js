@@ -404,6 +404,7 @@ export default await base.find('class', 'module').new({
           do: function init() {
             this.textarea($el.textarea({
               id: this.inputID(),
+              style: 'height: 0px;',
               oninput: e => {
                 this.value(e.target.value, false);
                 this.autoheight();
