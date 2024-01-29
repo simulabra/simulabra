@@ -29,12 +29,13 @@ body, html {
     height: 100%;
 }
 
-a {
+.link_body {
     color: var(--secondary);
 }
 
-a:hover {
+.link_body:hover {
     color: var(--secondary-2);
+    background-color: var(--background-secondary);
 }
 
 ul {
@@ -44,6 +45,7 @@ ul {
 textarea {
     box-sizing: border-box;
     width: 100%;
+    min-height: 5em;
 }
 
 input, textarea {
@@ -53,7 +55,7 @@ input, textarea {
 }
 
 input:focus, textarea:focus {
-    outline: solid var(--secondary) 1px;
+    outline: solid var(--secondary) 0px;
     box-shadow: 0 0 0px var(--secondary);
 }
 
@@ -147,14 +149,16 @@ select {
 
 .subtext {
     font-size: 0.6em;
-    color: var(--foreground-1);
+    font-style: italic;
     margin-left: 2px;
 }
 
 .toggly_input_container {
-  white-space: pre;
-  min-height: 1.5em;
+  white-space: pre-wrap;
+  min-height: 5em;
   max-height: 50vh;
+  padding: 2px;
+  margin-left: 0px;
   overflow-y: scroll;
   border: 1px solid var(--primary);
   background: var(--background-text);

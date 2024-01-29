@@ -713,6 +713,9 @@ ${output}`;
   line-height: 200%;
   background: var(--background-text);
 }
+.token_prob:hover {
+  background: var(--background-secondary);
+}
 
 .prob_sub {
   font-size: 0.5em;

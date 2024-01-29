@@ -311,33 +311,32 @@ export default await base.find('class', 'module').new({
           do: function render() {
             const uri = this.object().uri();
             let hovering = false;
-            return $el.span(
-              {},
-              $el.a({
-                href: '#',
-                id: `link-${this.id()}`,
-                object: uri,
-                onclick: e => {
-                  this.log('click');
-                  return this.dispatchEvent({
-                    type: 'command',
-                    target: this.command(),
-                  });
-                },
-                onmouseover: e => {
-                  if (!hovering) {
-                    hovering = true;
-                    e.preventDefault();
-                    this.hover();
-                  }
-                },
-                onmouseleave: e => {
+            return $el.span({
+              class: 'link_body',
+              onclick: e => {
+                this.log('click');
+                return this.dispatchEvent({
+                  type: 'command',
+                  target: this.command(),
+                });
+              },
+              onmouseover: e => {
+                if (!hovering) {
+                  hovering = true;
                   e.preventDefault();
-                  hovering = false;
-                  this.unhover();
-                },
-                ...this.properties()
-              }, this.link_text()),
+                  this.hover();
+                }
+              },
+              onmouseleave: e => {
+                e.preventDefault();
+                hovering = false;
+                this.unhover();
+              },
+              id: `link-${this.id()}`,
+              object: uri,
+              ...this.properties()
+            },
+              this.link_text(),
               $el.span({ class: 'subtext' }, this.subtext())
             );
           }
