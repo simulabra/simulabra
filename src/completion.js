@@ -315,7 +315,8 @@ export default await base.find('class', 'module').new({
       $.method.new({
         name: 'subtext',
         do: function subtext() {
-          return this.prob().toPrecision(2);
+          const opacity = Math.tanh(this.prob()) + 0.5;
+          return $el.span({ style: `opacity: ${opacity}` }, this.prob().toPrecision(2));
         }
       }),
       $.method.new({
@@ -639,8 +640,7 @@ ${output}`;
         $.method.new({
           name: 'render',
           do: function render() {
-            return $el.div({},
-              this.instruction(),
+            return $el.div({ class: 'completor-container' },
               // $el.select({
               //   onchange: (e) => {
               //     this.set_model(e.target.value);
@@ -650,29 +650,32 @@ ${output}`;
               //     return this.model_option(modelName, this.prompt_format().class().name());
               //   }),
               // ]),
-              $.number_input.new({
-                name: 'count',
-                parent: this,
-                command: $.completor_set_count_command,
-              }),
-              $.number_input.new({
-                name: 'temperature',
-                parent: this,
-                command: $.completor_set_temperature_command,
-              }),
-              $.number_input.new({
-                name: 'n_predict',
-                parent: this,
-                command: $.completor_set_n_predict_command,
-              }),
-              $el.div({}),
-              $.completor_fetch_next_link.new({ object: this, parent: this }),
-              ' ',
-              $.completor_complete_link.new({ object: this, parent: this }),
-              ' ',
-              $.completor_clear_link.new({ object: this, parent: this }),
-              $el.div({ class: 'prob-box' }, ...this.probs()),
-              this.completion_candidates(),
+              $el.div({ class: 'column' },
+                $.number_input.new({
+                  name: 'count',
+                  parent: this,
+                  command: $.completor_set_count_command,
+                }),
+                $.number_input.new({
+                  name: 'temperature',
+                  parent: this,
+                  command: $.completor_set_temperature_command,
+                }),
+                $.number_input.new({
+                  name: 'n_predict',
+                  parent: this,
+                  command: $.completor_set_n_predict_command,
+                }),
+                $el.div({}),
+                $.completor_fetch_next_link.new({ object: this, parent: this }),
+                ' ',
+                $.completor_complete_link.new({ object: this, parent: this }),
+                ' ',
+                $.completor_clear_link.new({ object: this, parent: this }),
+                $el.div({ class: 'prob-box' }, ...this.probs()),
+                this.completion_candidates(),
+              ),
+              $el.div({ class: 'column' }, this.instruction()),
             );
           }
         }),
@@ -699,6 +702,15 @@ ${output}`;
 .completor-preview {
   color: var(--foreground-1);
   font-style: italic;
+}
+
+.completor-container {
+  display: flex;
+}
+
+.column {
+  flex: 1;
+  padding: 4px;
 }
 
 .completion_candidates {

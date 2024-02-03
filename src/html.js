@@ -543,6 +543,9 @@ export default await base.find('class', 'module').new({
                         e.target.scrollTop = e.target.scrollHeight;
                       }, 0);
                     },
+                    onclick: e => {
+                      this.focus();
+                    },
                   }, this.value(), $el.span({ class: 'toggly_input_preview' }, this.preview()));
             return $el.div({}, $el.div({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)), inner)
           }
