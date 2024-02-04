@@ -301,6 +301,101 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'history_moment',
+      slots: [
+        $.var.new({ name: 'action', default: '' }),
+        $.var.new({ name: 'text', default: '' }),
+      ]
+    });
+
+    $.class.new({
+      name: 'completor_goto_history_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'moment' }),
+        $.method.new({
+          name: 'run',
+          do: async function run(ctx) {
+            ctx.instruction().set(this.moment().text());
+            await $.completor_fetch_next_command.new().run(ctx);
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'completor_goto_history_link',
+      slots: [
+        $.link,
+        $.var.new({ name: 'moment' }),
+        $.method.new({
+          name: 'link_text',
+          do: function link_text() {
+            return this.moment().action();
+          }
+        }),
+        $.method.new({
+          name: 'subtext',
+          do: function subtext() {
+            return '';
+          }
+        }),
+        $.method.new({
+          name: 'command',
+          do: function command() {
+            return $.completor_goto_history_command.new({ moment: this.moment() });
+          }
+        }),
+        $.method.new({
+          name: 'hover',
+          do: function hover() {
+            completor.preview(this.moment().text(), true);
+          }
+        }),
+        $.method.new({
+          name: 'unhover',
+          do: function unhover() {
+            completor.preview('');
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'completion_history',
+      slots: [
+        $.component,
+        $.var.new({ name: 'history', default: [] }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            const historyElements = this.history().slice().reverse().map((cc, i) => {
+              return $el.div({}, $.completor_goto_history_link.new({
+                object: this.parent(),
+                moment: cc,
+                parent: this,
+              }));
+            });
+
+            return $el.div({}, ...historyElements);
+          }
+        }),
+        $.method.new({
+          name: 'add',
+          do: function add(it) {
+            this.history([...this.history(), it]);
+          }
+        }),
+        $.method.new({
+          name: 'reset',
+          do: function reset() {
+            this.history([]);
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'token_prob',
     },
       $.link,
@@ -339,75 +434,6 @@ export default await base.find('class', 'module').new({
         }
       }),
     );
-
-    $.class.new({
-      name: 'base_model',
-      slots: [
-        $.method.new({
-          name: 'system',
-          do: function system() {
-            return 'You are an intelligent assistant.';
-          }
-        }),
-        $.method.new({
-          name: 'prompt',
-          do: function prompt(user, output) {
-            return `${user}${output}`;
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'chatml_model',
-      slots: [
-        $.base_model,
-        $.var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
-        $.method.new({
-          name: 'prompt',
-          do: function prompt(user, output, system) {
-            return `<|im_start|>system
-${system}
-<|im_end|>
-<|im_start|>user
-${user}
-<|im_end|>
-<|im_start|>assistant
-${output}`;
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'mistral_model',
-      slots: [
-        $.base_model,
-        $.method.new({
-          name: 'prompt',
-          do: function prompt(user, output) {
-            return `[INST]${user}[\INST]${output}`;
-          }
-        }),
-      ]
-    });
-
-    $.class.new({
-      name: 'alpaca_model',
-      slots: [
-        $.base_model,
-        $.method.new({
-          name: 'prompt',
-          do: function prompt(user, output, system) {
-            return `${system}
-### Instruction:
-${user}
-### Response:
-${output}`;
-          }
-        }),
-      ]
-    });
 
     $.class.new({
       name: 'completor_instruction_focus_command',
@@ -481,14 +507,24 @@ ${output}`;
       name: 'instruction_input',
       slots: [
         $.toggly_input,
+        $.var.new({ name: 'before_editing_state' }),
+        $.after.new({
+          name: 'focus',
+          do: function focus() {
+            this.before_editing_state(this.value(), false);
+          }
+        }),
         $.before.new({
           name: 'blur',
           do: function blur() {
             if (this.active()) {
               completor.save();
+              if (this.value() !== this.before_editing_state()) {
+                completor.add_history('edited', this.value());
+              }
             }
           }
-        })
+        }),
       ]
     })
 
@@ -508,6 +544,7 @@ ${output}`;
         $.var.new({ name: 'n_predict', default: 4 }),
         $.var.new({ name: 'n_probs', default: 50 }),
         $.var.new({ name: 'choices', default: [] }),
+        $.var.new({ name: 'history', default() { return $.completion_history.new({ parent: this }) } }),
         $.var.new({ name: 'probs', default: [] }),
         $.event.new({
           name: 'update',
@@ -525,6 +562,7 @@ ${output}`;
             this.set_model(model);
             const instruction = localStorage.getItem('instruction_value') ?? '';
             this.instruction().set(instruction);
+            this.add_history('loaded', instruction);
 
             document.addEventListener('keydown', e => {
               if (!(this.instruction().active() || e.ctrlKey)) {
@@ -586,8 +624,18 @@ ${output}`;
         }),
         $.method.new({
           name: 'preview',
-          do: function preview(text) {
-            this.instruction().preview(text);
+          do: function preview(text, hide) {
+            this.instruction().preview(text, hide);
+          }
+        }),
+        $.method.new({
+          name: 'add_history',
+          do: function add_history(action, text) {
+            this.history().add($.history_moment.new({
+              action,
+              text
+            }));
+            this.log('history', this.history());
           }
         }),
         $.method.new({
@@ -598,6 +646,7 @@ ${output}`;
             this.instruction().set(this.instruction().value() + it);
             this.preview('');
             this.save();
+            this.add_history(`insert:${it}`, this.instruction().value());
           }
         }),
         $.method.new({
@@ -640,7 +689,8 @@ ${output}`;
         $.method.new({
           name: 'render',
           do: function render() {
-            return $el.div({ class: 'completor-container' },
+            return $el.div(
+              { class: 'completor-container' },
               // $el.select({
               //   onchange: (e) => {
               //     this.set_model(e.target.value);
@@ -650,7 +700,8 @@ ${output}`;
               //     return this.model_option(modelName, this.prompt_format().class().name());
               //   }),
               // ]),
-              $el.div({ class: 'column' },
+              $el.div(
+                { class: 'column' },
                 $.number_input.new({
                   name: 'count',
                   parent: this,
@@ -675,7 +726,11 @@ ${output}`;
                 $el.div({ class: 'prob-box' }, ...this.probs()),
                 this.completion_candidates(),
               ),
-              $el.div({ class: 'column' }, this.instruction()),
+              $el.div(
+                { class: 'column' },
+                this.instruction(),
+                this.history(),
+              ),
             );
           }
         }),

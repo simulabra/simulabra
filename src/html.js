@@ -424,7 +424,9 @@ export default await base.find('class', 'module').new({
           do: function autoheight() {
             const el = this.element();
             // el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
+            if (el) {
+              el.style.height = el.scrollHeight + 'px';
+            }
           }
         }),
         $.method.new({
@@ -493,6 +495,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'input', default() { return $.input.new({ name: this.name(), parent: this }) } }),
         $.var.new({ name: 'active', default: false }),
         $.var.new({ name: 'preview_text', default: '' }),
+        $.var.new({ name: 'preview_hide', default: false }),
         $.method.new({
           name: 'value',
           do: function value() {
@@ -507,9 +510,10 @@ export default await base.find('class', 'module').new({
         }),
         $.method.new({
           name: 'preview',
-          do: function preview(text) {
+          do: function preview(text, hide = false) {
             if (text !== undefined) {
               this.preview_text(text, !this.active());
+              this.preview_hide(hide);
             }
             return this.preview_text();
           }
@@ -546,7 +550,7 @@ export default await base.find('class', 'module').new({
                     onclick: e => {
                       this.focus();
                     },
-                  }, this.value(), $el.span({ class: 'toggly_input_preview' }, this.preview()));
+                  }, this.preview_hide() ? '' : this.value(), $el.span({ class: 'toggly_input_preview' }, this.preview()));
             return $el.div({}, $el.div({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)), inner)
           }
         }),

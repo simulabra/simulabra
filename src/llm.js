@@ -106,5 +106,74 @@ export default await base.find('class', 'module').new({
       ]
     });
 
+    $.class.new({
+      name: 'base_model',
+      slots: [
+        $.method.new({
+          name: 'system',
+          do: function system() {
+            return 'You are an intelligent assistant.';
+          }
+        }),
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output) {
+            return `${user}${output}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'chatml_model',
+      slots: [
+        $.base_model,
+        $.var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output, system) {
+            return `<|im_start|>system
+${system}
+<|im_end|>
+<|im_start|>user
+${user}
+<|im_end|>
+<|im_start|>assistant
+${output}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'mistral_model',
+      slots: [
+        $.base_model,
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output) {
+            return `[INST]${user}[\INST]${output}`;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'alpaca_model',
+      slots: [
+        $.base_model,
+        $.method.new({
+          name: 'prompt',
+          do: function prompt(user, output, system) {
+            return `${system}
+### Instruction:
+${user}
+### Response:
+${output}`;
+          }
+        }),
+      ]
+    });
+
   }
 }).load();
