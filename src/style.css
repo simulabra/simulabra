@@ -7,7 +7,7 @@
     --background-text: #F3DAAA;
 
     /* Additional Foreground Colors */
-    --foreground-1: #885A5A; /* Lighter shade of primary */
+    --foreground-1: #9A645A; /* Lighter shade of primary */
     --foreground-2: #441F1F; /* Darker shade of primary */
     --foreground-3: #6B82A8; /* Lighter shade of secondary */
     --foreground-4: #334D6E; /* Darker shade of secondary */
@@ -179,7 +179,6 @@ select {
 
 .toggly_input_preview {
     color: var(--foreground-1);
-    font-style: italic;
 }
 
 .number_input {

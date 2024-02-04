@@ -377,7 +377,7 @@ export default await base.find('class', 'module').new({
               }));
             });
 
-            return $el.div({}, ...historyElements);
+            return $el.div({}, $el.div({}, 'history'), ...historyElements);
           }
         }),
         $.method.new({
@@ -725,11 +725,11 @@ export default await base.find('class', 'module').new({
                 $.completor_clear_link.new({ object: this, parent: this }),
                 $el.div({ class: 'prob-box' }, ...this.probs()),
                 this.completion_candidates(),
+                this.history(),
               ),
               $el.div(
                 { class: 'column' },
                 this.instruction(),
-                this.history(),
               ),
             );
           }
