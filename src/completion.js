@@ -521,6 +521,7 @@ export default await base.find('class', 'module').new({
               completor.save();
               if (this.value() !== this.before_editing_state()) {
                 completor.add_history('edited', this.value());
+                completor.fetch_next();
               }
             }
           }
@@ -691,15 +692,6 @@ export default await base.find('class', 'module').new({
           do: function render() {
             return $el.div(
               { class: 'completor-container' },
-              // $el.select({
-              //   onchange: (e) => {
-              //     this.set_model(e.target.value);
-              //   }
-              // }, [
-              //   ...['chatml', 'mistral', 'zephyr', 'alpaca', 'base'].map(modelName => {
-              //     return this.model_option(modelName, this.prompt_format().class().name());
-              //   }),
-              // ]),
               $el.div(
                 { class: 'column' },
                 $.number_input.new({
@@ -777,8 +769,8 @@ export default await base.find('class', 'module').new({
   border: 1px solid var(--primary);
   padding: 2px;
   margin: 2px;
-  line-height: 200%;
   background: var(--background-text);
+  display: inline-block;
 }
 .token_prob:hover {
   background: var(--background-secondary);
@@ -787,6 +779,10 @@ export default await base.find('class', 'module').new({
 .prob_sub {
   font-size: 0.5em;
   color: var(--foreground-1);
+}
+
+.prob-box {
+  break-inside: avoid;
 }
 
 #input-instruction {
