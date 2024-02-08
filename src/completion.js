@@ -114,7 +114,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'subtext',
           do: function subtext() {
-            return '[ ]';
+            return 'Spc';
           }
         }),
         $.method.new({
@@ -175,7 +175,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'subtext',
           do: function subtext() {
-            return '[RET]';
+            return 'Ret';
           }
         }),
         $.method.new({
