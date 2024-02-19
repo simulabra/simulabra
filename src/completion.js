@@ -587,6 +587,7 @@ export default await base.find('class', 'module').new({
               e.preventDefault();
               return $.completor_instruction_focus_command.new();
             } else if (key === ' ') {
+              e.preventDefault();
               return $.completor_fetch_next_command.new();
             } else if (key === '[') {
               return $.completor_set_n_predict_command.new({ value: this.n_predict() - 1 });
