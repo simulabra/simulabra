@@ -395,12 +395,19 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'token_prob',
-    },
+    $.class.new(
+      {
+        name: 'token_prob',
+      },
       $.link,
       $.var.new({ name: 'tok_str' }),
       $.var.new({ name: 'prob' }),
+      $.method.new({
+        name: 'font_size',
+        do: function font_size() {
+          return 1 + this.prob() * 1.7;
+        }
+      }),
       $.method.new({
         name: 'link_text',
         do: function link_text() {
@@ -431,6 +438,13 @@ export default await base.find('class', 'module').new({
         name: 'unhover',
         do: function unhover() {
           completor.preview('');
+        }
+      }),
+      $.after.new({
+        name: 'load',
+        do: function load(e) {
+          this.log(e, this.element());
+          this.element().style['font-size'] = `${this.font_size()}em`;
         }
       }),
     );

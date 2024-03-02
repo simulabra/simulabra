@@ -45,6 +45,12 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'load',
+          do: function load(e) {
+            // this.log('load', e);
+          }
+        }),
+        $.method.new({
           name: 'clear_swap_target',
           do: function clear_swap_target() {
             const st = this.swap_target();
@@ -59,6 +65,7 @@ export default await base.find('class', 'module').new({
             for (const c of children) {
               this.swap_target().appendChild(c);
             }
+            this.load(this.element());
           }
         }),
         $.event.new({
@@ -193,6 +200,7 @@ export default await base.find('class', 'module').new({
               }
             }
             elem.dispatchEvent(new Event('load'));
+            this.load(elem);
             return elem;
           }
         }),
