@@ -26,6 +26,16 @@ export default await base.find('class', 'module').new({
       ]
     });
 
+    // the new style?
+    // $.class.new('fetch_context', {
+    //   slots: [
+    //     $.var.new('context'),
+    //     $.var.new('count'),
+    //     $.method.fn(async function run(ctx) {
+    //     }),
+    //   ]
+    // });
+
     $.class.new({
       name: 'completor_fetch_next_command',
       slots: [
@@ -211,12 +221,6 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
-          name: 'subtext',
-          do: function subtext() {
-            return 'Esc';
-          }
-        }),
-        $.method.new({
           name: 'command',
           do: function command() {
             return $.completor_clear_command.new();
@@ -282,19 +286,27 @@ export default await base.find('class', 'module').new({
               }));
             });
 
-            return $el.div({}, ...candidatesElements);
+            return $el.div({ class: 'completion_candidates_list' }, ...candidatesElements);
           }
         }),
         $.method.new({
           name: 'add',
           do: function add(it) {
             this.candidates([...this.candidates(), it]);
+            const child = $el.div({}, $.completor_add_link.new({
+              object: this.parent(),
+              text: it.output(),
+              choice: this.candidates().length,
+              parent: this,
+            }));
+            this.element().querySelector('.completion_candidates_list').appendChild(child.to_dom());
           }
         }),
         $.method.new({
           name: 'reset',
           do: function reset() {
             this.candidates([]);
+            this.element().querySelector('.completion_candidates_list').innerHTML = '';
           }
         }),
       ]
@@ -428,7 +440,7 @@ export default await base.find('class', 'module').new({
           return $.completor_insert_command.new({ text: this.tok_str() });
         }
       }),
-      $.method.new({
+      $.after.new({
         name: 'hover',
         do: function hover() {
           completor.preview(this.tok_str());
@@ -523,20 +535,38 @@ export default await base.find('class', 'module').new({
         $.toggly_input,
         $.var.new({ name: 'before_editing_state' }),
         $.after.new({
+          name: 'load',
+          do: function load__after() {
+            return;
+            document.getElementById(this.input().inputID()).addEventListener('blur', e => {
+              if (this.active()) {
+                this.leave_editing();
+                completor.fetch_next();
+              }
+            });
+          }
+        }),
+        $.after.new({
           name: 'focus',
-          do: function focus() {
+          do: function focus__after() {
             this.before_editing_state(this.value(), false);
+          }
+        }),
+        $.method.new({
+          name: 'leave_editing',
+          do: function leave_editing() {
+            this.active(false, false);
+            completor.save();
+            if (this.value() !== this.before_editing_state()) {
+              completor.add_history('edited', this.value());
+            }
           }
         }),
         $.before.new({
           name: 'blur',
           do: function blur() {
             if (this.active()) {
-              completor.save();
-              if (this.value() !== this.before_editing_state()) {
-                completor.add_history('edited', this.value());
-                completor.fetch_next();
-              }
+              this.leave_editing();
             }
           }
         }),
@@ -555,7 +585,7 @@ export default await base.find('class', 'module').new({
           default() { return $.instruction_input.new({ name: 'instruction', parent: this }); }
         }),
         $.var.new({ name: 'count', default: 5 }),
-        $.var.new({ name: 'temperature', default: 2.0 }),
+        $.var.new({ name: 'temperature', default: 0.6 }),
         $.var.new({ name: 'n_predict', default: 4 }),
         $.var.new({ name: 'n_probs', default: 50 }),
         $.var.new({ name: 'choices', default: [] }),
@@ -607,16 +637,14 @@ export default await base.find('class', 'module').new({
               return $.completor_set_n_predict_command.new({ value: this.n_predict() - 1 });
             } else if (key === ']') {
               return $.completor_set_n_predict_command.new({ value: this.n_predict() + 1 });
-            } else if (key === '<') {
-              return $.completor_set_temperature_command.new({ value: this.temperature() - 1 });
-            } else if (key === '>') {
-              return $.completor_set_temperature_command.new({ value: this.temperature() + 1 });
             } else if (key === ',') {
-              return $.completor_set_count_command.new({ value: this.count() - 1 });
+              return $.completor_set_temperature_command.new({ value: this.temperature() - 0.1 });
             } else if (key === '.') {
-              return $.completor_set_count_command.new({ value: this.count() + 1 });
-            } else if (key === 'Escape') {
-              return $.completor_clear_command.new();
+              return $.completor_set_temperature_command.new({ value: this.temperature() + 0.1 });
+            // } else if (key === ',') {
+            //   return $.completor_set_count_command.new({ value: this.count() - 1 });
+            // } else if (key === '.') {
+            //   return $.completor_set_count_command.new({ value: this.count() + 1 });
             } else if (key === 'Enter') {
               return $.completor_complete_command.new();
             } else if (!isNaN(+key)) {
@@ -659,6 +687,7 @@ export default await base.find('class', 'module').new({
           do: function insert(it) {
             this.choices().push(it);
             this.instruction().blur();
+            this.fetch_next();
             this.instruction().set(this.instruction().value() + it);
             this.preview('');
             this.save();
@@ -710,18 +739,15 @@ export default await base.find('class', 'module').new({
               $el.div(
                 { class: 'column' },
                 $.number_input.new({
-                  name: 'count',
-                  parent: this,
-                  command: $.completor_set_count_command,
-                }),
-                $.number_input.new({
                   name: 'temperature',
                   parent: this,
+                  bind: 'temperature',
                   command: $.completor_set_temperature_command,
                 }),
                 $.number_input.new({
-                  name: 'n_predict',
+                  name: 'tokens',
                   parent: this,
+                  bind: 'n_predict',
                   command: $.completor_set_n_predict_command,
                 }),
                 $el.div({}),

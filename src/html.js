@@ -71,10 +71,6 @@ export default await base.find('class', 'module').new({
         $.event.new({
           name: 'update',
           do: function update(e) {
-            if (this.element() && !e.swapped) {
-              this.swap();
-              e.swapped = true;
-            }
           }
         }),
         $.after.new({
@@ -173,6 +169,21 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.method.new({
+          name: 'attach_to_elem',
+          do: function attach_to_elem(elem, child) {
+              if (Array.isArray(child)) {
+                for (const n of child) {
+                  this.attach_to_elem(elem, n);
+                }
+              } else {
+                elem.appendChild(this.domify(child));
+                if (typeof child === 'object' && 'load' in child) {
+                  child.load();
+                }
+              }
+          }
+        }),
+        $.method.new({
           name: 'to_dom',
           do: function to_dom() {
             const elem = document.createElement(this.tag());
@@ -191,16 +202,10 @@ export default await base.find('class', 'module').new({
               }
             }
             for (const child of this.children()) {
-              if (Array.isArray(child)) {
-                for (const n of child) {
-                  elem.appendChild(this.domify(n));
-                }
-              } else {
-                elem.appendChild(this.domify(child));
-              }
+              this.attach_to_elem(elem, child);
             }
             elem.dispatchEvent(new Event('load'));
-            this.load(elem);
+            // this.load(elem);
             return elem;
           }
         }),
@@ -374,27 +379,41 @@ export default await base.find('class', 'module').new({
       name: 'number_input',
       slots: [
         $.component,
-        $.var.new({ name: 'element' }),
         $.var.new({ name: 'value' }),
+        $.var.new({ name: 'bind' }),
         $.var.new({ name: 'command' }),
         $.after.new({
           name: 'init',
           do: function init() {
-            this.value(this.parent()[this.name()](), false);
-            this.element($el.input({
-              type: 'number',
-              value: this.value(),
-              onchange: e => {
-                this.value(+e.target.value, false);
-                this.command().new({ target: this.parent(), value: this.value() }).dispatchTo(this);
-              }
-            }), false);
+            this.value(this.parent()[this.bind()](), false);
           }
         }),
         $.method.new({
           name: 'render',
           do: function render(ctx) {
-            return $el.span({}, this.name(), this.element());
+            return $el.span(
+              {},
+              this.name(),
+              $el.input({
+                class: 'number_input_input',
+                type: 'number',
+                value: this.value(),
+                onchange: e => {
+                  this.value(+e.target.value, false);
+                  this.command().new({ target: this.parent(), value: this.value() }).dispatchTo(this);
+                }
+              })
+            );
+          }
+        }),
+        $.after.new({
+          name: 'value',
+          do: function value__after(setValue) {
+            this.log('after value');
+            if (this.element() && setValue !== undefined) {
+              this.log('update??');
+              this.element().querySelector('.number_input_input').value = setValue;
+            }
           }
         }),
       ]
@@ -406,27 +425,6 @@ export default await base.find('class', 'module').new({
         $.component,
         $.var.new({ name: 'value', default: '' }),
         $.var.new({ name: 'textarea' }),
-        $.after.new({
-          name: 'init',
-          do: function init() {
-            this.textarea($el.textarea({
-              id: this.inputID(),
-              style: 'height: 0px;',
-              oninput: e => {
-                this.value(e.target.value, false);
-                this.autoheight();
-              },
-              onload: e => {
-                e.target.value = this.value();
-                setTimeout(() => {
-                  this.autoheight();
-                  e.target.scrollTop = e.target.scrollHeight;
-                }, 0);
-              },
-              placeholder: this.placeholder(),
-            }, this.value()));
-          }
-        }),
         $.method.new({
           name: 'autoheight',
           do: function autoheight() {
@@ -440,14 +438,36 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            return this.textarea();
+            return $el.textarea({
+              id: this.inputID(),
+              style: 'height: 0px;',
+              oninput: e => {
+                this.value(e.target.value, false);
+                this.autoheight();
+              },
+              onload: e => {
+                e.target.value = this.value();
+                setTimeout(() => {
+                  this.autoheight();
+                  e.target.scrollTop = e.target.scrollHeight;
+                }, 0);
+              },
+              onblur: (e) => {
+                this.dispatchEvent({
+                  'type': 'blur',
+                });
+              },
+              placeholder: this.placeholder(),
+            }, this.value());
           }
         }),
         $.method.new({
           name: 'set',
           do: function set(value) {
             this.value(value);
-            this.textarea().children([value]);
+            if (this.element()) {
+              this.element().value = value;
+            }
           }
         }),
         $.method.new({
@@ -500,10 +520,21 @@ export default await base.find('class', 'module').new({
       name: 'toggly_input',
       slots: [
         $.component,
-        $.var.new({ name: 'input', default() { return $.input.new({ name: this.name(), parent: this }) } }),
+        $.var.new({ name: 'input', default() {
+          return $.input.new({
+            name: this.name(),
+            parent: this,
+          })
+        } }),
         $.var.new({ name: 'active', default: false }),
         $.var.new({ name: 'preview_text', default: '' }),
         $.var.new({ name: 'preview_hide', default: false }),
+        $.event.new({
+          name: 'blur',
+          do: function onblur(e) {
+            this.active(false);
+          }
+        }),
         $.method.new({
           name: 'value',
           do: function value() {
@@ -514,14 +545,21 @@ export default await base.find('class', 'module').new({
           name: 'set',
           do: function set(value) {
             this.input().set(value);
+            if (this.element()) {
+              const text = this.element().querySelector('.toggly_input_container');
+              text.childNodes[0].innerHTML = value; // ????
+            }
           }
         }),
         $.method.new({
           name: 'preview',
           do: function preview(text, hide = false) {
             if (text !== undefined) {
-              this.preview_text(text, !this.active());
-              this.preview_hide(hide);
+              this.active(false);
+              this.preview_text(text);
+              const previewElem = this.element().querySelector('.toggly_input_preview');
+              previewElem.innerHTML = text;
+              previewElem.hidden = hide;
             }
             return this.preview_text();
           }
@@ -532,6 +570,22 @@ export default await base.find('class', 'module').new({
             if (this.active()) {
               this.input().blur();
               this.active(false);
+            }
+          }
+        }),
+        $.after.new({
+          name: 'active',
+          do: function active__after(value) {
+            if (!this.element()) return;
+            const input = this.element().querySelector('.toggly_input_input');
+            const text = this.element().querySelector('.toggly_input_container');
+
+            if (value !== undefined) {
+              input.hidden = !value;
+              text.hidden = value;
+            }
+            if (value === false) {
+              text.childNodes[0].innerHTML = this.value(); // ????
             }
           }
         }),
@@ -546,20 +600,26 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'render',
           do: function render() {
-            const inner = this.active() ?
-                  this.input().render() :
-                  $el.div({
-                    class: 'toggly_input_container',
-                    onload: e => {
-                      setTimeout(() => {
-                        e.target.scrollTop = e.target.scrollHeight;
-                      }, 0);
-                    },
-                    onclick: e => {
-                      this.focus();
-                    },
-                  }, this.preview_hide() ? '' : this.value(), $el.span({ class: 'toggly_input_preview' }, this.preview()));
-            return $el.div({}, $el.div({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)), inner)
+            return $el.div(
+              {},
+              $el.div({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)),
+              $el.span({ class: 'toggly_input_input' }, this.input()),
+              $el.div(
+                {
+                  class: 'toggly_input_container',
+                  hidden: !this.active(),
+                  onload: e => {
+                    setTimeout(() => {
+                      e.target.scrollTop = e.target.scrollHeight;
+                    }, 0);
+                  },
+                  onclick: e => {
+                    this.focus();
+                  },
+                },
+                $el.span({ class: 'toggly_input_text', hidden: this.active() }, this.value()),
+                $el.span({ class: 'toggly_input_preview' }, this.preview())),
+            )
           }
         }),
       ]
