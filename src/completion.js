@@ -105,7 +105,6 @@ export default await base.find('class', 'module').new({
           name: 'run',
           do: async function run(ctx) {
             ctx.insert(this.text());
-            await $.completor_fetch_next_command.new().run(ctx);
           }
         }),
       ]
@@ -586,7 +585,7 @@ export default await base.find('class', 'module').new({
         }),
         $.var.new({ name: 'count', default: 5 }),
         $.var.new({ name: 'temperature', default: 0.6 }),
-        $.var.new({ name: 'n_predict', default: 4 }),
+        $.var.new({ name: 'n_predict', default: 8 }),
         $.var.new({ name: 'n_probs', default: 50 }),
         $.var.new({ name: 'choices', default: [] }),
         $.var.new({ name: 'history', default() { return $.completion_history.new({ parent: this }) } }),
@@ -622,6 +621,18 @@ export default await base.find('class', 'module').new({
                 }
               }
             });
+          }
+        }),
+        $.after.new({
+          name: 'probs',
+          do: function probs__after(value) {
+            if (value) {
+              const el = this.element().querySelector('.prob-box');
+              el.innerHTML = '';
+              for (const prob of value) {
+                el.appendChild(prob.to_dom());
+              }
+            }
           }
         }),
         $.method.new({
@@ -687,11 +698,11 @@ export default await base.find('class', 'module').new({
           do: function insert(it) {
             this.choices().push(it);
             this.instruction().blur();
-            this.fetch_next();
             this.instruction().set(this.instruction().value() + it);
             this.preview('');
             this.save();
             this.add_history(`insert:${it}`, this.instruction().value());
+            this.fetch_next();
           }
         }),
         $.method.new({
