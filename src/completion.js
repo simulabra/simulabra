@@ -805,6 +805,7 @@ export default await base.find('class', 'module').new({
 
 .completor-container {
   display: flex;
+  max-width: 1200px;
 }
 
 .column {
