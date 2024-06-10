@@ -66,12 +66,6 @@ export default await base.find('class', 'module').new({
             this.node_server().listen(this.port());
           }
         }),
-        $.method.new({
-          name: 'close',
-          do() {
-            this.http_server.close();
-          }
-        })
       ]
     });
     $.class.new({
