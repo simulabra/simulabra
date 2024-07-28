@@ -1,6 +1,7 @@
 import base from './base.js';
 import { createServer } from 'http';
 import axios from 'axios';
+import { readFileSync } from 'fs';
 
 export default await base.find('class', 'module').new({
   name: 'http',
@@ -57,7 +58,7 @@ export default await base.find('class', 'module').new({
             this.node_server(createServer((req, res) => {
               for (const handler of this.slots()) {
                 if (handler.match(req.url)) {
-                  return handler.handle($.http_request.new({ inner: req, start: new Date() }), $.http_response.new({ inner: res }));
+                  return handler.handle(this, $.http_request.new({ inner: req, start: new Date() }), $.http_response.new({ inner: res }));
                 }
               }
               res.writeHead(404);
@@ -85,7 +86,7 @@ export default await base.find('class', 'module').new({
       slots: [
         $.after.new({
           name: 'handle',
-          do(req, res) {
+          do(app, req, res) {
             this.log(`handle ${req.inner().url} in ${req.elapsed()} ms`);
           }
         })
@@ -126,15 +127,23 @@ export default await base.find('class', 'module').new({
       name: 'filetype_request_handler',
       slots: [
         $.request_handler,
-        $.var_handler,
         $.handler_logger,
         $.var.new({ name: 'filetypes' }),
+        $.var.new({ name: 'mime_type' }),
         $.method.new({
           name: 'match',
           do(url) {
             const filetype = /\.([^\.]+)$/.exec(url)[1];
             this.log(filetype, this.filetypes());
             return this.filetypes().includes(filetype);
+          }
+        }),
+        $.method.new({
+          name: 'handle',
+          do: function handle(app, req, res) {
+            const path = req.inner().url;
+            let fileName = '.' + path;
+            res.ok(readFileSync(fileName).toString(), this.mime_type());
           }
         }),
       ]
