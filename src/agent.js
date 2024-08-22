@@ -13,7 +13,7 @@ export default await base.find('class', 'module').new({
         $.method.new({
           name: 'templatize',
           do: function templatize(moduleName) {
-            return readFileSync('./src/module_template.html').toString().replaceAll('%%MODULE%%', 'completion');
+            return readFileSync('./src/module_template.html').toString().replaceAll('%%MODULE%%', moduleName);
           }
         }),
       ]
@@ -32,6 +32,12 @@ export default await base.find('class', 'module').new({
           path: '/completion',
           handler(app, req, res) {
             res.ok(app.templatize('completion'));
+          }
+        }),
+        $.path_request_handler.new({
+          path: '/agenda',
+          handler(app, req, res) {
+            res.ok(app.templatize('agenda'));
           }
         }),
         $.filetype_request_handler.new({

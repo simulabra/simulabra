@@ -89,7 +89,7 @@ export default await base.find('class', 'module').new({
                   }
                 }
               }
-              temperature += 0.2;
+              // temperature += 0.2;
             }
           }
         }),
@@ -570,15 +570,21 @@ export default await base.find('class', 'module').new({
           }
         }),
       ]
-    })
+    });
+
+    $.class.new({
+      name: 'completor_controls',
+      slots: [
+        $.window,
+        $.var.new({ name: 'completion_candidates' }),
+      ]
+    });
 
     $.class.new({
       name: 'completor',
       slots: [
         $.window,
         $.application,
-        $.var.new({ name: 'completion_candidates' }),
-        $.var.new({ name: 'prompt_format' }),
         $.var.new({
           name: 'instruction',
           default() { return $.instruction_input.new({ name: 'instruction', parent: this }); }
