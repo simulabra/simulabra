@@ -5,7 +5,6 @@ import torch
 import torch.nn.functional as F
 
 app = FastAPI()
-
 model_name = "google/gemma-2-2b-it"
 tokenizer = AutoTokenizer.from_pretrained(
     model_name,
@@ -33,10 +32,6 @@ class CompletionResponse(BaseModel):
     tops: dict[str, float]
     tokens: list[str]
 
-
-class TokenizationRequest(BaseModel):
-    text: str
-
 @app.post("/complete")
 async def complete_text(request: CompletionRequest):
     input_ids = tokenizer.encode(request.prompt, return_tensors="pt").to('cuda')
@@ -59,12 +54,6 @@ async def complete_text(request: CompletionRequest):
     content = tokenizer.decode(output.sequences[0], skip_special_tokens=True)
     tokens = [tokenizer.decode([t]) for t in tokenizer.encode(content)]
     return CompletionResponse(content=content, tops=tops, tokens=tokens)
-
-@app.post("/tokenize")
-async def tokenize_text(request: TokenizationRequest):
-    tokens = tokenizer.tokenize(request.text)
-    token_ids = tokenizer.convert_tokens_to_ids(tokens)
-    return {"tokens": tokens, "token_ids": token_ids}
 
 if __name__ == "__main__":
     import uvicorn
