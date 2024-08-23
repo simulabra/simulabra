@@ -7,6 +7,78 @@ export default await base.find('class', 'module').new({
     const __ = globalThis.SIMULABRA;
 
     $.class.new({
+      name: 'pyserver_completion_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'prompt' }),
+        $.var.new({ name: 'server_url', default: 'http://100.64.172.3:3032' }),
+        $.var.new({ name: 'n_predict', default: 4 }),
+        $.var.new({ name: 'temperature', default: 0.6 }),
+        $.var.new({ name: 'n_probs', default: 0 }),
+        $.var.new({ name: 'logit_bias', default: [] }),
+        $.method.new({
+          name: 'run',
+          do: async function run() {
+            const res = await fetch(`${this.server_url()}/completion`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                prompt: this.prompt(),
+                temperature: 0.3,
+                // frequency_penalty: 0.5,
+                min_p: 0.1,
+                // cache_prompt: true,
+                n_probs: this.n_probs(),
+                n_predict: this.n_predict(),
+                stop: ['<|im_end|>', '</s>'],
+              })
+            });
+
+            let t = await res.json();
+            const completion = $.llamacpp_completion_results.new({
+              output: t.content,
+              probs: t.completion_probabilities ?? []
+            });
+            return completion;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
+      name: 'local_llama_tokenize_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'prompt' }),
+        $.var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
+        $.method.new({
+          name: 'run',
+          do: async function run() {
+            const res = await fetch(`${this.server_url()}/tokenize`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                content: this.prompt(),
+              })
+            });
+
+            if (!res.ok) {
+              console.error('Error:', res.status, res.statusText);
+              return;
+            }
+
+            let result = await res.json();
+            return result.tokens;
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'llamacpp_completion_results',
       slots: [
         $.var.new({ name: 'output', default: '' }),
