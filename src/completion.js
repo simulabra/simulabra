@@ -58,29 +58,23 @@ export default await base.find('class', 'module').new({
             let n_predict = this.n_predict() ?? ctx.n_predict();
             let temperature = this.temperature() ?? ctx.temperature();;
             let n_probs = this.n_probs() ?? ctx.n_probs();;
-            const probs = await $.local_llama_completion_command.new({
-              prompt,
-              n_probs,
-              n_predict: 1,
-            }).run();
-            ctx.probs(probs.probs()[0].probs.map(p => $.token_prob.new({ object: ctx, parent: ctx, ...p })));
             for (let i = 0; i < count; i++) {
               if (!valid()) {
                 return;
               }
-              const completion = await $.local_llama_completion_command.new({
+              const completion = await ctx.pyserver().completion({
                 prompt,
-                logit_bias,
                 n_predict,
-                temperature
-              }).run();
+                temperature,
+                n_probs,
+              });
+              if (i === 0 && completion.tops()) {
+                ctx.probs(Object.entries(completion.tops()).map(([tok_str, prob]) => $.token_prob.new({ object: ctx, parent: ctx, tok_str, prob })));
+              }
 
-              if (completion.output() !== '' && valid()) {
+              if (completion.content() !== '' && valid()) {
                 ctx.completion_candidates().add(completion);
-                const tokens = await $.local_llama_tokenize_command.new({
-                  prompt: completion.output()
-                }).run();
-                for (const tok of tokens) {
+                for (let tok of completion.tokens()) {
                   const logit = logit_bias.find(l => l[0] === tok);
                   if (logit) {
                     logit[1] -= this.repeat_penalty();
@@ -154,13 +148,14 @@ export default await base.find('class', 'module').new({
                 this.log('hit chunky ceiling!');
                 return;
               }
-              const completion = await $.local_llama_completion_command.new({
-                prompt: ctx.prompt(),
+              const prompt = ctx.prompt();
+              const completion = await ctx.pyserver().completion({
+                prompt,
                 n_predict,
                 temperature,
-              }).run();
-              if (completion.output() !== '') {
-                ctx.insert(completion.output());
+              });
+              if (completion.content() !== '') {
+                ctx.insert(completion.content());
                 return chunk(depth + 1);
               }
             }
@@ -279,7 +274,7 @@ export default await base.find('class', 'module').new({
             const candidatesElements = this.candidates().map((cc, i) => {
               return $el.div({}, $.completor_add_link.new({
                 object: this.parent(),
-                text: cc.output(),
+                text: cc.content(),
                 choice: i + 1,
                 parent: this,
               }));
@@ -294,7 +289,7 @@ export default await base.find('class', 'module').new({
             this.candidates([...this.candidates(), it]);
             const child = $el.div({}, $.completor_add_link.new({
               object: this.parent(),
-              text: it.output(),
+              text: it.content(),
               choice: this.candidates().length,
               parent: this,
             }));
@@ -576,7 +571,6 @@ export default await base.find('class', 'module').new({
       name: 'completor_controls',
       slots: [
         $.window,
-        $.var.new({ name: 'completion_candidates' }),
       ]
     });
 
@@ -589,6 +583,7 @@ export default await base.find('class', 'module').new({
           name: 'instruction',
           default() { return $.instruction_input.new({ name: 'instruction', parent: this }); }
         }),
+        $.var.new({ name: 'completion_candidates' }),
         $.var.new({ name: 'count', default: 5 }),
         $.var.new({ name: 'temperature', default: 0.6 }),
         $.var.new({ name: 'n_predict', default: 8 }),
@@ -596,6 +591,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'choices', default: [] }),
         $.var.new({ name: 'history', default() { return $.completion_history.new({ parent: this }) } }),
         $.var.new({ name: 'probs', default: [] }),
+        $.var.new({ name: 'pyserver' }),
         $.event.new({
           name: 'update',
           do: function update(e) {
@@ -613,6 +609,7 @@ export default await base.find('class', 'module').new({
             const instruction = localStorage.getItem('instruction_value') ?? '';
             this.instruction().set(instruction);
             this.add_history('loaded', instruction);
+            this.pyserver($.pyserver.new());
 
             document.addEventListener('keydown', e => {
               if (!(this.instruction().active() || e.ctrlKey)) {
@@ -665,7 +662,7 @@ export default await base.find('class', 'module').new({
             } else if (key === 'Enter') {
               return $.completor_complete_command.new();
             } else if (!isNaN(+key)) {
-              const text = this.completion_candidates().candidates()[+key - 1]?.output();
+              const text = this.completion_candidates().candidates()[+key - 1]?.content();
               if (text !== undefined) {
                 return $.completor_insert_command.new({ text });
               } else {
@@ -739,7 +736,7 @@ export default await base.find('class', 'module').new({
           name: 'set_model',
           do: function set_model(modelName) {
             localStorage.setItem('selected_model', modelName);
-            this.prompt_format($[modelName + '_model'].new());
+            // this.prompt_format($[modelName + '_model'].new());
           }
         }),
         $.method.new({
@@ -760,6 +757,7 @@ export default await base.find('class', 'module').new({
                   parent: this,
                   bind: 'temperature',
                   command: $.completor_set_temperature_command,
+                  step: 0.1,
                 }),
                 $.number_input.new({
                   name: 'tokens',

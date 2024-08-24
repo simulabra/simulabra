@@ -1,8 +1,12 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 import torch.nn.functional as F
+from repeng import ControlVector, ControlModel, DatasetEntry
+import json
+import numpy as np
 
 app = FastAPI()
 model_name = "google/gemma-2-2b-it"
@@ -18,6 +22,9 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
     trust_remote_code=True,
 )
+control_model = ControlModel(model, list(range(-5, -22, -1)))
+vector = ControlVector.import_gguf('./control_vectors/allcaps.gguf')
+
 
 class CompletionRequest(BaseModel):
     prompt: str
@@ -26,19 +33,22 @@ class CompletionRequest(BaseModel):
     min_p: float = 0.05
     temperature: float = 0.6
     stop: list[str] = []
+    logit_bias: dict[int, float] = {}
 
 class CompletionResponse(BaseModel):
     content: str
     tops: dict[str, float]
     tokens: list[str]
 
-@app.post("/complete")
-async def complete_text(request: CompletionRequest):
+@app.post("/completion")
+async def completion(request: CompletionRequest):
     input_ids = tokenizer.encode(request.prompt, return_tensors="pt").to('cuda')
 
-    output = model.generate(
+    control_model.reset()
+    control_model.set_control(vector, 10)
+    output = control_model.generate(
         input_ids,
-        max_length=request.n_predict,
+        max_new_tokens=request.n_predict,
         do_sample=True,
         min_p=request.min_p,
         temperature=request.temperature,
@@ -52,8 +62,17 @@ async def complete_text(request: CompletionRequest):
         if top_probs[i] > 0.0001:
             tops[tokenizer.decode([t])] = top_probs[i]
     content = tokenizer.decode(output.sequences[0], skip_special_tokens=True)
+    content = content[len(request.prompt):]
     tokens = [tokenizer.decode([t]) for t in tokenizer.encode(content)]
     return CompletionResponse(content=content, tops=tops, tokens=tokens)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
     import uvicorn

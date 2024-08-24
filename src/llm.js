@@ -7,43 +7,61 @@ export default await base.find('class', 'module').new({
     const __ = globalThis.SIMULABRA;
 
     $.class.new({
-      name: 'pyserver_completion_command',
+      name: 'pyserver',
       slots: [
-        $.command,
-        $.var.new({ name: 'prompt' }),
         $.var.new({ name: 'server_url', default: 'http://100.64.172.3:3032' }),
-        $.var.new({ name: 'n_predict', default: 4 }),
-        $.var.new({ name: 'temperature', default: 0.6 }),
-        $.var.new({ name: 'n_probs', default: 0 }),
-        $.var.new({ name: 'logit_bias', default: [] }),
         $.method.new({
-          name: 'run',
-          do: async function run() {
+          name: 'completion',
+          do: async function completion({
+            prompt,
+            n_predict = 4,
+            temperature = 0.6,
+            min_p = 0.10,
+            n_probs = 10,
+            logit_bias = [],
+            stop = ['</s>', '<eos>'],_
+          }) {
             const res = await fetch(`${this.server_url()}/completion`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                prompt: this.prompt(),
-                temperature: 0.3,
-                // frequency_penalty: 0.5,
-                min_p: 0.1,
-                // cache_prompt: true,
-                n_probs: this.n_probs(),
-                n_predict: this.n_predict(),
-                stop: ['<|im_end|>', '</s>'],
+                prompt,
+                temperature,
+                min_p,
+                n_probs,
+                n_predict,
+                stop,
               })
             });
-
-            let t = await res.json();
-            const completion = $.llamacpp_completion_results.new({
-              output: t.content,
-              probs: t.completion_probabilities ?? []
-            });
-            return completion;
+            const json = await res.json();
+            return $.pyserver_completion_results.new(json);
           }
         }),
+      ]
+    });
+
+    $.class.new({
+      name: 'pyserver_completion_results',
+      slots: [
+        $.var.new({ name: 'content' }),
+        $.var.new({ name: 'tops' }),
+        $.var.new({ name: 'tokens' }),
+        $.method.new({
+          name: 'sum_prob',
+          do: function sum_prob() {
+            let sum = 0.0;
+            for (const p of this.probs()) {
+              const tok = p.content;
+              const prob = p.probs.find(pp => pp.tok_str === tok);
+              if (prob) {
+                sum += prob.prob;
+              }
+            }
+            return sum;
+          }
+        })
       ]
     });
 

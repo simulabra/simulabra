@@ -380,6 +380,7 @@ export default await base.find('class', 'module').new({
       slots: [
         $.component,
         $.var.new({ name: 'value' }),
+        $.var.new({ name: 'step', default: 1 }),
         $.var.new({ name: 'bind' }),
         $.var.new({ name: 'command' }),
         $.after.new({
@@ -398,6 +399,7 @@ export default await base.find('class', 'module').new({
                 class: 'number_input_input',
                 type: 'number',
                 value: this.value(),
+                step: this.step(),
                 onchange: e => {
                   this.value(+e.target.value, false);
                   this.command().new({ target: this.parent(), value: this.value() }).dispatchTo(this);
