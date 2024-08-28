@@ -38,12 +38,6 @@ export default await base.find('class', 'module').new({
         $.component,
         $.var.new({
           name: 'item_input',
-          default() {
-            return $.input.new({
-              name: `${this.name()}__item_input`,
-              parent: this
-            });
-          }
         }),
         $.var.new({
           name: 'submit_button',
@@ -55,6 +49,15 @@ export default await base.find('class', 'module').new({
               ]
             });
           }
+        }),
+        $.after.new({
+          name: 'init',
+          do: function init__after() {
+            this.item_input($.input.new({
+              name: `todo?`,
+              parent: this
+            }));
+          },
         }),
         $.method.new({
           name: 'render',
