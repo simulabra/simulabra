@@ -22,8 +22,8 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
     trust_remote_code=True,
 )
-control_model = ControlModel(model, list(range(-5, -22, -1)))
-vector = ControlVector.import_gguf('./control_vectors/allcaps.gguf')
+# control_model = ControlModel(model, list(range(-5, -22, -1)))
+# vector = ControlVector.import_gguf('./control_vectors/allcaps.gguf')
 
 
 class CompletionRequest(BaseModel):
@@ -44,9 +44,9 @@ class CompletionResponse(BaseModel):
 async def completion(request: CompletionRequest):
     input_ids = tokenizer.encode(request.prompt, return_tensors="pt").to('cuda')
 
-    control_model.reset()
-    control_model.set_control(vector, 10)
-    output = control_model.generate(
+    # control_model.reset()
+    # control_model.set_control(vector, 10)
+    output = model.generate(
         input_ids,
         max_new_tokens=request.n_predict,
         do_sample=True,

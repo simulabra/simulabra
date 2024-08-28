@@ -587,7 +587,7 @@ export default await base.find('class', 'module').new({
               text.hidden = value;
             }
             if (value === false) {
-              text.childNodes[0].innerHTML = this.value(); // ????
+              text.childNodes[0].innerText = this.value(); // ????
             }
           }
         }),

@@ -826,7 +826,8 @@ export default await base.find('class', 'module').new({
   border: 1px solid var(--primary);
   padding: 2px;
   margin: 2px;
-  background: var(--background-text);
+  background: var(--background);
+  box-shadow: 1px 1px 0px 0px var(--secondary);
   display: inline-block;
 }
 .token_prob:hover {

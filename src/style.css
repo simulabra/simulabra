@@ -2,8 +2,8 @@
     --primary: #663C3C;
     --secondary: #45628B;
     --secondary-2: #72868B;
-    --background: #E9CA9D;
-    --background-secondary: #E2B072;
+    --background: #E5CAA3;
+    --background-secondary: #E2B082;
     --background-text: #F3DAAA;
 
     /* Additional Foreground Colors */
@@ -27,6 +27,7 @@ body, html {
     background: var(--background);
     color: var(--primary);
     height: 100%;
+    padding: 2px;
 }
 
 .link_body {
@@ -60,11 +61,14 @@ input:focus, textarea:focus {
 }
 
 button {
-    background: var(--background-secondary);
+    background: var(--background);
     border: 1px solid var(--primary);
+    box-shadow: 1px 1px 0px 0px var(--secondary);
+    cursor: pointer;
 }
 
 button:hover {
+    background: var(--background-secondary);
     border: 1px solid var(--secondary);
 }
 
@@ -145,6 +149,7 @@ select {
     border: 1px solid var(--primary);
     overflow-y: scroll;
     height: 100%;
+  box-shadow: 1px 1px 0px 0px var(--secondary);
 }
 
 .subtext {
