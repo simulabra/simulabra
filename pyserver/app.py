@@ -9,7 +9,7 @@ import json
 import numpy as np
 
 app = FastAPI()
-model_name = "google/gemma-2-2b-it"
+model_name = "google/gemma-2-2b"
 tokenizer = AutoTokenizer.from_pretrained(
     model_name,
 )
@@ -22,8 +22,8 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
     trust_remote_code=True,
 )
-# control_model = ControlModel(model, list(range(-5, -22, -1)))
-# vector = ControlVector.import_gguf('./control_vectors/allcaps.gguf')
+control_model = ControlModel(model, list(range(-5, -22, -1)))
+vector = ControlVector.import_gguf('./control_vectors/gatsby.gguf')
 
 
 class CompletionRequest(BaseModel):
@@ -34,6 +34,7 @@ class CompletionRequest(BaseModel):
     temperature: float = 0.6
     stop: list[str] = []
     logit_bias: dict[int, float] = {}
+    control: float = 5.0
 
 class CompletionResponse(BaseModel):
     content: str
@@ -44,9 +45,9 @@ class CompletionResponse(BaseModel):
 async def completion(request: CompletionRequest):
     input_ids = tokenizer.encode(request.prompt, return_tensors="pt").to('cuda')
 
-    # control_model.reset()
-    # control_model.set_control(vector, 10)
-    output = model.generate(
+    control_model.reset()
+    control_model.set_control(vector, request.control)
+    output = control_model.generate(
         input_ids,
         max_new_tokens=request.n_predict,
         do_sample=True,

@@ -16,10 +16,11 @@ export default await base.find('class', 'module').new({
             prompt,
             n_predict = 4,
             temperature = 0.6,
-            min_p = 0.10,
+            min_p = 0.05,
             n_probs = 10,
             logit_bias = [],
-            stop = ['</s>', '<eos>'],_
+            stop = ['</s>', '<eos>'],
+            control = 5,
           }) {
             const res = await fetch(`${this.server_url()}/completion`, {
               method: 'POST',
@@ -33,6 +34,7 @@ export default await base.find('class', 'module').new({
                 n_probs,
                 n_predict,
                 stop,
+                control,
               })
             });
             const json = await res.json();

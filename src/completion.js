@@ -44,6 +44,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'temperature' }),
         $.var.new({ name: 'n_predict' }),
         $.var.new({ name: 'n_probs' }),
+        $.var.new({ name: 'control' }),
         $.var.new({ name: 'repeat_penalty', default: 0.3 }),
         $.method.new({
           name: 'run',
@@ -56,8 +57,9 @@ export default await base.find('class', 'module').new({
             }
             let count = this.count() ?? ctx.count();
             let n_predict = this.n_predict() ?? ctx.n_predict();
-            let temperature = this.temperature() ?? ctx.temperature();;
-            let n_probs = this.n_probs() ?? ctx.n_probs();;
+            let temperature = this.temperature() ?? ctx.temperature();
+            let n_probs = this.n_probs() ?? ctx.n_probs();
+            let control = this.control() ?? ctx.control();
             for (let i = 0; i < count; i++) {
               if (!valid()) {
                 return;
@@ -67,6 +69,7 @@ export default await base.find('class', 'module').new({
                 n_predict,
                 temperature,
                 n_probs,
+                control,
               });
               if (i === 0 && completion.tops()) {
                 ctx.probs(Object.entries(completion.tops()).map(([tok_str, prob]) => $.token_prob.new({ object: ctx, parent: ctx, tok_str, prob })));
@@ -524,6 +527,20 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
+      name: 'completor_set_control_command',
+      slots: [
+        $.command,
+        $.var.new({ name: 'value' }),
+        $.method.new({
+          name: 'run',
+          do: function run(ctx) {
+            ctx.control(this.value());
+          }
+        }),
+      ]
+    });
+
+    $.class.new({
       name: 'instruction_input',
       slots: [
         $.toggly_input,
@@ -586,6 +603,7 @@ export default await base.find('class', 'module').new({
         $.var.new({ name: 'completion_candidates' }),
         $.var.new({ name: 'count', default: 5 }),
         $.var.new({ name: 'temperature', default: 0.6 }),
+        $.var.new({ name: 'control', default: 5.0 }),
         $.var.new({ name: 'n_predict', default: 8 }),
         $.var.new({ name: 'n_probs', default: 50 }),
         $.var.new({ name: 'choices', default: [] }),
@@ -659,6 +677,10 @@ export default await base.find('class', 'module').new({
             //   return $.completor_set_count_command.new({ value: this.count() - 1 });
             // } else if (key === '.') {
             //   return $.completor_set_count_command.new({ value: this.count() + 1 });
+            } else if (key === '{') {
+              return $.completor_set_control_command.new({ value: this.control() - 0.1 });
+            } else if (key === '}') {
+              return $.completor_set_control_command.new({ value: this.control() + 0.1 });
             } else if (key === 'Enter') {
               return $.completor_complete_command.new();
             } else if (!isNaN(+key)) {
@@ -765,6 +787,13 @@ export default await base.find('class', 'module').new({
                   bind: 'n_predict',
                   command: $.completor_set_n_predict_command,
                 }),
+                $.number_input.new({
+                  name: 'control',
+                  parent: this,
+                  bind: 'control',
+                  command: $.completor_set_control_command,
+                  step: 0.1,
+                }),
                 $el.div({}),
                 $.completor_fetch_next_link.new({ object: this, parent: this }),
                 ' ',
@@ -832,6 +861,20 @@ export default await base.find('class', 'module').new({
 }
 .token_prob:hover {
   background: var(--background-secondary);
+  cursor: pointer;
+}
+
+.completor_add_link {
+  border: 1px solid var(--primary);
+  padding: 2px;
+  margin: 2px;
+  background: var(--background);
+  box-shadow: 1px 1px 0px 0px var(--secondary);
+  display: inline-block;
+}
+.completor_add_link:hover {
+  background: var(--background-secondary);
+  cursor: pointer;
 }
 
 .prob_sub {
