@@ -1,15 +1,9 @@
 ### SIMULABRA
-The web programming system, composed of:
 
-1) a new class system for Javascript
-
-2) a standard library of classes for building applications
-
-3) a self-hosted/cloud software platform
-
+Javascript Flavors
 
 ``` sh
 bun install
 bun run agent
+xdg-open http://localhost:3031
 ```
-then visit http://localhost:3031
