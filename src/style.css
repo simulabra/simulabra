@@ -2,8 +2,9 @@
     --primary: #663C3C;
     --secondary: #45628B;
     --secondary-2: #72868B;
-    --background: #E5CAA3;
-    --background-secondary: #E2B082;
+    --background: #E2C79D;
+    --background-shadow: #A28062;
+    --background-light: #F9DBC5;
     --background-text: #F3DAAA;
 
     /* Additional Foreground Colors */
@@ -13,6 +14,8 @@
     --foreground-4: #334D6E; /* Darker shade of secondary */
     --foreground-5: #4F6A48; /* Muted tone for secondary-2 */
     --foreground-6: #A67C52; /* Complementary tone for backgrounds */
+
+    --box-shadow-args: 1px 1px 0px 0px var(--background-shadow), -1px -1px 0px 0px var(--background-light), -2px -2px var(--background-light), -2px 0 var(--background-light), 0 -2px var(--background-light), 2px 2px var(--background-shadow), 0 2px var(--background-shadow), 2px 0 var(--background-shadow), 2px -2px var(--background-light), -2px 2px var(--background-shadow);
 }
 
 ::selection {
@@ -62,14 +65,15 @@ input:focus, textarea:focus {
 
 button {
     background: var(--background);
-    border: 1px solid var(--primary);
-    box-shadow: 1px 1px 0px 0px var(--secondary);
+    border: 0px solid var(--primary);
+    /*box-shadow: 1px 1px 0px 0px var(--background-shadow), -1px -1px 0px 0px var(--background-light);*/
+    box-shadow: var(--box-shadow-args);
     cursor: pointer;
 }
 
 button:hover {
-    background: var(--background-secondary);
-    border: 1px solid var(--secondary);
+    background: var(--background-shadow);
+    /*border: 1px solid var(--secondary);*/
 }
 
 button:active {
@@ -149,7 +153,6 @@ select {
     border: 1px solid var(--primary);
     overflow-y: scroll;
     height: 100%;
-  box-shadow: 1px 1px 0px 0px var(--secondary);
 }
 
 .subtext {

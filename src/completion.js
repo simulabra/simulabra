@@ -852,11 +852,11 @@ export default await base.find('class', 'module').new({
 }
 
 .token_prob {
-  border: 1px solid var(--primary);
+  //border: 1px solid var(--primary);
   padding: 2px;
   margin: 2px;
   background: var(--background);
-  box-shadow: 1px 1px 0px 0px var(--secondary);
+  box-shadow: var(--box-shadow-args);
   display: inline-block;
 }
 .token_prob:hover {
@@ -865,12 +865,12 @@ export default await base.find('class', 'module').new({
 }
 
 .completor_add_link {
-  border: 1px solid var(--primary);
+  //border: 1px solid var(--background-shadow);
   padding: 2px;
   margin: 2px;
   background: var(--background);
-  box-shadow: 1px 1px 0px 0px var(--secondary);
   display: inline-block;
+  box-shadow: var(--box-shadow-args);
 }
 .completor_add_link:hover {
   background: var(--background-secondary);
