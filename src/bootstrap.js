@@ -15,7 +15,50 @@ export default await base.find('class', 'module').new({
     // - streaming assistant response
     // - links to code locations
     $.class.new({
+      name: 'chat_message',
+      doc: 'a turn in a conversation between a user and an llm assistant',
+      slots: [
+        $.component,
+        $.var.new({
+          name: 'role',
+          doc: 'who is talking',
+          choices: ['user', 'assistant'],
+          default: 'user',
+        }),
+        $.var.new({
+          name: 'content',
+          type: 'string',
+        }),
+        $.var.new({
+          name: 'streaming',
+          doc: 'loading indicator',
+          default: false,
+        }),
+        $.method.new({
+          name: 'stream_data',
+          doc: 'add new tokens from the response',
+          do: function stream_data(data) {
+            this.content(this.content() + data);
+          }
+        }),
+        $.method.new({
+          name: 'stream_end',
+          do: function stream_end() {
+            this.streaming(false);
+          }
+        }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return sjsx`
+            `;
+          }
+        }),
+      ]
+    });
+    $.class.new({
       name: 'chat_list',
+      doc: 'the back and forth conversation between a user and an llm assistant',
       slots: [
         $.component,
         $.var.new({
@@ -23,25 +66,32 @@ export default await base.find('class', 'module').new({
           default: () => [],
         }),
         $.method.new({
-          name: 'stream_data',
-          do: function stream_data(data) {
-            if (this.messages().length > 0) {
-              this.messages()[this.messages().length - 1] += data;
-            }
-          }
-        }),
-        $.method.new({
           name: 'stream_begin',
+          doc: 'show loading indicator',
           do: function stream_begin() {
-            // show loading indicator
+            const streaming_message = $.chat_message.new({ role: 'assistant', content: '', streaming: true });
+            this.messages(...this.messages(), streaming_message );
+            return streaming_message;
           }
         }),
         $.method.new({
-          name: 'stream_end',
-          do: function stream_end() {
-            // hide loading indicator
+          name: 'conversation',
+          do: function conversation() {
+            return this.messages().map(m => { role: m.role(), content: m.content() });
           }
         }),
+        $.method.new({
+          name: 'render',
+          do: function render() {
+            return sjsx`
+            <div>
+            ${this.messages().slice(-1)}
+            </div>
+            `;
+          }
+        }),
+    });
+
     $.class.new({
       name: 'chat',
       slots: [
@@ -55,16 +105,36 @@ export default await base.find('class', 'module').new({
           doc: 'submit a use message to a conversational agent',
           do: function ask(prompt) {
             this.add_user_message(prompt)
-            this.messages().stream_begin();
-            const req = this.chat_request()
-            req.on('data', data => this.messages().stream_data(data));
-            req.on('end', () => this.messages().stream_end());
+            const conversation = this.messages().conversation();
+            const message = this.messages().stream_begin();
+            const req = this.chat_request(conversation)
+            return new Promise((resolve, reject) => {
+              req.on('data', data => message.stream_data(data));
+              req.on('error', err => reject(err));
+              req.on('end', () => {
+                message.stream_end();
+                resolve(message);
+              });
+            });
           }
         }),
         $.method.new({
           name: 'chat_request',
-          do: function chat_request() {
+          do: function chat_request(conversation) {
             // send chat request
+            const res = await fetch(`${this.api_url()}/v1/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'anthropic/claude-3.5-sonnet',
+                messages: conversation,
+              }),
+            });
+            const json = await res.json();
+            return $.pyserver_completion_results.new(json);
+          }
           }
         }),
         $.method.new({
