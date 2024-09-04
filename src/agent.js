@@ -40,6 +40,12 @@ export default await base.find('class', 'module').new({
             res.ok(app.templatize('agenda'));
           }
         }),
+        $.path_request_handler.new({
+          path: '/bootstrap',
+          handler(app, req, res) {
+            res.ok(app.templatize('bootstrap'));
+          }
+        }),
         $.filetype_request_handler.new({
           filetypes: ['js'],
           mime_type: 'application/javascript',

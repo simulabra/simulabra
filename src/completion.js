@@ -852,9 +852,8 @@ export default await base.find('class', 'module').new({
 }
 
 .token_prob {
-  //border: 1px solid var(--primary);
   padding: 2px;
-  margin: 2px;
+  margin: 4px;
   background: var(--background);
   box-shadow: var(--box-shadow-args);
   display: inline-block;
@@ -865,9 +864,8 @@ export default await base.find('class', 'module').new({
 }
 
 .completor_add_link {
-  //border: 1px solid var(--background-shadow);
   padding: 2px;
-  margin: 2px;
+  margin: 4px;
   background: var(--background);
   display: inline-block;
   box-shadow: var(--box-shadow-args);

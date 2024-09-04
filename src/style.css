@@ -4,7 +4,8 @@
     --secondary-2: #72868B;
     --background: #E2C79D;
     --background-shadow: #A28062;
-    --background-light: #F9DBC5;
+    /*--background-light: #F9DBC5;*/
+    --background-light: #C3B075;
     --background-text: #F3DAAA;
 
     /* Additional Foreground Colors */
@@ -54,13 +55,14 @@ textarea {
 
 input, textarea {
     background: var(--background-text);
-    border: 1px solid var(--primary);
+    border: 0px solid var(--primary);
+    box-shadow: var(--box-shadow-args);
     font-family: inherit;
 }
 
 input:focus, textarea:focus {
     outline: solid var(--secondary) 0px;
-    box-shadow: 0 0 0px var(--secondary);
+    /*box-shadow: 0 0 0px var(--secondary);*/
 }
 
 button {
@@ -82,7 +84,7 @@ button:active {
 
 select {
     background: var(--background-secondary);
-    border: 1px solid var(--primary);
+    /*border: 1px solid var(--primary);*/
 }
 
 .container {
@@ -102,15 +104,15 @@ select {
 }
 
 .windowed {
-    border-bottom: 0px;
     margin-bottom: 2px;
     max-height: 100%;
+    box-shadow: var(--box-shadow-args);
 }
 
 .window-bar {
     background: var(--background-secondary);
-    border: 1px solid var(--primary);
-    border-bottom: 0px solid var(--primary);
+    /*border: 1px solid var(--primary);*/
+    /*border-bottom: 0px solid var(--primary);*/
     display: flex;
     justify-content: space-between;
 }
@@ -136,8 +138,8 @@ select {
     width: 18px;
     height: 6px;
     display: inline-block;
-    border-top: 1px solid var(--primary);
-    border-bottom: 1px solid var(--primary);
+    /*border-top: 1px solid var(--primary);*/
+    /*border-bottom: 1px solid var(--primary);*/
     align-self: center;
 }
 
@@ -150,7 +152,7 @@ select {
     padding: 2px;
     overflow-wrap: break-word;
     word-break: break-all;
-    border: 1px solid var(--primary);
+    /*border: 1px solid var(--primary);*/
     overflow-y: scroll;
     height: 100%;
 }
@@ -162,21 +164,21 @@ select {
 }
 
 .toggly_input_container {
-  white-space: pre-wrap;
-  min-height: 5em;
-  max-height: 50vh;
-  padding: 2px;
-  margin-left: 0px;
-  overflow-y: scroll;
-  border: 1px solid var(--primary);
-  background: var(--background-text);
+    white-space: pre-wrap;
+    min-height: 5em;
+    max-height: 50vh;
+    padding: 2px;
+    margin-left: 0px;
+    overflow-y: scroll;
+    box-shadow: var(--box-shadow-args);
+    background: var(--background-text);
 }
 
 #input-instruction {
-  max-height: 50vh;
-  resize: none;
-  color: var(--primary);
-  font-size: 14px;
+    max-height: 50vh;
+    resize: none;
+    color: var(--primary);
+    font-size: 14px;
 }
 
 .toggly_input_name {
@@ -191,7 +193,8 @@ select {
 
 .number_input {
     padding: 2px;
-    border: 1px solid var(--primary);
+    margin: 4px;
+    box-shadow: var(--box-shadow-args);
 }
 
 .cm-s-simulabra.CodeMirror, .cm-s-simulabra .CodeMirror-gutters {
