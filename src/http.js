@@ -22,7 +22,30 @@ export default await base.find('class', 'module').new({
           do() {
             return +new Date() - +this.start();
           }
-        })
+        }),
+        $.method.new({
+          name: 'drain',
+          do: function drain() {
+            const req = this.inner();
+            return new Promise((resolve, reject) => {
+              if (req.method !== 'POST' || req.headers['content-type'] !== 'application/json') {
+                return reject('malformed request');
+              }
+              let body = '';
+              req.on('data', chunk => {
+                body += chunk;
+              });
+              req.on('end', () => {
+                try {
+                  const parsed = JSON.parse(body);
+                  return resolve(parsed);
+                } catch (e) {
+                  return reject(e);
+                }
+              });
+            });
+          },
+        }),
       ]
     });
     $.class.new({

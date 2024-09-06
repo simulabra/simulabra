@@ -1,5 +1,6 @@
 import base from './base.js';
 import http from './http.js';
+import chatConfig from '../.chatconfig.json';
 import { readFileSync } from 'fs';
 
 export default await base.find('class', 'module').new({
@@ -23,9 +24,23 @@ export default await base.find('class', 'module').new({
       port: 3031,
       slots: [
         $.path_request_handler.new({
-          path: '/',
-          handler(app, req, res) {
-            res.ok(readFileSync('./src/index.html').toString());
+          path: '/api/chat',
+          async handler(app, req, res) {
+            const conversation = await req.drain();
+            this.log(conversation);
+            let completion = await fetch(`${chatConfig.url}/v1/chat/completions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                "Authorization": `Bearer ${chatConfig.key}`,
+              },
+              body: JSON.stringify({
+                model: 'anthropic/claude-3.5-sonnet',
+                messages: conversation,
+              }),
+            });
+            const json = await completion.json();
+            res.ok(JSON.stringify(json), 'application/json');
           }
         }),
         $.path_request_handler.new({
