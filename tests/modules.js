@@ -2,16 +2,16 @@ import base from '../src/base.js';
 import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'test-modules',
   imports: [base, test],
-  registry: base.find('class', 'object_registry').new(),
+  registry: base.find('Class', 'object_registry').new(),
   async on_load(_, $) {
-    const a = $.module.new({
+    const a = $.Module.new({
       name: 'test-a',
       imports: [base],
       on_load(_, $) {
-        $.class.new({
+        $.Class.new({
           name: 'a',
           slots: [
             $.var.new({
@@ -29,11 +29,11 @@ export default await base.find('class', 'module').new({
       }
     });
     await a.load();
-    const b = $.module.new({
+    const b = $.Module.new({
       name: 'test-b',
       imports: [base, a],
       on_load(_, $) {
-        $.class.new({
+        $.Class.new({
           name: 'b',
           slots: [
             $.a,

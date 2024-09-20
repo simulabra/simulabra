@@ -1,11 +1,11 @@
 import base from './base.js';
 var __ = globalThis.SIMULABRA;
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'test',
   imports: [base],
   on_load(_, $) {
-    $.class.new({
+    $.Class.new({
       name: 'case',
       slots: [
         $.method.new({
@@ -32,7 +32,7 @@ export default await base.find('class', 'module').new({
         })
       ]
     });
-    $.class.new({
+    $.Class.new({
       name: 'async_case',
       slots: [
         $.case,

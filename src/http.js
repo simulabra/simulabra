@@ -3,12 +3,12 @@ import { createServer } from 'http';
 import axios from 'axios';
 import { readFileSync } from 'fs';
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'http',
   package: 'simulabra',
   imports: [base],
   on_load(_, $) {
-    $.class.new({
+    $.Class.new({
       name: 'http_request',
       slots: [
         $.var.new({
@@ -48,7 +48,7 @@ export default await base.find('class', 'module').new({
         }),
       ]
     });
-    $.class.new({
+    $.Class.new({
       name: 'http_response',
       slots: [
         $.var.new({
@@ -63,7 +63,7 @@ export default await base.find('class', 'module').new({
         }),
       ]
     });
-    $.class.new({
+    $.Class.new({
       name: 'http_server',
       slots: [
         $.var.new({ name: 'node_server' }),
@@ -92,7 +92,7 @@ export default await base.find('class', 'module').new({
         }),
       ]
     });
-    $.class.new({
+    $.Class.new({
       name: 'request_handler',
       slots: [
         $.virtual.new({
@@ -104,7 +104,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'handler_logger',
       slots: [
         $.after.new({
@@ -115,7 +115,7 @@ export default await base.find('class', 'module').new({
         })
       ]
     })
-    $.class.new({
+    $.Class.new({
       name: 'var_handler',
       slots: [
         $.var.new({
@@ -129,7 +129,7 @@ export default await base.find('class', 'module').new({
         }),
       ]
     });
-    $.class.new({
+    $.Class.new({
       name: 'path_request_handler',
       slots: [
         $.request_handler,
@@ -146,7 +146,7 @@ export default await base.find('class', 'module').new({
         }),
       ]
     });
-    $.class.new({
+    $.Class.new({
       name: 'filetype_request_handler',
       slots: [
         $.request_handler,
@@ -172,7 +172,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'http_request_command',
       slots: [
         $.command,

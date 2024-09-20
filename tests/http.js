@@ -4,10 +4,10 @@ import test from '../src/test.js';
 import http from '../src/http.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'test_http',
   imports: [test, http],
-  registry: base.find('class', 'object_registry').new(),
+  registry: base.find('Class', 'object_registry').new(),
   on_load(_, $) {
     $.async_case.new({
       name: 'server_creation',
@@ -17,7 +17,7 @@ export default await base.find('class', 'module').new({
           slots: [
             $.path_request_handler.new({
               path: '/',
-              handler(req, res) {
+              handler(app, req, res) {
                 this.log('handle http request');
                 res.ok('<h1>hello world!!</h1>');
               },

@@ -1,13 +1,13 @@
 import base from './base.js';
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'html',
   doc: 'html component classes for building applications',
   imports: [base],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
-    $.class.new({
+    $.Class.new({
       name: 'component',
       slots: [
         $.method.new({
@@ -81,7 +81,7 @@ export default await base.find('class', 'module').new({
         })
       ]
     });
-    $.class.new({
+    $.Class.new({
       name: 'window',
       slots: [
         $.component,
@@ -141,7 +141,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'html_element',
       slots: [
         $.component,
@@ -229,7 +229,7 @@ export default await base.find('class', 'module').new({
     });
     const $el = $.html_element.proxy();
 
-    $.class.new({
+    $.Class.new({
       name: 'application',
       slots: [
         $.var.new({ name: 'command_history', default: [] }),
@@ -267,7 +267,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'button',
       slots: [
         $.component,
@@ -290,7 +290,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'link',
       slots: [
         $.component,
@@ -357,7 +357,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'if',
       slots: [
         $.var.new({ name: 'when' }),
@@ -375,7 +375,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'number_input',
       slots: [
         $.component,
@@ -421,7 +421,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'input',
       slots: [
         $.component,
@@ -518,7 +518,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'toggly_input',
       slots: [
         $.component,

@@ -2,130 +2,132 @@ import base from './base.js';
 import html from './html.js';
 import llm from './llm.js';
 
-export default await base.find('class', 'module').new({
-  name: 'bootstrap',
+export default await base.find('Class', 'module').new({
+  name: 'Bootstrap',
   imports: [base, html, llm],
-  async on_load(_, $) {
+  async onLoad(_, $) {
     const __ = globalThis.SIMULABRA;
-    const $el = $.html_element.proxy();
+    const $el = $.HTMLElement.proxy();
 
     // DEAR BOOTSTRAP WRITES THE REST OF YOUR CODE
     // chat ui
     // - input text
     // - streaming assistant response
     // - links to code locations
-    $.class.new({
-      name: 'chat_message',
+    $.Class.new({
+      name: 'ChatMessage',
       doc: 'a turn in a conversation between a user and an llm assistant',
       slots: [
         $.component,
-        $.var.new({
+        $.Var.new({
           name: 'role',
           doc: 'who is talking',
           choices: ['user', 'assistant'],
           default: 'user',
         }),
-        $.var.new({
+        $.Var.new({
           name: 'content',
           type: 'string',
         }),
-        $.var.new({
+        $.Var.new({
           name: 'streaming',
           doc: 'loading indicator',
           default: false,
         }),
-        $.method.new({
-          name: 'stream_data',
+        $.Method.new({
+          name: 'streamData',
           doc: 'add new tokens from the response',
-          do: function stream_data(data) {
+          do: function streamData(data) {
             this.content(this.content() + data);
-          }
+          },
         }),
-        $.method.new({
-          name: 'stream_end',
-          do: function stream_end() {
+        $.Method.new({
+          name: 'streamEnd',
+          do: function streamEnd() {
             this.streaming(false);
-          }
+          },
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return sjsx`
             `;
-          }
+          },
         }),
-      ]
+      ],
     });
-    $.class.new({
-      name: 'chat_list',
+
+    $.Class.new({
+      name: 'ChatList',
       doc: 'the back and forth conversation between a user and an llm assistant',
       slots: [
         $.component,
-        $.var.new({
+        $.Var.new({
           name: 'messages',
           default: () => [],
         }),
-        $.method.new({
-          name: 'stream_begin',
+        $.Method.new({
+          name: 'streamBegin',
           doc: 'show loading indicator',
-          do: function stream_begin() {
-            const streaming_message = $.chat_message.new({ role: 'assistant', content: '', streaming: true });
-            this.messages(...this.messages(), streaming_message );
-            return streaming_message;
-          }
+          do: function streamBegin() {
+            const streamingMessage = $.ChatMessage.new({ role: 'assistant', content: '', streaming: true });
+            this.messages(...this.messages(), streamingMessage);
+            return streamingMessage;
+          },
         }),
-        $.method.new({
+        $.Method.new({
           name: 'conversation',
           do: function conversation() {
-            return this.messages().map(m => { role: m.role(), content: m.content() });
-          }
+            return this.messages().map(m => ({ role: m.role(), content: m.content() }));
+          },
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return sjsx`
             <div>
-            ${this.messages().slice(-1)}
+              ${this.messages().slice(-1)}
             </div>
             `;
-          }
+          },
         }),
+      ],
     });
 
-    $.class.new({
-      name: 'chat',
+    $.Class.new({
+      name: 'Chat',
       slots: [
         $.window,
-        $.var.new({
+        $.Var.new({
           name: 'messages',
-          default: () => $.chat_list.new(),
+          default: () => $.ChatList.new(),
         }),
-        $.method.new({
+        $.Method.new({
           name: 'ask',
-          doc: 'submit a use message to a conversational agent',
+          doc: 'submit a user message to a conversational agent',
           do: function ask(prompt) {
-            this.add_user_message(prompt)
+            this.addUserMessage(prompt);
             const conversation = this.messages().conversation();
-            const message = this.messages().stream_begin();
-            const req = this.chat_request(conversation)
+            const message = this.messages().streamBegin();
+            const req = this.chatRequest(conversation);
             return new Promise((resolve, reject) => {
-              req.on('data', data => message.stream_data(data));
+              req.on('data', data => message.streamData(data));
               req.on('error', err => reject(err));
               req.on('end', () => {
-                message.stream_end();
+                message.streamEnd();
                 resolve(message);
               });
             });
-          }
+          },
         }),
-        $.method.new({
-          name: 'chat_request',
-          do: function chat_request(conversation) {
+        $.Method.new({
+          name: 'chatRequest',
+          do: async function chatRequest(conversation) {
             // send chat request
-            const res = await fetch(`${this.api_url()}/v1/chat/completions`, {
-              method: 'POST',
+            const res = await fetch(`${this.apiUrl()}/v1/chat/completions`, {
+              Method: 'POST',
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
               },
               body: JSON.stringify({
                 model: 'anthropic/claude-3.5-sonnet',
@@ -133,21 +135,21 @@ export default await base.find('class', 'module').new({
               }),
             });
             const json = await res.json();
-            return $.pyserver_completion_results.new(json);
-          }
-          }
+            return $.PyserverCompletionResults.new(json);
+          },
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return sjsx`
             <$messages />
             <$input />
             `;
-          }
+          },
         }),
-      ]
+      ],
     });
+
     // diff view
     // - do you accept?
     // - standard format communicated via prompt
@@ -164,4 +166,5 @@ export default await base.find('class', 'module').new({
     // - to disk
     // - file picker
 
+  },
 }).load();

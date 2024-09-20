@@ -3,11 +3,11 @@ import { join, dirname, relative } from 'path';
 import base from './base.js';
 import test from './test.js';
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'runner',
   imports: [test],
   async on_load(_, $) {
-    $.class.new({
+    $.Class.new({
       name: 'test_timer',
       slots: [
         $.var.new({ name: 'start' }),
@@ -26,7 +26,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'test_runner',
       slots: [
         $.var.new({

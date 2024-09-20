@@ -64,8 +64,8 @@ function bootstrap() {
 
   function debug(...args) {
     let __ = globalThis.SIMULABRA;
-    if (__.$$debug_class) {
-      __.$$debug_class.log(...args);
+    if (__.$$DebugClass) {
+      __.$$DebugClass.log(...args);
     } else {
       console.log(...args.map(a => simulabra_display(a)));
     }
@@ -74,11 +74,11 @@ function bootstrap() {
   class Frame {
     constructor(receiver, method_impl, args) {
       this._receiver = receiver;
-      this._method_impl = method_impl;
+      this._methodImpl = method_impl;
       this._args = args;
     }
     description() {
-      return `${pry(this._receiver)}.${this._method_impl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
+      return `${pry(this._receiver)}.${this._methodImpl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
     }
   }
 
@@ -209,10 +209,10 @@ function bootstrap() {
     }
 
     _add(name, op) {
-      op.combine(this._get_impl(name));
+      op.combine(this._getImpl(name));
     }
 
-    _get_impl(name) {
+    _getImpl(name) {
       if (!this._impls.hasOwnProperty(name)) {
         this._impls[name] = new MethodImpl({ _name: name });
       }
@@ -220,7 +220,7 @@ function bootstrap() {
     }
 
     description() {
-      return `!class-prototype#${this._proto._class.name()}`;
+      return `!Class-prototype#${this._proto._class.name()}`;
     }
   }
 
@@ -308,10 +308,10 @@ function bootstrap() {
         return 'native_function';
       },
       uri() {
-        return 'simulabra://localhost/native_classes/function';
+        return 'simulabra://localhost/NativeClasses/function';
       },
       title() {
-        return '~native_class#function';
+        return '~NativeClass#function';
       }
     }
   };
@@ -354,13 +354,13 @@ function bootstrap() {
     }
   }
 
-  const classDef = {
+  const ClassDef = {
     class() {
       return this._class;
     }
   }
 
-  const $base_slots = [
+  const $BaseSlots = [
     function init() {
       // mostly broken
       if (globalThis.SIMULABRA._debug) {
@@ -447,7 +447,7 @@ function bootstrap() {
       }
       this.observers()[message].push(cb.bind(this));
     },
-    classDef.class,
+    ClassDef.class,
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'id' }),
     BVar.new({ name: 'src_line' }),
@@ -455,19 +455,19 @@ function bootstrap() {
   ];
 
   // const $base_proto = {};
-  // manload($base_slots, $base_proto);
+  // manload($BaseSlots, $base_proto);
 
   Array.prototype.load = function (target) {
     this.forEach(it => it.load(target));
   }
 
-  const $class_slots = [
+  const $ClassSlots = [
     function init() {
       this.events([]);
-      $base_slots[0].apply(this);
+      $BaseSlots[0].apply(this);
       this.id_ctr(0);
       this.proto(new ClassPrototype(this));
-      $base_slots.load(this.proto());
+      $BaseSlots.load(this.proto());
       this._proto._class = this;
       this.load(this.proto());
       this.proto()._reify();
@@ -497,7 +497,7 @@ function bootstrap() {
       return this.description();
     },
     function descended(target) {
-      return this.name() === target.name() || !!this.slots().find(c => c.class() !== BVar && c.class().name() === 'class' && c.descended(target));
+      return this.name() === target.name() || !!this.slots().find(c => c.class() !== BVar && c.class().name() === 'Class' && c.descended(target));
     },
     function title() {
       return `~${this.name()}`;
@@ -507,11 +507,11 @@ function bootstrap() {
       const instances = mods.map(m => m.instances(this)).flat();
       return instances;
     },
-    function superclasses() {
+    function superClasses() {
       let res = [];
       for (const slot of this.slots()) {
-        if (typeof slot !== 'string' && slot.isa($class)) {
-          res = [slot, ...slot.superclasses(), ...res];
+        if (typeof slot !== 'string' && slot.isa($Class)) {
+          res = [slot, ...slot.superClasses(), ...res];
         }
       }
       return res;
@@ -529,7 +529,7 @@ function bootstrap() {
           // skip
         } else if (slot.class() === BVar || slot.isa($var)) {
           vars.push(slot);
-        } else if (slot.isa($class)) {
+        } else if (slot.isa($Class)) {
           vars = [...vars, ...slot.vars()];
         }
       }
@@ -554,7 +554,7 @@ function bootstrap() {
     })
   ];
 
-  const $class_proto = new ClassPrototype(null);
+  const $ClassProto = new ClassPrototype(null);
   const newObj = {
     new(props = {}, ...slots) {
       if (!props.hasOwnProperty('slots')) {
@@ -567,29 +567,29 @@ function bootstrap() {
       return obj;
     }
   };
-  $class_slots.push(newObj.new);
+  $ClassSlots.push(newObj.new);
 
-  manload($base_slots, $class_proto);
-  manload($class_slots, $class_proto);
-  $class_proto._reify();
-  const $class = Object.create($class_proto._proto);
-  $class._class = $class;
-  $class._name = 'class';
-  $class.proto($class);
-  $class.slots($class_slots);
-  $class.init();
+  manload($BaseSlots, $ClassProto);
+  manload($ClassSlots, $ClassProto);
+  $ClassProto._reify();
+  const $Class = Object.create($ClassProto._proto);
+  $Class._class = $Class;
+  $Class._name = 'Class';
+  $Class.proto($Class);
+  $Class.slots($ClassSlots);
+  $Class.init();
 
   const $base_proto = new ClassPrototype(null);
-  manload($base_slots, $base_proto);
-  manload($class_slots, $base_proto);
+  manload($BaseSlots, $base_proto);
+  manload($ClassSlots, $base_proto);
   $base_proto._reify();
   const $base = Object.create($base_proto._proto);
-  $base._class = $class;
+  $base._class = $Class;
   $base._name = 'base';
   $base.init();
 
   // a missing middle
-  var $var = $class.new({
+  var $var = $Class.new({
     name: 'var',
     slots: [
       BVar.new({ name: 'name', }),
@@ -637,14 +637,14 @@ function bootstrap() {
     ]
   });
 
-  const $fn = $class.new({
+  const $fn = $Class.new({
     name: 'fn',
     slots: [
       $var.new({ name: 'do' }), // fn, meat and taters
     ]
   });
 
-  const $static = $class.new({
+  const $static = $Class.new({
     name: 'static',
     slots: [
       $fn,
@@ -660,7 +660,7 @@ function bootstrap() {
     ]
   });
 
-  const $fake_state = $class.new({
+  const $fake_state = $Class.new({
     name: 'fake_state',
     slots: [
       $static.new({
@@ -687,7 +687,7 @@ function bootstrap() {
     ]
   });
 
-  const $var_state = $class.new({
+  const $var_state = $Class.new({
     name: 'var_state',
     slots: [
       $var.new({ name: 'var_ref' }),
@@ -709,7 +709,7 @@ function bootstrap() {
     ]
   });
 
-  const $method = $class.new({
+  const $method = $Class.new({
     name: 'method',
     slots: [
       $fn,
@@ -739,7 +739,7 @@ function bootstrap() {
     ]
   });
 
-  var $debug = $class.new({
+  var $debug = $Class.new({
     name: 'debug',
     slots: [
       $static.new({
@@ -760,7 +760,7 @@ function bootstrap() {
     ]
   });
 
-  const $before = $class.new({
+  const $before = $Class.new({
     name: 'before',
     slots: [
       $fn,
@@ -771,7 +771,7 @@ function bootstrap() {
     ]
   });
 
-  const $after = $class.new({
+  const $after = $Class.new({
     name: 'after',
     slots: [
       $fn,
@@ -783,7 +783,7 @@ function bootstrap() {
   });
 
 
-  const $virtual = $class.new({
+  const $virtual = $Class.new({
     name: 'virtual',
     slots: [
       $var.new({ name: 'name' }),
@@ -798,10 +798,10 @@ function bootstrap() {
     ]
   });
 
-  const $object_registry = $class.new({
+  const $object_registry = $Class.new({
     name: 'object_registry',
     slots: [
-      $var.new({ name: 'class_instances', default: () => ({}) }),
+      $var.new({ name: 'classInstances', default: () => ({}) }),
       $var.new({ name: 'refs', default: () => ({}) }),
       function register(o) {
         this.add_instance(o);
@@ -812,21 +812,21 @@ function bootstrap() {
         return this.refs()[u]?.deref();
       },
       function add_instance(obj) {
-        for (const cls of [obj.class(), ...obj.class().superclasses()]) {
-          const className = cls.name();
-          if (this.class_instances()[className] === undefined) {
-            this.class_instances()[className] = [];
+        for (const cls of [obj.class(), ...obj.class().superClasses()]) {
+          const ClassName = cls.name();
+          if (this.classInstances()[ClassName] === undefined) {
+            this.classInstances()[ClassName] = [];
           }
-          this.class_instances()[className].push(obj.uri());
+          this.classInstances()[ClassName].push(obj.uri());
         }
       },
       function instances(cls) {
-        return (this.class_instances()[cls.name()] ?? []).map(u => this.deref(u)).filter(o => o !== undefined);
+        return (this.classInstances()[cls.name()] ?? []).map(u => this.deref(u)).filter(o => o !== undefined);
       },
     ]
   });
 
-  const $deffed = $class.new({
+  const $deffed = $Class.new({
     name: 'deffed',
     slots: [
       $after.new({
@@ -838,7 +838,7 @@ function bootstrap() {
     ]
   });
 
-  const $registered = $class.new({
+  const $registered = $Class.new({
     name: 'registered',
     slots: [
       $after.new({
@@ -850,8 +850,8 @@ function bootstrap() {
     ]
   });
 
-  const $module = $class.new({
-    name: 'module',
+  const $module = $Class.new({
+    name: 'Module',
     // debug: true,
     slots: [
       $deffed,
@@ -881,17 +881,17 @@ function bootstrap() {
       function register(obj) {
         return this.registry()?.register(obj);
       },
-      function repo(className) {
-        return this.repos()[className] || {};
+      function repo(ClassName) {
+        return this.repos()[ClassName] || {};
       },
-      function find(className, name) {
+      function find(ClassName, name) {
         // totally dies to recursion!
-        const v = this.repo(className)[name];
+        const v = this.repo(ClassName)[name];
         if (v) {
           return v;
         } else {
           for (let imp of this.imports()) {
-            const iv = imp.find(className, name);
+            const iv = imp.find(ClassName, name);
             if (iv) {
               return iv;
             }
@@ -899,16 +899,16 @@ function bootstrap() {
           return undefined;
         }
       },
-      function proxy(className, errFn) {
+      function proxy(ClassName, errFn) {
         return new Proxy(this, {
           get(target, p) {
             if (p === 'then' || p === 'format') {
               return target[p];
             }
-            const v = target.find(className, p);
+            const v = target.find(ClassName, p);
             if (v === undefined) {
-              // target.log(target.repo(className))
-              const err = new Error(`failed to find ~${className}#${p}`);
+              // target.log(target.repo(ClassName))
+              const err = new Error(`failed to find ~${ClassName}#${p}`);
               if (errFn) {
                 errFn(err);
               } else {
@@ -921,13 +921,13 @@ function bootstrap() {
         })
       },
       function def(name, obj) {
-        const className = obj.class().name();
-        // const className = 'class';
-        // this.log('def', className, name);
-        if (!this.repos().hasOwnProperty(className)) {
-          this.repos()[className] = {};
+        const ClassName = obj.class().name();
+        // const ClassName = 'Class';
+        // this.log('def', ClassName, name);
+        if (!this.repos().hasOwnProperty(ClassName)) {
+          this.repos()[ClassName] = {};
         }
-        this.repos()[className][name] = obj;
+        this.repos()[ClassName][name] = obj;
         this.classes().push(obj);
       },
       async function load() {
@@ -939,13 +939,13 @@ function bootstrap() {
           // }
           const om = $$().mod();
           $$().mod(this);
-          await this.on_load().apply(this, [this, this.proxy('class')]);
+          await this.on_load().apply(this, [this, this.proxy('Class')]);
           $$().mod(om);
         }
         return this;
       },
       function $() {
-        return this.proxy('class');
+        return this.proxy('Class');
       }
     ]
   });
@@ -953,13 +953,13 @@ function bootstrap() {
   var _ = $module.new({
     name: 'base',
     registry: $object_registry.new(),
-    doc: 'simulabra core system classes'
+    doc: 'simulabra core system Classes'
   });
-  var $ = _.proxy('class');
+  var $ = _.proxy('Class');
   __._mod = _;
   const INTRINSICS = [
     $base,
-    $class,
+    $Class,
     $var,
     $fn,
     $method,
@@ -980,20 +980,20 @@ function bootstrap() {
   });
 
   _.register(_);
-  $.class.new({
+  $.Class.new({
     name: 'static_var',
     slots: [
       $.var,
       $.after.new({
         name: 'load',
         do: function load() {
-          this._get_impl(this.name()).reify(this._proto._class);
+          this._getImpl(this.name()).reify(this._proto._class);
         }
       })
     ]
   });
 
-  $.class.new({
+  $.Class.new({
     name: 'simulabra_global',
     slots: [
       $.var.new({ name: 'mod' }),
@@ -1009,15 +1009,15 @@ function bootstrap() {
           this.tick(this.tick() + 1);
         }, 16);
       },
-      function js_new(className, ...args) {
-        const obj = new globalThis[className](...args);
+      function js_new(ClassName, ...args) {
+        const obj = new globalThis[ClassName](...args);
         return obj;
       },
       function js_get(obj, p) {
         return obj[p];
       },
       function $() {
-        return this.mod().proxy('class');
+        return this.mod().proxy('Class');
       },
       function base() {
         return _;
@@ -1039,7 +1039,7 @@ function bootstrap() {
   __.addEventListener('log', e => console.log(...e.args));
 
   globalThis.SIMULABRA = __;
-  __.$$debug_class = $debug;
+  __.$$DebugClass = $debug;
   __.start_ticking();
 
   [
@@ -1049,7 +1049,7 @@ function bootstrap() {
     $.simulabra_global,
   ].forEach(it => __.register(it));
 
-  $.class.new({
+  $.Class.new({
     name: 'event',
     slots: [
       $.fn,
@@ -1061,10 +1061,10 @@ function bootstrap() {
     ]
   });
 
-  $.class.new({
+  $.Class.new({
     name: 'primitive',
     slots: [
-      $.class,
+      $.Class,
       $.deffed,
       $.var.new({ name: 'slots', default: [] }),
       $.var.new({ name: 'js_prototype' }),
@@ -1088,7 +1088,7 @@ function bootstrap() {
     ]
   });
 
-  $.class.new({
+  $.Class.new({
     name: 'proc',
     slots: [
       $.fn,
@@ -1105,7 +1105,7 @@ function bootstrap() {
     js_prototype: Object.prototype,
   });
 
-  // Object.prototype.class = function() {
+  // Object.prototype.Class = function() {
   //   return $.object_primitive;
   // }
 
@@ -1166,7 +1166,7 @@ function bootstrap() {
     ]
   });
 
-  $.class.new({
+  $.Class.new({
     name: 'number',
     slots: [
       function primitive() {
@@ -1226,7 +1226,7 @@ function bootstrap() {
     ]
   });
 
-  $.class.new({
+  $.Class.new({
     name: 'command',
     slots: [
       $.virtual.new({ name: 'run' }),

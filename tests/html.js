@@ -3,9 +3,9 @@ import test from '../src/test.js';
 import html from '../src/html.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('class', 'module').new({
-  name: 'test_html',
-  registry: base.find('class', 'object_registry').new(),
+export default await base.find('Class', 'Module').new({
+  name: 'TestHTML',
+  registry: base.find('Class', 'object_registry').new(),
   imports: [test, html],
   on_load(_, $) {
   }

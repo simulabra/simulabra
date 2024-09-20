@@ -2,12 +2,12 @@ import base from '../src/base.js';
 import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'test_classes',
   imports: [test],
-  registry: base.find('class', 'object_registry').new(),
+  registry: base.find('Class', 'object_registry').new(),
   on_load(_, $) {
-    $.class.new({
+    $.Class.new({
       name: 'basic',
       slots: []
     });
@@ -20,7 +20,7 @@ export default await base.find('class', 'module').new({
       }
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'point',
       slots: [
         $.var.new({ name: 'x' }),
@@ -48,7 +48,7 @@ export default await base.find('class', 'module').new({
       }
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'point_extended',
       slots: [
         $.point,
@@ -78,7 +78,7 @@ export default await base.find('class', 'module').new({
       }
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'color',
       slots: [
         $.var.new({ name: 'r' }),
@@ -87,7 +87,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'color_point',
       slots: [
         $.color,
@@ -108,7 +108,7 @@ export default await base.find('class', 'module').new({
       }
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'before_basic',
       slots: [
         $.var.new({ name: 'x', default: 0 }),
@@ -136,7 +136,7 @@ export default await base.find('class', 'module').new({
       }
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'after_basic',
       slots: [
         $.var.new({ name: 'x', default: 0 }),
@@ -165,7 +165,7 @@ export default await base.find('class', 'module').new({
       }
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'after_before_combined',
       slots: [
         $.before_basic,
@@ -187,7 +187,7 @@ export default await base.find('class', 'module').new({
       }
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'after_before_combined_method',
       slots: [
         $.after_before_combined,
@@ -209,7 +209,7 @@ export default await base.find('class', 'module').new({
         this.assert_eq(abc.x(), 8);
       }
     });
-    $.class.new({
+    $.Class.new({
       name: 'after_multiple',
       slots: [
         $.after_basic,
@@ -234,7 +234,7 @@ export default await base.find('class', 'module').new({
     $.case.new({
       name: 'static',
       do() {
-        $.class.new({
+        $.Class.new({
           name: 'static_test',
           slots: [
             $.static.new({
@@ -253,7 +253,7 @@ export default await base.find('class', 'module').new({
     $.case.new({
       name: 'basic extend',
       do() {
-        $.class.new({
+        $.Class.new({
           name: 'ext1',
           slots: [
             $.method.new({

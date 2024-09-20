@@ -2,12 +2,12 @@ import base from '../src/base.js';
 import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'brainfuck_interpreter',
   imports: [base, test],
-  registry: base.find('class', 'object_registry').new(),
+  registry: base.find('Class', 'object_registry').new(),
   on_load(_, $) {
-    $.class.new({
+    $.Class.new({
       name: 'brainfuck_interpreter',
       slots: [
         $.var.new({ name: 'code', default: '' }),
