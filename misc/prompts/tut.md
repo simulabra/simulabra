@@ -1,41 +1,43 @@
 Welcome to Simulabra!
 
-Simulabra is an object-oriented framework and metasystem for Javascript. It has a class system that best resembles the Common Lisp Object System and Flavors. Classes and methods are defined in a declarative style, with inline docs and before/after method combination instead of calls to super. Included are a component library and other utilities for writing dynamic web applications.
+Simulabra is an object-oriented extension for Javascript. The class system (which does not use the ES5 `class` keyword) best resembles the Common Lisp Object System (specifically the original Flavors, without multiple dispatch). Classes are defined in a declarative style, with slots of methods, vars, and before/after method combination instead of `super`; docstrings; and multiple inheritance, differentiating it from contemporary takes on OOP. Included are a component library and other utilities for writing dynamic web applications.
 
+Here is how you define a class in Simulabra.
 ```
-// class definition
-$.class.new({
-  name: 'point',
-  doc: 'a 2d point in Euclidean space', // brief functional purpose of the class
-  slots: [ // slot system
-    $.var.new({
+$.Class.new({
+  name: 'Point',
+  doc: 'a 2d point in Euclidean space',
+  slots: [
+    $.Var.new({
       name: 'x',
       default: 0,
     }),
-    $.var.new({
+    $.Var.new({
       name: 'y',
       default: 0,
     }),
-    $.method.new({
+    $.Method.new({
       name: 'dist',
       doc: 'the distance to another point',
       do: function dist(other) {
         return Math.sqrt((this.x() - other.x())**2 + (this.y() - other.y())**2);
-      }
+      },
     }),
-  ]
+  ],
 });
 ```
-Now we can use the class as demonstrated in this test case:
+Now we can use the class as demonstrated in this test case.
 ```
-$.test_case.new({
-  name: 'point dist basic',
-  do: function test_case__point_dist_basic() {
-    const p = $.point.new({
+$.TestCase.new({
+  name: 'PointBasic',
+  do: function TestCase__PointBasic() {
+    const p = $.Point.new({
       x: 3,
       y: 4
     });
-    this.assert_eq(p.dist($.point.new()), 5);
+    this.assertEq(p.dist($.Point.new()), 5);
   },
 });
 ```
+In Simulabra, you usually want tests for the things you are building to keep them stable. A basic test library is included.
+
