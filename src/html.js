@@ -1,69 +1,69 @@
 import base from './base.js';
 
 export default await base.find('Class', 'Module').new({
-  name: 'html',
-  doc: 'html component classes for building applications',
+  name: 'HTML',
+  doc: 'HTML component classes for building Web applications',
   imports: [base],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
     $.Class.new({
-      name: 'component',
+      name: 'Component',
       slots: [
-        $.method.new({
-          name: 'dom_id',
-          do: function dom_id() {
+        $.Method.new({
+          name: 'domID',
+          do: function domID() {
             return `${this.class().name()}--${this.id()}`;
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'element',
           do: function element() {
-            return document.getElementById(this.dom_id());
+            return document.getElementById(this.domID());
           }
         }),
-        $.method.new({
-          name: 'swap_target',
-          do: function swap_target() {
+        $.Method.new({
+          name: 'swapTarget',
+          do: function swapTarget() {
             return this.element().querySelector('.swap-target');
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'container',
           do: function container(...children) {
-            return $el.span({ id: this.dom_id(), class: this.class().name(), ref: this.uri() }, $el.span({ class: 'swap-target' }, ...children));
+            return $el.span({ id: this.domID(), class: this.class().name(), ref: this.uri() }, $el.span({ class: 'swap-target' }, ...children));
           }
         }),
-        $.var.new({
+        $.Var.new({
           name: 'parent',
           default: null
         }),
-        $.method.new({
-          name: 'to_dom',
-          do: function to_dom() {
-            return this.container(this.render()).to_dom();
+        $.Method.new({
+          name: 'toDOM',
+          do: function toDOM() {
+            return this.container(this.render()).toDOM();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'load',
           do: function load(e) {
             // this.log('load', e);
           }
         }),
-        $.method.new({
-          name: 'clear_swap_target',
-          do: function clear_swap_target() {
-            const st = this.swap_target();
+        $.Method.new({
+          name: 'clearSwapTarget',
+          do: function clearSwapTarget() {
+            const st = this.swapTarget();
             st.innerHTML = '';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'swap',
           do: function swap() {
-            this.clear_swap_target();
-            const children = [this.render().to_dom()].flat(Infinity);
+            this.clearSwapTarget();
+            const children = [this.render().toDOM()].flat(Infinity);
             for (const c of children) {
-              this.swap_target().appendChild(c);
+              this.swapTarget().appendChild(c);
             }
             this.load(this.element());
           }
@@ -84,22 +84,22 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'window',
       slots: [
-        $.component,
-        $.var.new({ name: 'minimized', default: false }),
-        $.method.new({
+        $.Component,
+        $.Var.new({ name: 'minimized', default: false }),
+        $.Method.new({
           name: 'toggle',
           do: function toggle() {
             this.minimized(!this.minimized());
             if (this.minimized()) {
-              this.clear_swap_target();
+              this.clearSwapTarget();
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'container',
           do: function container(...children) {
             return $el.div({
-              id: this.dom_id(),
+              id: this.domID(),
               class: `windowed ${this.class().name()}`,
               ref: this.uri()
             }, [
@@ -132,7 +132,7 @@ export default await base.find('Class', 'Module').new({
             ]);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'window_title',
           do: function window_title() {
             return this.title();
@@ -144,12 +144,12 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'html_element',
       slots: [
-        $.component,
-        $.var.new({ name: 'tag', default: 'div' }),
-        $.var.new({ name: 'properties', default: {} }),
-        $.var.new({ name: 'events', default: {} }),
-        $.var.new({ name: 'children', default: [] }),
-        $.method.new({
+        $.Component,
+        $.Var.new({ name: 'tag', default: 'div' }),
+        $.Var.new({ name: 'properties', default: {} }),
+        $.Var.new({ name: 'events', default: {} }),
+        $.Var.new({ name: 'children', default: [] }),
+        $.Method.new({
           name: 'domify',
           do: function domify(node) {
             if (typeof node === 'object' && 'type' in node && typeof node.type === 'string') {
@@ -160,7 +160,7 @@ export default await base.find('Class', 'Module').new({
               return node;
             } else {
               try {
-                return node.to_dom();
+                return node.toDOM();
               } catch (e) {
                 this.log('failed to domify node', node);
                 throw e;
@@ -168,12 +168,12 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.method.new({
-          name: 'attach_to_elem',
-          do: function attach_to_elem(elem, child) {
+        $.Method.new({
+          name: 'attachToElement',
+          do: function attachToElement(elem, child) {
               if (Array.isArray(child)) {
                 for (const n of child) {
-                  this.attach_to_elem(elem, n);
+                  this.attachToElement(elem, n);
                 }
               } else {
                 elem.appendChild(this.domify(child));
@@ -183,9 +183,9 @@ export default await base.find('Class', 'Module').new({
               }
           }
         }),
-        $.method.new({
-          name: 'to_dom',
-          do: function to_dom() {
+        $.Method.new({
+          name: 'toDOM',
+          do: function toDOM() {
             const elem = document.createElement(this.tag());
             for (const pkey of Object.keys(this.properties())) {
               const prop = this.properties()[pkey];
@@ -202,7 +202,7 @@ export default await base.find('Class', 'Module').new({
               }
             }
             for (const child of this.children()) {
-              this.attach_to_elem(elem, child);
+              this.attachToElement(elem, child);
             }
             elem.dispatchEvent(new Event('load'));
             // this.load(elem);
@@ -232,12 +232,12 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'application',
       slots: [
-        $.var.new({ name: 'command_history', default: [] }),
+        $.Var.new({ name: 'commandHistory', default: [] }),
         $.after.new({
           name: 'init',
           do: function init() {
             this.addEventListener('command', (e) => {
-              this.process_command(e.target);
+              this.processCommand(e.target);
             });
             this.log('append css');
             const el = document.createElement('style');
@@ -245,20 +245,20 @@ export default await base.find('Class', 'Module').new({
             document.head.appendChild(el);
           }
         }),
-        $.method.new({
-          name: 'process_command',
-          do: async function process_command(cmd) {
-            this.log('process_command', cmd);
+        $.Method.new({
+          name: 'processCommand',
+          do: async function processCommand(cmd) {
+            this.log('processCommand', cmd);
             try {
               await cmd.run(this);
-              this.command_history().push(cmd);
+              this.commandHistory().push(cmd);
             } catch (err) {
               this.log('command failed', cmd, err);
               this.dispatchEvent({ type: 'error', cmd, err })
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'css',
           do: function css() {
             return '';
@@ -270,10 +270,10 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'button',
       slots: [
-        $.component,
-        $.var.new({ name: 'command' }),
-        $.var.new({ name: 'slots' }),
-        $.method.new({
+        $.Component,
+        $.Var.new({ name: 'command' }),
+        $.Var.new({ name: 'slots' }),
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.button({
@@ -293,33 +293,33 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'link',
       slots: [
-        $.component,
-        $.var.new({ name: 'command' }),
-        $.var.new({ name: 'object' }),
-        $.var.new({ name: 'properties', default: {} }),
-        $.method.new({
-          name: 'link_text',
-          do: function link_text() {
+        $.Component,
+        $.Var.new({ name: 'command' }),
+        $.Var.new({ name: 'object' }),
+        $.Var.new({ name: 'properties', default: {} }),
+        $.Method.new({
+          name: 'linkText',
+          do: function linkText() {
             return this.object().title();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'subtext',
           do: function subtext() {
             return '';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'hover',
           do: function hover() {
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'unhover',
           do: function unhover() {
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             const uri = this.object().uri();
@@ -349,7 +349,7 @@ export default await base.find('Class', 'Module').new({
               object: uri,
               ...this.properties()
             },
-              this.link_text(),
+              this.linkText(),
               $el.span({ class: 'subtext' }, this.subtext())
             );
           }
@@ -360,15 +360,15 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'if',
       slots: [
-        $.var.new({ name: 'when' }),
-        $.var.new({ name: 'slots', default: [] }),
-        $.method.new({
-          name: 'to_dom',
-          do: function to_dom() {
+        $.Var.new({ name: 'when' }),
+        $.Var.new({ name: 'slots', default: [] }),
+        $.Method.new({
+          name: 'toDOM',
+          do: function toDOM() {
             if (this.when()) {
-              return this.slots().to_dom();
+              return this.slots().toDOM();
             } else {
-              return ''.to_dom();
+              return ''.toDOM();
             }
           }
         })
@@ -376,27 +376,27 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'number_input',
+      name: 'NumberInput',
       slots: [
-        $.component,
-        $.var.new({ name: 'value' }),
-        $.var.new({ name: 'step', default: 1 }),
-        $.var.new({ name: 'bind' }),
-        $.var.new({ name: 'command' }),
+        $.Component,
+        $.Var.new({ name: 'value' }),
+        $.Var.new({ name: 'step', default: 1 }),
+        $.Var.new({ name: 'bind' }),
+        $.Var.new({ name: 'command' }),
         $.after.new({
           name: 'init',
           do: function init() {
             this.value(this.parent()[this.bind()](), false);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render(ctx) {
             return $el.span(
               {},
               this.name(),
               $el.input({
-                class: 'number_input_input',
+                class: 'NumberInput_input',
                 type: 'number',
                 value: this.value(),
                 step: this.step(),
@@ -414,7 +414,7 @@ export default await base.find('Class', 'Module').new({
             this.log('after value');
             if (this.element() && setValue !== undefined) {
               this.log('update??');
-              this.element().querySelector('.number_input_input').value = setValue;
+              this.element().querySelector('.NumberInput_input').value = setValue;
             }
           }
         }),
@@ -424,10 +424,10 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'input',
       slots: [
-        $.component,
-        $.var.new({ name: 'value', default: '' }),
-        $.var.new({ name: 'textarea' }),
-        $.method.new({
+        $.Component,
+        $.Var.new({ name: 'value', default: '' }),
+        $.Var.new({ name: 'textarea' }),
+        $.Method.new({
           name: 'autoheight',
           do: function autoheight() {
             const el = this.element();
@@ -437,7 +437,7 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.textarea({
@@ -463,7 +463,7 @@ export default await base.find('Class', 'Module').new({
             }, this.value());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'set',
           do: function set(value) {
             this.value(value);
@@ -472,45 +472,45 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'inputID',
           do: function inputID() {
             return `input-${this.name()}`;
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'element',
           do: function element() {
             return document.getElementById(this.inputID());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'active',
           do: function active() {
             return this.element() === document.activeElement;
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'placeholder',
           do: function placeholder() {
             return `${this.name()}...`;
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'blur',
           do: function blur() {
             this.element().blur();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'focus',
           do: function focus() {
             this.element().focus();
           }
         }),
-        $.method.new({
-          name: 'move_to_end',
-          do: function move_to_end() {
+        $.Method.new({
+          name: 'moveToEnd',
+          do: function moveToEnd() {
             const endp = this.value().length;
             this.element().setSelectionRange(endp, endp);
           }
@@ -519,54 +519,54 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'toggly_input',
+      name: 'TogglyInput',
       slots: [
-        $.component,
-        $.var.new({ name: 'input', default() {
+        $.Component,
+        $.Var.new({ name: 'input', default() {
           return $.input.new({
             name: this.name(),
             parent: this,
           })
         } }),
-        $.var.new({ name: 'active', default: false }),
-        $.var.new({ name: 'preview_text', default: '' }),
-        $.var.new({ name: 'preview_hide', default: false }),
+        $.Var.new({ name: 'active', default: false }),
+        $.Var.new({ name: 'preview_text', default: '' }),
+        $.Var.new({ name: 'preview_hide', default: false }),
         $.event.new({
           name: 'blur',
           do: function onblur(e) {
             this.active(false);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'value',
           do: function value() {
             return this.input().value();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'set',
           do: function set(value) {
             this.input().set(value);
             if (this.element()) {
-              const text = this.element().querySelector('.toggly_input_container');
+              const text = this.element().querySelector('.TogglyInput_container');
               text.childNodes[0].innerHTML = value; // ????
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'preview',
           do: function preview(text, hide = false) {
             if (text !== undefined) {
               this.active(false);
               this.preview_text(text);
-              const previewElem = this.element().querySelector('.toggly_input_preview');
+              const previewElem = this.element().querySelector('.TogglyInput_preview');
               previewElem.innerHTML = text;
               previewElem.hidden = hide;
             }
             return this.preview_text();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'blur',
           do: function blur() {
             if (this.active()) {
@@ -579,8 +579,8 @@ export default await base.find('Class', 'Module').new({
           name: 'active',
           do: function active__after(value) {
             if (!this.element()) return;
-            const input = this.element().querySelector('.toggly_input_input');
-            const text = this.element().querySelector('.toggly_input_container');
+            const input = this.element().querySelector('.TogglyInput_input');
+            const text = this.element().querySelector('.TogglyInput_container');
 
             if (value !== undefined) {
               input.hidden = !value;
@@ -591,24 +591,24 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'focus',
           do: function focus() {
             this.active(true);
             this.input().focus();
-            this.input().move_to_end();
+            this.input().moveToEnd();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div(
               {},
-              $el.div({ class: 'toggly_input_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)),
-              $el.span({ class: 'toggly_input_input' }, this.input()),
+              $el.div({ class: 'TogglyInput_name' }, this.name(), $el.span({ class: 'subtext' }, `[i] ${this.value().length}c`)),
+              $el.span({ class: 'TogglyInput_input' }, this.input()),
               $el.div(
                 {
-                  class: 'toggly_input_container',
+                  class: 'TogglyInput_container',
                   hidden: !this.active(),
                   onload: e => {
                     setTimeout(() => {
@@ -619,8 +619,8 @@ export default await base.find('Class', 'Module').new({
                     this.focus();
                   },
                 },
-                $el.span({ class: 'toggly_input_text', hidden: this.active() }, this.value()),
-                $el.span({ class: 'toggly_input_preview' }, this.preview())),
+                $el.span({ class: 'TogglyInput_text', hidden: this.active() }, this.value()),
+                $el.span({ class: 'TogglyInput_preview' }, this.preview())),
             )
           }
         }),

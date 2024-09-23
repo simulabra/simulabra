@@ -6,9 +6,9 @@ export default await base.find('Class', 'Module').new({
   imports: [base],
   on_load(_, $) {
     $.Class.new({
-      name: 'case',
+      name: 'Case',
       slots: [
-        $.method.new({
+        $.Method.new({
           name: 'run',
           do() {
             try {
@@ -21,9 +21,9 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.var.new({ name: 'do' }),
-        $.method.new({
-          name: 'assert_eq',
+        $.Var.new({ name: 'do' }),
+        $.Method.new({
+          name: 'assertEq',
           do(a, b) {
             if (a !== b) {
               throw new Error(`assertion failed: ${a?.description()} !== ${b?.description()}`);
@@ -33,10 +33,10 @@ export default await base.find('Class', 'Module').new({
       ]
     });
     $.Class.new({
-      name: 'async_case',
+      name: 'AsyncCase',
       slots: [
-        $.case,
-        $.method.new({
+        $.Case,
+        $.Method.new({
           name: 'run',
           override: true,
           do() {

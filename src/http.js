@@ -4,31 +4,30 @@ import axios from 'axios';
 import { readFileSync } from 'fs';
 
 export default await base.find('Class', 'Module').new({
-  name: 'http',
-  package: 'simulabra',
+  name: 'HTTP',
   imports: [base],
   on_load(_, $) {
     $.Class.new({
-      name: 'http_request',
+      name: 'HTTPRequest',
       slots: [
-        $.var.new({
+        $.Var.new({
           name: 'inner'
         }),
-        $.var.new({
+        $.Var.new({
           name: 'start'
         }),
-        $.method.new({
+        $.Method.new({
           name: 'elapsed',
           do() {
             return +new Date() - +this.start();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'drain',
           do: function drain() {
             const req = this.inner();
             return new Promise((resolve, reject) => {
-              if (req.method !== 'POST' || req.headers['content-type'] !== 'application/json') {
+              if (req.Method !== 'POST' || req.headers['content-type'] !== 'application/json') {
                 return reject('malformed request');
               }
               let body = '';
@@ -49,12 +48,12 @@ export default await base.find('Class', 'Module').new({
       ]
     });
     $.Class.new({
-      name: 'http_response',
+      name: 'HTTPResponse',
       slots: [
-        $.var.new({
+        $.Var.new({
           name: 'inner'
         }),
-        $.method.new({
+        $.Method.new({
           name: 'ok',
           do(message, ct = 'text/html') {
             this.inner().writeHead(200, { 'Content-type': ct });
@@ -64,36 +63,36 @@ export default await base.find('Class', 'Module').new({
       ]
     });
     $.Class.new({
-      name: 'http_server',
+      name: 'HTTPServer',
       slots: [
-        $.var.new({ name: 'node_server' }),
-        $.var.new({
+        $.Var.new({ name: 'nodeServer' }),
+        $.Var.new({
           name: 'port',
           default: '3030',
         }),
-        $.var.new({
+        $.Var.new({
           name: 'slots',
           default: [],
         }),
         $.after.new({
           name: 'init',
           do() {
-            this.node_server(createServer((req, res) => {
+            this.nodeServer(createServer((req, res) => {
               for (const handler of this.slots()) {
                 if (handler.match(req.url)) {
-                  return handler.handle(this, $.http_request.new({ inner: req, start: new Date() }), $.http_response.new({ inner: res }));
+                  return handler.handle(this, $.HTTPRequest.new({ inner: req, start: new Date() }), $.HTTPResponse.new({ inner: res }));
                 }
               }
               res.writeHead(404);
               res.end();
             }));
-            this.node_server().listen(this.port());
+            this.nodeServer().listen(this.port());
           }
         }),
       ]
     });
     $.Class.new({
-      name: 'request_handler',
+      name: 'RequestHandler',
       slots: [
         $.virtual.new({
           name: 'match'
@@ -105,7 +104,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'handler_logger',
+      name: 'HandlerLogger',
       slots: [
         $.after.new({
           name: 'handle',
@@ -116,12 +115,12 @@ export default await base.find('Class', 'Module').new({
       ]
     })
     $.Class.new({
-      name: 'var_handler',
+      name: 'VarHandler',
       slots: [
-        $.var.new({
+        $.Var.new({
           name: 'handler',
         }),
-        $.method.new({
+        $.Method.new({
           name: 'handle',
           do(...args) {
             this.handler().apply(this, args)
@@ -130,15 +129,15 @@ export default await base.find('Class', 'Module').new({
       ]
     });
     $.Class.new({
-      name: 'path_request_handler',
+      name: 'PathRequestHandler',
       slots: [
-        $.request_handler,
-        $.var_handler,
-        $.handler_logger,
-        $.var.new({
+        $.RequestHandler,
+        $.VarHandler,
+        $.HandlerLogger,
+        $.Var.new({
           name: 'path',
         }),
-        $.method.new({
+        $.Method.new({
           name: 'match',
           do(url) {
             return this.path() === url;
@@ -147,13 +146,13 @@ export default await base.find('Class', 'Module').new({
       ]
     });
     $.Class.new({
-      name: 'filetype_request_handler',
+      name: 'FiletypeRequestHandler',
       slots: [
-        $.request_handler,
-        $.handler_logger,
-        $.var.new({ name: 'filetypes' }),
-        $.var.new({ name: 'mime_type' }),
-        $.method.new({
+        $.RequestHandler,
+        $.HandlerLogger,
+        $.Var.new({ name: 'filetypes' }),
+        $.Var.new({ name: 'mimeType' }),
+        $.Method.new({
           name: 'match',
           do(url) {
             const filetype = /\.([^\.]+)$/.exec(url)[1];
@@ -161,34 +160,34 @@ export default await base.find('Class', 'Module').new({
             return this.filetypes().includes(filetype);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'handle',
           do: function handle(app, req, res) {
             const path = req.inner().url;
             let fileName = '.' + path;
-            res.ok(readFileSync(fileName).toString(), this.mime_type());
+            res.ok(readFileSync(fileName).toString(), this.mimeType());
           }
         }),
       ]
     });
 
     $.Class.new({
-      name: 'http_request_command',
+      name: 'HTTPRequestCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'url' }),
-        $.var.new({ name: 'method' }),
-        $.var.new({ name: 'response_type' }),
-        $.var.new({ name: 'data' }),
-        $.method.new({
+        $.Var.new({ name: 'url' }),
+        $.Var.new({ name: 'Method' }),
+        $.Var.new({ name: 'responseType' }),
+        $.Var.new({ name: 'data' }),
+        $.Method.new({
           name: 'run',
           async: true,
           do: function run() {
             return axios({
               url: this.url(),
-              method: this.method(),
+              Method: this.Method(),
               data: this.data(),
-              responseType: this.response_type(),
+              responseType: this.responseType(),
             });
           }
         }),

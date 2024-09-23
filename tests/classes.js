@@ -12,39 +12,39 @@ export default await base.find('Class', 'Module').new({
       slots: []
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'class_def',
       do() {
         const b = $.basic.new();
-        this.assert_eq(b.class(), $.basic);
+        this.assertEq(b.class(), $.basic);
       }
     });
 
     $.Class.new({
       name: 'point',
       slots: [
-        $.var.new({ name: 'x' }),
-        $.var.new({ name: 'y' }),
+        $.Var.new({ name: 'x' }),
+        $.Var.new({ name: 'y' }),
         function dist() {
           return Math.sqrt(this.x() ** 2 + this.y() ** 2);
         }
       ]
     });
 
-    $.case.new({
-      name: 'class_def_var',
+    $.Case.new({
+      name: 'class_def_Var',
       do() {
         const p = $.point.new({ x: 2 });
-        this.assert_eq(p.x(), 2);
+        this.assertEq(p.x(), 2);
       }
     });
 
-    $.case.new({
-      name: 'class_set_var',
+    $.Case.new({
+      name: 'class_set_Var',
       do() {
         const p = $.point.new({ x: 2 });
         p.x(3);
-        this.assert_eq(p.x(), 3);
+        this.assertEq(p.x(), 3);
       }
     });
 
@@ -52,8 +52,8 @@ export default await base.find('Class', 'Module').new({
       name: 'point_extended',
       slots: [
         $.point,
-        $.var.new({ name: 'phi' }),
-        $.method.new({
+        $.Var.new({ name: 'phi' }),
+        $.Method.new({
           name: 'phi_shift',
           do() {
             return this.dist() * this.phi() / Math.PI;
@@ -62,28 +62,28 @@ export default await base.find('Class', 'Module').new({
       ]
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'class_name',
       do() {
-        this.assert_eq($.point.name(), 'point');
-        this.assert_eq($.point_extended.name(), 'point_extended');
+        this.assertEq($.point.name(), 'point');
+        this.assertEq($.point_extended.name(), 'point_extended');
       }
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'class_inheritance_phi',
       do() {
         const pe = $.point_extended.new({ x: 3, y: 4, phi: Math.PI });
-        this.assert_eq(pe.phi_shift(), 5);
+        this.assertEq(pe.phi_shift(), 5);
       }
     });
 
     $.Class.new({
       name: 'color',
       slots: [
-        $.var.new({ name: 'r' }),
-        $.var.new({ name: 'g' }),
-        $.var.new({ name: 'b' }),
+        $.Var.new({ name: 'r' }),
+        $.Var.new({ name: 'g' }),
+        $.Var.new({ name: 'b' }),
       ]
     });
 
@@ -98,21 +98,21 @@ export default await base.find('Class', 'Module').new({
       ],
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'class_multiple_inheritance_override',
       do() {
         const cp = $.color_point.new({ r: 33, g: 55, b: 44, x: 3, y: 4 });
-        this.assert_eq(cp.dist(), 5);
-        this.assert_eq(cp.g(), 5);
-        this.assert_eq(cp.r(), 33);
+        this.assertEq(cp.dist(), 5);
+        this.assertEq(cp.g(), 5);
+        this.assertEq(cp.r(), 33);
       }
     });
 
     $.Class.new({
       name: 'before_basic',
       slots: [
-        $.var.new({ name: 'x', default: 0 }),
-        $.method.new({
+        $.Var.new({ name: 'x', default: 0 }),
+        $.Method.new({
           name: 'bump',
           do() {
             return this.x(this.x() + 2);
@@ -127,20 +127,20 @@ export default await base.find('Class', 'Module').new({
       ]
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'before_basic',
       do() {
         const ab = $.before_basic.new();
         ab.bump();
-        this.assert_eq(ab.x(), 3);
+        this.assertEq(ab.x(), 3);
       }
     });
 
     $.Class.new({
       name: 'after_basic',
       slots: [
-        $.var.new({ name: 'x', default: 0 }),
-        $.method.new({
+        $.Var.new({ name: 'x', default: 0 }),
+        $.Method.new({
           name: 'bump',
           do() {
             return this.x(this.x() + 2);
@@ -156,12 +156,12 @@ export default await base.find('Class', 'Module').new({
     });
 
 
-    $.case.new({
+    $.Case.new({
       name: 'after_basic',
       do() {
         const ab = $.after_basic.new();
         ab.bump();
-        this.assert_eq(ab.x(), 3);
+        this.assertEq(ab.x(), 3);
       }
     });
 
@@ -178,20 +178,20 @@ export default await base.find('Class', 'Module').new({
       ]
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'after_before_combined',
       do() {
         const ab = $.after_before_combined.new();
         ab.bump();
-        this.assert_eq(ab.x(), 6);
+        this.assertEq(ab.x(), 6);
       }
     });
 
     $.Class.new({
-      name: 'after_before_combined_method',
+      name: 'after_before_combined_Method',
       slots: [
         $.after_before_combined,
-        $.method.new({
+        $.Method.new({
           name: 'bump',
           override: true,
           do() {
@@ -201,12 +201,12 @@ export default await base.find('Class', 'Module').new({
       ]
     });
 
-    $.case.new({
-      name: 'after_before_combined_method',
+    $.Case.new({
+      name: 'after_before_combined_Method',
       do() {
-        const abc = $.after_before_combined_method.new();
+        const abc = $.after_before_combined_Method.new();
         abc.bump();
-        this.assert_eq(abc.x(), 8);
+        this.assertEq(abc.x(), 8);
       }
     });
     $.Class.new({
@@ -222,16 +222,16 @@ export default await base.find('Class', 'Module').new({
       ]
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'after_multiple',
       do() {
         const am = $.after_multiple.new();
         am.bump();
-        this.assert_eq(am.x(), 4);
+        this.assertEq(am.x(), 4);
       }
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'static',
       do() {
         $.Class.new({
@@ -246,17 +246,17 @@ export default await base.find('Class', 'Module').new({
           ]
         });
 
-        this.assert_eq($.static_test.frob(3), 6);
+        this.assertEq($.static_test.frob(3), 6);
       }
     });
 
-    $.case.new({
+    $.Case.new({
       name: 'basic extend',
       do() {
         $.Class.new({
           name: 'ext1',
           slots: [
-            $.method.new({
+            $.Method.new({
               name: 'p',
               do() {}
             }),
@@ -270,9 +270,9 @@ export default await base.find('Class', 'Module').new({
           }
         }));
         let e = $.ext1.new();
-        this.assert_eq(x, 0);
+        this.assertEq(x, 0);
         e.p();
-        this.assert_eq(x, 1);
+        this.assertEq(x, 1);
       }
     });
 

@@ -10,14 +10,14 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'test_timer',
       slots: [
-        $.var.new({ name: 'start' }),
+        $.Var.new({ name: 'start' }),
         $.after.new({
           name: 'init',
           do() {
             this.start(+new Date());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'mark',
           do() {
             return `[${+new Date() - this.start()}ms]`;
@@ -29,10 +29,10 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'test_runner',
       slots: [
-        $.var.new({
+        $.Var.new({
           name: 'module_cache',
         }),
-        $.var.new({
+        $.Var.new({
           name: 'timer',
         }),
         $.after.new({
@@ -41,24 +41,24 @@ export default await base.find('Class', 'Module').new({
             this.timer($.test_timer.new({ name: 'runner_timer' }));
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'run_mod',
           async: true,
           async do(mod) {
             this.log(`run ${mod.title()}`);
             globalThis.SIMULABRA.mod(mod);
-            const cases = mod.instances($.case);
-            if (cases === undefined) {
-              throw new Error(`no cases in module ${mod.description()}`);
+            const Cases = mod.instances($.Case);
+            if (Cases === undefined) {
+              throw new Error(`no Cases in module ${mod.description()}`);
             }
-            for (const test_case of cases) {
-              await test_case.run();
+            for (const test_Case of Cases) {
+              await test_Case.run();
             }
-            const n = Object.values(cases).length;
-            this.log(mod.title(), `${n} test cases passed`);
+            const n = Object.values(Cases).length;
+            this.log(mod.title(), `${n} test Cases passed`);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'load_file',
           async: true,
           async do(filePath) {
@@ -66,7 +66,7 @@ export default await base.find('Class', 'Module').new({
             return esm.default;
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'run',
           async: true,
           async do(path) {
@@ -85,7 +85,7 @@ export default await base.find('Class', 'Module').new({
             this.log('done running');
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'log',
           override: true,
           do(...args) {

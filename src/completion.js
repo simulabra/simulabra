@@ -10,55 +10,55 @@ export default await base.find('class', 'module').new({
     const $el = $.html_element.proxy();
 
     $.class.new({
-      name: 'context_var',
+      name: 'ContextVar',
       slots: [
-        $.var,
+        $.Var,
       ]
     });
 
     $.class.new({
-      name: 'fetch_context',
+      name: 'FetchContext',
       slots: [
-        $.var.new({ name: 'context' }),
-        $.var.new({ name: 'count' }),
-        $.var.new({ name: 'temperature' }),
-        $.var.new({ name: 'n_predict' }),
+        $.Var.new({ name: 'context' }),
+        $.Var.new({ name: 'count' }),
+        $.Var.new({ name: 'temperature' }),
+        $.Var.new({ name: 'nPredict' }),
       ]
     });
 
     // the new style?
-    // $.class.new('fetch_context', {
+    // $.class.new('FetchContext', {
     //   slots: [
-    //     $.var.new('context'),
-    //     $.var.new('count'),
-    //     $.method.fn(async function run(ctx) {
+    //     $.Var.new('context'),
+    //     $.Var.new('count'),
+    //     $.Method.fn(async function run(ctx) {
     //     }),
     //   ]
     // });
 
     $.class.new({
-      name: 'completor_fetch_next_command',
+      name: 'CompletorFetchNextCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'count' }),
-        $.var.new({ name: 'temperature' }),
-        $.var.new({ name: 'n_predict' }),
-        $.var.new({ name: 'n_probs' }),
-        $.var.new({ name: 'control' }),
-        $.var.new({ name: 'repeat_penalty', default: 0.3 }),
-        $.method.new({
+        $.Var.new({ name: 'count' }),
+        $.Var.new({ name: 'temperature' }),
+        $.Var.new({ name: 'nPredict' }),
+        $.Var.new({ name: 'nProbs' }),
+        $.Var.new({ name: 'control' }),
+        $.Var.new({ name: 'repeatPenalty', default: 0.3 }),
+        $.Method.new({
           name: 'run',
           do: async function run(ctx) {
-            ctx.completion_candidates().reset();
+            ctx.completionCandidates().reset();
             let logit_bias = [];
             const prompt = ctx.prompt();
             function valid() {
               return ctx.prompt() === prompt;
             }
             let count = this.count() ?? ctx.count();
-            let n_predict = this.n_predict() ?? ctx.n_predict();
+            let nPredict = this.nPredict() ?? ctx.nPredict();
             let temperature = this.temperature() ?? ctx.temperature();
-            let n_probs = this.n_probs() ?? ctx.n_probs();
+            let nProbs = this.nProbs() ?? ctx.nProbs();
             let control = this.control() ?? ctx.control();
             for (let i = 0; i < count; i++) {
               if (!valid()) {
@@ -66,23 +66,23 @@ export default await base.find('class', 'module').new({
               }
               const completion = await ctx.pyserver().completion({
                 prompt,
-                n_predict,
+                nPredict,
                 temperature,
-                n_probs,
+                nProbs,
                 control,
               });
               if (i === 0 && completion.tops()) {
-                ctx.probs(Object.entries(completion.tops()).map(([tok_str, prob]) => $.token_prob.new({ object: ctx, parent: ctx, tok_str, prob })));
+                ctx.probs(Object.entries(completion.tops()).map(([tokStr, prob]) => $.TokenProb.new({ object: ctx, parent: ctx, tokStr, prob })));
               }
 
               if (completion.content() !== '' && valid()) {
-                ctx.completion_candidates().add(completion);
+                ctx.completionCandidates().add(completion);
                 for (let tok of completion.tokens()) {
                   const logit = logit_bias.find(l => l[0] === tok);
                   if (logit) {
-                    logit[1] -= this.repeat_penalty();
+                    logit[1] -= this.repeatPenalty();
                   } else {
-                    logit_bias.push([tok, -this.repeat_penalty()]);
+                    logit_bias.push([tok, -this.repeatPenalty()]);
                   }
                 }
               }
@@ -94,11 +94,11 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_insert_command',
+      name: 'CompletorInsertCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'text' }),
-        $.method.new({
+        $.Var.new({ name: 'text' }),
+        $.Method.new({
           name: 'run',
           do: async function run(ctx) {
             ctx.insert(this.text());
@@ -108,43 +108,43 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_fetch_next_link',
+      name: 'CompletorFetchNextLink',
       slots: [
         $.link,
-        $.method.new({
-          name: 'link_text',
-          do: function link_text() {
+        $.Method.new({
+          name: 'linkText',
+          do: function linkText() {
             return 'think!';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'subtext',
           do: function subtext() {
             return 'Spc';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'command',
           do: function command() {
-            return $.completor_fetch_next_command.new();
+            return $.CompletorFetchNextCommand.new();
           }
         }),
       ]
     });
 
     $.class.new({
-      name: 'completor_complete_command',
+      name: 'CompletorCompleteCommand',
       slots: [
         $.command,
-        $.var.new({
+        $.Var.new({
           name: 'length',
           default: 100,
         }),
-        $.method.new({
+        $.Method.new({
           name: 'run',
           do: async function run(ctx) {
-            let n_predict = ctx.n_predict();
-            const chunks = this.length() / n_predict;
+            let nPredict = ctx.nPredict();
+            const chunks = this.length() / nPredict;
             let temperature = ctx.temperature();;
             const chunk = async (depth = 0) => {
               if (depth > chunks) {
@@ -154,7 +154,7 @@ export default await base.find('class', 'module').new({
               const prompt = ctx.prompt();
               const completion = await ctx.pyserver().completion({
                 prompt,
-                n_predict,
+                nPredict,
                 temperature,
               });
               if (completion.content() !== '') {
@@ -170,35 +170,35 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_complete_link',
+      name: 'CompletorCompleteLink',
       slots: [
         $.link,
-        $.method.new({
-          name: 'link_text',
-          do: function link_text() {
+        $.Method.new({
+          name: 'linkText',
+          do: function linkText() {
             return 'complete';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'subtext',
           do: function subtext() {
             return 'Ret';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'command',
           do: function command() {
-            return $.completor_complete_command.new();
+            return $.CompletorCompleteCommand.new();
           }
         }),
       ]
     });
 
     $.class.new({
-      name: 'completor_clear_command',
+      name: 'CompletorClearCommand',
       slots: [
         $.command,
-        $.method.new({
+        $.Method.new({
           name: 'run',
           do: function run(ctx) {
             ctx.clear();
@@ -208,56 +208,56 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_clear_link',
+      name: 'CompletorClearLink',
       slots: [
         $.link,
-        $.method.new({
-          name: 'link_text',
-          do: function link_text() {
+        $.Method.new({
+          name: 'linkText',
+          do: function linkText() {
             return 'clear';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'command',
           do: function command() {
-            return $.completor_clear_command.new();
+            return $.CompletorClearCommand.new();
           }
         }),
       ]
     });
 
     $.class.new({
-      name: 'completor_add_link',
+      name: 'CompletorAddLink',
       slots: [
         $.link,
-        $.var.new({ name: 'choice' }),
-        $.var.new({ name: 'text' }),
-        $.var.new({ name: 'emphasize' }),
-        $.method.new({
-          name: 'link_text',
-          do: function link_text() {
+        $.Var.new({ name: 'choice' }),
+        $.Var.new({ name: 'text' }),
+        $.Var.new({ name: 'emphasize' }),
+        $.Method.new({
+          name: 'linkText',
+          do: function linkText() {
             return this.text();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'subtext',
           do: function subtext() {
             return this.choice();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'command',
           do: function command() {
-            return $.completor_insert_command.new({ text: this.text() });
+            return $.CompletorInsertCommand.new({ text: this.text() });
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'hover',
           do: function hover() {
             completor.preview(this.text());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'unhover',
           do: function unhover() {
             completor.preview('');
@@ -267,15 +267,15 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completion_candidates',
+      name: 'CompletionCandidates',
       slots: [
         $.component,
-        $.var.new({ name: 'candidates', default: [] }),
-        $.method.new({
+        $.Var.new({ name: 'candidates', default: [] }),
+        $.Method.new({
           name: 'render',
           do: function render() {
             const candidatesElements = this.candidates().map((cc, i) => {
-              return $el.div({}, $.completor_add_link.new({
+              return $el.div({}, $.CompletorAddLink.new({
                 object: this.parent(),
                 text: cc.content(),
                 choice: i + 1,
@@ -283,27 +283,27 @@ export default await base.find('class', 'module').new({
               }));
             });
 
-            return $el.div({ class: 'completion_candidates_list' }, ...candidatesElements);
+            return $el.div({ class: 'CompletionCandidates_list' }, ...candidatesElements);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'add',
           do: function add(it) {
             this.candidates([...this.candidates(), it]);
-            const child = $el.div({}, $.completor_add_link.new({
+            const child = $el.div({}, $.CompletorAddLink.new({
               object: this.parent(),
               text: it.content(),
               choice: this.candidates().length,
               parent: this,
             }));
-            this.element().querySelector('.completion_candidates_list').appendChild(child.to_dom());
+            this.element().querySelector('.CompletionCandidates_list').appendChild(child.to_dom());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'reset',
           do: function reset() {
             this.candidates([]);
-            this.element().querySelector('.completion_candidates_list').innerHTML = '';
+            this.element().querySelector('.CompletionCandidates_list').innerHTML = '';
           }
         }),
       ]
@@ -312,56 +312,56 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'history_moment',
       slots: [
-        $.var.new({ name: 'action', default: '' }),
-        $.var.new({ name: 'text', default: '' }),
+        $.Var.new({ name: 'action', default: '' }),
+        $.Var.new({ name: 'text', default: '' }),
       ]
     });
 
     $.class.new({
-      name: 'completor_goto_history_command',
+      name: 'CompletorGotoHistoryCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'moment' }),
-        $.method.new({
+        $.Var.new({ name: 'moment' }),
+        $.Method.new({
           name: 'run',
           do: async function run(ctx) {
             ctx.instruction().set(this.moment().text());
-            await $.completor_fetch_next_command.new().run(ctx);
+            await $.CompletorFetchNextCommand.new().run(ctx);
           }
         }),
       ]
     });
 
     $.class.new({
-      name: 'completor_goto_history_link',
+      name: 'CompletorGotoHistoryLink',
       slots: [
         $.link,
-        $.var.new({ name: 'moment' }),
-        $.method.new({
-          name: 'link_text',
-          do: function link_text() {
+        $.Var.new({ name: 'moment' }),
+        $.Method.new({
+          name: 'linkText',
+          do: function linkText() {
             return this.moment().action();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'subtext',
           do: function subtext() {
             return '';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'command',
           do: function command() {
-            return $.completor_goto_history_command.new({ moment: this.moment() });
+            return $.CompletorGotoHistoryCommand.new({ moment: this.moment() });
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'hover',
           do: function hover() {
             completor.preview(this.moment().text(), true);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'unhover',
           do: function unhover() {
             completor.preview('');
@@ -371,15 +371,15 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completion_history',
+      name: 'CompletionHistory',
       slots: [
         $.component,
-        $.var.new({ name: 'history', default: [] }),
-        $.method.new({
+        $.Var.new({ name: 'history', default: [] }),
+        $.Method.new({
           name: 'render',
           do: function render() {
             const historyElements = this.history().slice().reverse().map((cc, i) => {
-              return $el.div({}, $.completor_goto_history_link.new({
+              return $el.div({}, $.CompletorGotoHistoryLink.new({
                 object: this.parent(),
                 moment: cc,
                 parent: this,
@@ -389,13 +389,13 @@ export default await base.find('class', 'module').new({
             return $el.div({}, $el.div({}, 'history'), ...historyElements);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'add',
           do: function add(it) {
             this.history([...this.history(), it]);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'reset',
           do: function reset() {
             this.history([]);
@@ -406,44 +406,44 @@ export default await base.find('class', 'module').new({
 
     $.class.new(
       {
-        name: 'token_prob',
+        name: 'TokenProb',
       },
       $.link,
-      $.var.new({ name: 'tok_str' }),
-      $.var.new({ name: 'prob' }),
-      $.method.new({
-        name: 'font_size',
-        do: function font_size() {
+      $.Var.new({ name: 'tokStr' }),
+      $.Var.new({ name: 'prob' }),
+      $.Method.new({
+        name: 'fontSize',
+        do: function fontSize() {
           return 1 + this.prob() * 1.7;
         }
       }),
-      $.method.new({
-        name: 'link_text',
-        do: function link_text() {
-          return this.tok_str();
+      $.Method.new({
+        name: 'linkText',
+        do: function linkText() {
+          return this.tokStr();
         }
       }),
-      $.method.new({
+      $.Method.new({
         name: 'subtext',
         do: function subtext() {
           const opacity = Math.tanh(this.prob()) + 0.5;
           return $el.span({ style: `opacity: ${opacity}` }, this.prob().toPrecision(2));
         }
       }),
-      $.method.new({
+      $.Method.new({
         name: 'command',
         do: function command() {
           this.log('issue command');
-          return $.completor_insert_command.new({ text: this.tok_str() });
+          return $.CompletorInsertCommand.new({ text: this.tokStr() });
         }
       }),
       $.after.new({
         name: 'hover',
         do: function hover() {
-          completor.preview(this.tok_str());
+          completor.preview(this.tokStr());
         }
       }),
-      $.method.new({
+      $.Method.new({
         name: 'unhover',
         do: function unhover() {
           completor.preview('');
@@ -453,16 +453,16 @@ export default await base.find('class', 'module').new({
         name: 'load',
         do: function load(e) {
           this.log(e, this.element());
-          this.element().style['font-size'] = `${this.font_size()}em`;
+          this.element().style['font-size'] = `${this.fontSize()}em`;
         }
       }),
     );
 
     $.class.new({
-      name: 'completor_instruction_focus_command',
+      name: 'CompletorInstructionFocusCommand',
       slots: [
         $.command,
-        $.method.new({
+        $.Method.new({
           name: 'run',
           do: async function run(ctx) {
             ctx.instruction().focus();
@@ -472,10 +472,10 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_unfocus_command',
+      name: 'CompletorUnfocusCommand',
       slots: [
         $.command,
-        $.method.new({
+        $.Method.new({
           name: 'run',
           do: function run(ctx) {
             ctx.instruction().blur();
@@ -485,25 +485,25 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_set_n_predict_command',
+      name: 'CompletorSetNPredictCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'value' }),
-        $.method.new({
+        $.Var.new({ name: 'value' }),
+        $.Method.new({
           name: 'run',
           do: function run(ctx) {
-            ctx.n_predict(this.value());
+            ctx.nPredict(this.value());
           }
         }),
       ]
     });
 
     $.class.new({
-      name: 'completor_set_count_command',
+      name: 'CompletorSetCountCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'value' }),
-        $.method.new({
+        $.Var.new({ name: 'value' }),
+        $.Method.new({
           name: 'run',
           do: function run(ctx) {
             ctx.count(this.value());
@@ -513,11 +513,11 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_set_temperature_command',
+      name: 'CompletorSetTemperatureCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'value' }),
-        $.method.new({
+        $.Var.new({ name: 'value' }),
+        $.Method.new({
           name: 'run',
           do: function run(ctx) {
             ctx.temperature(this.value());
@@ -527,11 +527,11 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_set_control_command',
+      name: 'CompletorSetControlCommand',
       slots: [
         $.command,
-        $.var.new({ name: 'value' }),
-        $.method.new({
+        $.Var.new({ name: 'value' }),
+        $.Method.new({
           name: 'run',
           do: function run(ctx) {
             ctx.control(this.value());
@@ -541,10 +541,10 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'instruction_input',
+      name: 'InstructionInput',
       slots: [
-        $.toggly_input,
-        $.var.new({ name: 'before_editing_state' }),
+        $.TogglyInput,
+        $.Var.new({ name: 'beforeEditingState' }),
         $.after.new({
           name: 'load',
           do: function load__after() {
@@ -560,15 +560,15 @@ export default await base.find('class', 'module').new({
         $.after.new({
           name: 'focus',
           do: function focus__after() {
-            this.before_editing_state(this.value(), false);
+            this.beforeEditingState(this.value(), false);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'leave_editing',
           do: function leave_editing() {
             this.active(false, false);
             completor.save();
-            if (this.value() !== this.before_editing_state()) {
+            if (this.value() !== this.beforeEditingState()) {
               completor.add_history('edited', this.value());
             }
           }
@@ -585,43 +585,36 @@ export default await base.find('class', 'module').new({
     });
 
     $.class.new({
-      name: 'completor_controls',
-      slots: [
-        $.window,
-      ]
-    });
-
-    $.class.new({
       name: 'completor',
       slots: [
         $.window,
         $.application,
-        $.var.new({
+        $.Var.new({
           name: 'instruction',
-          default() { return $.instruction_input.new({ name: 'instruction', parent: this }); }
+          default() { return $.InstructionInput.new({ name: 'instruction', parent: this }); }
         }),
-        $.var.new({ name: 'completion_candidates' }),
-        $.var.new({ name: 'count', default: 5 }),
-        $.var.new({ name: 'temperature', default: 0.6 }),
-        $.var.new({ name: 'control', default: 5.0 }),
-        $.var.new({ name: 'n_predict', default: 8 }),
-        $.var.new({ name: 'n_probs', default: 50 }),
-        $.var.new({ name: 'choices', default: [] }),
-        $.var.new({ name: 'history', default() { return $.completion_history.new({ parent: this }) } }),
-        $.var.new({ name: 'probs', default: [] }),
-        $.var.new({ name: 'pyserver' }),
+        $.Var.new({ name: 'completionCandidates' }),
+        $.Var.new({ name: 'count', default: 5 }),
+        $.Var.new({ name: 'temperature', default: 0.6 }),
+        $.Var.new({ name: 'control', default: 5.0 }),
+        $.Var.new({ name: 'nPredict', default: 8 }),
+        $.Var.new({ name: 'nProbs', default: 50 }),
+        $.Var.new({ name: 'choices', default: [] }),
+        $.Var.new({ name: 'history', default() { return $.CompletionHistory.new({ parent: this }) } }),
+        $.Var.new({ name: 'probs', default: [] }),
+        $.Var.new({ name: 'pyserver' }),
         $.event.new({
           name: 'update',
           do: function update(e) {
-            if (e._var.name() === 'count') {
-              document.querySelector('.completion_candidates').style['min-height'] = `${this.count() * 1.5}em`;
+            if (e._Var.name() === 'count') {
+              document.querySelector('.CompletionCandidates').style['min-height'] = `${this.count() * 1.5}em`;
             }
           }
         }),
         $.after.new({
           name: 'init',
           do: function init() {
-            this.completion_candidates($.completion_candidates.new({ parent: this }));
+            this.completionCandidates($.CompletionCandidates.new({ parent: this }));
             const model = localStorage.getItem('selected_model') ?? 'chatml';
             this.set_model(model);
             const instruction = localStorage.getItem('instruction_value') ?? '';
@@ -637,7 +630,7 @@ export default await base.find('class', 'module').new({
                 if (e.key === 'Escape') {
                   this.dispatchEvent({
                     type: 'command',
-                    target: $.completor_unfocus_command.new(),
+                    target: $.CompletorUnfocusCommand.new(),
                   });
                 }
               }
@@ -656,37 +649,37 @@ export default await base.find('class', 'module').new({
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'key_command',
           do: function key_command(key, e) {
             if (key === 'i') {
               e.preventDefault();
-              return $.completor_instruction_focus_command.new();
+              return $.CompletorInstructionFocusCommand.new();
             } else if (key === ' ') {
               e.preventDefault();
-              return $.completor_fetch_next_command.new();
+              return $.CompletorFetchNextCommand.new();
             } else if (key === '[') {
-              return $.completor_set_n_predict_command.new({ value: this.n_predict() - 1 });
+              return $.CompletorSetNPredictCommand.new({ value: this.nPredict() - 1 });
             } else if (key === ']') {
-              return $.completor_set_n_predict_command.new({ value: this.n_predict() + 1 });
+              return $.CompletorSetNPredictCommand.new({ value: this.nPredict() + 1 });
             } else if (key === ',') {
-              return $.completor_set_temperature_command.new({ value: this.temperature() - 0.1 });
+              return $.CompletorSetTemperatureCommand.new({ value: this.temperature() - 0.1 });
             } else if (key === '.') {
-              return $.completor_set_temperature_command.new({ value: this.temperature() + 0.1 });
+              return $.CompletorSetTemperatureCommand.new({ value: this.temperature() + 0.1 });
             // } else if (key === ',') {
-            //   return $.completor_set_count_command.new({ value: this.count() - 1 });
+            //   return $.CompletorSetCountCommand.new({ value: this.count() - 1 });
             // } else if (key === '.') {
-            //   return $.completor_set_count_command.new({ value: this.count() + 1 });
+            //   return $.CompletorSetCountCommand.new({ value: this.count() + 1 });
             } else if (key === '{') {
-              return $.completor_set_control_command.new({ value: this.control() - 0.1 });
+              return $.CompletorSetControlCommand.new({ value: this.control() - 0.1 });
             } else if (key === '}') {
-              return $.completor_set_control_command.new({ value: this.control() + 0.1 });
+              return $.CompletorSetControlCommand.new({ value: this.control() + 0.1 });
             } else if (key === 'Enter') {
-              return $.completor_complete_command.new();
+              return $.CompletorCompleteCommand.new();
             } else if (!isNaN(+key)) {
-              const text = this.completion_candidates().candidates()[+key - 1]?.content();
+              const text = this.completionCandidates().candidates()[+key - 1]?.content();
               if (text !== undefined) {
-                return $.completor_insert_command.new({ text });
+                return $.CompletorInsertCommand.new({ text });
               } else {
                 return null;
               }
@@ -696,19 +689,19 @@ export default await base.find('class', 'module').new({
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'window_title',
           do: function window_title() {
             return 'imagine anything';
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'preview',
           do: function preview(text, hide) {
             this.instruction().preview(text, hide);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'add_history',
           do: function add_history(action, text) {
             this.history().add($.history_moment.new({
@@ -718,7 +711,7 @@ export default await base.find('class', 'module').new({
             this.log('history', this.history());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'insert',
           do: function insert(it) {
             this.choices().push(it);
@@ -730,44 +723,44 @@ export default await base.find('class', 'module').new({
             this.fetch_next();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'clear',
           do: function clear() {
             this.instruction().set('');
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'save',
           do: function save() {
             localStorage.setItem('instruction_value', this.instruction().value());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'fetch_next',
           do: function fetch_next() {
-            return $.completor_fetch_next_command.new().run(this);
+            return $.CompletorFetchNextCommand.new().run(this);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'prompt',
           do: function prompt() {
             return this.instruction().value();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'set_model',
           do: function set_model(modelName) {
             localStorage.setItem('selected_model', modelName);
             // this.prompt_format($[modelName + '_model'].new());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'model_option',
           do: function model_option(name, selectedName) {
             return $el.option({ value: name, selected: name + '_model' === selectedName }, name);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div(
@@ -778,30 +771,30 @@ export default await base.find('class', 'module').new({
                   name: 'temperature',
                   parent: this,
                   bind: 'temperature',
-                  command: $.completor_set_temperature_command,
+                  command: $.CompletorSetTemperatureCommand,
                   step: 0.1,
                 }),
                 $.number_input.new({
                   name: 'tokens',
                   parent: this,
-                  bind: 'n_predict',
-                  command: $.completor_set_n_predict_command,
+                  bind: 'nPredict',
+                  command: $.CompletorSetNPredictCommand,
                 }),
                 $.number_input.new({
                   name: 'control',
                   parent: this,
                   bind: 'control',
-                  command: $.completor_set_control_command,
+                  command: $.CompletorSetControlCommand,
                   step: 0.1,
                 }),
                 $el.div({}),
-                $.completor_fetch_next_link.new({ object: this, parent: this }),
+                $.CompletorFetchNextLink.new({ object: this, parent: this }),
                 ' ',
-                $.completor_complete_link.new({ object: this, parent: this }),
+                $.CompletorCompleteLink.new({ object: this, parent: this }),
                 ' ',
-                $.completor_clear_link.new({ object: this, parent: this }),
+                $.CompletorClearLink.new({ object: this, parent: this }),
                 $el.div({ class: 'prob-box' }, ...this.probs()),
-                this.completion_candidates(),
+                this.completionCandidates(),
                 this.history(),
               ),
               $el.div(
@@ -811,16 +804,16 @@ export default await base.find('class', 'module').new({
             );
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'css',
           do: function css() {
             return `
 .completor-link-pre {
-  color: var(--secondary-2);
+  color: Var(--secondary-2);
 }
 
 .completor-link-pre-emphasize {
-  color: var(--secondary-2);
+  color: Var(--secondary-2);
 }
 
 .completed-true {
@@ -832,7 +825,7 @@ export default await base.find('class', 'module').new({
 }
 
 .completor-preview {
-  color: var(--foreground-1);
+  color: Var(--foreground-1);
   font-style: italic;
 }
 
@@ -846,38 +839,38 @@ export default await base.find('class', 'module').new({
   padding: 4px;
 }
 
-.completion_candidates {
+.CompletionCandidates {
   min-height: 4.5em;
   display: block;
 }
 
-.token_prob {
+.TokenProb {
   padding: 2px;
   margin: 4px;
-  background: var(--background);
-  box-shadow: var(--box-shadow-args);
+  background: Var(--background);
+  box-shadow: Var(--box-shadow-args);
   display: inline-block;
 }
-.token_prob:hover {
-  background: var(--background-secondary);
+.TokenProb:hover {
+  background: Var(--background-secondary);
   cursor: pointer;
 }
 
-.completor_add_link {
+.CompletorAddLink {
   padding: 2px;
   margin: 4px;
-  background: var(--background);
+  background: Var(--background);
   display: inline-block;
-  box-shadow: var(--box-shadow-args);
+  box-shadow: Var(--box-shadow-args);
 }
-.completor_add_link:hover {
-  background: var(--background-secondary);
+.CompletorAddLink:hover {
+  background: Var(--background-secondary);
   cursor: pointer;
 }
 
 .prob_sub {
   font-size: 0.5em;
-  color: var(--foreground-1);
+  color: Var(--foreground-1);
 }
 
 .prob-box {

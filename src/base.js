@@ -72,13 +72,13 @@ function bootstrap() {
   }
 
   class Frame {
-    constructor(receiver, method_impl, args) {
+    constructor(receiver, Method_impl, args) {
       this._receiver = receiver;
-      this._methodImpl = method_impl;
+      this._MethodImpl = Method_impl;
       this._args = args;
     }
     description() {
-      return `${pry(this._receiver)}.${this._methodImpl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
+      return `${pry(this._receiver)}.${this._MethodImpl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
     }
   }
 
@@ -233,16 +233,16 @@ function bootstrap() {
       return new this(args);
     }
     static descended(other) {
-      return other === BVar || other === $var;
+      return other === BVar || other === $Var;
     }
     name() {
       return this._name;
     }
     uri() {
-      return `simulabra://localhost/bvar/${this._name}`;
+      return `simulabra://localhost/bVar/${this._name}`;
     }
     title() {
-      return `!bvar#${this._name}`;
+      return `!bVar#${this._name}`;
     }
     state() {
       return $fake_state.list_from_map({
@@ -375,18 +375,18 @@ function bootstrap() {
       }
     },
     function description(seen) { //TODO: add depth
-      const vars = this.state().filter(v => v.value() !== v.var_ref().defval());
-      const varDesc = vars.length > 0 ? `{\n${vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
-      return `${this.class().description(seen)}.new${varDesc}`;
+      const Vars = this.state().filter(v => v.value() !== v.Var_ref().defval());
+      const VarDesc = Vars.length > 0 ? `{\n${Vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
+      return `${this.class().description(seen)}.new${VarDesc}`;
     },
     function toString() {
       return this.description();
     },
     function state() {
-      return this.class().vars().map(var_ref => {
-        const value = this[`_${var_ref.name()}`];
+      return this.class().Vars().map(Var_ref => {
+        const value = this[`_${Var_ref.name()}`];
         if (value !== undefined) {
-          return $var_state.new({ var_ref, value });
+          return var_state.new({ Var_ref, value });
         } else {
           return null;
         }
@@ -519,21 +519,21 @@ function bootstrap() {
     function proxied(ctx) {
       return this;
     },
-    function vars(visited = new Set()) {
+    function Vars(visited = new Set()) {
       if (visited.has(this)) return [];
       visited.add(this);
 
-      let vars = [];
+      let Vars = [];
       for (const slot of this.slots()) {
         if (typeof slot === 'function') {
           // skip
-        } else if (slot.class() === BVar || slot.isa($var)) {
-          vars.push(slot);
+        } else if (slot.class() === BVar || slot.isa($Var)) {
+          Vars.push(slot);
         } else if (slot.isa($Class)) {
-          vars = [...vars, ...slot.vars()];
+          Vars = [...Vars, ...slot.Vars()];
         }
       }
-      return vars;
+      return Vars;
     },
     function genid() {
       let id = this.id_ctr();
@@ -589,8 +589,8 @@ function bootstrap() {
   $base.init();
 
   // a missing middle
-  var $var = $Class.new({
-    name: 'var',
+  var $Var = $Class.new({
+    name: 'Var',
     slots: [
       BVar.new({ name: 'name', }),
       BVar.new({ name: 'debug', default: true }),
@@ -619,7 +619,7 @@ function bootstrap() {
             this[pk] = assign;
             if (self.observable() && update) {
               const ev = new Event('update');
-              ev._var = self;
+              ev._Var = self;
               ev._value = assign;
               ev._target = this;
               this.dispatchEvent(ev); // best there is?
@@ -640,7 +640,7 @@ function bootstrap() {
   const $fn = $Class.new({
     name: 'fn',
     slots: [
-      $var.new({ name: 'do' }), // fn, meat and taters
+      $Var.new({ name: 'do' }), // fn, meat and taters
     ]
   });
 
@@ -671,7 +671,7 @@ function bootstrap() {
           return list;
         }
       }),
-      $var.new({ name: 'value' }),
+      $Var.new({ name: 'value' }),
       function kv() {
         return [this.name(), this.value()];
       },
@@ -687,39 +687,39 @@ function bootstrap() {
     ]
   });
 
-  const $var_state = $Class.new({
-    name: 'var_state',
+  const var_state = $Class.new({
+    name: 'Var_state',
     slots: [
-      $var.new({ name: 'var_ref' }),
-      $var.new({ name: 'value' }),
+      $Var.new({ name: 'Var_ref' }),
+      $Var.new({ name: 'value' }),
       function kv() {
-        return [this.var_ref().name(), this.value()];
+        return [this.Var_ref().name(), this.value()];
       },
       function description(seen) {
         let d;
         if (this.value().title instanceof Function) {
           d = this.value().title();
-        } else if (!this.var_ref().debug()) {
+        } else if (!this.Var_ref().debug()) {
           d = `<hidden>`;
         } else {
           d = simulabra_string(this.value(), seen);
         }
-        return `:${this.var_ref().name()}=${d}`;
+        return `:${this.Var_ref().name()}=${d}`;
       }
     ]
   });
 
-  const $method = $Class.new({
-    name: 'method',
+  const $Method = $Class.new({
+    name: 'Method',
     slots: [
       $fn,
-      $var.new({ name: 'message' }),
-      $var.new({ name: 'name' }),
-      $var.new({ name: 'override', default: false }),
-      $var.new({ name: 'debug', default: true }),
+      $Var.new({ name: 'message' }),
+      $Var.new({ name: 'name' }),
+      $Var.new({ name: 'override', default: false }),
+      $Var.new({ name: 'debug', default: true }),
       function combine(impl) {
         if (impl._name !== this.name()) {
-          throw new Error('tried to combine method on non-same named impl');
+          throw new Error('tried to combine Method on non-same named impl');
         }
         let fn = this.do();
         if (typeof fn !== 'function') {
@@ -764,7 +764,7 @@ function bootstrap() {
     name: 'before',
     slots: [
       $fn,
-      $var.new({ name: 'name' }),
+      $Var.new({ name: 'name' }),
       function combine(impl) {
         impl._befores.push(this.do());
       }
@@ -775,7 +775,7 @@ function bootstrap() {
     name: 'after',
     slots: [
       $fn,
-      $var.new({ name: 'name' }),
+      $Var.new({ name: 'name' }),
       function combine(impl) {
         impl._afters.push(this.do());
       }
@@ -786,7 +786,7 @@ function bootstrap() {
   const $virtual = $Class.new({
     name: 'virtual',
     slots: [
-      $var.new({ name: 'name' }),
+      $Var.new({ name: 'name' }),
       function load(parent) {
         this.dlog('virtual load', this);
         parent[this.name()] = function () { throw new Error(`not implemented: ${this.name()}`); };
@@ -801,8 +801,8 @@ function bootstrap() {
   const $object_registry = $Class.new({
     name: 'object_registry',
     slots: [
-      $var.new({ name: 'classInstances', default: () => ({}) }),
-      $var.new({ name: 'refs', default: () => ({}) }),
+      $Var.new({ name: 'classInstances', default: () => ({}) }),
+      $Var.new({ name: 'refs', default: () => ({}) }),
       function register(o) {
         this.add_instance(o);
         const u = o.uri();
@@ -855,20 +855,20 @@ function bootstrap() {
     // debug: true,
     slots: [
       $deffed,
-      $var.new({ name: 'name' }),
-      $var.new({
+      $Var.new({ name: 'name' }),
+      $Var.new({
         name: 'imports',
         desc: 'the other modules available within this one',
         default: [],
         debug: false,
       }),
-      $var.new({ name: 'on_load' }),
-      $var.new({ name: 'registry' }),
-      $var.new({ name: 'parent' }),
-      $var.new({ name: 'doc', default: '-' }),
-      $var.new({ name: 'loaded', default: false }),
-      $var.new({ name: 'repos', default: () => ({}) }),
-      $var.new({ name: 'classes', default: () => [] }),
+      $Var.new({ name: 'on_load' }),
+      $Var.new({ name: 'registry' }),
+      $Var.new({ name: 'parent' }),
+      $Var.new({ name: 'doc', default: '-' }),
+      $Var.new({ name: 'loaded', default: false }),
+      $Var.new({ name: 'repos', default: () => ({}) }),
+      $Var.new({ name: 'classes', default: () => [] }),
       $before.new({
         name: 'init',
         do: function init() {
@@ -960,12 +960,12 @@ function bootstrap() {
   const INTRINSICS = [
     $base,
     $Class,
-    $var,
+    $Var,
     $fn,
-    $method,
+    $Method,
     $static,
     $debug,
-    $var_state,
+    var_state,
     $virtual,
     $before,
     $after,
@@ -981,9 +981,9 @@ function bootstrap() {
 
   _.register(_);
   $.Class.new({
-    name: 'static_var',
+    name: 'static_Var',
     slots: [
-      $.var,
+      $.Var,
       $.after.new({
         name: 'load',
         do: function load() {
@@ -996,14 +996,14 @@ function bootstrap() {
   $.Class.new({
     name: 'simulabra_global',
     slots: [
-      $.var.new({ name: 'mod' }),
-      $.var.new({ name: 'modules', default: {} }),
-      $.var.new({ name: 'stack', debug: false }),
-      $.var.new({ name: 'debug', default: true }),
-      $.var.new({ name: 'trace', default: true }),
-      $.var.new({ name: 'tick', default: 0 }),
-      $.var.new({ name: 'handlers', default: {} }),
-      $.var.new({ name: 'registry' }),
+      $.Var.new({ name: 'mod' }),
+      $.Var.new({ name: 'modules', default: {} }),
+      $.Var.new({ name: 'stack', debug: false }),
+      $.Var.new({ name: 'debug', default: true }),
+      $.Var.new({ name: 'trace', default: true }),
+      $.Var.new({ name: 'tick', default: 0 }),
+      $.Var.new({ name: 'handlers', default: {} }),
+      $.Var.new({ name: 'registry' }),
       function start_ticking() {
         setInterval(() => {
           this.tick(this.tick() + 1);
@@ -1044,7 +1044,7 @@ function bootstrap() {
 
   [
     ...INTRINSICS,
-    $.static_var,
+    $.static_Var,
     $.object_registry,
     $.simulabra_global,
   ].forEach(it => __.register(it));
@@ -1053,8 +1053,8 @@ function bootstrap() {
     name: 'event',
     slots: [
       $.fn,
-      $.var.new({ name: 'type' }),
-      $.var.new({ name: 'do' }),
+      $.Var.new({ name: 'type' }),
+      $.Var.new({ name: 'do' }),
       function load(proto) {
         proto._proto._class.events().push(this);
       }
@@ -1066,10 +1066,10 @@ function bootstrap() {
     slots: [
       $.Class,
       $.deffed,
-      $.var.new({ name: 'slots', default: [] }),
-      $.var.new({ name: 'js_prototype' }),
-      $.var.new({ name: 'methods', default: {} }),
-      $.var.new({ name: 'name' }),
+      $.Var.new({ name: 'slots', default: [] }),
+      $.Var.new({ name: 'js_prototype' }),
+      $.Var.new({ name: 'Methods', default: {} }),
+      $.Var.new({ name: 'name' }),
       function init() {
         for (let c of this.slots()) {
           c.load(this.js_prototype());
@@ -1079,8 +1079,8 @@ function bootstrap() {
       function descended(cls) {
         return cls === $.primitive;
       },
-      function extend(methods) {
-        methods.map(m => m.load(this.js_prototype())); // wee-woo!
+      function extend(Methods) {
+        Methods.map(m => m.load(this.js_prototype())); // wee-woo!
       },
       function description() {
         return `primitive ${this.name()}`;
@@ -1113,7 +1113,7 @@ function bootstrap() {
     name: 'string_primitive',
     js_prototype: String.prototype,
     slots: [
-      $.method.new({
+      $.Method.new({
         name: 'class',
         do() {
           return _.proxy('primitive').string_primitive;
@@ -1132,7 +1132,7 @@ function bootstrap() {
     name: 'boolean_primitive',
     js_prototype: Boolean.prototype,
     slots: [
-      $method.new({
+      $Method.new({
         name: 'class',
         do() {
           return _.proxy('primitive').boolean_primitive;
@@ -1154,7 +1154,7 @@ function bootstrap() {
       function to_dom() {
         return document.createTextNode(this.toString());
       },
-      $method.new({
+      $Method.new({
         name: 'class',
         do() {
           return _.proxy('primitive').number_primitive;
@@ -1186,7 +1186,7 @@ function bootstrap() {
         }
         return res;
       },
-      $method.new({
+      $Method.new({
         name: 'class',
         do() {
           return _.proxy('primitive').array_primitive;
@@ -1230,7 +1230,7 @@ function bootstrap() {
     name: 'command',
     slots: [
       $.virtual.new({ name: 'run' }),
-      $.method.new({
+      $.Method.new({
         name: 'dispatchTo',
         do: function dispatchTo(o) {
           o.dispatchEvent({

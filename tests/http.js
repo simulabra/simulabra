@@ -5,17 +5,17 @@ import http from '../src/http.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('Class', 'Module').new({
-  name: 'test_http',
+  name: 'TestHTTP',
   imports: [test, http],
   registry: base.find('Class', 'object_registry').new(),
   on_load(_, $) {
-    $.async_case.new({
-      name: 'server_creation',
+    $.AsyncCase.new({
+      name: 'ServerCreation',
       async do() {
-        const server = $.http_server.new({
+        const server = $.HTTPServer.new({
           port: 3030,
           slots: [
-            $.path_request_handler.new({
+            $.PathRequestHandler.new({
               path: '/',
               handler(app, req, res) {
                 this.log('handle http request');
@@ -27,10 +27,10 @@ export default await base.find('Class', 'Module').new({
         const response = await fetch('http://localhost:3030');
         const text = await response.text();
 
-        this.assert_eq(response.status, 200);
-        this.assert_eq(text, '<h1>hello world!!</h1>');
+        this.assertEq(response.status, 200);
+        this.assertEq(text, '<h1>hello world!!</h1>');
 
-        server.node_server().close();
+        server.nodeServer().close();
       }
     });
   }

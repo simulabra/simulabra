@@ -14,11 +14,11 @@ export default await base.find('Class', 'Module').new({
         $.Class.new({
           name: 'a',
           slots: [
-            $.var.new({
+            $.Var.new({
               name: 'x',
               default: 1,
             }),
-            $.method.new({
+            $.Method.new({
               name: 'frob',
               do() {
                 this.x(this.x() * 3);
@@ -49,13 +49,13 @@ export default await base.find('Class', 'Module').new({
     });
     await b.load();
 
-    $.case.new({
+    $.Case.new({
       name: 'module-inheritance',
       do() {
         const binst = b.$().b.new();
         binst.frob();
         binst.frob();
-        this.assert_eq(binst.x(), 5);
+        this.assertEq(binst.x(), 5);
       }
     });
   }

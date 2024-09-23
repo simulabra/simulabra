@@ -14,15 +14,15 @@ export default await base.find('class', 'module').new({
       doc: 'a generic item in the agenda',
       slots: [
         $.component,
-        $.var.new({
+        $.Var.new({
           name: 'title',
           type: 'string',
         }),
-        $.var.new({
+        $.Var.new({
           name: 'created',
           type: 'date',
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div({}, `[${this.created().toISOString()}] ${this.title()}`);
@@ -36,10 +36,10 @@ export default await base.find('class', 'module').new({
       doc: 'a field to enter items into the agenda',
       slots: [
         $.component,
-        $.var.new({
+        $.Var.new({
           name: 'item_input',
         }),
-        $.var.new({
+        $.Var.new({
           name: 'submit_button',
           default() {
             return $.button.new({
@@ -59,7 +59,7 @@ export default await base.find('class', 'module').new({
             }));
           },
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div({}, this.item_input(), this.submit_button());
@@ -73,11 +73,11 @@ export default await base.find('class', 'module').new({
       slots: [
         $.window,
         $.application,
-        $.var.new({
+        $.Var.new({
           name: 'items',
           default: [],
         }),
-        $.var.new({
+        $.Var.new({
           name: 'new_item',
           default() {
             return $.new_item.new({
@@ -85,13 +85,13 @@ export default await base.find('class', 'module').new({
             });
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'add_item',
           do: function add_item(item) {
             this.items([...this.items(), item]);
           },
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div(

@@ -13,9 +13,9 @@ export default await base.find('class', 'module').new({
       name: 'message',
       slots: [
         $.component,
-        $.var.new({ name: 'text' }),
-        $.var.new({ name: 'time' }),
-        $.method.new({
+        $.Var.new({ name: 'text' }),
+        $.Var.new({ name: 'time' }),
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div({},
@@ -32,18 +32,18 @@ export default await base.find('class', 'module').new({
       name: 'message_log',
       slots: [
         $.window,
-        $.var.new({
+        $.Var.new({
           name: 'message_list',
           default: []
         }),
-        $.method.new({
+        $.Method.new({
           name: 'add',
           do: function add(mstr) {
             this.message_list().push($.message.new({ text: mstr, time: new Date() }));
             this.dispatchEvent({ type: 'update' });
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div({}, ...this.message_list().map(m => m.render()));
@@ -56,25 +56,25 @@ export default await base.find('class', 'module').new({
       name: 'explorer_select_command',
       slots: [
         $.command,
-        $.var.new({ name: 'object' }),
-        $.var.new({ name: 'previous' }),
-        // (~var #object)
-        // ~method#target(%editor.explorer)
-        // $method(:target %editor.explorer)
-        $.method.new({
+        $.Var.new({ name: 'object' }),
+        $.Var.new({ name: 'previous' }),
+        // (~Var #object)
+        // ~Method#target(%editor.explorer)
+        // $Method(:target %editor.explorer)
+        $.Method.new({
           name: 'target',
           do: function target() {
             return $editor.explorer();
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'run',
           do: function run() {
             this.previous(this.target().object());
             this.target().object(this.object());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'description',
           do: function description() {
             return `~explorer_select_command object=${this.object().title()}`;
@@ -87,9 +87,9 @@ export default await base.find('class', 'module').new({
       name: 'explorer_select_link',
       slots: [
         $.link,
-        $.var.new({ name: 'target' }),
-        $.var.new({ name: 'object' }),
-        $.method.new({
+        $.Var.new({ name: 'target' }),
+        $.Var.new({ name: 'object' }),
+        $.Method.new({
           name: 'command',
           do: function command() {
             return $.explorer_select_command.new({ object: this.object() });
@@ -102,15 +102,15 @@ export default await base.find('class', 'module').new({
       name: 'slot_value',
       slots: [
         $.component,
-        $.var.new({ name: 'slot_name' }),
-        $.var.new({ name: 'value' }),
-        $.method.new({
+        $.Var.new({ name: 'slot_name' }),
+        $.Var.new({ name: 'value' }),
+        $.Method.new({
           name: 'display_function_or_object',
           do: function display_function_or_object() {
             return $.explorer_select_link.new({ object: this.value(), parent: this });
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'display_array',
           do: function display_array() {
             return $el.span({},
@@ -118,7 +118,7 @@ export default await base.find('class', 'module').new({
               this.value().map((it, idx) => $el.div({ class: 'array-item' }, $.slot_value.new({ slot_name: idx, value: it, parent: this }).display())));
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'display_weak_ref',
           do: function display_weak_ref() {
             const ref = this.value().deref();
@@ -129,14 +129,14 @@ export default await base.find('class', 'module').new({
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'display_primitive',
           do: function display_primitive() {
             this.log(this.value());
             return $el.span({}, this.value()?.display() ?? JSON.stringify(this.value()));
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'display',
           do: function display() {
             if (this.value() !== null && (typeof this.value() === 'function' || typeof this.value() === 'object' && '_id' in this.value())) {
@@ -152,7 +152,7 @@ export default await base.find('class', 'module').new({
             }
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div({ class: 'slot-value' }, [$el.span({}, this.slot_name() + ': '), this.display()]);
@@ -165,8 +165,8 @@ export default await base.find('class', 'module').new({
       name: 'object_explorer',
       slots: [
         $.window,
-        $.var.new({ name: 'object' }),
-        $.method.new({
+        $.Var.new({ name: 'object' }),
+        $.Method.new({
           name: 'render',
           do: function render() {
             if (!this.object()) {
@@ -190,7 +190,7 @@ export default await base.find('class', 'module').new({
       name: 'intro',
       slots: [
         $.window,
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div({}, [
@@ -210,14 +210,14 @@ export default await base.find('class', 'module').new({
       name: 'module_browser',
       slots: [
         $.window,
-        $.method.new({
+        $.Method.new({
           name: 'objects',
           do: function objects() {
             return this.module().instances($.class);
           }
         }),
-        $.var.new({ name: 'module' }),
-        $.method.new({
+        $.Var.new({ name: 'module' }),
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div(
@@ -236,8 +236,8 @@ export default await base.find('class', 'module').new({
       name: 'codemirror_run_command',
       slots: [
         $.command,
-        $.var.new({ name: 'codemirror' }),
-        $.method.new({
+        $.Var.new({ name: 'codemirror' }),
+        $.Method.new({
           name: 'run',
           do: async function run() {
             const todo_mod = (await this.import_module()).default;
@@ -245,7 +245,7 @@ export default await base.find('class', 'module').new({
             todo_mod.$().todo_list.mount(this.codemirror().parent());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'import_module',
           do: function import_module() {
             const code = this.codemirror().editor().getValue();
@@ -261,8 +261,8 @@ export default await base.find('class', 'module').new({
       name: 'codemirror',
       slots: [
         $.window,
-        $.var.new({ name: 'editor' }),
-        $.method.new({
+        $.Var.new({ name: 'editor' }),
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div(
@@ -299,10 +299,10 @@ export default await base.find('class', 'module').new({
       slots: [
         $.window,
         $.application,
-        $.var.new({ name: 'messages' }),
-        $.var.new({ name: 'explorer' }),
-        $.var.new({ name: 'modules' }),
-        $.var.new({ name: 'codemirror' }),
+        $.Var.new({ name: 'messages' }),
+        $.Var.new({ name: 'explorer' }),
+        $.Var.new({ name: 'modules' }),
+        $.Var.new({ name: 'codemirror' }),
         $.after.new({
           name: 'init',
           do: function init() {
@@ -322,19 +322,19 @@ export default await base.find('class', 'module').new({
             this.messages().add('run: ' + cmd.description());
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'load_modules',
           do: function load_modules() {
             this.modules(__.base().instances($.module).map(it => $.module_browser.new({ name: it.name(), module: it, parent: this })));
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'add_module',
           do: function add_module(mod) {
             this.modules([...this.modules().filter(m => m.name() !== mod.name()), $.module_browser.new({ name: mod.name(), module: mod, parent: this })]);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'render',
           do: function render() {
             return $el.div({ class: 'container' }, [
@@ -344,7 +344,7 @@ export default await base.find('class', 'module').new({
             ]);
           }
         }),
-        $.method.new({
+        $.Method.new({
           name: 'css',
           do: function css() {
             return `
@@ -368,11 +368,11 @@ export default await base.find('class', 'module').new({
 }
 
 .completor-link-pre {
-  color: var(--secondary-2);
+  color: Var(--secondary-2);
 }
 
 .completor-link-pre-emphasize {
-  color: var(--secondary-2);
+  color: Var(--secondary-2);
 }
 
 .completed-true {

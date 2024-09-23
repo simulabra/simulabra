@@ -2,7 +2,7 @@ import base from './base.js';
 import html from './html.js';
 import llm from './llm.js';
 
-export default await base.find('Class', 'module').new({
+export default await base.find('Class', 'Module').new({
   name: 'Bootstrap',
   imports: [base, html, llm],
   async onLoad(_, $) {

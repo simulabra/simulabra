@@ -10,14 +10,14 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'brainfuck_interpreter',
       slots: [
-        $.var.new({ name: 'code', default: '' }),
-        $.var.new({ name: 'input', default: '' }),
-        $.var.new({ name: 'output', default: '' }),
-        $.var.new({ name: 'data', default: () => Array(30000).fill(0) }),
-        $.var.new({ name: 'dataPtr', default: 0 }),
-        $.var.new({ name: 'codePtr', default: 0 }),
-        $.var.new({ name: 'inputPtr', default: 0 }),
-        $.method.new({
+        $.Var.new({ name: 'code', default: '' }),
+        $.Var.new({ name: 'input', default: '' }),
+        $.Var.new({ name: 'output', default: '' }),
+        $.Var.new({ name: 'data', default: () => Array(30000).fill(0) }),
+        $.Var.new({ name: 'dataPtr', default: 0 }),
+        $.Var.new({ name: 'codePtr', default: 0 }),
+        $.Var.new({ name: 'inputPtr', default: 0 }),
+        $.Method.new({
           name: 'execute',
           do() {
             while (this.codePtr() < this.code().length) {
@@ -74,53 +74,53 @@ export default await base.find('Class', 'Module').new({
       ]
     });
     // Test: Basic brainfuck interpreter initialization
-    $.case.new({
+    $.Case.new({
       name: 'interpreter_init',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: '++.' });
-        this.assert_eq(bf.code(), '++.');
+        this.assertEq(bf.code(), '++.');
       }
     });
 
     // Test: Simple brainfuck program execution
-    $.case.new({
+    $.Case.new({
       name: 'interpreter_exec_simple',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: '++.' });
         bf.execute();
-        this.assert_eq(bf.output(), String.fromCharCode(2));
+        this.assertEq(bf.output(), String.fromCharCode(2));
       }
     });
 
     // Test: Brainfuck program execution with loops
-    $.case.new({
+    $.Case.new({
       name: 'interpreter_exec_loops',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: '++[>++<-]>.' });
         bf.execute();
-        this.assert_eq(bf.output(), String.fromCharCode(4));
+        this.assertEq(bf.output(), String.fromCharCode(4));
       }
     });
 
     // Test: Brainfuck program execution with input
-    $.case.new({
+    $.Case.new({
       name: 'interpreter_exec_input',
       do() {
         const bf = $.brainfuck_interpreter.new({ code: ',+.', input: String.fromCharCode(2) });
         bf.execute();
-        this.assert_eq(bf.output(), String.fromCharCode(3));
+        this.assertEq(bf.output(), String.fromCharCode(3));
       }
     });
 
     // Test: Hello World!
-    $.case.new({
+    $.Case.new({
       name: 'interpreter_hello_world',
       do() {
         const bf = $.brainfuck_interpreter.new({
           code: '++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.',
         });
         bf.execute();
-        this.assert_eq(bf.output(), "Hello World!\n");
+        this.assertEq(bf.output(), "Hello World!\n");
       }
     });
   }
