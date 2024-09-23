@@ -63,11 +63,11 @@ export default await base.find('Class', 'Module').new({
         }),
         $.FiletypeRequestHandler.new({
           filetypes: ['js'],
-          mime_type: 'application/javascript',
+          mimeType: 'application/javascript',
         }),
         $.FiletypeRequestHandler.new({
           filetypes: ['css'],
-          mime_type: 'text/css',
+          mimeType: 'text/css',
         })
       ]
     });

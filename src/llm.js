@@ -1,15 +1,15 @@
 import base from './base.js';
 
-export default await base.find('class', 'module').new({
-  name: 'llm',
+export default await base.find('Class', 'Module').new({
+  name: 'LLM',
   imports: [base],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
 
-    $.class.new({
+    $.Class.new({
       name: 'pyserver',
       slots: [
-        $.Var.new({ name: 'server_url', default: 'http://100.64.172.3:3032' }),
+        $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3032' }),
         $.Method.new({
           name: 'completion',
           do: async function completion({
@@ -22,7 +22,7 @@ export default await base.find('class', 'module').new({
             stop = ['</s>', '<eos>'],
             control = 5,
           }) {
-            const res = await fetch(`${this.server_url()}/completion`, {
+            const res = await fetch(`${this.serverUrl()}/completion`, {
               Method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -38,21 +38,21 @@ export default await base.find('class', 'module').new({
               })
             });
             const json = await res.json();
-            return $.pyserver_completion_results.new(json);
+            return $.PyserverCompletionResults.new(json);
           }
         }),
       ]
     });
 
-    $.class.new({
-      name: 'pyserver_completion_results',
+    $.Class.new({
+      name: 'PyserverCompletionResults',
       slots: [
         $.Var.new({ name: 'content' }),
         $.Var.new({ name: 'tops' }),
         $.Var.new({ name: 'tokens' }),
         $.Method.new({
-          name: 'sum_prob',
-          do: function sum_prob() {
+          name: 'sumProb',
+          do: function sumProb() {
             let sum = 0.0;
             for (const p of this.probs()) {
               const tok = p.content;
@@ -67,16 +67,16 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'local_llama_tokenize_command',
+    $.Class.new({
+      name: 'LocalLlamaTokenizeCommand',
       slots: [
         $.command,
         $.Var.new({ name: 'prompt' }),
-        $.Var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
+        $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
         $.Method.new({
           name: 'run',
           do: async function run() {
-            const res = await fetch(`${this.server_url()}/tokenize`, {
+            const res = await fetch(`${this.serverUrl()}/tokenize`, {
               Method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -98,14 +98,14 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'llamacpp_completion_results',
+    $.Class.new({
+      name: 'LlamacppCompletionResults',
       slots: [
         $.Var.new({ name: 'output', default: '' }),
         $.Var.new({ name: 'probs', default: () => [] }),
         $.Method.new({
-          name: 'sum_prob',
-          do: function sum_prob() {
+          name: 'sumProb',
+          do: function sumProb() {
             let sum = 0.0;
             for (const p of this.probs()) {
               const tok = p.content;
@@ -120,12 +120,12 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'local_llama_completion_command',
+    $.Class.new({
+      name: 'LocalLlamaCompletionCommand',
       slots: [
         $.command,
         $.Var.new({ name: 'prompt' }),
-        $.Var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
+        $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
         $.Var.new({ name: 'n_predict', default: 4 }),
         $.Var.new({ name: 'temperature', default: 5.0 }),
         $.Var.new({ name: 'top_k', default: 200 }),
@@ -135,7 +135,7 @@ export default await base.find('class', 'module').new({
         $.Method.new({
           name: 'run',
           do: async function run() {
-            const res = await fetch(`${this.server_url()}/completion`, {
+            const res = await fetch(`${this.serverUrl()}/completion`, {
               Method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -154,7 +154,7 @@ export default await base.find('class', 'module').new({
             });
 
             let t = await res.json();
-            const completion = $.llamacpp_completion_results.new({
+            const completion = $.LlamacppCompletionResults.new({
               output: t.content,
               probs: t.completion_probabilities ?? []
             });
@@ -164,16 +164,16 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'local_llama_tokenize_command',
+    $.Class.new({
+      name: 'LocalLlamaTokenizeCommand',
       slots: [
         $.command,
         $.Var.new({ name: 'prompt' }),
-        $.Var.new({ name: 'server_url', default: 'http://100.64.172.3:3731' }),
+        $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
         $.Method.new({
           name: 'run',
           do: async function run() {
-            const res = await fetch(`${this.server_url()}/tokenize`, {
+            const res = await fetch(`${this.serverUrl()}/tokenize`, {
               Method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -195,8 +195,8 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'base_model',
+    $.Class.new({
+      name: 'BaseModel',
       slots: [
         $.Method.new({
           name: 'system',
@@ -213,10 +213,10 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
-      name: 'chatml_model',
+    $.Class.new({
+      name: 'ChatMLModel',
       slots: [
-        $.base_model,
+        $.BaseModel,
         $.Var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
         $.Method.new({
           name: 'prompt',
@@ -234,10 +234,10 @@ ${output}`;
       ]
     });
 
-    $.class.new({
-      name: 'mistral_model',
+    $.Class.new({
+      name: 'MistralModel',
       slots: [
-        $.base_model,
+        $.BaseModel,
         $.Method.new({
           name: 'prompt',
           do: function prompt(user, output) {
@@ -247,10 +247,10 @@ ${output}`;
       ]
     });
 
-    $.class.new({
-      name: 'alpaca_model',
+    $.Class.new({
+      name: 'AlpacaModel',
       slots: [
-        $.base_model,
+        $.BaseModel,
         $.Method.new({
           name: 'prompt',
           do: function prompt(user, output, system) {

@@ -2,21 +2,21 @@ import base from './base.js';
 import html from './html.js';
 import llm from './llm.js';
 
-export default await base.find('class', 'module').new({
-  name: 'completion',
+export default await base.find('Class', 'Module').new({
+  name: 'Completion',
   imports: [base, html, llm],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
     const $el = $.html_element.proxy();
 
-    $.class.new({
+    $.Class.new({
       name: 'ContextVar',
       slots: [
         $.Var,
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'FetchContext',
       slots: [
         $.Var.new({ name: 'context' }),
@@ -27,7 +27,7 @@ export default await base.find('class', 'module').new({
     });
 
     // the new style?
-    // $.class.new('FetchContext', {
+    // $.Class.new('FetchContext', {
     //   slots: [
     //     $.Var.new('context'),
     //     $.Var.new('count'),
@@ -36,7 +36,7 @@ export default await base.find('class', 'module').new({
     //   ]
     // });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorFetchNextCommand',
       slots: [
         $.command,
@@ -93,7 +93,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorInsertCommand',
       slots: [
         $.command,
@@ -107,7 +107,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorFetchNextLink',
       slots: [
         $.link,
@@ -132,7 +132,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorCompleteCommand',
       slots: [
         $.command,
@@ -169,7 +169,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorCompleteLink',
       slots: [
         $.link,
@@ -194,7 +194,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorClearCommand',
       slots: [
         $.command,
@@ -207,7 +207,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorClearLink',
       slots: [
         $.link,
@@ -226,7 +226,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorAddLink',
       slots: [
         $.link,
@@ -266,10 +266,10 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletionCandidates',
       slots: [
-        $.component,
+        $.Component,
         $.Var.new({ name: 'candidates', default: [] }),
         $.Method.new({
           name: 'render',
@@ -296,7 +296,7 @@ export default await base.find('class', 'module').new({
               choice: this.candidates().length,
               parent: this,
             }));
-            this.element().querySelector('.CompletionCandidates_list').appendChild(child.to_dom());
+            this.element().querySelector('.CompletionCandidates_list').appendChild(child.toDOM());
           }
         }),
         $.Method.new({
@@ -309,7 +309,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'history_moment',
       slots: [
         $.Var.new({ name: 'action', default: '' }),
@@ -317,7 +317,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorGotoHistoryCommand',
       slots: [
         $.command,
@@ -332,7 +332,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorGotoHistoryLink',
       slots: [
         $.link,
@@ -370,10 +370,10 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletionHistory',
       slots: [
-        $.component,
+        $.Component,
         $.Var.new({ name: 'history', default: [] }),
         $.Method.new({
           name: 'render',
@@ -404,7 +404,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new(
+    $.Class.new(
       {
         name: 'TokenProb',
       },
@@ -458,7 +458,7 @@ export default await base.find('class', 'module').new({
       }),
     );
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorInstructionFocusCommand',
       slots: [
         $.command,
@@ -471,7 +471,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorUnfocusCommand',
       slots: [
         $.command,
@@ -484,7 +484,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorSetNPredictCommand',
       slots: [
         $.command,
@@ -498,7 +498,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorSetCountCommand',
       slots: [
         $.command,
@@ -512,7 +512,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorSetTemperatureCommand',
       slots: [
         $.command,
@@ -526,7 +526,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'CompletorSetControlCommand',
       slots: [
         $.command,
@@ -540,7 +540,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'InstructionInput',
       slots: [
         $.TogglyInput,
@@ -552,7 +552,7 @@ export default await base.find('class', 'module').new({
             document.getElementById(this.input().inputID()).addEventListener('blur', e => {
               if (this.active()) {
                 this.leave_editing();
-                completor.fetch_next();
+                completor.fetchNext();
               }
             });
           }
@@ -584,7 +584,7 @@ export default await base.find('class', 'module').new({
       ]
     });
 
-    $.class.new({
+    $.Class.new({
       name: 'completor',
       slots: [
         $.window,
@@ -616,7 +616,7 @@ export default await base.find('class', 'module').new({
           do: function init() {
             this.completionCandidates($.CompletionCandidates.new({ parent: this }));
             const model = localStorage.getItem('selected_model') ?? 'chatml';
-            this.set_model(model);
+            this.setModel(model);
             const instruction = localStorage.getItem('instruction_value') ?? '';
             this.instruction().set(instruction);
             this.add_history('loaded', instruction);
@@ -644,7 +644,7 @@ export default await base.find('class', 'module').new({
               const el = this.element().querySelector('.prob-box');
               el.innerHTML = '';
               for (const prob of value) {
-                el.appendChild(prob.to_dom());
+                el.appendChild(prob.toDOM());
               }
             }
           }
@@ -720,7 +720,7 @@ export default await base.find('class', 'module').new({
             this.preview('');
             this.save();
             this.add_history(`insert:${it}`, this.instruction().value());
-            this.fetch_next();
+            this.fetchNext();
           }
         }),
         $.Method.new({
@@ -736,8 +736,8 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.Method.new({
-          name: 'fetch_next',
-          do: function fetch_next() {
+          name: 'fetchNext',
+          do: function fetchNext() {
             return $.CompletorFetchNextCommand.new().run(this);
           }
         }),
@@ -748,15 +748,15 @@ export default await base.find('class', 'module').new({
           }
         }),
         $.Method.new({
-          name: 'set_model',
-          do: function set_model(modelName) {
+          name: 'setModel',
+          do: function setModel(modelName) {
             localStorage.setItem('selected_model', modelName);
             // this.prompt_format($[modelName + '_model'].new());
           }
         }),
         $.Method.new({
-          name: 'model_option',
-          do: function model_option(name, selectedName) {
+          name: 'modelOption',
+          do: function modelOption(name, selectedName) {
             return $el.option({ value: name, selected: name + '_model' === selectedName }, name);
           }
         }),
@@ -767,20 +767,20 @@ export default await base.find('class', 'module').new({
               { class: 'completor-container' },
               $el.div(
                 { class: 'column' },
-                $.number_input.new({
+                $.NumberInput.new({
                   name: 'temperature',
                   parent: this,
                   bind: 'temperature',
                   command: $.CompletorSetTemperatureCommand,
                   step: 0.1,
                 }),
-                $.number_input.new({
+                $.NumberInput.new({
                   name: 'tokens',
                   parent: this,
                   bind: 'nPredict',
                   command: $.CompletorSetNPredictCommand,
                 }),
-                $.number_input.new({
+                $.NumberInput.new({
                   name: 'control',
                   parent: this,
                   bind: 'control',
@@ -891,6 +891,6 @@ input[type="number"] {
     });
 
     let completor = $.completor.new();
-    document.body.appendChild(completor.to_dom());
+    document.body.appendChild(completor.toDOM());
   }
 }).load();
