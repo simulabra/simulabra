@@ -569,7 +569,7 @@ export default await base.find('Class', 'Module').new({
             this.active(false, false);
             completor.save();
             if (this.value() !== this.beforeEditingState()) {
-              completor.add_history('edited', this.value());
+              completor.addHistory('edited', this.value());
             }
           }
         }),
@@ -619,12 +619,12 @@ export default await base.find('Class', 'Module').new({
             this.setModel(model);
             const instruction = localStorage.getItem('instruction_value') ?? '';
             this.instruction().set(instruction);
-            this.add_history('loaded', instruction);
+            this.addHistory('loaded', instruction);
             this.pyserver($.pyserver.new());
 
             document.addEventListener('keydown', e => {
               if (!(this.instruction().active() || e.ctrlKey)) {
-                const cmd = this.key_command(e.key, e);
+                const cmd = this.keyCommand(e.key, e);
                 cmd?.dispatchTo(this);
               } else {
                 if (e.key === 'Escape') {
@@ -650,8 +650,8 @@ export default await base.find('Class', 'Module').new({
           }
         }),
         $.Method.new({
-          name: 'key_command',
-          do: function key_command(key, e) {
+          name: 'keyCommand',
+          do: function keyCommand(key, e) {
             if (key === 'i') {
               e.preventDefault();
               return $.CompletorInstructionFocusCommand.new();
@@ -690,8 +690,8 @@ export default await base.find('Class', 'Module').new({
           }
         }),
         $.Method.new({
-          name: 'window_title',
-          do: function window_title() {
+          name: 'windowTitle',
+          do: function windowTitle() {
             return 'imagine anything';
           }
         }),
@@ -702,8 +702,8 @@ export default await base.find('Class', 'Module').new({
           }
         }),
         $.Method.new({
-          name: 'add_history',
-          do: function add_history(action, text) {
+          name: 'addHistory',
+          do: function addHistory(action, text) {
             this.history().add($.history_moment.new({
               action,
               text
@@ -719,7 +719,7 @@ export default await base.find('Class', 'Module').new({
             this.instruction().set(this.instruction().value() + it);
             this.preview('');
             this.save();
-            this.add_history(`insert:${it}`, this.instruction().value());
+            this.addHistory(`insert:${it}`, this.instruction().value());
             this.fetchNext();
           }
         }),
