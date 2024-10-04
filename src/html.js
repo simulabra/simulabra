@@ -82,7 +82,7 @@ export default await base.find('Class', 'Module').new({
       ]
     });
     $.Class.new({
-      name: 'window',
+      name: 'Window',
       slots: [
         $.Component,
         $.Var.new({ name: 'minimized', default: false }),
@@ -119,7 +119,7 @@ export default await base.find('Class', 'Module').new({
                   // }),
                   $el.span({
                     class: 'window-title'
-                  }, this.window_title())
+                  }, this.windowTitle())
                 ])
               ]),
               $el.div({
@@ -133,8 +133,8 @@ export default await base.find('Class', 'Module').new({
           }
         }),
         $.Method.new({
-          name: 'window_title',
-          do: function window_title() {
+          name: 'windowTitle',
+          do: function windowTitle() {
             return this.title();
           }
         })
@@ -142,7 +142,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'html_element',
+      name: 'HtmlElement',
       slots: [
         $.Component,
         $.Var.new({ name: 'tag', default: 'div' }),
@@ -215,7 +215,7 @@ export default await base.find('Class', 'Module').new({
             return new Proxy({}, {
               get(target, p) {
                 return function(properties, ...children) {
-                  return $.html_element.new({
+                  return $.HtmlElement.new({
                     tag: p,
                     properties,
                     children
@@ -227,10 +227,10 @@ export default await base.find('Class', 'Module').new({
         }),
       ]
     });
-    const $el = $.html_element.proxy();
+    const $el = $.HtmlElement.proxy();
 
     $.Class.new({
-      name: 'application',
+      name: 'Application',
       slots: [
         $.Var.new({ name: 'commandHistory', default: [] }),
         $.after.new({
@@ -268,7 +268,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'button',
+      name: 'Button',
       slots: [
         $.Component,
         $.Var.new({ name: 'command' }),
@@ -291,7 +291,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'link',
+      name: 'Link',
       slots: [
         $.Component,
         $.Var.new({ name: 'command' }),
@@ -358,7 +358,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'if',
+      name: 'If',
       slots: [
         $.Var.new({ name: 'when' }),
         $.Var.new({ name: 'slots', default: [] }),
@@ -422,7 +422,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'input',
+      name: 'Input',
       slots: [
         $.Component,
         $.Var.new({ name: 'value', default: '' }),

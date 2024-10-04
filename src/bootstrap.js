@@ -18,7 +18,7 @@ export default await base.find('Class', 'Module').new({
       name: 'ChatMessage',
       doc: 'a turn in a conversation between a user and an llm assistant',
       slots: [
-        $.component,
+        $.Component,
         $.Var.new({
           name: 'role',
           doc: 'who is talking',
@@ -61,10 +61,10 @@ export default await base.find('Class', 'Module').new({
       name: 'ChatList',
       doc: 'the back and forth conversation between a user and an llm assistant',
       slots: [
-        $.component,
-        $.Var.new({
+        $.Component,
+        $.ComponentVar.new({
           name: 'messages',
-          default: () => [],
+          element: $.ListElement,
         }),
         $.Method.new({
           name: 'streamBegin',
@@ -97,10 +97,17 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'Chat',
       slots: [
-        $.window,
-        $.Var.new({
+        $.Window,
+        $.ComponentVar.new({
           name: 'messages',
-          default: () => $.ChatList.new(),
+          element: $.ChatList,
+        }),
+        $.ComponentVar.new({
+          name: 'chat_input',
+          element: $.Input,
+          defaults: {
+            placeholder: 'Message bootstrap...',
+          }
         }),
         $.Method.new({
           name: 'ask',
@@ -142,8 +149,8 @@ export default await base.find('Class', 'Module').new({
           name: 'render',
           do: function render() {
             return sjsx`
-            <$messages />
-            <$input />
+            ${this.messages()}
+            ${this.chat_input()}
             `;
           },
         }),
