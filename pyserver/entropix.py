@@ -616,18 +616,18 @@ def calculate_metrics(logits: torch.Tensor, attention_scores: torch.Tensor) -> D
 
 class SamplerConfig:
     def __init__(self):
-        self.temperature = 0.7
+        self.temperature = 0.66
         self.top_p = 0.90
         self.top_k = 27
         self.min_p = 0.03
 
-        self.low_logits_entropy_threshold = 0.6
+        self.low_logits_entropy_threshold = 0.8
         self.medium_logits_entropy_threshold = 2.1
-        self.high_logits_entropy_threshold = 5.0
+        self.high_logits_entropy_threshold = 4.5
 
-        self.low_logits_varentropy_threshold = 0.7
+        self.low_logits_varentropy_threshold = 0.9
         self.medium_logits_varentropy_threshold = 2.1
-        self.high_logits_varentropy_threshold = 10.0 
+        self.high_logits_varentropy_threshold = 8.0 
 
         self.low_attention_entropy_threshold = 8.8
         self.medium_attention_entropy_threshold = 9.0
@@ -670,151 +670,6 @@ class SamplerConfig:
         self.adaptive_score_agreement_coefficient = 0.5
         self.adaptive_score_interaction_strength_coefficient = 0.6
 
-def sample(gen_tokens: torch.Tensor, logits: torch.Tensor, attention_scores: torch.Tensor, cfg: SamplerConfig,
-           clarifying_question_token: int = 2564, generator: torch.Generator = torch.Generator(device=device).manual_seed(1337)) -> Tuple[torch.Tensor, SamplerState]:
-    metrics = calculate_metrics(logits, attention_scores)
-    ent, vent = metrics["logits_entropy"], metrics["logits_varentropy"]
-    attn_ent, attn_vent = metrics["attn_entropy"], metrics["attn_varentropy"]
-    agreement = metrics["agreement"]
-    interaction_strength = metrics["interaction_strength"]
-    print('entropy', ent.item(), cfg.low_logits_entropy_threshold, cfg.high_logits_entropy_threshold)
-    print('varentropy', vent.item(), cfg.low_logits_varentropy_threshold, cfg.high_logits_varentropy_threshold)
-
-    # Low Entropy, Low Varentropy: "flowing with unspoken intent"
-    if (ent < cfg.low_logits_entropy_threshold and
-        vent < cfg.low_logits_varentropy_threshold):
-        sampler_state = SamplerState.FLOWING
-        print('FLOWING')
-        sampled_token = torch.argmax(logits[:, -1], dim=-1, keepdim=True).to(torch.int32)
-        return sampled_token, sampler_state
-
-    # High Entropy, Low Varentropy: "treading carefully, asking clarifying questions"
-    elif (ent > cfg.high_logits_entropy_threshold and
-          vent < cfg.low_logits_varentropy_threshold):
-        sampler_state = SamplerState.TREADING
-        print('TREADING')
-        # Insert a clarifying question token if not already present
-        if not torch.isin(gen_tokens[:, -1], torch.tensor([clarifying_question_token], device=device)).any():
-            sampled_token = torch.tensor([[clarifying_question_token]], dtype=torch.int32, device=device)
-            return sampled_token, sampler_state
-        else:
-            # If we've just asked a question, sample with slightly higher temperature
-            temp_adj = cfg.high_entropy_attention_offset + cfg.high_entropy_attention_coefficient * attn_ent
-            sampled_token = _sample(
-                logits,
-                temperature=min(1.5, cfg.temperature * temp_adj),
-                top_p=cfg.top_p,
-                top_k=cfg.top_k,
-                min_p=cfg.min_p,
-                generator=generator
-            )
-            return sampled_token, sampler_state
-
-    # Low Entropy, High Varentropy: "exploring forks in the path"
-    elif (ent < cfg.high_logits_entropy_threshold and
-          vent > cfg.high_logits_varentropy_threshold):
-        sampler_state = SamplerState.EXPLORING
-        print('EXPLORING')
-        temp_adj = cfg.low_entropy_interaction_strength_offset + cfg.low_entropy_interaction_strength_coefficient * interaction_strength
-        top_k_adj = max(5, int(cfg.top_k * (1 + 0.5 * (1 - agreement))))
-        sampled_token = _sample(
-            logits,
-            temperature=min(1.5, cfg.temperature * temp_adj),
-            top_p=cfg.top_p,
-            top_k=top_k_adj,
-            min_p=cfg.min_p,
-            generator=generator
-        )
-        return sampled_token, sampler_state
-
-    # High Entropy, High Varentropy: "resampling in the mist"
-    elif (ent > cfg.medium_logits_entropy_threshold and
-          vent > cfg.high_logits_varentropy_threshold):
-        sampler_state = SamplerState.RESAMPLING
-        print('RESAMPLING')
-        # Use high temperature and adjusted top_p based on attention metrics
-        temp_adj = cfg.high_entropy_varentropy_attention_offset + cfg.high_entropy_varentropy_attention_coefficient * attn_vent
-        top_p_adj = max(0.5, cfg.top_p - cfg.high_entropy_attention_coefficient * attn_ent)
-        sampled_token = _sample(
-            logits,
-            temperature=max(2.0, cfg.temperature * temp_adj),
-            top_p=top_p_adj,
-            top_k=cfg.top_k,
-            min_p=cfg.min_p,
-            generator=generator
-        )
-        return sampled_token, sampler_state
-
-    # Middle ground: use adaptive sampling
-    else:
-        sampler_state = SamplerState.ADAPTIVE
-        print('ADAPTIVE')
-        logits_uncertainty = ent + vent
-        attn_uncertainty = attn_ent + attn_vent
-
-        temperature = cfg.temperature * (
-            1 +
-            cfg.adaptive_temperature_logits_coefficient * ent +
-            cfg.adaptive_temperature_attention_coefficient * attn_ent -
-            cfg.adaptive_temperature_agreement_coefficient * agreement
-        )
-        top_p = torch.clamp(
-            (cfg.top_p * (1 + cfg.adaptive_top_p_coefficient * attn_vent)).clone().detach(),
-            0.1,
-            1.0
-        )
-        top_k = int(torch.clamp(
-            torch.round(torch.tensor(cfg.top_k) * (
-                1 +
-                cfg.adaptive_top_k_interaction_coefficient * interaction_strength.item() -
-                cfg.adaptive_top_k_agreement_coefficient * agreement.item()
-            )),
-            min=1,
-            max=100
-        ).item())
-        min_p = torch.clamp(
-            (cfg.min_p * (1 - cfg.adaptive_min_p_coefficient * vent)).clone().detach(),
-            0.01,
-            0.5
-        )
-
-        samples = []
-        for _ in range(cfg.n_adaptive_samples):
-            sample = _sample(
-                logits,
-                temperature=temperature,
-                top_p=top_p,
-                top_k=top_k,
-                min_p=min_p,
-                generator=generator
-            )
-            samples.append(sample)
-
-        def score_sample(sample):
-            # Ensure sample is a 1D tensor of indices
-            sample_indices = sample.view(-1).to(torch.long)
-
-            # Create one-hot encoding
-            one_hot = F.one_hot(sample_indices, num_classes=logits.shape[-1])
-
-            # Calculate log probability
-            log_probs = F.log_softmax(logits[:, -1], dim=-1)
-            log_prob = torch.sum(log_probs * one_hot, dim=-1)
-
-            confidence_score = (
-                (1 - ent / cfg.high_logits_entropy_threshold) * cfg.adaptive_score_logits_entropy_coefficient +
-                (1 - attn_ent / cfg.high_attention_entropy_threshold) * cfg.adaptive_score_attention_entropy_coefficient +
-                (1 - vent / cfg.high_logits_varentropy_threshold) * cfg.adaptive_score_logits_varentropy_coefficient +
-                (1 - attn_vent / cfg.high_attention_varentropy_threshold) * cfg.adaptive_score_attention_varentropy_coefficient +
-                (agreement / cfg.high_agreement_threshold) * cfg.adaptive_score_agreement_coefficient +
-                (interaction_strength / cfg.high_interaction_strength_threshold) * cfg.adaptive_score_interaction_strength_coefficient
-            )
-            return log_prob + confidence_score
-
-        sample_scores = torch.stack([score_sample(sample) for sample in samples])
-        best_sample_idx = torch.argmax(sample_scores)
-        sampled_token = samples[best_sample_idx]
-        return sampled_token, sampler_state
 
 print(f"Using device: {device}")
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
@@ -882,7 +737,140 @@ class EntropixModel:
         self.sampler_config = SamplerConfig()
         self.generator = torch.Generator(device=device).manual_seed(1337)
 
-    def generate(self, prompt, max_tokens=200, debug=False):
+    def sample(self, gen_tokens: torch.Tensor, logits: torch.Tensor, attention_scores: torch.Tensor, cfg: SamplerConfig,
+               clarifying_question_token: int = 365, generator: torch.Generator = torch.Generator(device=device).manual_seed(1337)) -> Tuple[torch.Tensor, SamplerState]:
+        metrics = calculate_metrics(logits, attention_scores)
+        ent, vent = metrics["logits_entropy"], metrics["logits_varentropy"]
+        attn_ent, attn_vent = metrics["attn_entropy"], metrics["attn_varentropy"]
+        agreement = metrics["agreement"]
+        interaction_strength = metrics["interaction_strength"]
+        # print('entropy', ent.item(), cfg.low_logits_entropy_threshold, cfg.high_logits_entropy_threshold)
+        # print('varentropy', vent.item(), cfg.low_logits_varentropy_threshold, cfg.high_logits_varentropy_threshold)
+
+        def already_thinking():
+            gen = ''.join([self.tokenizer.decode(t) for t in gen_tokens.tolist()[0]])
+            thinking_start = gen.rfind('(')
+            thinking_end = gen.rfind(')')
+            print(gen, thinking_start, thinking_end)
+            if thinking_start == -1 or thinking_start < thinking_end:
+                return False
+            else:
+                return True
+
+        # Low Entropy, Low Varentropy: "flowing with unspoken intent"
+        if ent < cfg.low_logits_entropy_threshold and vent < cfg.low_logits_varentropy_threshold:
+            sampler_state = SamplerState.FLOWING
+            sampled_token = torch.argmax(logits[:, -1], dim=-1, keepdim=True).to(torch.int32)
+            return sampled_token, sampler_state
+        
+        # High Entropy, Low Varentropy: "treading carefully, asking clarifying questions"
+        elif ent > cfg.high_logits_entropy_threshold and vent > cfg.high_logits_varentropy_threshold and not already_thinking():
+            sampler_state = SamplerState.TREADING
+            # Insert a clarifying question token if not already present
+            sampled_token = torch.tensor([[clarifying_question_token]], dtype=torch.int32, device=device)
+            return sampled_token, sampler_state
+
+        # Low Entropy, High Varentropy: "exploring forks in the path"
+        elif ent < cfg.high_logits_entropy_threshold and vent > cfg.high_logits_varentropy_threshold:
+            sampler_state = SamplerState.EXPLORING
+            temp_adj = cfg.low_entropy_interaction_strength_offset + cfg.low_entropy_interaction_strength_coefficient * interaction_strength
+            top_k_adj = max(5, int(cfg.top_k * (1 + 0.5 * (1 - agreement))))
+            sampled_token = _sample(
+                logits,
+                temperature=min(cfg.temperature, cfg.temperature * temp_adj),
+                top_p=cfg.top_p,
+                top_k=cfg.top_k,
+                min_p=cfg.min_p,
+                generator=generator
+            )
+            return sampled_token, sampler_state
+
+        # High Entropy, High Varentropy: "resampling in the mist"
+        elif ent > cfg.medium_logits_entropy_threshold and vent > cfg.high_logits_varentropy_threshold:
+            sampler_state = SamplerState.RESAMPLING
+            # Use high temperature and adjusted top_p based on attention metrics
+            temp_adj = cfg.high_entropy_varentropy_attention_offset + cfg.high_entropy_varentropy_attention_coefficient * attn_vent
+            top_p_adj = max(0.5, cfg.top_p - cfg.high_entropy_attention_coefficient * attn_ent)
+            sampled_token = _sample(
+                logits,
+                temperature=max(cfg.temperature, cfg.temperature * temp_adj),
+                top_p=top_p_adj,
+                top_k=cfg.top_k,
+                min_p=cfg.min_p,
+                generator=generator
+            )
+            return sampled_token, sampler_state
+
+        else:
+            # Middle ground: use adaptive sampling
+            sampler_state = SamplerState.ADAPTIVE
+            logits_uncertainty = ent + vent
+            attn_uncertainty = attn_ent + attn_vent
+
+            temperature = cfg.temperature * (
+                1 +
+                cfg.adaptive_temperature_logits_coefficient * ent +
+                cfg.adaptive_temperature_attention_coefficient * attn_ent -
+                cfg.adaptive_temperature_agreement_coefficient * agreement
+            )
+            top_p = torch.clamp(
+                (cfg.top_p * (1 + cfg.adaptive_top_p_coefficient * attn_vent)).clone().detach(),
+                0.1,
+                1.0
+            )
+            top_k = int(torch.clamp(
+                torch.round(torch.tensor(cfg.top_k) * (
+                    1 +
+                    cfg.adaptive_top_k_interaction_coefficient * interaction_strength.item() -
+                    cfg.adaptive_top_k_agreement_coefficient * agreement.item()
+                )),
+                min=1,
+                max=100
+            ).item())
+            min_p = torch.clamp(
+                (cfg.min_p * (1 - cfg.adaptive_min_p_coefficient * vent)).clone().detach(),
+                0.01,
+                0.5
+            )
+
+            samples = []
+            for _ in range(cfg.n_adaptive_samples):
+                sample = _sample(
+                    logits,
+                    temperature=temperature,
+                    top_p=top_p,
+                    top_k=top_k,
+                    min_p=min_p,
+                    generator=generator
+                )
+                samples.append(sample)
+
+            def score_sample(sample):
+                # Ensure sample is a 1D tensor of indices
+                sample_indices = sample.view(-1).to(torch.long)
+
+                # Create one-hot encoding
+                one_hot = F.one_hot(sample_indices, num_classes=logits.shape[-1])
+
+                # Calculate log probability
+                log_probs = F.log_softmax(logits[:, -1], dim=-1)
+                log_prob = torch.sum(log_probs * one_hot, dim=-1)
+
+                confidence_score = (
+                    (1 - ent / cfg.high_logits_entropy_threshold) * cfg.adaptive_score_logits_entropy_coefficient +
+                    (1 - attn_ent / cfg.high_attention_entropy_threshold) * cfg.adaptive_score_attention_entropy_coefficient +
+                    (1 - vent / cfg.high_logits_varentropy_threshold) * cfg.adaptive_score_logits_varentropy_coefficient +
+                    (1 - attn_vent / cfg.high_attention_varentropy_threshold) * cfg.adaptive_score_attention_varentropy_coefficient +
+                    (agreement / cfg.high_agreement_threshold) * cfg.adaptive_score_agreement_coefficient +
+                    (interaction_strength / cfg.high_interaction_strength_threshold) * cfg.adaptive_score_interaction_strength_coefficient
+                )
+                return log_prob + confidence_score
+
+            sample_scores = torch.stack([score_sample(sample) for sample in samples])
+            best_sample_idx = torch.argmax(sample_scores)
+            sampled_token = samples[best_sample_idx]
+            return sampled_token, sampler_state
+    def generate(self, prompt, max_tokens=128, debug=False):
         # Initialize lists to store metrics
         metrics_data = {
             'logits_entropy': [],
@@ -893,9 +881,22 @@ class EntropixModel:
             'interaction_strength': []
         }
         sampler_states = []
+        templated_prompt = f"""<|im_start|>system
+You are an intelligent assistant who can think during your answer just by using parentheses, like (Thought: reasoning leads to better answers). Try to think of what is unclear about the answer, and reason through what the correct response would be. Get right to the point in the parenthetical by diving at the critical points of the problem.
+<|im_end|>
+<|im_start|>user
+How many of the letter r are in 'strawberry'?
+<|im_end|>
+<|im_start|>assistant
+There are (Thought: If I just try to answer without reasoning I will probably guess wrong. I should probably count the letters to make sure I get the answer right. Let's count it out letter by letter, keeping track of how many 'r's we see: s - 0, t - 0, r - 1, a - 1, w - 1, b - 1, e - 1, r - 2, r - 3, y - 3, done) 3 occurences of the letter 'r' in the word 'strawberry'.
+<|im_end|>
+<|im_start|>user
+{prompt}<|im_end|>
+<|im_start|>assistant\n"""
 
         with torch.inference_mode():
-            tokens = self.tokenizer.encode("<|im_start|>user\n" + prompt + "<|im_end|>\n<|im_start|>assistant\n", bos=True, eos=False, allowed_special='all')
+            tokens = self.tokenizer.encode(templated_prompt, bos=True, eos=False, allowed_special='all')
+            max_tokens += len(tokens)
             tokens = torch.tensor([tokens], dtype=torch.long).to(device)
             bsz, seqlen = tokens.shape
             cur_pos = 0
@@ -904,7 +905,7 @@ class EntropixModel:
             kvcache = KVCache.new(self.model_params.n_layers, bsz, self.model_params.max_seq_len, self.model_params.n_local_kv_heads, self.model_params.head_dim).to(device)
 
             logits, kvcache, scores, _ = xfmr(self.xfmr_weights, self.model_params, tokens, cur_pos, freqs_cis[:seqlen], kvcache, attn_mask=attn_mask)
-            next_token, sampler_state = sample(tokens, logits, scores, self.sampler_config, generator=self.generator)
+            next_token, sampler_state = self.sample(tokens, logits, scores, self.sampler_config, generator=self.generator)
 
             metrics = calculate_metrics(logits, scores)
             for key in metrics_data.keys():
@@ -920,7 +921,7 @@ class EntropixModel:
             while cur_pos < max_tokens:
                 cur_pos += 1
                 logits, kvcache, scores, _ = xfmr(self.xfmr_weights, self.model_params, next_token, cur_pos, freqs_cis[cur_pos:cur_pos+1], kvcache)
-                next_token, sampler_state = sample(gen_tokens, logits, scores, self.sampler_config, generator=self.generator)
+                next_token, sampler_state = self.sample(gen_tokens, logits, scores, self.sampler_config, generator=self.generator)
 
                 metrics = calculate_metrics(logits, scores)
                 for key in metrics_data.keys():
@@ -945,15 +946,15 @@ def generate_text(prompt):
     if 'entropix_model' not in globals():
         print("Model not initialized. Please run initialize_model() first.")
         return
+    
     response = entropix_model.generate(prompt)
-    # Display the response with proper newline rendering
-    print(''.join([r['token'] for r in response]))
     for r in response:
         print(r)
+    print(''.join([r['token'] for r in response]))
 
 torch.cuda.empty_cache()
 
 initialize_model()
 
-generate_text("How are we feeling today, robot boy?")
-# generate_text("Which number is larger, 9.9 or 9.11? Give only the larger number in answer.")
+# generate_text("Who was the 12th President of the United States?")
+generate_text("Which number is larger, 9.9 or 9.11? Give only the larger number in answer.")
