@@ -23,10 +23,26 @@ export default await base.find('Class', 'Module').new({
         }),
         $.Var.new({ name: 'do' }),
         $.Method.new({
+          name: 'assert',
+          do(statement, msg = '') {
+            if (!statement) {
+              throw new Error(`${this.description()}: assertion failed: ${msg}`);
+            }
+          }
+        }),
+        $.Method.new({
           name: 'assertEq',
-          do(a, b) {
+          do(a, b, msg = '') {
             if (a !== b) {
-              throw new Error(`assertion failed: ${a?.description()} !== ${b?.description()}`);
+              throw new Error(`${this.description()}: assertEq failed (${a?.description()} !== ${b?.description()}) ${msg}`);
+            }
+          }
+        }),
+        $.Method.new({
+          name: 'assertErrorMessageIncludes',
+          do(errorMessage, messageFragment) {
+            if (!errorMessage.includes(messageFragment)) {
+              throw new Error(`${this.description()}: Error message should include '${messageFragment}', got '${errorMessage}'`);
             }
           }
         })

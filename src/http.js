@@ -74,7 +74,7 @@ export default await base.find('Class', 'Module').new({
           name: 'slots',
           default: [],
         }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do() {
             this.nodeServer(createServer((req, res) => {
@@ -106,7 +106,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'HandlerLogger',
       slots: [
-        $.after.new({
+        $.After.new({
           name: 'handle',
           do(app, req, res) {
             this.log(`handle ${req.inner().url} in ${req.elapsed()} ms`);

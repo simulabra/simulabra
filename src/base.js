@@ -166,8 +166,8 @@ function bootstrap() {
           } catch (e) {
             if (!e._logged && self._debug) {
               e._logged = true;
-              debug('failed message: call', self._name, 'on', this._class, 'with', args);
-              __._stack.trace();
+              debug('failed message: call', self._name, 'on', this._class._name);
+              //__._stack.trace();
             }
             throw e;
           }
@@ -771,8 +771,8 @@ function bootstrap() {
     ]
   });
 
-  const $after = $Class.new({
-    name: 'after',
+  const $After = $Class.new({
+    name: 'After',
     slots: [
       $fn,
       $Var.new({ name: 'name' }),
@@ -826,10 +826,10 @@ function bootstrap() {
     ]
   });
 
-  const $deffed = $Class.new({
-    name: 'deffed',
+  const $Deffed = $Class.new({
+    name: 'Deffed',
     slots: [
-      $after.new({
+      $After.new({
         name: 'init',
         do() {
           $$().mod()?.def(this.name(), this);
@@ -841,7 +841,7 @@ function bootstrap() {
   const $registered = $Class.new({
     name: 'registered',
     slots: [
-      $after.new({
+      $After.new({
         name: 'init',
         do() {
           $$().mod()?.register(this);
@@ -854,7 +854,7 @@ function bootstrap() {
     name: 'Module',
     // debug: true,
     slots: [
-      $deffed,
+      $Deffed,
       $Var.new({ name: 'name' }),
       $Var.new({
         name: 'imports',
@@ -968,10 +968,10 @@ function bootstrap() {
     var_state,
     $virtual,
     $before,
-    $after,
+    $After,
     $object_registry,
     $module,
-    $deffed,
+    $Deffed,
   ];
 
   INTRINSICS.forEach(it => {
@@ -981,10 +981,10 @@ function bootstrap() {
 
   _.register(_);
   $.Class.new({
-    name: 'static_Var',
+    name: 'StaticVar',
     slots: [
       $.Var,
-      $.after.new({
+      $.After.new({
         name: 'load',
         do: function load() {
           this._getImpl(this.name()).reify(this._proto._class);
@@ -994,7 +994,7 @@ function bootstrap() {
   });
 
   $.Class.new({
-    name: 'simulabra_global',
+    name: 'SimulabraGlobal',
     slots: [
       $.Var.new({ name: 'mod' }),
       $.Var.new({ name: 'modules', default: {} }),
@@ -1028,7 +1028,7 @@ function bootstrap() {
     ]
   });
 
-  __ = $.simulabra_global.new({
+  __ = $.SimulabraGlobal.new({
     stack: new FrameStack(),
     mod: _,
     base_mod: _,
@@ -1044,10 +1044,78 @@ function bootstrap() {
 
   [
     ...INTRINSICS,
-    $.static_Var,
+    $.StaticVar,
     $.object_registry,
-    $.simulabra_global,
+    $.SimulabraGlobal,
   ].forEach(it => __.register(it));
+
+  $.Class.new({
+    name: 'EnumVar',
+    slots: [
+      $.Var,
+      $.Var.new({
+        name: 'choices',
+        required: true
+      }),
+      $.After.new({
+        name: 'init',
+        do: function after__init() {
+          const def = this.default();
+          if (def !== undefined && !this.choices().includes(def)) {
+            throw new Error(`Invalid default value ${def} for choices ${this.choices().join(', ')}`);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: 'combine',
+        do: function combine(impl) {
+          const pk = '_' + this.name();
+          const self = this;
+
+          impl._primary = function enumAccess(assign, update = true) {
+            if (assign !== undefined) {
+              if (!self.choices().includes(assign)) {
+                throw new Error(`Invalid enum value '${assign}' for ${self.name()}. Valid choices are: ${self.choices().join(', ')}`);
+              }
+
+              this[pk] = assign;
+              if (self.observable() && update) {
+                const ev = new Event('update');
+                ev._Var = self; 
+                ev._value = assign;
+                ev._target = this;
+                this.dispatchEvent(ev);
+              }
+              if (self._trace) {
+                self.log('mutated to', assign);
+              }
+            } else if (!(pk in this)) {
+              this[pk] = self.defval(this);
+            }
+            return this[pk];
+          };
+
+          impl._direct = true;
+        }
+      }),
+
+      $.Method.new({
+        name: 'defval',
+        do: function defval(ctx) {
+          const def = this.default();
+          if (def !== undefined) {
+            if (!this.choices().includes(def)) {
+              throw new Error(
+                `Invalid default enum value '${def}' for ${this.name()}. Valid choices are: ${this.choices().join(', ')}`
+              );
+            }
+          }
+          return def;
+        }
+      })
+    ]
+  });
 
   $.Class.new({
     name: 'event',
@@ -1065,10 +1133,10 @@ function bootstrap() {
     name: 'primitive',
     slots: [
       $.Class,
-      $.deffed,
+      $.Deffed,
       $.Var.new({ name: 'slots', default: [] }),
       $.Var.new({ name: 'js_prototype' }),
-      $.Var.new({ name: 'Methods', default: {} }),
+      $.Var.new({ name: 'methods', default: {} }),
       $.Var.new({ name: 'name' }),
       function init() {
         for (let c of this.slots()) {
@@ -1079,8 +1147,8 @@ function bootstrap() {
       function descended(cls) {
         return cls === $.primitive;
       },
-      function extend(Methods) {
-        Methods.map(m => m.load(this.js_prototype())); // wee-woo!
+      function extend(methods) {
+        methods.map(m => m.load(this.js_prototype())); // wee-woo!
       },
       function description() {
         return `primitive ${this.name()}`;
@@ -1092,7 +1160,7 @@ function bootstrap() {
     name: 'proc',
     slots: [
       $.fn,
-      $.deffed,
+      $.Deffed,
       function proxied(ctx) {
         return this.do().bind(ctx);
       }

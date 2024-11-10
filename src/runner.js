@@ -11,7 +11,7 @@ export default await base.find('Class', 'Module').new({
       name: 'test_timer',
       slots: [
         $.Var.new({ name: 'start' }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do() {
             this.start(+new Date());
@@ -35,7 +35,7 @@ export default await base.find('Class', 'Module').new({
         $.Var.new({
           name: 'timer',
         }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do() {
             this.timer($.test_timer.new({ name: 'runner_timer' }));

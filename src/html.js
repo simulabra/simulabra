@@ -73,7 +73,7 @@ export default await base.find('Class', 'Module').new({
           do: function update(e) {
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'dispatchEvent',
           do: function dispatchEvent(event) {
             this.parent()?.dispatchEvent(event);
@@ -233,7 +233,7 @@ export default await base.find('Class', 'Module').new({
       name: 'Application',
       slots: [
         $.Var.new({ name: 'commandHistory', default: [] }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do: function init() {
             this.addEventListener('command', (e) => {
@@ -383,7 +383,7 @@ export default await base.find('Class', 'Module').new({
         $.Var.new({ name: 'step', default: 1 }),
         $.Var.new({ name: 'bind' }),
         $.Var.new({ name: 'command' }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do: function init() {
             this.value(this.parent()[this.bind()](), false);
@@ -408,7 +408,7 @@ export default await base.find('Class', 'Module').new({
             );
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'value',
           do: function value__after(setValue) {
             this.log('after value');
@@ -575,7 +575,7 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'active',
           do: function active__after(value) {
             if (!this.element()) return;

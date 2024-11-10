@@ -137,7 +137,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'after_basic',
+      name: 'AfterBasic',
       slots: [
         $.Var.new({ name: 'x', default: 0 }),
         $.Method.new({
@@ -146,7 +146,7 @@ export default await base.find('Class', 'Module').new({
             return this.x(this.x() + 2);
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'bump',
           do() {
             return this.x(this.x() + 1);
@@ -157,19 +157,19 @@ export default await base.find('Class', 'Module').new({
 
 
     $.Case.new({
-      name: 'after_basic',
+      name: 'AfterBasic',
       do() {
-        const ab = $.after_basic.new();
+        const ab = $.AfterBasic.new();
         ab.bump();
         this.assertEq(ab.x(), 3);
       }
     });
 
     $.Class.new({
-      name: 'after_before_combined',
+      name: 'AfterBeforeCombined',
       slots: [
         $.before_basic,
-        $.after.new({
+        $.After.new({
           name: 'bump',
           do() {
             return this.x(this.x() * 2);
@@ -179,18 +179,18 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'after_before_combined',
+      name: 'AfterBeforeCombined',
       do() {
-        const ab = $.after_before_combined.new();
+        const ab = $.AfterBeforeCombined.new();
         ab.bump();
         this.assertEq(ab.x(), 6);
       }
     });
 
     $.Class.new({
-      name: 'after_before_combined_Method',
+      name: 'AfterBeforeCombined_Method',
       slots: [
-        $.after_before_combined,
+        $.AfterBeforeCombined,
         $.Method.new({
           name: 'bump',
           override: true,
@@ -202,18 +202,18 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'after_before_combined_Method',
+      name: 'AfterBeforeCombined_Method',
       do() {
-        const abc = $.after_before_combined_Method.new();
+        const abc = $.AfterBeforeCombined_Method.new();
         abc.bump();
         this.assertEq(abc.x(), 8);
       }
     });
     $.Class.new({
-      name: 'after_multiple',
+      name: 'AfterMultiple',
       slots: [
-        $.after_basic,
-        $.after.new({
+        $.AfterBasic,
+        $.After.new({
           name: 'bump',
           do() {
             return this.x(this.x() + 1);
@@ -223,9 +223,9 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'after_multiple',
+      name: 'AfterMultiple',
       do() {
-        const am = $.after_multiple.new();
+        const am = $.AfterMultiple.new();
         am.bump();
         this.assertEq(am.x(), 4);
       }
@@ -263,7 +263,7 @@ export default await base.find('Class', 'Module').new({
           ]
         });
         let x = 0;
-        $.ext1.extend($.after.new({
+        $.ext1.extend($.After.new({
           name: 'p',
           do() {
             x++;
@@ -273,6 +273,67 @@ export default await base.find('Class', 'Module').new({
         this.assertEq(x, 0);
         e.p();
         this.assertEq(x, 1);
+      }
+    });
+
+    $.Class.new({
+      name: 'Task',
+      slots: [
+        $.EnumVar.new({
+          name: 'status',
+          choices: ['pending', 'active', 'complete'],
+          default: 'pending'
+        })
+      ]
+    });
+
+    $.Case.new({
+      name: 'EnumVarBasic',
+      do() {
+        const t = $.Task.new();
+        this.assertEq(t.status(), 'pending', 'Wrong default value');
+        t.status('active');
+        this.assertEq(t.status(), 'active', 'Failed to update value');
+      }
+    });
+
+    $.Case.new({
+      name: 'EnumVarInvalid',
+      do() {
+        const t = $.Task.new();
+        let caught = false;
+        try {
+          t.status('invalid_status');
+        } catch (e) {
+          caught = true;
+          this.assertErrorMessageIncludes(e.message, 'Invalid enum value');
+          this.assertErrorMessageIncludes(e.message, 'pending, active, complete');
+        }
+        this.assert(caught, 'Should have thrown error for invalid enum value');
+      }
+    });
+
+    $.Case.new({
+      name: 'EnumVarInvalidDefault',
+      do() {
+        let caught = false;
+        try {
+          $.Class.new({
+            name: 'BadTask',
+            slots: [
+              $.EnumVar.new({
+                name: 'status',
+                choices: ['pending', 'active', 'complete'],
+                default: 'invalid_default'
+              })
+            ]
+          });
+        } catch (e) {
+          caught = true;
+          this.assertErrorMessageIncludes(e.message, 'Invalid default value');
+          this.assertErrorMessageIncludes(e.message, 'pending, active, complete');
+        }
+        this.assert(caught, 'Should have thrown error for invalid default value');
       }
     });
 

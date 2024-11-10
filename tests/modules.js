@@ -37,7 +37,7 @@ export default await base.find('Class', 'Module').new({
           name: 'b',
           slots: [
             $.a,
-            $.after.new({
+            $.After.new({
               name: 'frob',
               do() {
                 this.x(this.x() - 1);

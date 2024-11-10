@@ -128,7 +128,7 @@ def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     imports.remove("flash_attn")
     return imports
 
-def download_weights(model_id: str = MODEL_ID, out_dir: Path = Path('weights/1B-Instruct')):
+def download_weights(model_id: str = MODEL_ID, out_dir: Path = Path(f"weights/{MODEL_ID}")):
     # device = torch.device("cpu")
     if not out_dir.exists():
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -764,14 +764,14 @@ class EntropixModel:
             return sampled_token, sampler_state
         
         # High Entropy, Low Varentropy: "treading carefully, asking clarifying questions"
-        elif ent > cfg.high_logits_entropy_threshold and vent > cfg.high_logits_varentropy_threshold and not already_thinking():
+        elif ent > cfg.high_logits_entropy_threshold and vent < cfg.low_logits_varentropy_threshold and not already_thinking():
             sampler_state = SamplerState.TREADING
             # Insert a clarifying question token if not already present
             sampled_token = torch.tensor([[clarifying_question_token]], dtype=torch.int32, device=device)
             return sampled_token, sampler_state
 
         # Low Entropy, High Varentropy: "exploring forks in the path"
-        elif ent < cfg.high_logits_entropy_threshold and vent > cfg.high_logits_varentropy_threshold:
+        elif ent < cfg.low_logits_entropy_threshold and vent > cfg.high_logits_varentropy_threshold:
             sampler_state = SamplerState.EXPLORING
             temp_adj = cfg.low_entropy_interaction_strength_offset + cfg.low_entropy_interaction_strength_coefficient * interaction_strength
             top_k_adj = max(5, int(cfg.top_k * (1 + 0.5 * (1 - agreement))))
@@ -957,4 +957,5 @@ torch.cuda.empty_cache()
 initialize_model()
 
 # generate_text("Who was the 12th President of the United States?")
-generate_text("Which number is larger, 9.9 or 9.11? Give only the larger number in answer.")
+generate_text("Which number is larger, 9.15 or 9.9?")
+# generate_text("Who would do such a thing and")
