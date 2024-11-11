@@ -316,7 +316,7 @@ export default await base.find('class', 'module').new({
             });
           }
         }),
-        $.before.new({
+        $.Before.new({
           name: 'process_command',
           do: function process_command(cmd) {
             this.messages().add('run: ' + cmd.description());

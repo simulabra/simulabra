@@ -209,7 +209,7 @@ export default await base.find('Class', 'Module').new({
             return elem;
           }
         }),
-        $.static.new({
+        $.Static.new({
           name: 'proxy',
           do: function proxy() {
             return new Proxy({}, {

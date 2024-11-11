@@ -375,7 +375,7 @@ function bootstrap() {
       }
     },
     function description(seen) { //TODO: add depth
-      const Vars = this.state().filter(v => v.value() !== v.Var_ref().defval());
+      const Vars = this.state().filter(v => v.value() !== v.ref().defval());
       const VarDesc = Vars.length > 0 ? `{\n${Vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
       return `${this.class().description(seen)}.new${VarDesc}`;
     },
@@ -383,10 +383,10 @@ function bootstrap() {
       return this.description();
     },
     function state() {
-      return this.class().Vars().map(Var_ref => {
-        const value = this[`_${Var_ref.name()}`];
+      return this.class().Vars().map(ref => {
+        const value = this[`_${ref.name()}`];
         if (value !== undefined) {
-          return var_state.new({ Var_ref, value });
+          return $VarState.new({ ref, value });
         } else {
           return null;
         }
@@ -405,10 +405,10 @@ function bootstrap() {
       return `simulabra://localhost/${this.class().name()}/${this.uid()}`;
     },
     function log(...args) {
-      $debug?.log(this.title(), ...args);
+      $Debug?.log(this.title(), ...args);
     },
     function dlog(...args) {
-      if ($debug && this.class().debug()) {
+      if ($Debug && this.class().debug()) {
         this.log(...args);
       }
     },
@@ -609,7 +609,7 @@ function bootstrap() {
         }
       },
       function should_debug() {
-        return this.debug() || $debug.debug();
+        return this.debug() || $Debug.debug();
       },
       function combine(impl) {
         const pk = '_' + this.name();
@@ -637,17 +637,17 @@ function bootstrap() {
     ]
   });
 
-  const $fn = $Class.new({
-    name: 'fn',
+  const $Fn = $Class.new({
+    name: 'Fn',
     slots: [
       $Var.new({ name: 'do' }), // fn, meat and taters
     ]
   });
 
-  const $static = $Class.new({
-    name: 'static',
+  const $Static = $Class.new({
+    name: 'Static',
     slots: [
-      $fn,
+      $Fn,
       function load(proto) {
         const impl = new MethodImpl({ _name: this.name() });
         let fn = this.do();
@@ -663,7 +663,7 @@ function bootstrap() {
   const $fake_state = $Class.new({
     name: 'fake_state',
     slots: [
-      $static.new({
+      $Static.new({
         name: 'list_from_map',
         do: function list_from_map(map) {
           const list = Object.entries(map).map(([k, v]) => this.new({ name: k, value: v }));
@@ -687,24 +687,24 @@ function bootstrap() {
     ]
   });
 
-  const var_state = $Class.new({
-    name: 'Var_state',
+  const $VarState = $Class.new({
+    name: 'VarState',
     slots: [
-      $Var.new({ name: 'Var_ref' }),
+      $Var.new({ name: 'ref' }),
       $Var.new({ name: 'value' }),
       function kv() {
-        return [this.Var_ref().name(), this.value()];
+        return [this.ref().name(), this.value()];
       },
       function description(seen) {
         let d;
         if (this.value().title instanceof Function) {
           d = this.value().title();
-        } else if (!this.Var_ref().debug()) {
+        } else if (!this.ref().debug()) {
           d = `<hidden>`;
         } else {
           d = simulabra_string(this.value(), seen);
         }
-        return `:${this.Var_ref().name()}=${d}`;
+        return `:${this.ref().name()}=${d}`;
       }
     ]
   });
@@ -712,7 +712,7 @@ function bootstrap() {
   const $Method = $Class.new({
     name: 'Method',
     slots: [
-      $fn,
+      $Fn,
       $Var.new({ name: 'message' }),
       $Var.new({ name: 'name' }),
       $Var.new({ name: 'override', default: false }),
@@ -739,10 +739,10 @@ function bootstrap() {
     ]
   });
 
-  var $debug = $Class.new({
-    name: 'debug',
+  var $Debug = $Class.new({
+    name: 'Debug',
     slots: [
-      $static.new({
+      $Static.new({
         name: 'log',
         do: function log(...args) {
           // const stack = (new Error).stack;
@@ -751,7 +751,7 @@ function bootstrap() {
           return this;
         }
       }),
-      $static.new({
+      $Static.new({
         name: 'format',
         do: function format(...args) {
           return args.map(a => simulabra_display(a));
@@ -760,10 +760,10 @@ function bootstrap() {
     ]
   });
 
-  const $before = $Class.new({
-    name: 'before',
+  const $Before = $Class.new({
+    name: 'Before',
     slots: [
-      $fn,
+      $Fn,
       $Var.new({ name: 'name' }),
       function combine(impl) {
         impl._befores.push(this.do());
@@ -774,7 +774,7 @@ function bootstrap() {
   const $After = $Class.new({
     name: 'After',
     slots: [
-      $fn,
+      $Fn,
       $Var.new({ name: 'name' }),
       function combine(impl) {
         impl._afters.push(this.do());
@@ -783,8 +783,8 @@ function bootstrap() {
   });
 
 
-  const $virtual = $Class.new({
-    name: 'virtual',
+  const $Virtual = $Class.new({
+    name: 'Virtual',
     slots: [
       $Var.new({ name: 'name' }),
       function load(parent) {
@@ -798,20 +798,20 @@ function bootstrap() {
     ]
   });
 
-  const $object_registry = $Class.new({
-    name: 'object_registry',
+  const $ObjectRegistry = $Class.new({
+    name: 'ObjectRegistry',
     slots: [
       $Var.new({ name: 'classInstances', default: () => ({}) }),
       $Var.new({ name: 'refs', default: () => ({}) }),
       function register(o) {
-        this.add_instance(o);
+        this.addInstance(o);
         const u = o.uri();
         this.refs()[u] = new WeakRef(o);
       },
       function deref(u) {
         return this.refs()[u]?.deref();
       },
-      function add_instance(obj) {
+      function addInstance(obj) {
         for (const cls of [obj.class(), ...obj.class().superClasses()]) {
           const ClassName = cls.name();
           if (this.classInstances()[ClassName] === undefined) {
@@ -869,10 +869,10 @@ function bootstrap() {
       $Var.new({ name: 'loaded', default: false }),
       $Var.new({ name: 'repos', default: () => ({}) }),
       $Var.new({ name: 'classes', default: () => [] }),
-      $before.new({
+      $Before.new({
         name: 'init',
         do: function init() {
-          this.registry($object_registry.new());
+          this.registry($ObjectRegistry.new());
         }
       }),
       function instances(cls) {
@@ -952,7 +952,7 @@ function bootstrap() {
 
   var _ = $module.new({
     name: 'base',
-    registry: $object_registry.new(),
+    registry: $ObjectRegistry.new(),
     doc: 'simulabra core system Classes'
   });
   var $ = _.proxy('Class');
@@ -961,15 +961,15 @@ function bootstrap() {
     $base,
     $Class,
     $Var,
-    $fn,
+    $Fn,
     $Method,
-    $static,
-    $debug,
-    var_state,
-    $virtual,
-    $before,
+    $Static,
+    $Debug,
+    $VarState,
+    $Virtual,
+    $Before,
     $After,
-    $object_registry,
+    $ObjectRegistry,
     $module,
     $Deffed,
   ];
@@ -1004,16 +1004,16 @@ function bootstrap() {
       $.Var.new({ name: 'tick', default: 0 }),
       $.Var.new({ name: 'handlers', default: {} }),
       $.Var.new({ name: 'registry' }),
-      function start_ticking() {
+      function startTicking() {
         setInterval(() => {
           this.tick(this.tick() + 1);
         }, 16);
       },
-      function js_new(ClassName, ...args) {
+      function jsNew(ClassName, ...args) {
         const obj = new globalThis[ClassName](...args);
         return obj;
       },
-      function js_get(obj, p) {
+      function jsGet(obj, p) {
         return obj[p];
       },
       function $() {
@@ -1031,21 +1031,21 @@ function bootstrap() {
   __ = $.SimulabraGlobal.new({
     stack: new FrameStack(),
     mod: _,
-    base_mod: _,
+    baseMod: _,
     bootstrapped: true,
-    registry: $.object_registry.new(),
+    registry: $.ObjectRegistry.new(),
   });
 
   __.addEventListener('log', e => console.log(...e.args));
 
   globalThis.SIMULABRA = __;
-  __.$$DebugClass = $debug;
-  __.start_ticking();
+  __.$$DebugClass = $Debug;
+  __.startTicking();
 
   [
     ...INTRINSICS,
     $.StaticVar,
-    $.object_registry,
+    $.ObjectRegistry,
     $.SimulabraGlobal,
   ].forEach(it => __.register(it));
 
@@ -1120,7 +1120,7 @@ function bootstrap() {
   $.Class.new({
     name: 'event',
     slots: [
-      $.fn,
+      $.Fn,
       $.Var.new({ name: 'type' }),
       $.Var.new({ name: 'do' }),
       function load(proto) {
@@ -1159,7 +1159,7 @@ function bootstrap() {
   $.Class.new({
     name: 'proc',
     slots: [
-      $.fn,
+      $.Fn,
       $.Deffed,
       function proxied(ctx) {
         return this.do().bind(ctx);
@@ -1297,7 +1297,7 @@ function bootstrap() {
   $.Class.new({
     name: 'command',
     slots: [
-      $.virtual.new({ name: 'run' }),
+      $.Virtual.new({ name: 'run' }),
       $.Method.new({
         name: 'dispatchTo',
         do: function dispatchTo(o) {

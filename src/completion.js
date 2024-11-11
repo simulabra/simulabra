@@ -573,7 +573,7 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.before.new({
+        $.Before.new({
           name: 'blur',
           do: function blur() {
             if (this.active()) {

@@ -94,10 +94,10 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'RequestHandler',
       slots: [
-        $.virtual.new({
+        $.Virtual.new({
           name: 'match'
         }),
-        $.virtual.new({
+        $.Virtual.new({
           name: 'handle',
         }),
       ]

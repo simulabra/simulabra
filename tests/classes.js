@@ -5,7 +5,7 @@ const __ = globalThis.SIMULABRA;
 export default await base.find('Class', 'Module').new({
   name: 'test_classes',
   imports: [test],
-  registry: base.find('Class', 'object_registry').new(),
+  registry: base.find('Class', 'ObjectRegistry').new(),
   on_load(_, $) {
     $.Class.new({
       name: 'basic',
@@ -109,7 +109,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'before_basic',
+      name: 'BeforeBasic',
       slots: [
         $.Var.new({ name: 'x', default: 0 }),
         $.Method.new({
@@ -118,7 +118,7 @@ export default await base.find('Class', 'Module').new({
             return this.x(this.x() + 2);
           }
         }),
-        $.before.new({
+        $.Before.new({
           name: 'bump',
           do() {
             return this.x(this.x() + 1);
@@ -128,9 +128,9 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'before_basic',
+      name: 'BeforeBasic',
       do() {
-        const ab = $.before_basic.new();
+        const ab = $.BeforeBasic.new();
         ab.bump();
         this.assertEq(ab.x(), 3);
       }
@@ -168,7 +168,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'AfterBeforeCombined',
       slots: [
-        $.before_basic,
+        $.BeforeBasic,
         $.After.new({
           name: 'bump',
           do() {
@@ -232,12 +232,12 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'static',
+      name: 'Static',
       do() {
         $.Class.new({
-          name: 'static_test',
+          name: 'StaticTest',
           slots: [
-            $.static.new({
+            $.Static.new({
               name: 'frob',
               do(n) {
                 return n * 2;
@@ -246,7 +246,7 @@ export default await base.find('Class', 'Module').new({
           ]
         });
 
-        this.assertEq($.static_test.frob(3), 6);
+        this.assertEq($.StaticTest.frob(3), 6);
       }
     });
 

@@ -5,7 +5,7 @@ const __ = globalThis.SIMULABRA;
 export default await base.find('Class', 'Module').new({
   name: 'test-modules',
   imports: [base, test],
-  registry: base.find('Class', 'object_registry').new(),
+  registry: base.find('Class', 'ObjectRegistry').new(),
   async on_load(_, $) {
     const a = $.Module.new({
       name: 'test-a',
