@@ -31,7 +31,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'message_log',
       slots: [
-        $.window,
+        $.Window,
         $.Var.new({
           name: 'message_list',
           default: []
@@ -55,7 +55,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'explorer_select_command',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'object' }),
         $.Var.new({ name: 'previous' }),
         // (~Var #object)
@@ -164,7 +164,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'object_explorer',
       slots: [
-        $.window,
+        $.Window,
         $.Var.new({ name: 'object' }),
         $.Method.new({
           name: 'render',
@@ -189,7 +189,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'intro',
       slots: [
-        $.window,
+        $.Window,
         $.Method.new({
           name: 'render',
           do: function render() {
@@ -209,7 +209,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'module_browser',
       slots: [
-        $.window,
+        $.Window,
         $.Method.new({
           name: 'objects',
           do: function objects() {
@@ -235,7 +235,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'codemirror_run_command',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'codemirror' }),
         $.Method.new({
           name: 'run',
@@ -260,7 +260,7 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'codemirror',
       slots: [
-        $.window,
+        $.Window,
         $.Var.new({ name: 'editor' }),
         $.Method.new({
           name: 'render',
@@ -297,13 +297,13 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'editor',
       slots: [
-        $.window,
-        $.application,
+        $.Window,
+        $.Application,
         $.Var.new({ name: 'messages' }),
         $.Var.new({ name: 'explorer' }),
         $.Var.new({ name: 'modules' }),
         $.Var.new({ name: 'codemirror' }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do: function init() {
             this.messages($.message_log.new({ parent: this }));

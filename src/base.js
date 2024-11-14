@@ -1295,7 +1295,7 @@ function bootstrap() {
   });
 
   $.Class.new({
-    name: 'command',
+    name: 'Command',
     slots: [
       $.Virtual.new({ name: 'run' }),
       $.Method.new({

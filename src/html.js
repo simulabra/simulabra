@@ -154,7 +154,7 @@ export default await base.find('Class', 'Module').new({
           do: function domify(node) {
             if (typeof node === 'object' && 'type' in node && typeof node.type === 'string') {
               return node;
-            } else if (typeof node === 'string') {
+            } else if (typeof node === 'string' || typeof node === 'number') {
               return document.createTextNode(node);
             } else if (node instanceof Node) {
               return node;
@@ -523,7 +523,7 @@ export default await base.find('Class', 'Module').new({
       slots: [
         $.Component,
         $.Var.new({ name: 'input', default() {
-          return $.input.new({
+          return $.Input.new({
             name: this.name(),
             parent: this,
           })

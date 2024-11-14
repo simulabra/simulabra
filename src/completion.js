@@ -7,7 +7,7 @@ export default await base.find('Class', 'Module').new({
   imports: [base, html, llm],
   async on_load(_, $) {
     const __ = globalThis.SIMULABRA;
-    const $el = $.html_element.proxy();
+    const $el = $.HtmlElement.proxy();
 
     $.Class.new({
       name: 'ContextVar',
@@ -39,7 +39,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorFetchNextCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'count' }),
         $.Var.new({ name: 'temperature' }),
         $.Var.new({ name: 'nPredict' }),
@@ -64,20 +64,29 @@ export default await base.find('Class', 'Module').new({
               if (!valid()) {
                 return;
               }
-              const completion = await ctx.pyserver().completion({
+              //const completion = await ctx.pyserver().completion({
+              //  prompt,
+              //  nPredict,
+              //  temperature,
+              //  nProbs,
+              //  control,
+              //});
+              const completion = await $.LocalLlamaCompletionCommand.new({
                 prompt,
                 nPredict,
                 temperature,
-                nProbs,
-                control,
-              });
-              if (i === 0 && completion.tops()) {
-                ctx.probs(Object.entries(completion.tops()).map(([tokStr, prob]) => $.TokenProb.new({ object: ctx, parent: ctx, tokStr, prob })));
-              }
-
+                nProbs
+              }).run();
+              //if (i === 0 && completion.tops()) {
+              //  ctx.probs(Object.entries(completion.tops()).map(([tokStr, prob]) => $.TokenProb.new({ object: ctx, parent: ctx, tokStr, prob })));
+              //}
+              //
               if (completion.content() !== '' && valid()) {
                 ctx.completionCandidates().add(completion);
-                for (let tok of completion.tokens()) {
+                const tokens = await $.LocalLlamaTokenizeCommand.new({
+                  prompt: completion.content(),
+                }).run();
+                for (let tok of tokens) {
                   const logit = logit_bias.find(l => l[0] === tok);
                   if (logit) {
                     logit[1] -= this.repeatPenalty();
@@ -96,7 +105,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorInsertCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'text' }),
         $.Method.new({
           name: 'run',
@@ -110,7 +119,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorFetchNextLink',
       slots: [
-        $.link,
+        $.Link,
         $.Method.new({
           name: 'linkText',
           do: function linkText() {
@@ -135,7 +144,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorCompleteCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({
           name: 'length',
           default: 100,
@@ -172,7 +181,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorCompleteLink',
       slots: [
-        $.link,
+        $.Link,
         $.Method.new({
           name: 'linkText',
           do: function linkText() {
@@ -197,7 +206,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorClearCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Method.new({
           name: 'run',
           do: function run(ctx) {
@@ -210,7 +219,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorClearLink',
       slots: [
-        $.link,
+        $.Link,
         $.Method.new({
           name: 'linkText',
           do: function linkText() {
@@ -229,7 +238,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorAddLink',
       slots: [
-        $.link,
+        $.Link,
         $.Var.new({ name: 'choice' }),
         $.Var.new({ name: 'text' }),
         $.Var.new({ name: 'emphasize' }),
@@ -320,7 +329,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorGotoHistoryCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'moment' }),
         $.Method.new({
           name: 'run',
@@ -335,7 +344,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorGotoHistoryLink',
       slots: [
-        $.link,
+        $.Link,
         $.Var.new({ name: 'moment' }),
         $.Method.new({
           name: 'linkText',
@@ -408,7 +417,7 @@ export default await base.find('Class', 'Module').new({
       {
         name: 'TokenProb',
       },
-      $.link,
+      $.Link,
       $.Var.new({ name: 'tokStr' }),
       $.Var.new({ name: 'prob' }),
       $.Method.new({
@@ -437,7 +446,7 @@ export default await base.find('Class', 'Module').new({
           return $.CompletorInsertCommand.new({ text: this.tokStr() });
         }
       }),
-      $.after.new({
+      $.After.new({
         name: 'hover',
         do: function hover() {
           completor.preview(this.tokStr());
@@ -449,7 +458,7 @@ export default await base.find('Class', 'Module').new({
           completor.preview('');
         }
       }),
-      $.after.new({
+      $.After.new({
         name: 'load',
         do: function load(e) {
           this.log(e, this.element());
@@ -461,7 +470,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorInstructionFocusCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Method.new({
           name: 'run',
           do: async function run(ctx) {
@@ -474,7 +483,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorUnfocusCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Method.new({
           name: 'run',
           do: function run(ctx) {
@@ -487,7 +496,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorSetNPredictCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'value' }),
         $.Method.new({
           name: 'run',
@@ -501,7 +510,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorSetCountCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'value' }),
         $.Method.new({
           name: 'run',
@@ -515,7 +524,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorSetTemperatureCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'value' }),
         $.Method.new({
           name: 'run',
@@ -529,7 +538,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'CompletorSetControlCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'value' }),
         $.Method.new({
           name: 'run',
@@ -545,7 +554,7 @@ export default await base.find('Class', 'Module').new({
       slots: [
         $.TogglyInput,
         $.Var.new({ name: 'beforeEditingState' }),
-        $.after.new({
+        $.After.new({
           name: 'load',
           do: function load__after() {
             return;
@@ -557,7 +566,7 @@ export default await base.find('Class', 'Module').new({
             });
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'focus',
           do: function focus__after() {
             this.beforeEditingState(this.value(), false);
@@ -587,8 +596,8 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'completor',
       slots: [
-        $.window,
-        $.application,
+        $.Window,
+        $.Application,
         $.Var.new({
           name: 'instruction',
           default() { return $.InstructionInput.new({ name: 'instruction', parent: this }); }
@@ -611,7 +620,7 @@ export default await base.find('Class', 'Module').new({
             }
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do: function init() {
             this.completionCandidates($.CompletionCandidates.new({ parent: this }));
@@ -637,7 +646,7 @@ export default await base.find('Class', 'Module').new({
             });
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'probs',
           do: function probs__after(value) {
             if (value) {

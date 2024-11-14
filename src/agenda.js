@@ -50,10 +50,10 @@ export default await base.find('class', 'module').new({
             });
           }
         }),
-        $.after.new({
+        $.After.new({
           name: 'init',
           do: function init__after() {
-            this.item_input($.input.new({
+            this.item_input($.Input.new({
               name: `todo?`,
               parent: this
             }));
@@ -71,8 +71,8 @@ export default await base.find('class', 'module').new({
     $.class.new({
       name: 'agenda',
       slots: [
-        $.window,
-        $.application,
+        $.Window,
+        $.Application,
         $.Var.new({
           name: 'items',
           default: [],

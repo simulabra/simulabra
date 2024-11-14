@@ -174,7 +174,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'HTTPRequestCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'url' }),
         $.Var.new({ name: 'Method' }),
         $.Var.new({ name: 'responseType' }),

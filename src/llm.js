@@ -23,7 +23,7 @@ export default await base.find('Class', 'Module').new({
             control = 5,
           }) {
             const res = await fetch(`${this.serverUrl()}/completion`, {
-              Method: 'POST',
+              method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -40,6 +40,20 @@ export default await base.find('Class', 'Module').new({
             const json = await res.json();
             return $.PyserverCompletionResults.new(json);
           }
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'CompletionResults',
+      slots: [
+        $.Var.new({
+          name: 'content',
+          doc: 'the tokens sampled from the completion',
+        }),
+        $.Var.new({
+          name: 'probs',
+          doc: 'the logprobs of the tokens',
         }),
       ]
     });
@@ -70,14 +84,14 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'LocalLlamaTokenizeCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'prompt' }),
         $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
         $.Method.new({
           name: 'run',
           do: async function run() {
             const res = await fetch(`${this.serverUrl()}/tokenize`, {
-              Method: 'POST',
+              method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -101,8 +115,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'LlamacppCompletionResults',
       slots: [
-        $.Var.new({ name: 'output', default: '' }),
-        $.Var.new({ name: 'probs', default: () => [] }),
+        $.CompletionResults,
         $.Method.new({
           name: 'sumProb',
           do: function sumProb() {
@@ -123,20 +136,18 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'LocalLlamaCompletionCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'prompt' }),
         $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
-        $.Var.new({ name: 'n_predict', default: 4 }),
+        $.Var.new({ name: 'nPredict', default: 4 }),
         $.Var.new({ name: 'temperature', default: 5.0 }),
-        $.Var.new({ name: 'top_k', default: 200 }),
-        $.Var.new({ name: 'top_p', default: 1.00 }),
-        $.Var.new({ name: 'n_probs', default: 0 }),
-        $.Var.new({ name: 'logit_bias', default: [] }),
+        $.Var.new({ name: 'nProbs', default: 0 }),
+        $.Var.new({ name: 'logitBias', default: [] }),
         $.Method.new({
           name: 'run',
           do: async function run() {
             const res = await fetch(`${this.serverUrl()}/completion`, {
-              Method: 'POST',
+              method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -146,16 +157,16 @@ export default await base.find('Class', 'Module').new({
                 // frequency_penalty: 0.5,
                 min_p: 0.1,
                 cache_prompt: true,
-                n_probs: this.n_probs(),
-                n_predict: this.n_predict(),
-                logit_bias: this.logit_bias(),
+                n_probs: this.nProbs(),
+                n_predict: this.nPredict(),
+                logit_bias: this.logitBias(),
                 stop: ['<|im_end|>', '</s>'],
               })
             });
 
             let t = await res.json();
             const completion = $.LlamacppCompletionResults.new({
-              output: t.content,
+              content: t.content,
               probs: t.completion_probabilities ?? []
             });
             return completion;
@@ -167,14 +178,14 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'LocalLlamaTokenizeCommand',
       slots: [
-        $.command,
+        $.Command,
         $.Var.new({ name: 'prompt' }),
         $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
         $.Method.new({
           name: 'run',
           do: async function run() {
             const res = await fetch(`${this.serverUrl()}/tokenize`, {
-              Method: 'POST',
+              method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
