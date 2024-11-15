@@ -45,12 +45,16 @@ export default await base.find('Class', 'Module').new({
         $.Var.new({ name: 'nPredict' }),
         $.Var.new({ name: 'nProbs' }),
         $.Var.new({ name: 'control' }),
-        $.Var.new({ name: 'repeatPenalty', default: 0.3 }),
+        $.Var.new({ name: 'repeatPenalty', default: 0.5 }),
+        $.Var.new({
+          name: 'completionCommandClass',
+          default: $.LocalLlamaCompletionCommand,
+        }),
         $.Method.new({
           name: 'run',
           do: async function run(ctx) {
             ctx.completionCandidates().reset();
-            let logit_bias = [];
+            let logitBias = [];
             const prompt = ctx.prompt();
             function valid() {
               return ctx.prompt() === prompt;
@@ -75,7 +79,8 @@ export default await base.find('Class', 'Module').new({
                 prompt,
                 nPredict,
                 temperature,
-                nProbs
+                nProbs,
+                logitBias
               }).run();
               //if (i === 0 && completion.tops()) {
               //  ctx.probs(Object.entries(completion.tops()).map(([tokStr, prob]) => $.TokenProb.new({ object: ctx, parent: ctx, tokStr, prob })));
@@ -87,11 +92,11 @@ export default await base.find('Class', 'Module').new({
                   prompt: completion.content(),
                 }).run();
                 for (let tok of tokens) {
-                  const logit = logit_bias.find(l => l[0] === tok);
+                  const logit = logitBias.find(l => l[0] === tok);
                   if (logit) {
-                    logit[1] -= this.repeatPenalty();
+                    logit[1] *= 2;
                   } else {
-                    logit_bias.push([tok, -this.repeatPenalty()]);
+                    logitBias.push([tok, -this.repeatPenalty()]);
                   }
                 }
               }
