@@ -86,6 +86,14 @@ export default await base.find('Class', 'Module').new({
               //  ctx.probs(Object.entries(completion.tops()).map(([tokStr, prob]) => $.TokenProb.new({ object: ctx, parent: ctx, tokStr, prob })));
               //}
               //
+              if (!ctx.probs() || ctx.probs().length === 0) {
+                ctx.probs(completion.probs()[0].probs.map(p => $.TokenProb.new({
+                  object: ctx,
+                  parent: ctx,
+                  tokStr: p.tok_str,
+                  prob: p.prob,
+                })));
+              }
               if (completion.content() !== '' && valid()) {
                 ctx.completionCandidates().add(completion);
                 const tokens = await $.LocalLlamaTokenizeCommand.new({
@@ -492,7 +500,7 @@ export default await base.find('Class', 'Module').new({
         $.Method.new({
           name: 'run',
           do: function run(ctx) {
-            ctx.instruction().blur();
+            ctx.unfocus();
           }
         }),
       ]
@@ -615,6 +623,7 @@ export default await base.find('Class', 'Module').new({
         $.Var.new({ name: 'nProbs', default: 50 }),
         $.Var.new({ name: 'choices', default: [] }),
         $.Var.new({ name: 'history', default() { return $.CompletionHistory.new({ parent: this }) } }),
+        $.Var.new({ name: 'beforeFocusText' }),
         $.Var.new({ name: 'probs', default: [] }),
         $.Var.new({ name: 'pyserver' }),
         $.event.new({
@@ -738,6 +747,15 @@ export default await base.find('Class', 'Module').new({
           }
         }),
         $.Method.new({
+          name: 'unfocus',
+          do: function unfocus() {
+            if (this.instruction().value() !== this.beforeFocusText()) {
+              this.fetchNext();
+            }
+            this.instruction().blur();
+          }
+        }),
+        $.Method.new({
           name: 'clear',
           do: function clear() {
             this.instruction().set('');
@@ -752,6 +770,8 @@ export default await base.find('Class', 'Module').new({
         $.Method.new({
           name: 'fetchNext',
           do: function fetchNext() {
+            this.probs([]);
+            this.beforeFocusText(this.instruction().value());
             return $.CompletorFetchNextCommand.new().run(this);
           }
         }),
@@ -765,7 +785,6 @@ export default await base.find('Class', 'Module').new({
           name: 'setModel',
           do: function setModel(modelName) {
             localStorage.setItem('selected_model', modelName);
-            // this.prompt_format($[modelName + '_model'].new());
           }
         }),
         $.Method.new({
