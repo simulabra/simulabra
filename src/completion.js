@@ -276,13 +276,13 @@ export default await base.find('Class', 'Module').new({
         $.Method.new({
           name: 'hover',
           do: function hover() {
-            completor.preview(this.text());
+            //completor.preview(this.text());
           }
         }),
         $.Method.new({
           name: 'unhover',
           do: function unhover() {
-            completor.preview('');
+            //completor.preview('');
           }
         }),
       ]
@@ -380,13 +380,13 @@ export default await base.find('Class', 'Module').new({
         $.Method.new({
           name: 'hover',
           do: function hover() {
-            completor.preview(this.moment().text(), true);
+            //completor.preview(this.moment().text(), true);
           }
         }),
         $.Method.new({
           name: 'unhover',
           do: function unhover() {
-            completor.preview('');
+            //completor.preview('');
           }
         }),
       ]
@@ -462,13 +462,13 @@ export default await base.find('Class', 'Module').new({
       $.After.new({
         name: 'hover',
         do: function hover() {
-          completor.preview(this.tokStr());
+          //completor.preview(this.tokStr());
         }
       }),
       $.Method.new({
         name: 'unhover',
         do: function unhover() {
-          completor.preview('');
+          //completor.preview('');
         }
       }),
       $.After.new({
@@ -565,7 +565,7 @@ export default await base.find('Class', 'Module').new({
     $.Class.new({
       name: 'InstructionInput',
       slots: [
-        $.TogglyInput,
+        $.Input,
         $.Var.new({ name: 'beforeEditingState' }),
         $.After.new({
           name: 'load',
@@ -740,7 +740,6 @@ export default await base.find('Class', 'Module').new({
             this.choices().push(it);
             this.instruction().blur();
             this.instruction().set(this.instruction().value() + it);
-            this.preview('');
             this.save();
             this.addHistory(`insert:${it}`, this.instruction().value());
             this.fetchNext();
@@ -828,7 +827,7 @@ export default await base.find('Class', 'Module').new({
                 $.CompletorClearLink.new({ object: this, parent: this }),
                 $el.div({ class: 'prob-box' }, ...this.probs()),
                 this.completionCandidates(),
-                this.history(),
+                //this.history(),
               ),
               $el.div(
                 { class: 'column' },
@@ -865,6 +864,10 @@ export default await base.find('Class', 'Module').new({
 .completor-container {
   display: flex;
   max-width: 1200px;
+}
+
+.completor {
+  height: 80vh;
 }
 
 .column {
@@ -908,10 +911,6 @@ export default await base.find('Class', 'Module').new({
 
 .prob-box {
   break-inside: avoid;
-}
-
-#input-instruction {
-  height: 20vh;
 }
 
 input[type="number"] {

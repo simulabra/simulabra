@@ -41,7 +41,7 @@ body, html {
 
 .link_body:hover {
     color: var(--secondary-2);
-    background-color: var(--background-secondary);
+    cursor: pointer;
 }
 
 ul {
@@ -111,7 +111,8 @@ select {
 }
 
 .window-bar {
-    background: var(--background-secondary);
+    background: var(--background-shadow);
+    color: var(--background-light);
     /*border: 1px solid var(--primary);*/
     /*border-bottom: 0px solid var(--primary);*/
     display: flex;
@@ -176,7 +177,7 @@ select {
 }
 
 #input-instruction {
-    max-height: 50vh;
+    height: 75vh;
     resize: none;
     color: var(--primary);
     font-size: 14px;

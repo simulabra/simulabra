@@ -395,6 +395,7 @@ export default await base.find('Class', 'Module').new({
             return $el.span(
               {},
               this.name(),
+              ' ',
               $el.input({
                 class: 'NumberInput_input',
                 type: 'number',
@@ -442,15 +443,12 @@ export default await base.find('Class', 'Module').new({
           do: function render() {
             return $el.textarea({
               id: this.inputID(),
-              style: 'height: 0px;',
               oninput: e => {
                 this.value(e.target.value, false);
-                this.autoheight();
               },
               onload: e => {
                 e.target.value = this.value();
                 setTimeout(() => {
-                  this.autoheight();
                   e.target.scrollTop = e.target.scrollHeight;
                 }, 0);
               },
@@ -469,6 +467,7 @@ export default await base.find('Class', 'Module').new({
             this.value(value);
             if (this.element()) {
               this.element().value = value;
+              this.element().scrollTop = this.element().scrollHeight;
             }
           }
         }),
