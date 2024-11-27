@@ -373,6 +373,11 @@ function bootstrap() {
       for (const ev of (this.class().events() ?? [])) {
         this.addEventListener(ev.name(), ev.do().bind(this));
       }
+      for (const slot of this.class().slots()) {
+        if (slot.class()._fullSlot) {
+          slot.initInstance(this);
+        }
+      }
     },
     function description(seen) { //TODO: add depth
       const Vars = this.state().filter(v => v.value() !== v.ref().defval());
@@ -484,10 +489,11 @@ function bootstrap() {
       comp.load(this.proto());
       this.proto()._reify();
     },
-    function defaultInitSlot(slot, dval) {
-      const pk = '_' + slot;
-      if (!(pk in this)) {
-        this[pk] = dval;
+    function initInstance(inst) {
+      for (const slot of this.slots()) {
+        if (slot.class()._fullSlot) {
+          slot.initInstance(inst);
+        }
       }
     },
     function description() {
@@ -541,6 +547,7 @@ function bootstrap() {
       return id;
     },
     BVar.new({ name: 'name' }),
+    BVar.new({ name: 'fullSlot', default: false }),
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
     BVar.new({ name: 'events' }),
@@ -575,6 +582,7 @@ function bootstrap() {
   const $Class = Object.create($ClassProto._proto);
   $Class._class = $Class;
   $Class._name = 'Class';
+  $Class._fullSlot = true;
   $Class.proto($Class);
   $Class.slots($ClassSlots);
   $Class.init();
@@ -634,6 +642,8 @@ function bootstrap() {
         };
         impl._direct = true;
       },
+      function initInstance(inst) {
+      }
     ]
   });
 
@@ -1114,6 +1124,31 @@ function bootstrap() {
           return def;
         }
       })
+    ]
+  });
+
+  $.Class.new({
+    name: 'AutoVar',
+    fullSlot: true,
+    slots: [
+      $.Var,
+      $.Var.new({
+        name: 'autoFunction',
+        required: true
+      }),
+      $.Method.new({
+        name: 'defval',
+        do: function defval() {
+          return this.autoFunction().apply(this);
+        }
+      }),
+      $.After.new({
+        name: 'initInstance',
+        override: true,
+        do: function initInstance(inst) {
+          inst[this.name()](this.autoFunction().apply(inst));
+        }
+      }),
     ]
   });
 

@@ -812,13 +812,6 @@ export default await base.find('Class', 'Module').new({
                   bind: 'nPredict',
                   command: $.CompletorSetNPredictCommand,
                 }),
-                $.NumberInput.new({
-                  name: 'control',
-                  parent: this,
-                  bind: 'control',
-                  command: $.CompletorSetControlCommand,
-                  step: 0.1,
-                }),
                 $el.div({}),
                 $.CompletorFetchNextLink.new({ object: this, parent: this }),
                 ' ',
@@ -834,6 +827,13 @@ export default await base.find('Class', 'Module').new({
                 this.instruction(),
               ),
             );
+            //return $.sjsx`<div class="completor-container">
+            //  <div class="column">
+            //    ${this.temperatureInput()}
+            //    ${this.tokensInput()}
+            //    <div></div>
+            //`;
+
           }
         }),
         $.Method.new({
@@ -867,7 +867,7 @@ export default await base.find('Class', 'Module').new({
 }
 
 .completor {
-  height: 80vh;
+  height: 54em;
 }
 
 .column {

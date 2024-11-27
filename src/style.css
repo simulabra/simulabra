@@ -177,7 +177,7 @@ select {
 }
 
 #input-instruction {
-    height: 75vh;
+    height: 50em;
     resize: none;
     color: var(--primary);
     font-size: 14px;
