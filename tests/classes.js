@@ -3,7 +3,7 @@ import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('Class', 'Module').new({
-  name: 'test_classes',
+  name: 'TestClasses',
   imports: [test],
   registry: base.find('Class', 'ObjectRegistry').new(),
   on_load(_, $) {
@@ -13,7 +13,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'class_def',
+      name: 'ClassDef',
       do() {
         const b = $.basic.new();
         this.assertEq(b.class(), $.basic);
@@ -21,7 +21,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'point',
+      name: 'Point',
       slots: [
         $.Var.new({ name: 'x' }),
         $.Var.new({ name: 'y' }),
@@ -32,26 +32,26 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'class_def_Var',
+      name: 'ClassDefVar',
       do() {
-        const p = $.point.new({ x: 2 });
+        const p = $.Point.new({ x: 2 });
         this.assertEq(p.x(), 2);
       }
     });
 
     $.Case.new({
-      name: 'class_set_Var',
+      name: 'ClassSetVar',
       do() {
-        const p = $.point.new({ x: 2 });
+        const p = $.Point.new({ x: 2 });
         p.x(3);
         this.assertEq(p.x(), 3);
       }
     });
 
     $.Class.new({
-      name: 'point_extended',
+      name: 'PointExtended',
       slots: [
-        $.point,
+        $.Point,
         $.Var.new({ name: 'phi' }),
         $.Method.new({
           name: 'phi_shift',
@@ -63,17 +63,17 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'class_name',
+      name: 'ClassName',
       do() {
-        this.assertEq($.point.name(), 'point');
-        this.assertEq($.point_extended.name(), 'point_extended');
+        this.assertEq($.Point.name(), 'Point');
+        this.assertEq($.PointExtended.name(), 'PointExtended');
       }
     });
 
     $.Case.new({
-      name: 'class_inheritance_phi',
+      name: 'ClassInheritancePhi',
       do() {
-        const pe = $.point_extended.new({ x: 3, y: 4, phi: Math.PI });
+        const pe = $.PointExtended.new({ x: 3, y: 4, phi: Math.PI });
         this.assertEq(pe.phi_shift(), 5);
       }
     });
@@ -88,10 +88,10 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'color_point',
+      name: 'ColorPoint',
       slots: [
         $.color,
-        $.point,
+        $.Point,
         function g() {
           return this.dist();
         }
@@ -101,7 +101,7 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'class_multiple_inheritance_override',
       do() {
-        const cp = $.color_point.new({ r: 33, g: 55, b: 44, x: 3, y: 4 });
+        const cp = $.ColorPoint.new({ r: 33, g: 55, b: 44, x: 3, y: 4 });
         this.assertEq(cp.dist(), 5);
         this.assertEq(cp.g(), 5);
         this.assertEq(cp.r(), 33);
@@ -251,7 +251,7 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'basic extend',
+      name: 'BasicExtend',
       do() {
         $.Class.new({
           name: 'ext1',

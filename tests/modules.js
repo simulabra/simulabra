@@ -3,7 +3,7 @@ import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('Class', 'Module').new({
-  name: 'test-modules',
+  name: 'TestModules',
   imports: [base, test],
   registry: base.find('Class', 'ObjectRegistry').new(),
   async on_load(_, $) {

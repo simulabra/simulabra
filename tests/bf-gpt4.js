@@ -3,12 +3,12 @@ import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
 export default await base.find('Class', 'Module').new({
-  name: 'brainfuck_interpreter',
+  name: 'BrainfuckInterpreter',
   imports: [base, test],
   registry: base.find('Class', 'ObjectRegistry').new(),
   on_load(_, $) {
     $.Class.new({
-      name: 'brainfuck_interpreter',
+      name: 'BrainfuckInterpreter',
       slots: [
         $.Var.new({ name: 'code', default: '' }),
         $.Var.new({ name: 'input', default: '' }),
@@ -77,7 +77,7 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'interpreter_init',
       do() {
-        const bf = $.brainfuck_interpreter.new({ code: '++.' });
+        const bf = $.BrainfuckInterpreter.new({ code: '++.' });
         this.assertEq(bf.code(), '++.');
       }
     });
@@ -86,7 +86,7 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'interpreter_exec_simple',
       do() {
-        const bf = $.brainfuck_interpreter.new({ code: '++.' });
+        const bf = $.BrainfuckInterpreter.new({ code: '++.' });
         bf.execute();
         this.assertEq(bf.output(), String.fromCharCode(2));
       }
@@ -96,7 +96,7 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'interpreter_exec_loops',
       do() {
-        const bf = $.brainfuck_interpreter.new({ code: '++[>++<-]>.' });
+        const bf = $.BrainfuckInterpreter.new({ code: '++[>++<-]>.' });
         bf.execute();
         this.assertEq(bf.output(), String.fromCharCode(4));
       }
@@ -106,7 +106,7 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'interpreter_exec_input',
       do() {
-        const bf = $.brainfuck_interpreter.new({ code: ',+.', input: String.fromCharCode(2) });
+        const bf = $.BrainfuckInterpreter.new({ code: ',+.', input: String.fromCharCode(2) });
         bf.execute();
         this.assertEq(bf.output(), String.fromCharCode(3));
       }
@@ -116,7 +116,7 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'interpreter_hello_world',
       do() {
-        const bf = $.brainfuck_interpreter.new({
+        const bf = $.BrainfuckInterpreter.new({
           code: '++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.',
         });
         bf.execute();

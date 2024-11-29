@@ -8,7 +8,7 @@ export default await base.find('Class', 'Module').new({
   imports: [test],
   async on_load(_, $) {
     $.Class.new({
-      name: 'test_timer',
+      name: 'TestTimer',
       slots: [
         $.Var.new({ name: 'start' }),
         $.After.new({
@@ -27,18 +27,15 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'test_runner',
+      name: 'TestRunner',
       slots: [
-        $.Var.new({
-          name: 'module_cache',
-        }),
         $.Var.new({
           name: 'timer',
         }),
         $.After.new({
           name: 'init',
           do() {
-            this.timer($.test_timer.new({ name: 'runner_timer' }));
+            this.timer($.TestTimer.new({ name: 'runnerTimer' }));
           }
         }),
         $.Method.new({
@@ -47,15 +44,15 @@ export default await base.find('Class', 'Module').new({
           async do(mod) {
             this.log(`run ${mod.title()}`);
             globalThis.SIMULABRA.mod(mod);
-            const Cases = mod.instances($.Case);
-            if (Cases === undefined) {
-              throw new Error(`no Cases in module ${mod.description()}`);
+            const cases = mod.instances($.Case);
+            if (cases === undefined) {
+              throw new Error(`no cases in module ${mod.description()}`);
             }
-            for (const test_Case of Cases) {
-              await test_Case.run();
+            for (const testCase of cases) {
+              await testCase.run();
             }
-            const n = Object.values(Cases).length;
-            this.log(mod.title(), `${n} test Cases passed`);
+            const n = Object.values(cases).length;
+            this.log(mod.title(), `${n} test cases passed`);
           }
         }),
         $.Method.new({
@@ -95,7 +92,7 @@ export default await base.find('Class', 'Module').new({
       ]
     });
 
-    const runner = $.test_runner.new();
+    const runner = $.TestRunner.new();
     await runner.run('tests');
   }
 }).load();

@@ -29,6 +29,43 @@ export default await __.base().find('Class', 'Module').new({
           name: 'message',
           type: 'string',
         }),
+        $.Method.new({
+          name: 'run',
+          do: function run(ctx) {
+          }
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'TodoCommand',
+      slots: [
+        $.AgendaCommand,
+        $.Var.new({
+          name: 'task',
+          type: 'string',
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'ScheduleCommand',
+      slots: [
+        $.AgendaCommand,
+        $.Var.new({
+          name: 'memo',
+          type: 'string',
+        }),
+        $.Var.new({
+          name: 'eventDate',
+          type: 'date',
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'Agenda',
+      slots: [
       ]
     });
 
