@@ -31,19 +31,48 @@ export default await __.base().find('Class', 'Module').new({
         }),
         $.Method.new({
           name: 'run',
-          do: function run(ctx) {
+          do: function run(agenda) {
+            agenda.addLog(this.createdAt(), this.message());
           }
         }),
       ]
     });
 
     $.Class.new({
-      name: 'TodoCommand',
+      name: 'Task',
+      slots: [
+        $.Var.new({
+          name: 'title'
+        }),
+        $.Var.new({
+          name: 'created',
+        }),
+        $.Var.new({
+          name: 'deadline',
+        }),
+        $.Method.new({
+          name: 'description',
+          do: function description() {
+            return `task "${this.title()}"`;
+          }
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'TaskCommand',
       slots: [
         $.AgendaCommand,
         $.Var.new({
           name: 'task',
-          type: 'string',
+          type: 'Task',
+        }),
+        $.Method.new({
+          name: 'run',
+          do: function run(agenda) {
+            agenda.addTask(this.task());
+            agenda.addLog(this.createdAt(), `added ${this.task()}`);
+          }
         }),
       ]
     });
@@ -66,6 +95,42 @@ export default await __.base().find('Class', 'Module').new({
     $.Class.new({
       name: 'Agenda',
       slots: [
+        $.Var.new({
+          name: 'journal',
+          doc: 'history of commands',
+          default: () => [],
+        }),
+        $.Var.new({
+          name: 'logs',
+          default: () => [],
+        }),
+        $.Var.new({
+          name: 'tasks',
+          default: () => [],
+        }),
+        $.Method.new({
+          name: 'addLog',
+          do: function addLog(date, message, stdout = true) {
+            const entry = `[${date.toISOString()}] ${message}`;
+            this.logs().push(entry);
+            if (stdout) {
+              this.log(entry);
+            }
+          }
+        }),
+        $.Method.new({
+          name: 'addTask',
+          do: function addTask(task) {
+            this.tasks().push(task);
+          }
+        }),
+        $.Method.new({
+          name: 'processCommand',
+          do: function processCommand(cmd) {
+            cmd.run(this);
+            this.journal().push(cmd);
+          }
+        }),
       ]
     });
 
