@@ -1,3 +1,5 @@
+import { Database } from 'bun:sqlite';
+
 const __ = globalThis.SIMULABRA;
 export default await __.base().find('Class', 'Module').new({
   name: 'Agenda',
@@ -22,17 +24,16 @@ export default await __.base().find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'LogCommand',
+      name: 'NoteCommand',
       slots: [
         $.AgendaCommand,
         $.Var.new({
-          name: 'message',
-          type: 'string',
+          name: 'note',
         }),
         $.Method.new({
           name: 'run',
           do: function run(agenda) {
-            agenda.addLog(this.createdAt(), this.message());
+            agenda.note(this.note());
           }
         }),
       ]
@@ -60,7 +61,40 @@ export default await __.base().find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'TaskCommand',
+      name: 'NoteFragment',
+      slots: [
+        $.AutoVar.new({
+          name: 'created',
+          doc: 'date of creation timestamp',
+          json: true,
+          autoFunction() {
+            return new Date();
+          }
+        }),
+        $.Var.new({
+          name: 'dbid',
+          doc: 'id in the db',
+        }),
+        $.Var.new({
+          name: 'source',
+          default: 'user',
+          json: true,
+        }),
+        $.Var.new({
+          name: 'message',
+          json: true,
+        }),
+        $.Method.new({
+          name: 'description',
+          do: function description() {
+            return `#${this.dbid() ?? 'unsaved'} [${this.source()}/${this.created().toISOString()}] ${this.message()}`;
+          }
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'TodoCommand',
       slots: [
         $.AgendaCommand,
         $.Var.new({
@@ -70,8 +104,7 @@ export default await __.base().find('Class', 'Module').new({
         $.Method.new({
           name: 'run',
           do: function run(agenda) {
-            agenda.addTask(this.task());
-            agenda.addLog(this.createdAt(), `added ${this.task()}`);
+            agenda.todo(this.task());
           }
         }),
       ]
@@ -96,12 +129,28 @@ export default await __.base().find('Class', 'Module').new({
       name: 'Agenda',
       slots: [
         $.Var.new({
+          name: 'dbName',
+          doc: 'name of db file or :memory:',
+          default: ':memory:',
+        }),
+        $.Var.new({
+          name: 'db',
+          doc: 'bun sqlite instance',
+        }),
+        $.After.new({
+          name: 'init',
+          do: function init() {
+            this.db(new Database(this.dbName()));
+            this.db().query('CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, source TEXT, message TEXT)').run();
+          }
+        }),
+        $.Var.new({
           name: 'journal',
           doc: 'history of commands',
           default: () => [],
         }),
         $.Var.new({
-          name: 'logs',
+          name: 'notes',
           default: () => [],
         }),
         $.Var.new({
@@ -109,19 +158,43 @@ export default await __.base().find('Class', 'Module').new({
           default: () => [],
         }),
         $.Method.new({
-          name: 'addLog',
-          do: function addLog(date, message, stdout = true) {
-            const entry = `[${date.toISOString()}] ${message}`;
-            this.logs().push(entry);
+          name: 'loadNotes',
+          do: function loadNotes() {
+            const dbNotes = this.db().query('SELECT * FROM notes').all();
+            return dbNotes.map(dbNote => {
+              return $.NoteFragment.new({
+                dbid: dbNote.id,
+                created: new Date(dbNote.created),
+                source: dbNote.source,
+                message: dbNote.message,
+              });
+            });
+          }
+        }),
+        $.Method.new({
+          name: 'note',
+          do: function note(note, stdout = true) {
+            this.notes().push(note);
+            const noteQuery = this.db().query('INSERT INTO notes (source, created, message) VALUES ($source, $created, $message)');
+            const dbNote = noteQuery.run({
+              $source: note.source(),
+              $created: note.created().toISOString(),
+              $message: note.message(),
+            });
+            note.dbid(dbNote.lastInsertRowid);
             if (stdout) {
-              this.log(entry);
+              this.log(note.description());
             }
           }
         }),
         $.Method.new({
-          name: 'addTask',
-          do: function addTask(task) {
+          name: 'todo',
+          do: function todo(task) {
             this.tasks().push(task);
+            this.note($.NoteFragment.new({
+              source: 'system', 
+              message: `added ${task}`
+            }));
           }
         }),
         $.Method.new({

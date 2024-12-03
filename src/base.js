@@ -452,6 +452,9 @@ function bootstrap() {
       }
       this.observers()[message].push(cb.bind(this));
     },
+    function json() {
+      return this.class().jsonify(this);
+    },
     ClassDef.class,
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'id' }),
@@ -545,6 +548,15 @@ function bootstrap() {
       let id = this.id_ctr();
       this.id_ctr(id + 1);
       return id;
+    },
+    function jsonify(object) {
+      const json = {};
+      for (const slot of this.slots()) {
+        if (slot._json) {
+          json[slot._name] = JSON.parse(JSON.stringify(object[slot._name]()));
+        }
+      }
+      return json;
     },
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'fullSlot', default: false }),
