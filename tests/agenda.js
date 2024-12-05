@@ -14,14 +14,14 @@ export default await base.find('Class', 'Module').new({
       do() {
         const before = new Date();
         const message = 'time to test the agenda I think';
-        const note = $.NoteFragment.new({
-          message
+        const note = $.Note.new({
+          message,
         });
         const command = $.NoteCommand.new({
           note,
         });
         const after = new Date();
-        const timestamp = command.createdAt();
+        const timestamp = command.created();
         this.assert(+before <= +timestamp && +after >= +timestamp, `timestamp not in correct time range: ${before} -> ${timestamp} -> ${after}`);
 
         this.assertEq(command.note().message(), message);
@@ -31,34 +31,60 @@ export default await base.find('Class', 'Module').new({
     });
 
     $.Case.new({
-      name: 'SimpleTask',
+      name: 'SimpleTodo',
       do() {
-        const task = $.Task.new({
-          title: 'test agenda',
+        const todo = $.Todo.new({
+          content: 'test agenda',
           created: new Date(),
         });
 
         const command = $.TodoCommand.new({
-          task,
+          todo,
         });
 
         agenda.processCommand(command);
-        this.assertEq(agenda.tasks().length, 1);
-        this.assertEq(agenda.tasks()[0].title(), 'test agenda');
-        this.assertEq(agenda.notes()[1].message(), 'added task "test agenda"');
+        this.assertEq(agenda.todos().length, 1);
+        this.assertEq(agenda.todos()[0].content(), 'test agenda');
+        this.assertEq(agenda.notes()[1].message(), 'added todo "test agenda"');
       }
     });
 
     $.Case.new({
       name: 'LoadNotes',
       do() {
-        const notes = agenda.loadNotes();
-        this.assertEq(notes[0].dbid(), 1);
-        this.assertEq(notes[1].dbid(), 2);
+        const notes = $.Note.loadAll(agenda.db());
+        this.assertEq(notes[0].pid(), 1);
+        this.assertEq(notes[1].pid(), 2);
         this.assertEq(notes[0].source(), 'user');
         this.assertEq(notes[1].source(), 'system');
         this.assert(+notes[0].created() <= +notes[1].created(), `notes created out of order ${+notes[0].created()} ${+notes[1].created()}`);
         this.assertEq(notes[0].message(), 'time to test the agenda I think');
+      }
+    });
+
+    $.Case.new({
+      name: 'LoadTodos',
+      do() {
+        const todos = $.Todo.loadAll(agenda.db());
+        this.log(todos[0].content());
+        this.assertEq(todos[0].pid(), 1);
+        this.assertEq(todos[0].content(), 'test agenda');
+        this.assertEq(todos[0].finished(), null);
+      }
+    });
+
+    $.Case.new({
+      name: 'FinishTodo',
+      do() {
+        const todo = agenda.todos()[0];
+        const command = $.FinishTodoCommand.new({
+          todo
+        });
+        agenda.processCommand(command);
+        this.assert(todo.finished() instanceof Date, `todo not finished: ${todo.finished()}`);
+        this.assertEq(agenda.todos().length, 0);
+        const dbTodos = $.Todo.loadAll(agenda.db());
+        this.assert(dbTodos[0].finished() instanceof Date, `todo not finished in db: ${typeof dbTodos[0].finished()}`);
       }
     });
   }

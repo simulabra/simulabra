@@ -10,11 +10,147 @@ export default await __.base().find('Class', 'Module').new({
 
 
     $.Class.new({
+      name: 'DBVar',
+      slots: [
+        $.Var,
+        $.Var.new({
+          name: 'mutable',
+          default: false,
+        }),
+        $.Var.new({
+          name: 'primary',
+          default: false,
+        }),
+        $.Var.new({
+          name: 'toSQL',
+          default: () => function() { return this; },
+        }),
+        $.Var.new({
+          name: 'fromSQL',
+          default: () => function() { return this; },
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'Persisted',
+      slots: [
+        $.DBVar.new({
+          name: 'pid',
+          doc: 'id in the db',
+          primary: true,
+        }),
+        $.DBVar.new({
+          name: 'created',
+          toSQL() {
+            return this ? this.toISOString() : null;
+          },
+          fromSQL() {
+            return this ? new Date(this) : null;
+          },
+        }),
+        $.Method.new({
+          name: 'columns',
+          do: function columns() {
+            return this.class().slots().filter(slot => slot.class().descended($.DBVar));
+          }
+        }),
+        $.Method.new({
+          name: 'columnReplacements',
+          do: function columnReplacements(columns) {
+              return Object.fromEntries(columns.map(col => (['$' + col.name(), col.toSQL().apply(this[col.name()]())])));
+          }
+        }),
+        $.Method.new({
+          name: 'save',
+          do: function save(db) {
+            const columns = this.columns();
+            const table = this.class().name();
+            if (!this.pid()) {
+              const insertcols = columns.filter(col => !col.primary());
+              const insertSQL = `INSERT INTO ${table} (${insertcols.map(ic => ic.name()).join(', ')}) VALUES (${insertcols.map(ic => '$' + ic.name()).join(', ')})`;
+              const insertQuery = db.query(insertSQL);
+              const result = insertQuery.run(this.columnReplacements(insertcols));
+              this.pid(result.lastInsertRowid);
+            } else {
+              const mutablecols = columns.filter(col => col.mutable());
+              const updateSQL = `UPDATE ${table} SET ${mutablecols.map(mc => mc.name() + ' = $' + mc.name()).join(', ')} WHERE pid = $pid`;
+              const query = db.query(updateSQL);
+              const replacements = this.columnReplacements(mutablecols);
+              replacements.$pid = this.pid();
+              const result = query.run(replacements);
+            }
+            return this;
+          }
+        }),
+        $.Static.new({
+          name: 'loadAll',
+          do: function loadAll(db) {
+            const elems = db.query(`SELECT * FROM ${this.name()}`).all();
+            return elems.map(elem => {
+              for (const col of Object.keys(elem)) {
+                elem[col] = this.getslot(col).fromSQL().apply(elem[col]);
+              }
+              return this.new(elem);
+            });
+          }
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'Todo',
+      slots: [
+        $.Persisted,
+        $.DBVar.new({
+          name: 'content',
+          mutable: true,
+        }),
+        $.DBVar.new({
+          name: 'finished',
+          mutable: true,
+          toSQL() {
+            return this ? this.toISOString() : null;
+          },
+          fromSQL() {
+            return this ? new Date(this) : null;
+          },
+        }),
+        $.Method.new({
+          name: 'description',
+          do: function description() {
+            return `todo "${this.content()}"`;
+          }
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'Note',
+      slots: [
+        $.Persisted,
+        $.DBVar.new({
+          name: 'source',
+          default: 'user',
+        }),
+        $.DBVar.new({
+          name: 'message',
+        }),
+        $.Method.new({
+          name: 'description',
+          do: function description() {
+            return `~Note#${this.pid() ?? 'unsaved'} [${this.source()}/${this.created().toISOString()}] ${this.message()}`;
+          }
+        }),
+      ]
+    });
+
+    $.Class.new({
       name: 'AgendaCommand',
       slots: [
         $.Command,
         $.AutoVar.new({
-          name: 'createdAt',
+          name: 'created',
           doc: 'date of creation timestamp',
           autoFunction() {
             return new Date();
@@ -40,71 +176,33 @@ export default await __.base().find('Class', 'Module').new({
     });
 
     $.Class.new({
-      name: 'Task',
-      slots: [
-        $.Var.new({
-          name: 'title'
-        }),
-        $.Var.new({
-          name: 'created',
-        }),
-        $.Var.new({
-          name: 'deadline',
-        }),
-        $.Method.new({
-          name: 'description',
-          do: function description() {
-            return `task "${this.title()}"`;
-          }
-        }),
-      ]
-    });
-
-    $.Class.new({
-      name: 'NoteFragment',
-      slots: [
-        $.AutoVar.new({
-          name: 'created',
-          doc: 'date of creation timestamp',
-          json: true,
-          autoFunction() {
-            return new Date();
-          }
-        }),
-        $.Var.new({
-          name: 'dbid',
-          doc: 'id in the db',
-        }),
-        $.Var.new({
-          name: 'source',
-          default: 'user',
-          json: true,
-        }),
-        $.Var.new({
-          name: 'message',
-          json: true,
-        }),
-        $.Method.new({
-          name: 'description',
-          do: function description() {
-            return `#${this.dbid() ?? 'unsaved'} [${this.source()}/${this.created().toISOString()}] ${this.message()}`;
-          }
-        }),
-      ]
-    });
-
-    $.Class.new({
       name: 'TodoCommand',
       slots: [
         $.AgendaCommand,
         $.Var.new({
-          name: 'task',
-          type: 'Task',
+          name: 'todo',
+          type: 'Todo',
         }),
         $.Method.new({
           name: 'run',
           do: function run(agenda) {
-            agenda.todo(this.task());
+            agenda.todo(this.todo());
+          }
+        }),
+      ]
+    });
+
+    $.Class.new({
+      name: 'FinishTodoCommand',
+      slots: [
+        $.AgendaCommand,
+        $.Var.new({
+          name: 'todo',
+        }),
+        $.Method.new({
+          name: 'run',
+          do: function run(agenda) {
+            agenda.finishTodo(this.todo());
           }
         }),
       ]
@@ -141,7 +239,10 @@ export default await __.base().find('Class', 'Module').new({
           name: 'init',
           do: function init() {
             this.db(new Database(this.dbName()));
-            this.db().query('CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, source TEXT, message TEXT)').run();
+            this.db().query('CREATE TABLE IF NOT EXISTS Note (pid INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, source TEXT, message TEXT)').run();
+            this.notes($.Note.loadAll(this.db()));
+            this.db().query('CREATE TABLE IF NOT EXISTS Todo (pid INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, content TEXT, finished TEXT)').run();
+            this.todos($.Todo.loadAll(this.db()).filter(t => !t.finished));
           }
         }),
         $.Var.new({
@@ -154,47 +255,46 @@ export default await __.base().find('Class', 'Module').new({
           default: () => [],
         }),
         $.Var.new({
-          name: 'tasks',
+          name: 'todos',
           default: () => [],
-        }),
-        $.Method.new({
-          name: 'loadNotes',
-          do: function loadNotes() {
-            const dbNotes = this.db().query('SELECT * FROM notes').all();
-            return dbNotes.map(dbNote => {
-              return $.NoteFragment.new({
-                dbid: dbNote.id,
-                created: new Date(dbNote.created),
-                source: dbNote.source,
-                message: dbNote.message,
-              });
-            });
-          }
         }),
         $.Method.new({
           name: 'note',
           do: function note(note, stdout = true) {
+            if (!note.created()) {
+              note.created(new Date());
+            }
             this.notes().push(note);
-            const noteQuery = this.db().query('INSERT INTO notes (source, created, message) VALUES ($source, $created, $message)');
-            const dbNote = noteQuery.run({
-              $source: note.source(),
-              $created: note.created().toISOString(),
-              $message: note.message(),
-            });
-            note.dbid(dbNote.lastInsertRowid);
+            note.save(this.db());
             if (stdout) {
               this.log(note.description());
             }
           }
         }),
         $.Method.new({
-          name: 'todo',
-          do: function todo(task) {
-            this.tasks().push(task);
-            this.note($.NoteFragment.new({
+          name: 'sysnote',
+          do: function sysnote(message) {
+            this.note($.Note.new({
               source: 'system', 
-              message: `added ${task}`
+              message
             }));
+          }
+        }),
+        $.Method.new({
+          name: 'todo',
+          do: function todo(todo) {
+            this.todos().push(todo);
+            todo.save(this.db());
+            this.sysnote(`added ${todo}`);
+          }
+        }),
+        $.Method.new({
+          name: 'finishTodo',
+          do: function finishTodo(todo) {
+            todo.finished(new Date());
+            todo.save(this.db());
+            this.todos(this.todos().filter(t => t !== todo));
+            this.sysnote(`finished ${todo}`);
           }
         }),
         $.Method.new({
@@ -208,21 +308,21 @@ export default await __.base().find('Class', 'Module').new({
     });
 
   //  $.Class.new({
-  //    name: 'AgendaTask',
+  //    name: 'AgendaTodo',
   //    slots: [
   //      $.Component,
   //      $.Var.new({ name: 'description', default: '' }),
   //      $.Var.new({ name: 'completed', default: false }),
   //      $.Button.new({
   //        name: 'removeButton',
-  //        command: () => $.TaskRemoveCommand.new({ target: this }),
+  //        command: () => $.TodoRemoveCommand.new({ target: this }),
   //        text: 'delete',
   //      }),
   //      $.Method.new({
   //        name: 'render',
   //        do: function render() {
-  //          return $.sjsx`<li class="task-${this.completed() ? 'completed' : 'todo'}">
-  //            ${this.task()}
+  //          return $.sjsx`<li class="todo-${this.completed() ? 'completed' : 'todo'}">
+  //            ${this.todo()}
   //            ${this.removeButton()}
   //          </li>`;
   //        }
@@ -235,17 +335,17 @@ export default await __.base().find('Class', 'Module').new({
   //    slots: [
   //      $.Component,
   //      $.Var.new({
-  //        name: 'tasks',
+  //        name: 'todos',
   //        default: () => [],
   //      }),
   //      $.Method.new({
   //        name: 'add',
-  //        do: function add(task) {
+  //        do: function add(todo) {
   //          const todoItem = $.AgendaItem.new({
-  //            task,
+  //            todo,
   //            parent: this
   //          });
-  //          this.tasks(...this.tasks(), todoItem);
+  //          this.todos(...this.todos(), todoItem);
   //          this.rerender();
   //        }
   //      }),
@@ -253,7 +353,7 @@ export default await __.base().find('Class', 'Module').new({
   //        name: 'render',
   //        do: function render() {
   //          return $.sjsx`<ul>
-  //            ${this.tasks()}
+  //            ${this.todos()}
   //          </ul>`;
   //        }
   //      }),
@@ -268,18 +368,18 @@ export default await __.base().find('Class', 'Module').new({
   //        default: 'what to do?' // change me!
   //      }),
   //      $.AgendaList.new({
-  //        name: 'taskList',
+  //        name: 'todoList',
   //      }),
   //      $.Method.new({
-  //        name: 'addTask',
-  //        do: function addTask(description) {
-  //          this.taskList().add(description);
+  //        name: 'addTodo',
+  //        do: function addTodo(description) {
+  //          this.todoList().add(description);
   //        }
   //      }),
   //      $.Method.new({
-  //        name: 'removeTask',
-  //        do: function removeTask(task) {
-  //          this.tasks(this.tasks().filter(t => t !== task));
+  //        name: 'removeTodo',
+  //        do: function removeTodo(todo) {
+  //          this.todos(this.todos().filter(t => t !== todo));
   //        }
   //      }),
   //      $.Method.new({
@@ -288,7 +388,7 @@ export default await __.base().find('Class', 'Module').new({
   //          const input = this.element().querySelector('input');
   //          const description = input.value;
   //          if (description) {
-  //            this.addTask(description);
+  //            this.addTodo(description);
   //            input.value = '';
   //          }
   //        }
@@ -299,14 +399,14 @@ export default await __.base().find('Class', 'Module').new({
   //          if (e.key === 'Enter') {
   //            return this.dispatchEvent({
   //              type: 'command',
-  //              target: $.TaskSubmitCommand.new({ target: this }),
+  //              target: $.TodoSubmitCommand.new({ target: this }),
   //            });
   //          }
   //        }
   //      }),
   //      $.Button.new({
   //        name: 'addButton',
-  //        command: () => $.TaskSubmitCommand.new({ target: this }),
+  //        command: () => $.TodoSubmitCommand.new({ target: this }),
   //      }),
   //      $.Method.new({
   //        name: 'render',
@@ -315,7 +415,7 @@ export default await __.base().find('Class', 'Module').new({
   //            ${this.prompt()}
   //            ${this.todoInput()}
   //            ${this.addButton()}
-  //            ${this.taskList()}
+  //            ${this.todoList()}
   //          </div>`;
   //        }
   //      }),
@@ -323,7 +423,7 @@ export default await __.base().find('Class', 'Module').new({
   //  });
   //
   //  $.Class.new({
-  //    name: 'task_finish_command',
+  //    name: 'todo_finish_command',
   //    slots: [
   //      $.Command,
   //      $.Var.new({ name: 'target' }),
@@ -338,7 +438,7 @@ export default await __.base().find('Class', 'Module').new({
   //  });
   //
   //  $.Class.new({
-  //    name: 'task',
+  //    name: 'todo',
   //    slots: [
   //      $.component,
   //      $.Method.new({
@@ -347,7 +447,7 @@ export default await __.base().find('Class', 'Module').new({
   //          return $el.span({},
   //            $el.span({ class: `completed-${this.completed()}` }, this.description()),
   //            ' ',
-  //            $.button.new({ command: $.task_finish_command.new({ target: this }), slots: [this.completed() ? 'undo' : 'finish'], parent: this })
+  //            $.button.new({ command: $.todo_finish_command.new({ target: this }), slots: [this.completed() ? 'undo' : 'finish'], parent: this })
   //          );
   //        }
   //      }),
@@ -355,7 +455,7 @@ export default await __.base().find('Class', 'Module').new({
   //  });
   //
   //  $.Class.new({
-  //    name: 'TaskSubmitCommand',
+  //    name: 'TodoSubmitCommand',
   //    slots: [
   //      $.Command,
   //      $.Var.new({ name: 'target' }),
@@ -369,15 +469,15 @@ export default await __.base().find('Class', 'Module').new({
   //  });
   //
   //  $.Class.new({
-  //    name: 'TaskRemoveCommand',
+  //    name: 'TodoRemoveCommand',
   //    slots: [
   //      $.Command,
   //      $.Var.new({ name: 'target' }),
-  //      $.Var.new({ name: 'task' }),
+  //      $.Var.new({ name: 'todo' }),
   //      $.Method.new({
   //        name: 'run',
   //        do: function run() {
-  //          this.target().removeTask(this.task());
+  //          this.target().removeTodo(this.todo());
   //        }
   //      }),
   //    ]

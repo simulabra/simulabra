@@ -500,7 +500,7 @@ function bootstrap() {
       }
     },
     function description() {
-      return `~${this.name()}`;
+      return `$.${this.name()}`;
     },
     function toString() {
       return this.description();
@@ -509,7 +509,7 @@ function bootstrap() {
       return this.name() === target.name() || !!this.slots().find(c => c.class() !== BVar && c.class().name() === 'Class' && c.descended(target));
     },
     function title() {
-      return `~${this.name()}`;
+      return `$.Class#${this.name()}`;
     },
     function instances() {
       const mods = globalThis.SIMULABRA.base().instances($.module);
@@ -557,6 +557,19 @@ function bootstrap() {
         }
       }
       return json;
+    },
+    function getslot(name) {
+      for (const slot of this.slots()) {
+        if (slot.class().descended($.Class)) {
+          const recur = slot.getslot(name);
+          if (recur) {
+            return recur;
+          }
+        } else if (slot._name === name) {
+          return slot;
+        }
+      }
+      return null;
     },
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'fullSlot', default: false }),
