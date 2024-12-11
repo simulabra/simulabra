@@ -137,9 +137,9 @@ export default await __.base().find('Class', 'Module').new({
           name: 'message',
         }),
         $.Method.new({
-          name: 'description',
-          do: function description() {
-            return `~Note#${this.pid() ?? 'unsaved'} [${this.source()}/${this.created().toISOString()}] ${this.message()}`;
+          name: 'logline',
+          do: function logline() {
+            return `$.Note#${this.pid() ?? 'unsaved'} [${this.source()}/${this.created().toISOString()}] ${this.message()}`;
           }
         }),
       ]
@@ -267,7 +267,7 @@ export default await __.base().find('Class', 'Module').new({
             this.notes().push(note);
             note.save(this.db());
             if (stdout) {
-              this.log(note.description());
+              this.log(note.logline());
             }
           }
         }),

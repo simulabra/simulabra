@@ -7,6 +7,8 @@ export default await base.find('Class', 'Module').new({
   name: 'runner',
   imports: [test],
   async on_load(_, $) {
+    const __ = globalThis.SIMULABRA;
+
     $.Class.new({
       name: 'TestTimer',
       slots: [
@@ -43,7 +45,8 @@ export default await base.find('Class', 'Module').new({
           async: true,
           async do(mod) {
             this.log(`run ${mod.title()}`);
-            globalThis.SIMULABRA.mod(mod);
+            const baseMod = __.mod();
+            __.mod(mod);
             const cases = mod.instances($.Case);
             if (cases === undefined) {
               throw new Error(`no cases in module ${mod.description()}`);
@@ -53,6 +56,7 @@ export default await base.find('Class', 'Module').new({
             }
             const n = Object.values(cases).length;
             this.log(mod.title(), `${n} test cases passed`);
+            __.mod(baseMod);
           }
         }),
         $.Method.new({

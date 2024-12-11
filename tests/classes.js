@@ -337,5 +337,20 @@ export default await base.find('Class', 'Module').new({
       }
     });
 
+    $.Case.new({
+      name: 'ClassGetInstance',
+      do() {
+        const t = $.Task.new({ name: 'testInstance' });
+        const tid = _.getInstance($.Task, t.id());
+        this.assertEq(t, tid);
+        const tname = _.getInstance($.Task, t.name());
+        this.assertEq(t, tname);
+        const trefname = $.Task.$testInstance;
+        this.assertEq(t, trefname);
+        const trefid = $.Task['$' + t.id()];
+        this.assertEq(t, trefid);
+      }
+    });
+
   }
 }).load();

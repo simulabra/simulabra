@@ -183,10 +183,12 @@ function bootstrap() {
   function DebugProto() {
     return new Proxy({}, {
       get(target, p, receiver) {
-        if (p in target) {
+        if (target[p] !== undefined) {
           return target[p];
         } else if (p[0] === '_') {
           return undefined; // default? nullable?
+        } else if (p[0] === '$') {
+          return globalThis.SIMULABRA.mod().getInstance(receiver, p.slice(1));
         } else if (nativePassthrough(p)) {
           return target[p];
         }
@@ -198,7 +200,7 @@ function bootstrap() {
   class ClassPrototype {
     constructor(parent) {
       this._impls = {};
-      this._proto = DebugProto();
+      this._proto = DebugProto(parent);
       this._proto._class = parent;
     }
 
@@ -220,7 +222,7 @@ function bootstrap() {
     }
 
     description() {
-      return `!Class-prototype#${this._proto._class.name()}`;
+      return `!ClassPrototype#${this._proto._class.name()}`;
     }
   }
 
@@ -382,7 +384,7 @@ function bootstrap() {
     function description(seen) { //TODO: add depth
       const Vars = this.state().filter(v => v.value() !== v.ref().defval());
       const VarDesc = Vars.length > 0 ? `{\n${Vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
-      return `${this.class().description(seen)}.new${VarDesc}`;
+      return `${this.class().description(seen)}#${this.ident()}${VarDesc}`;
     },
     function toString() {
       return this.description();
@@ -406,11 +408,14 @@ function bootstrap() {
     function title() {
       return `${this.class().description()}#${this.uid()}`;
     },
+    function ident() {
+      return `${this.id()}${this.name() ? `(${this.name()})` : ''}`;
+    },
     function uri() {
-      return `simulabra://localhost/${this.class().name()}/${this.uid()}`;
+      return `simulabra://localhost/${this.class().name()}/${this.id()}`;
     },
     function log(...args) {
-      $Debug?.log(this.title(), ...args);
+      $Debug?.log(this.title(), ...args.map(a => simulabra_string(a)));
     },
     function dlog(...args) {
       if ($Debug && this.class().debug()) {
@@ -512,7 +517,7 @@ function bootstrap() {
       return `$.Class#${this.name()}`;
     },
     function instances() {
-      const mods = globalThis.SIMULABRA.base().instances($.module);
+      const mods = globalThis.SIMULABRA.base().instances($.Module);
       const instances = mods.map(m => m.instances(this)).flat();
       return instances;
     },
@@ -586,7 +591,7 @@ function bootstrap() {
     })
   ];
 
-  const $ClassProto = new ClassPrototype(null);
+  const $ClassProto = new ClassPrototype();
   const newObj = {
     new(props = {}, ...slots) {
       if (!props.hasOwnProperty('slots')) {
@@ -612,7 +617,7 @@ function bootstrap() {
   $Class.slots($ClassSlots);
   $Class.init();
 
-  const $base_proto = new ClassPrototype(null);
+  const $base_proto = new ClassPrototype($Class);
   manload($BaseSlots, $base_proto);
   manload($ClassSlots, $base_proto);
   $base_proto._reify();
@@ -732,7 +737,7 @@ function bootstrap() {
       },
       function description(seen) {
         let d;
-        if (this.value().title instanceof Function) {
+        if (this.value()?.title instanceof Function) {
           d = this.value().title();
         } else if (!this.ref().debug()) {
           d = `<hidden>`;
@@ -771,27 +776,6 @@ function bootstrap() {
         impl._primary = fn;
         impl._debug = this.debug();
       },
-    ]
-  });
-
-  var $Debug = $Class.new({
-    name: 'Debug',
-    slots: [
-      $Static.new({
-        name: 'log',
-        do: function log(...args) {
-          // const stack = (new Error).stack;
-          // const source = stack.split('\n')[2];
-          $$().dispatchEvent({ type: 'log', args });
-          return this;
-        }
-      }),
-      $Static.new({
-        name: 'format',
-        do: function format(...args) {
-          return args.map(a => simulabra_display(a));
-        }
-      }),
     ]
   });
 
@@ -908,10 +892,18 @@ function bootstrap() {
         name: 'init',
         do: function init() {
           this.registry($ObjectRegistry.new());
+          if (!this.parent()) {
+            this.parent(__.mod());
+          }
         }
       }),
       function instances(cls) {
-        return this.registry()?.instances(cls) ?? [];
+        const thisInstances = this.registry()?.instances(cls) ?? [];
+        const parentInstances = this.parent()?.instances(cls) ?? [];
+        return [...thisInstances, ...parentInstances];
+      },
+      function getInstance(cls, nameOrId) {
+        return this.instances(cls).find(i => i.id() == nameOrId || i.name() == nameOrId);
       },
       function register(obj) {
         return this.registry()?.register(obj);
@@ -999,7 +991,6 @@ function bootstrap() {
     $Fn,
     $Method,
     $Static,
-    $Debug,
     $VarState,
     $Virtual,
     $Before,
@@ -1059,7 +1050,22 @@ function bootstrap() {
       },
       function register(o) {
         return this.registry().register(o);
-      }
+      },
+      function tryCall(obj, missingFn) {
+        return new Proxy({}, {
+          get(target, p, receiver) {
+            if (obj !== undefined && obj[p] !== undefined) {
+              return function(...args) {
+                return obj[p].apply(obj, args);
+              }
+            } else {
+              return function(...args) {
+                return missingFn.apply(obj, args);
+              }
+            }
+          }
+        });
+      },
     ]
   });
 
@@ -1074,6 +1080,28 @@ function bootstrap() {
   __.addEventListener('log', e => console.log(...e.args));
 
   globalThis.SIMULABRA = __;
+
+  var $Debug = $Class.new({
+    name: 'Debug',
+    slots: [
+      $Static.new({
+        name: 'log',
+        do: function log(...args) {
+          // const stack = (new Error).stack;
+          // const source = stack.split('\n')[2];
+          $$().dispatchEvent({ type: 'log', args });
+          return this;
+        }
+      }),
+      $Static.new({
+        name: 'format',
+        do: function format(...args) {
+          return args.map(a => simulabra_display(a));
+        }
+      }),
+    ]
+  });
+
   __.$$DebugClass = $Debug;
   __.startTicking();
 
@@ -1248,7 +1276,7 @@ function bootstrap() {
         },
       }),
       function description() {
-        return `"${this}"`;
+        return this;
       },
       function to_dom() {
         return document.createTextNode(this);

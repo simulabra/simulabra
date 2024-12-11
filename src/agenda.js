@@ -110,6 +110,7 @@ export default await base.find('class', 'module').new({
       title: 'Make todo list app',
       created: new Date(),
     }));
+
     document.body.appendChild(agenda.to_dom());
   },
 }).load();
