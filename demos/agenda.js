@@ -22,6 +22,10 @@ export default await __.base().find('Class', 'Module').new({
           default: false,
         }),
         $.Var.new({
+          name: 'createText',
+          default: 'TEXT',
+        }),
+        $.Var.new({
           name: 'toSQL',
           default: () => function() { return this; },
         }),
@@ -39,6 +43,7 @@ export default await __.base().find('Class', 'Module').new({
           name: 'pid',
           doc: 'id in the db',
           primary: true,
+          createText: 'INTEGER PRIMARY KEY AUTOINCREMENT',
         }),
         $.DBVar.new({
           name: 'created',
@@ -49,10 +54,10 @@ export default await __.base().find('Class', 'Module').new({
             return this ? new Date(this) : null;
           },
         }),
-        $.Method.new({
+        $.Static.new({
           name: 'columns',
           do: function columns() {
-            return this.class().slots().filter(slot => slot.class().descended($.DBVar));
+            return this.allSlots().filter(slot => slot.class().descended($.DBVar));
           }
         }),
         $.Method.new({
@@ -61,20 +66,32 @@ export default await __.base().find('Class', 'Module').new({
               return Object.fromEntries(columns.map(col => (['$' + col.name(), col.toSQL().apply(this[col.name()]())])));
           }
         }),
+        $.Static.new({
+          name: 'table',
+          do: function table() {
+            return this.name();
+          }
+        }),
+        $.Static.new({
+          name: 'initDB',
+          do: function initDB(db) {
+            const createQuery = `CREATE TABLE IF NOT EXISTS ${this.table()} (${this.columns().map(col => col.name() + ' ' + col.createText()).join(', ')})`;
+            db.query(createQuery).run();
+          }
+        }),
         $.Method.new({
           name: 'save',
           do: function save(db) {
-            const columns = this.columns();
-            const table = this.class().name();
+            const columns = this.class().columns();
             if (!this.pid()) {
               const insertcols = columns.filter(col => !col.primary());
-              const insertSQL = `INSERT INTO ${table} (${insertcols.map(ic => ic.name()).join(', ')}) VALUES (${insertcols.map(ic => '$' + ic.name()).join(', ')})`;
+              const insertSQL = `INSERT INTO ${this.class().table()} (${insertcols.map(ic => ic.name()).join(', ')}) VALUES (${insertcols.map(ic => '$' + ic.name()).join(', ')})`;
               const insertQuery = db.query(insertSQL);
               const result = insertQuery.run(this.columnReplacements(insertcols));
               this.pid(result.lastInsertRowid);
             } else {
               const mutablecols = columns.filter(col => col.mutable());
-              const updateSQL = `UPDATE ${table} SET ${mutablecols.map(mc => mc.name() + ' = $' + mc.name()).join(', ')} WHERE pid = $pid`;
+              const updateSQL = `UPDATE ${this.class().table()} SET ${mutablecols.map(mc => mc.name() + ' = $' + mc.name()).join(', ')} WHERE pid = $pid`;
               const query = db.query(updateSQL);
               const replacements = this.columnReplacements(mutablecols);
               replacements.$pid = this.pid();
@@ -239,9 +256,10 @@ export default await __.base().find('Class', 'Module').new({
           name: 'init',
           do: function init() {
             this.db(new Database(this.dbName()));
-            this.db().query('CREATE TABLE IF NOT EXISTS Note (pid INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, source TEXT, message TEXT)').run();
+
+            $.Note.initDB(this.db());
+            $.Todo.initDB(this.db());
             this.notes($.Note.loadAll(this.db()));
-            this.db().query('CREATE TABLE IF NOT EXISTS Todo (pid INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, content TEXT, finished TEXT)').run();
             this.todos($.Todo.loadAll(this.db()).filter(t => !t.finished));
           }
         }),

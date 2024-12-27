@@ -530,6 +530,13 @@ function bootstrap() {
       }
       return res;
     },
+    function allSlots() {
+      let slots = this.slots();
+      for (const superclass of this.superClasses()) {
+        slots = slots.concat(superclass.allSlots());
+      }
+      return slots;
+    },
     function proxied(ctx) {
       return this;
     },
