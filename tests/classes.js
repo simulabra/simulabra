@@ -352,5 +352,44 @@ export default await base.find('Class', 'Module').new({
       }
     });
 
+    $.Case.new({
+      name: 'AutoVar',
+      do() {
+        $.Class.new({
+          name: 'AutoVarTester',
+          slots: [
+            $.AutoVar.new({
+              name: 'value',
+              autoFunction() {
+                return 42;
+              }
+            })
+          ]
+        });
+
+        $.Class.new({
+          name: 'AutoVarDependencyTester', 
+          slots: [
+            $.Var.new({ name: 'counter', default: 0 }),
+            $.AutoVar.new({
+              name: 'computed',
+              autoFunction() {
+                return this.counter() * 2;
+              }
+            })
+          ]
+        });
+
+        const tester = $.AutoVarTester.new();
+        this.assertEq(tester.value(), 42);
+
+        tester.value(200);
+        this.assertEq(tester.value(), 200);
+
+        const depTester = $.AutoVarDependencyTester.new({ counter: 5 });
+        this.assertEq(depTester.computed(), 10);
+      }
+    });
+
   }
 }).load();

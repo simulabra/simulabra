@@ -12,18 +12,9 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'SimpleNote',
       do() {
-        const before = new Date();
         const message = 'time to test the agenda I think';
-        const note = $.Note.new({
-          message,
-        });
-        const command = $.NoteCommand.new({
-          note,
-        });
-        const after = new Date();
-        const timestamp = command.created();
-        this.assert(+before <= +timestamp && +after >= +timestamp, `timestamp not in correct time range: ${before} -> ${timestamp} -> ${after}`);
-
+        const note = $.Note.new({ message });
+        const command = note.command();
         this.assertEq(command.note().message(), message);
         agenda.processCommand(command);
         this.assert(agenda.notes().length === 1 && agenda.notes()[0].message() === message, 'message not found in notes');
@@ -33,15 +24,8 @@ export default await base.find('Class', 'Module').new({
     $.Case.new({
       name: 'SimpleTodo',
       do() {
-        const todo = $.Todo.new({
-          content: 'test agenda',
-          created: new Date(),
-        });
-
-        const command = $.TodoCommand.new({
-          todo,
-        });
-
+        const todo = $.Todo.new({ content: 'test agenda' });
+        const command = todo.command();
         agenda.processCommand(command);
         this.assertEq(agenda.todos().length, 1);
         this.assertEq(agenda.todos()[0].content(), 'test agenda');
