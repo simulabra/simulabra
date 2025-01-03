@@ -72,13 +72,13 @@ function bootstrap() {
   }
 
   class Frame {
-    constructor(receiver, Method_impl, args) {
+    constructor(receiver, methodImpl, args) {
       this._receiver = receiver;
-      this._MethodImpl = Method_impl;
+      this._methodImpl = methodImpl;
       this._args = args;
     }
     description() {
-      return `${pry(this._receiver)}.${this._MethodImpl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
+      return `${pry(this._receiver)}.${this._methodImpl._name}(${this._args.length > 0 ? this._args.map(a => pry(a)).join('') : ''})`;
     }
   }
 
@@ -226,6 +226,7 @@ function bootstrap() {
     }
   }
 
+  // bootstrapping the var slot
   class BVar {
     constructor({ name, ...desc }) {
       this._name = name;
@@ -286,9 +287,6 @@ function bootstrap() {
     if (!this) return;
     this[name] = op;
   }
-  // Object.prototype.eq = function (other) {
-  //   return this === other;
-  // }
   Function.prototype.load = function (proto) {
     proto._add(this.name, this);
   };
@@ -362,6 +360,7 @@ function bootstrap() {
     }
   }
 
+  // base object inherited by everything
   const $BaseSlots = [
     function init() {
       // mostly broken
@@ -466,9 +465,6 @@ function bootstrap() {
     BVar.new({ name: 'src_line' }),
     BVar.new({ name: 'observers' }),
   ];
-
-  // const $base_proto = {};
-  // manload($BaseSlots, $base_proto);
 
   Array.prototype.load = function (target) {
     this.forEach(it => it.load(target));
