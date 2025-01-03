@@ -3,9 +3,8 @@ import test from '../src/test.js';
 import todos from '../demos/agenda.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'TestAgendas',
-  registry: base.find('Class', 'ObjectRegistry').new(),
   imports: [test, todos],
   on_load(_, $) {
     const agenda = $.Agenda.new();

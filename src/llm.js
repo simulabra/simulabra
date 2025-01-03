@@ -1,6 +1,6 @@
 import base from './base.js';
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'LLM',
   imports: [base],
   async on_load(_, $) {

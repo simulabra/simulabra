@@ -1,7 +1,7 @@
 import db from '../src/db';
 
 const __ = globalThis.SIMULABRA;
-export default await __.base().find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'Agenda',
   doc: 'what is needing to be done',
   imports: [__.base(), db],

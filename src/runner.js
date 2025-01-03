@@ -2,13 +2,12 @@ import { readdir } from 'fs/promises';
 import { join, dirname, relative } from 'path';
 import base from './base.js';
 import test from './test.js';
+const __ = globalThis.SIMULABRA;
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'runner',
   imports: [test],
   async on_load(_, $) {
-    const __ = globalThis.SIMULABRA;
-
     $.Class.new({
       name: 'TestTimer',
       slots: [

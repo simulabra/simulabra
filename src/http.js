@@ -2,8 +2,9 @@ import base from './base.js';
 import { createServer } from 'http';
 import axios from 'axios';
 import { readFileSync } from 'fs';
+const __ = globalThis.SIMULABRA;
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'HTTP',
   imports: [base],
   on_load(_, $) {

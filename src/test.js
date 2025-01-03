@@ -1,7 +1,7 @@
 import base from './base.js';
 var __ = globalThis.SIMULABRA;
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'test',
   imports: [base],
   on_load(_, $) {

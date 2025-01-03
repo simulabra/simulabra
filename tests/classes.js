@@ -2,10 +2,9 @@ import base from '../src/base.js';
 import test from '../src/test.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'TestClasses',
   imports: [test],
-  registry: base.find('Class', 'ObjectRegistry').new(),
   on_load(_, $) {
     $.Class.new({
       name: 'basic',

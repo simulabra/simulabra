@@ -4,10 +4,9 @@ import test from '../src/test.js';
 import http from '../src/http.js';
 const __ = globalThis.SIMULABRA;
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'TestHTTP',
   imports: [test, http],
-  registry: base.find('Class', 'ObjectRegistry').new(),
   on_load(_, $) {
     $.AsyncCase.new({
       name: 'ServerCreation',

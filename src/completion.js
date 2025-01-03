@@ -2,7 +2,7 @@ import base from './base.js';
 import html from './html.js';
 import llm from './llm.js';
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'Completion',
   imports: [base, html, llm],
   async on_load(_, $) {

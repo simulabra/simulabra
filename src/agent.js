@@ -3,7 +3,7 @@ import http from './http.js';
 import chatConfig from '../.chatconfig.json';
 import { readFileSync } from 'fs';
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'agent',
   imports: [base, http],
   async on_load(_, $) {

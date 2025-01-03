@@ -1,12 +1,11 @@
 import base from './base.js';
+const __ = globalThis.SIMULABRA;
 
-export default await base.find('Class', 'Module').new({
+export default await __.$().Module.new({
   name: 'HTML',
   doc: 'HTML component classes for building Web applications',
   imports: [base],
   async on_load(_, $) {
-    const __ = globalThis.SIMULABRA;
-
     $.Class.new({
       name: 'Component',
       slots: [
