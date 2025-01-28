@@ -15,7 +15,7 @@ export default await __.$().Module.new({
         const note = $.Note.new({ message });
         const command = note.command();
         this.assertEq(command.note().message(), message);
-        agenda.processCommand(command);
+        agenda.receive(command);
         this.assert(agenda.notes().length === 1 && agenda.notes()[0].message() === message, 'message not found in notes');
       }
     });
@@ -25,7 +25,7 @@ export default await __.$().Module.new({
       do() {
         const todo = $.Todo.new({ content: 'test agenda' });
         const command = todo.command();
-        agenda.processCommand(command);
+        agenda.receive(command);
         this.assertEq(agenda.todos().length, 1);
         this.assertEq(agenda.todos()[0].content(), 'test agenda');
         this.assertEq(agenda.notes()[1].message(), 'added todo "test agenda"');
@@ -63,7 +63,7 @@ export default await __.$().Module.new({
         const command = $.FinishTodoCommand.new({
           todo
         });
-        agenda.processCommand(command);
+        agenda.receive(command);
         this.assert(todo.finished() instanceof Date, `todo not finished: ${todo.finished()}`);
         this.assertEq(agenda.todos().length, 0);
         const dbTodos = $.Todo.loadAll(agenda.db());

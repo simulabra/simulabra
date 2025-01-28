@@ -121,8 +121,11 @@ export default await __.$().Module.new({
         }),
         $.Method.new({
           name: 'run',
-          do: function run(agenda) {
-            agenda.finishTodo(this.todo());
+          do: function run(ctx) {
+            this.todo().finished(new Date());
+            this.todo().save(ctx.db());
+            ctx.todos(ctx.todos().filter(t => t !== this.todo()));
+            ctx.sysnote(`finished ${this.todo()}`);
           }
         }),
       ]
@@ -210,198 +213,13 @@ export default await __.$().Module.new({
           }
         }),
         $.Method.new({
-          name: 'finishTodo',
-          do: function finishTodo(todo) {
-            todo.finished(new Date());
-            todo.save(this.db());
-            this.todos(this.todos().filter(t => t !== todo));
-            this.sysnote(`finished ${todo}`);
-          }
-        }),
-        $.Method.new({
-          name: 'processCommand',
-          do: function processCommand(cmd) {
+          name: 'receive',
+          do: function receive(cmd) {
             cmd.run(this);
             this.journal().push(cmd);
           }
         }),
       ]
     });
-
-  //  $.Class.new({
-  //    name: 'AgendaTodo',
-  //    slots: [
-  //      $.Component,
-  //      $.Var.new({ name: 'description', default: '' }),
-  //      $.Var.new({ name: 'completed', default: false }),
-  //      $.Button.new({
-  //        name: 'removeButton',
-  //        command: () => $.TodoRemoveCommand.new({ target: this }),
-  //        text: 'delete',
-  //      }),
-  //      $.Method.new({
-  //        name: 'render',
-  //        do: function render() {
-  //          return $.sjsx`<li class="todo-${this.completed() ? 'completed' : 'todo'}">
-  //            ${this.todo()}
-  //            ${this.removeButton()}
-  //          </li>`;
-  //        }
-  //      }),
-  //    ]
-  //  });
-  //
-  //  $.Class.new({
-  //    name: 'AgendaList',
-  //    slots: [
-  //      $.Component,
-  //      $.Var.new({
-  //        name: 'todos',
-  //        default: () => [],
-  //      }),
-  //      $.Method.new({
-  //        name: 'add',
-  //        do: function add(todo) {
-  //          const todoItem = $.AgendaItem.new({
-  //            todo,
-  //            parent: this
-  //          });
-  //          this.todos(...this.todos(), todoItem);
-  //          this.rerender();
-  //        }
-  //      }),
-  //      $.Method.new({
-  //        name: 'render',
-  //        do: function render() {
-  //          return $.sjsx`<ul>
-  //            ${this.todos()}
-  //          </ul>`;
-  //        }
-  //      }),
-  //    ]
-  //  }),
-  //  $.Class.new({
-  //    name: 'AgendaApp',
-  //    slots: [
-  //      $.Window,
-  //      $.Var.new({
-  //        name: 'prompt',
-  //        default: 'what to do?' // change me!
-  //      }),
-  //      $.AgendaList.new({
-  //        name: 'todoList',
-  //      }),
-  //      $.Method.new({
-  //        name: 'addTodo',
-  //        do: function addTodo(description) {
-  //          this.todoList().add(description);
-  //        }
-  //      }),
-  //      $.Method.new({
-  //        name: 'removeTodo',
-  //        do: function removeTodo(todo) {
-  //          this.todos(this.todos().filter(t => t !== todo));
-  //        }
-  //      }),
-  //      $.Method.new({
-  //        name: 'submit',
-  //        do: function submit() {
-  //          const input = this.element().querySelector('input');
-  //          const description = input.value;
-  //          if (description) {
-  //            this.addTodo(description);
-  //            input.value = '';
-  //          }
-  //        }
-  //      }),
-  //      $.TextInput({
-  //        name: 'todoInput',
-  //        onkeydown: e => {
-  //          if (e.key === 'Enter') {
-  //            return this.dispatchEvent({
-  //              type: 'command',
-  //              target: $.TodoSubmitCommand.new({ target: this }),
-  //            });
-  //          }
-  //        }
-  //      }),
-  //      $.Button.new({
-  //        name: 'addButton',
-  //        command: () => $.TodoSubmitCommand.new({ target: this }),
-  //      }),
-  //      $.Method.new({
-  //        name: 'render',
-  //        do: function render() {
-  //          return $.sjsx`<div>
-  //            ${this.prompt()}
-  //            ${this.todoInput()}
-  //            ${this.addButton()}
-  //            ${this.todoList()}
-  //          </div>`;
-  //        }
-  //      }),
-  //    ]
-  //  });
-  //
-  //  $.Class.new({
-  //    name: 'todo_finish_command',
-  //    slots: [
-  //      $.Command,
-  //      $.Var.new({ name: 'target' }),
-  //      $.Method.new({
-  //        name: 'run',
-  //        do: function run() {
-  //          this.log('finish');
-  //          this.target().completed(!this.target().completed());
-  //        }
-  //      }),
-  //    ]
-  //  });
-  //
-  //  $.Class.new({
-  //    name: 'todo',
-  //    slots: [
-  //      $.component,
-  //      $.Method.new({
-  //        name: 'render',
-  //        do: function render() {
-  //          return $el.span({},
-  //            $el.span({ class: `completed-${this.completed()}` }, this.description()),
-  //            ' ',
-  //            $.button.new({ command: $.todo_finish_command.new({ target: this }), slots: [this.completed() ? 'undo' : 'finish'], parent: this })
-  //          );
-  //        }
-  //      }),
-  //    ]
-  //  });
-  //
-  //  $.Class.new({
-  //    name: 'TodoSubmitCommand',
-  //    slots: [
-  //      $.Command,
-  //      $.Var.new({ name: 'target' }),
-  //      $.Method.new({
-  //        name: 'run',
-  //        do: function run() {
-  //          this.target().submit();
-  //        }
-  //      }),
-  //    ]
-  //  });
-  //
-  //  $.Class.new({
-  //    name: 'TodoRemoveCommand',
-  //    slots: [
-  //      $.Command,
-  //      $.Var.new({ name: 'target' }),
-  //      $.Var.new({ name: 'todo' }),
-  //      $.Method.new({
-  //        name: 'run',
-  //        do: function run() {
-  //          this.target().removeTodo(this.todo());
-  //        }
-  //      }),
-  //    ]
-  //  });
   }
 }).load();
