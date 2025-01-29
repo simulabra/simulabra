@@ -24,7 +24,7 @@ export default await __.$().Module.new({
       name: 'SimpleTodo',
       do() {
         const todo = $.Todo.new({ content: 'test agenda' });
-        const command = todo.command();
+        const command = todo.create(agenda);
         agenda.receive(command);
         this.assertEq(agenda.todos().length, 1);
         this.assertEq(agenda.todos()[0].content(), 'test agenda');
@@ -60,10 +60,7 @@ export default await __.$().Module.new({
       name: 'FinishTodo',
       do() {
         const todo = agenda.todos()[0];
-        const command = $.FinishTodoCommand.new({
-          todo
-        });
-        agenda.receive(command);
+        agenda.receive(todo.finish(agenda));
         this.assert(todo.finished() instanceof Date, `todo not finished: ${todo.finished()}`);
         this.assertEq(agenda.todos().length, 0);
         const dbTodos = $.Todo.loadAll(agenda.db());

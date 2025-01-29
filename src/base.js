@@ -1388,7 +1388,7 @@ function bootstrap() {
   $.Class.new({
     name: 'Command',
     slots: [
-      $.Virtual.new({ name: 'run' }),
+      $.Var.new({ name: 'run' }),
       $.Method.new({
         name: 'dispatchTo',
         do: function dispatchTo(o) {
@@ -1398,12 +1398,49 @@ function bootstrap() {
           });
         }
       }),
+      $.Method.new({
+        name: 'combine',
+        do: function combine(impl) {
+          const self = this;
+
+          impl._primary = function (...args) {
+            return $.CommandContext.new({
+              command: self,
+              parent: this,
+              args
+            });
+          };
+        },
+      }),
     ],
   });
 
-  return _;
-}
 
-const base = bootstrap();
+    $.Class.new({
+      name: 'CommandContext',
+      slots: [
+        $.Var.new({
+          name: 'command',
+        }),
+        $.Var.new({
+          name: 'parent',
+        }),
+        $.Var.new({
+          name: 'args',
+          default: () => [],
+        }),
+        $.Method.new({
+          name: 'run',
+          do: function run() {
+            return this.command().run().apply(this.parent(), [this, ...this.args()]);
+          }
+        }),
+      ]
+    });
 
-export default base;
+    return _;
+  }
+
+    const base = bootstrap();
+
+    export default base;

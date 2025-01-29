@@ -30,10 +30,19 @@ export default await __.$().Module.new({
             return `todo "${this.content()}"`;
           }
         }),
-        $.Method.new({
-          name: 'command',
-          do: function command() {
-            return $.TodoCommand.new({ todo: this });
+        $.Command.new({
+          name: 'create',
+          run(command, agenda) {
+            agenda.todo(this);
+          }
+        }),
+        $.Command.new({
+          name: 'finish',
+          run(command, agenda) {
+            this.finished(new Date());
+            this.save(agenda.db());
+            agenda.todos(agenda.todos().filter(t => t !== this));
+            agenda.sysnote(`finished ${this}`);
           }
         }),
       ]
@@ -90,42 +99,6 @@ export default await __.$().Module.new({
           name: 'run',
           do: function run(agenda) {
             agenda.note(this.note());
-          }
-        }),
-      ]
-    });
-
-    $.Class.new({
-      name: 'TodoCommand',
-      slots: [
-        $.AgendaCommand,
-        $.Var.new({
-          name: 'todo',
-          type: 'Todo',
-        }),
-        $.Method.new({
-          name: 'run',
-          do: function run(agenda) {
-            agenda.todo(this.todo());
-          }
-        }),
-      ]
-    });
-
-    $.Class.new({
-      name: 'FinishTodoCommand',
-      slots: [
-        $.AgendaCommand,
-        $.Var.new({
-          name: 'todo',
-        }),
-        $.Method.new({
-          name: 'run',
-          do: function run(ctx) {
-            this.todo().finished(new Date());
-            this.todo().save(ctx.db());
-            ctx.todos(ctx.todos().filter(t => t !== this.todo()));
-            ctx.sysnote(`finished ${this.todo()}`);
           }
         }),
       ]
