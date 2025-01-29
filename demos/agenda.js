@@ -62,52 +62,21 @@ export default await __.$().Module.new({
         $.Method.new({
           name: 'logline',
           do: function logline() {
-            return `$.Note#${this.pid() ?? 'unsaved'} [${this.source()}/${this.created().toISOString()}] ${this.message()}`;
+            return `$.Note#${this.pid() ?? 'unsaved'} [${this.created().toISOString()}]<${this.source()}> ${this.message()}`;
           }
         }),
-        $.Method.new({
-          name: 'command',
-          do: function command() {
-            return $.NoteCommand.new({ note: this });
-          }
-        }),
-      ]
-    });
-
-    $.Class.new({
-      name: 'AgendaCommand',
-      slots: [
-        $.Command,
-        $.AutoVar.new({
-          name: 'created',
-          doc: 'date of creation timestamp',
-          autoFunction() {
-            return new Date();
+        $.Command.new({
+          name: 'create',
+          run(command, agenda) {
+            agenda.note(this);
           }
         }),
       ]
     });
 
     $.Class.new({
-      name: 'NoteCommand',
+      name: 'ScheduleMemo',
       slots: [
-        $.AgendaCommand,
-        $.Var.new({
-          name: 'note',
-        }),
-        $.Method.new({
-          name: 'run',
-          do: function run(agenda) {
-            agenda.note(this.note());
-          }
-        }),
-      ]
-    });
-
-    $.Class.new({
-      name: 'ScheduleCommand',
-      slots: [
-        $.AgendaCommand,
         $.Var.new({
           name: 'memo',
           type: 'string',
@@ -115,6 +84,12 @@ export default await __.$().Module.new({
         $.Var.new({
           name: 'eventDate',
           type: 'date',
+        }),
+        $.Command.new({
+          name: 'create',
+          run(command, agenda) {
+            agenda.schedule(this);
+          }
         }),
       ]
     });

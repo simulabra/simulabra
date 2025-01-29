@@ -3,8 +3,9 @@ function bootstrap() {
   if (__?._bootstrapped) {
     return __.base();
   }
-  console.log('~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~%~');
-  console.log('STARTING SIMULABRA: INFINITE SOFTWARE');
+  console.log('~\\~\\~\\~\\~\\~\\~\\~\\~\\~\\~/~/~/~/~/~/~/~/~/~');
+  console.log('~STARTING SIMULABRA: INFINITE SOFTWARE~');
+  console.log('~/~/~/~/~/~/~/~/~/~/~\\~\\~\\~\\~\\~\\~\\~\\~\\~');
   globalThis.SIMULABRA = {
     debug() {
       return true;
@@ -44,15 +45,15 @@ function bootstrap() {
     if (obj === undefined || obj === null) {
       return '' + obj;
     } else if (Object.getPrototypeOf(obj) === ClassPrototype) {
-      return '#proto ' + obj._name || '?';
+      return '#ClassPrototype.' + obj._name || '?';
     } else if (typeof obj.description === 'function') {
       return obj.description(seen);
     } else if (typeof obj === 'object') {
       const ps = [];
       for (const [k, v] of Object.entries(obj)) {
-        ps.push(`:${k}=${simulabra_string(v, seen)}`)
+        ps.push(`${k}: ${simulabra_string(v, seen)}`)
       }
-      return '{' + ps.join(' ') + '}';
+      return '{' + ps.join(', ') + '}';
     } else {
       return obj.toString();
     }
@@ -222,7 +223,7 @@ function bootstrap() {
     }
 
     description() {
-      return `!ClassPrototype#${this._proto._class.name()}`;
+      return `#ClassPrototype.${this._proto._class.name()}`;
     }
   }
 
@@ -245,7 +246,7 @@ function bootstrap() {
       return `simulabra://localhost/bVar/${this._name}`;
     }
     title() {
-      return `!bVar#${this._name}`;
+      return `#BVar.${this._name}`;
     }
     state() {
       return $fake_state.list_from_map({
@@ -383,7 +384,7 @@ function bootstrap() {
     function description(seen) { //TODO: add depth
       const Vars = this.state().filter(v => v.value() !== v.ref().defval());
       const VarDesc = Vars.length > 0 ? `{\n${Vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
-      return `${this.class().description(seen)}#${this.ident()}${VarDesc}`;
+      return `${this.class().description(seen)}.${this.ident()}${VarDesc}`;
     },
     function toString() {
       return this.description();
@@ -405,7 +406,7 @@ function bootstrap() {
       return this.name() ?? this.id();
     },
     function title() {
-      return `${this.class().description()}#${this.uid()}`;
+      return `${this.class().description()}.${this.uid()}`;
     },
     function ident() {
       return `${this.id()}${this.name() ? `(${this.name()})` : ''}`;
@@ -510,7 +511,7 @@ function bootstrap() {
       return this.name() === target.name() || !!this.slots().find(c => c.class() !== BVar && c.class().name() === 'Class' && c.descended(target));
     },
     function title() {
-      return `$.Class#${this.name()}`;
+      return `$.Class.${this.name()}`;
     },
     function instances() {
       const mods = globalThis.SIMULABRA.base().instances($.Module);
@@ -938,7 +939,7 @@ function bootstrap() {
             const v = target.find(ClassName, p);
             if (v === undefined) {
               // target.log(target.repo(ClassName))
-              const err = new Error(`failed to find ~${ClassName}#${p}`);
+              const err = new Error(`failed to find ~${ClassName}.${p}`);
               if (errFn) {
                 errFn(err);
               } else {
@@ -1353,15 +1354,15 @@ function bootstrap() {
       }),
       function description() {
         return `(${this.map(it => { return simulabra_string(it) ?? '' + it }).join(' ')})`;
-      },
-      function to_dom() {
-        const el = document.createElement('span');
-        this.forEach(it => el.appendChild(it.to_dom()));
-        return el;
-      },
-      function last() {
-        return this[this.length - 1];
-      }
+        },
+          function to_dom() {
+            const el = document.createElement('span');
+            this.forEach(it => el.appendChild(it.to_dom()));
+            return el;
+          },
+          function last() {
+            return this[this.length - 1];
+          }
     ]
   });
 
@@ -1390,15 +1391,6 @@ function bootstrap() {
     slots: [
       $.Var.new({ name: 'run' }),
       $.Method.new({
-        name: 'dispatchTo',
-        do: function dispatchTo(o) {
-          o.dispatchEvent({
-            type: 'command',
-            target: this,
-          });
-        }
-      }),
-      $.Method.new({
         name: 'combine',
         do: function combine(impl) {
           const self = this;
@@ -1415,32 +1407,30 @@ function bootstrap() {
     ],
   });
 
+  $.Class.new({
+    name: 'CommandContext',
+    slots: [
+      $.Var.new({
+        name: 'command',
+      }),
+      $.Var.new({
+        name: 'parent',
+      }),
+      $.Var.new({
+        name: 'args',
+        default: () => [],
+      }),
+      $.Method.new({
+        name: 'run',
+        do: function run() {
+          return this.command().run().apply(this.parent(), [this, ...this.args()]);
+        }
+      }),
+    ]
+  });
+  return _;
+}
 
-    $.Class.new({
-      name: 'CommandContext',
-      slots: [
-        $.Var.new({
-          name: 'command',
-        }),
-        $.Var.new({
-          name: 'parent',
-        }),
-        $.Var.new({
-          name: 'args',
-          default: () => [],
-        }),
-        $.Method.new({
-          name: 'run',
-          do: function run() {
-            return this.command().run().apply(this.parent(), [this, ...this.args()]);
-          }
-        }),
-      ]
-    });
+const base = bootstrap();
 
-    return _;
-  }
-
-    const base = bootstrap();
-
-    export default base;
+export default base;

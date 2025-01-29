@@ -13,8 +13,8 @@ export default await __.$().Module.new({
       do() {
         const message = 'time to test the agenda I think';
         const note = $.Note.new({ message });
-        const command = note.command();
-        this.assertEq(command.note().message(), message);
+        const command = note.create(agenda);
+        this.assertEq(command.parent().message(), message);
         agenda.receive(command);
         this.assert(agenda.notes().length === 1 && agenda.notes()[0].message() === message, 'message not found in notes');
       }
@@ -49,7 +49,6 @@ export default await __.$().Module.new({
       name: 'LoadTodos',
       do() {
         const todos = $.Todo.loadAll(agenda.db());
-        this.log(todos[0].content());
         this.assertEq(todos[0].pid(), 1);
         this.assertEq(todos[0].content(), 'test agenda');
         this.assertEq(todos[0].finished(), null);
