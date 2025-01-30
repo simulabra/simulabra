@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 export default await __.$().Module.new({
   name: 'agent',
   imports: [base, http],
-  async on_load(_, $) {
+  async mod(_, $) {
     $.Class.new({
       name: 'AgentServer',
       slots: [

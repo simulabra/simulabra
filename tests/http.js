@@ -7,7 +7,7 @@ const __ = globalThis.SIMULABRA;
 export default await __.$().Module.new({
   name: 'TestHTTP',
   imports: [test, http],
-  on_load(_, $) {
+  mod(_, $) {
     $.AsyncCase.new({
       name: 'ServerCreation',
       async do() {

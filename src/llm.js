@@ -3,7 +3,7 @@ import base from './base.js';
 export default await __.$().Module.new({
   name: 'LLM',
   imports: [base],
-  async on_load(_, $) {
+  async mod(_, $) {
     const __ = globalThis.SIMULABRA;
 
     $.Class.new({

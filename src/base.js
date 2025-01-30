@@ -885,7 +885,7 @@ function bootstrap() {
         default: [],
         debug: false,
       }),
-      $Var.new({ name: 'on_load' }),
+      $Var.new({ name: 'mod' }),
       $Var.new({ name: 'registry' }),
       $Var.new({ name: 'parent' }),
       $Var.new({ name: 'doc', default: '-' }),
@@ -962,7 +962,7 @@ function bootstrap() {
         this.classes().push(obj);
       },
       async function load() {
-        if (!this.loaded() && this.on_load()) {
+        if (!this.loaded() && this.mod()) {
           this.loaded(true);
           // for (const imp of this.imports()) {
           //   this.log('dynamic import', imp);
@@ -970,7 +970,7 @@ function bootstrap() {
           // }
           const om = $$().mod();
           $$().mod(this);
-          await this.on_load().apply(this, [this, this.proxy('Class')]);
+          await this.mod().apply(this, [this, this.proxy('Class')]);
           $$().mod(om);
         }
         return this;

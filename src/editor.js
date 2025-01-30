@@ -5,7 +5,7 @@ export default await base.find('class', 'module').new({
   name: 'editor',
   doc: 'classes for the simulabra editor',
   imports: [base, html],
-  on_load(_, $) {
+  mod(_, $) {
     const __ = globalThis.SIMULABRA;
     const $el = $.html_element.proxy();
 

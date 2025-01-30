@@ -5,7 +5,7 @@ export default await __.$().Module.new({
   name: 'HTML',
   doc: 'HTML component classes for building Web applications',
   imports: [base],
-  async on_load(_, $) {
+  async mod(_, $) {
     $.Class.new({
       name: 'Component',
       slots: [

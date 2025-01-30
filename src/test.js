@@ -4,7 +4,7 @@ var __ = globalThis.SIMULABRA;
 export default await __.$().Module.new({
   name: 'test',
   imports: [base],
-  on_load(_, $) {
+  mod(_, $) {
     $.Class.new({
       name: 'Case',
       slots: [

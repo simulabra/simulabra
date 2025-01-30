@@ -5,7 +5,7 @@ const __ = globalThis.SIMULABRA;
 export default await __.$().Module.new({
   name: 'TestClasses',
   imports: [test],
-  on_load(_, $) {
+  mod(_, $) {
     $.Class.new({
       name: 'basic',
       slots: []

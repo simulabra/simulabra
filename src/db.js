@@ -5,7 +5,7 @@ export default await __.base().find('Class', 'Module').new({
   name: 'DB',
   doc: 'sqlite wrapper',
   imports: [__.base()],
-  on_load(_, $) {
+  mod(_, $) {
     $.Class.new({
       name: 'SQLite',
       slots: [

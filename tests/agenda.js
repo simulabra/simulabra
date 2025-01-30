@@ -6,7 +6,7 @@ const __ = globalThis.SIMULABRA;
 export default await __.$().Module.new({
   name: 'TestAgendas',
   imports: [test, todos],
-  on_load(_, $) {
+  mod(_, $) {
     const agenda = $.Agenda.new();
     $.Case.new({
       name: 'SimpleNote',

@@ -7,7 +7,7 @@ const __ = globalThis.SIMULABRA;
 export default await __.$().Module.new({
   name: 'runner',
   imports: [test],
-  async on_load(_, $) {
+  async mod(_, $) {
     $.Class.new({
       name: 'TestTimer',
       slots: [

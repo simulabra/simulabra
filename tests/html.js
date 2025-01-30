@@ -6,6 +6,6 @@ const __ = globalThis.SIMULABRA;
 export default await __.$().Module.new({
   name: 'TestHTML',
   imports: [test, html],
-  on_load(_, $) {
+  mod(_, $) {
   }
 });

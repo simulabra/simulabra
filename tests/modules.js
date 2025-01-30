@@ -6,11 +6,11 @@ export default await __.$().Module.new({
   name: 'TestModules',
   imports: [base, test],
   registry: base.find('Class', 'ObjectRegistry').new(),
-  async on_load(_, $) {
+  async mod(_, $) {
     const a = $.Module.new({
       name: 'test-a',
       imports: [base],
-      on_load(_, $) {
+      mod(_, $) {
         $.Class.new({
           name: 'a',
           slots: [
@@ -32,7 +32,7 @@ export default await __.$().Module.new({
     const b = $.Module.new({
       name: 'test-b',
       imports: [base, a],
-      on_load(_, $) {
+      mod(_, $) {
         $.Class.new({
           name: 'b',
           slots: [

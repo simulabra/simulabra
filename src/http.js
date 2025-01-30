@@ -7,7 +7,7 @@ const __ = globalThis.SIMULABRA;
 export default await __.$().Module.new({
   name: 'HTTP',
   imports: [base],
-  on_load(_, $) {
+  mod(_, $) {
     $.Class.new({
       name: 'HTTPRequest',
       slots: [

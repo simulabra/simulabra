@@ -5,7 +5,7 @@ import llm from './llm.js';
 export default await __.$().Module.new({
   name: 'Completion',
   imports: [base, html, llm],
-  async on_load(_, $) {
+  async mod(_, $) {
     const __ = globalThis.SIMULABRA;
     const $el = $.HtmlElement.proxy();
 
