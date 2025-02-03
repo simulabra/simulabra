@@ -1,18 +1,18 @@
 import base from '../src/base.js';
 import test from '../src/test.js';
+
 const __ = globalThis.SIMULABRA;
 
 export default await __.$().Module.new({
-  name: 'TestModules',
+  name: 'test.modules',
   imports: [base, test],
-  registry: base.find('Class', 'ObjectRegistry').new(),
   async mod(_, $) {
     const a = $.Module.new({
-      name: 'test-a',
+      name: 'test.modules.a',
       imports: [base],
       mod(_, $) {
         $.Class.new({
-          name: 'a',
+          name: 'A',
           slots: [
             $.Var.new({
               name: 'x',
@@ -30,13 +30,13 @@ export default await __.$().Module.new({
     });
     await a.load();
     const b = $.Module.new({
-      name: 'test-b',
+      name: 'test.modules.b',
       imports: [base, a],
       mod(_, $) {
         $.Class.new({
-          name: 'b',
+          name: 'B',
           slots: [
-            $.a,
+            $.A,
             $.After.new({
               name: 'frob',
               do() {
@@ -50,9 +50,9 @@ export default await __.$().Module.new({
     await b.load();
 
     $.Case.new({
-      name: 'module-inheritance',
+      name: 'module inheritance',
       do() {
-        const binst = b.$().b.new();
+        const binst = b.$().B.new();
         binst.frob();
         binst.frob();
         this.assertEq(binst.x(), 5);

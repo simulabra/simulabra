@@ -1,9 +1,10 @@
 import base from '../src/base.js';
 import test from '../src/test.js';
+
 const __ = globalThis.SIMULABRA;
 
 export default await __.$().Module.new({
-  name: 'BrainfuckInterpreter',
+  name: 'test.bf',
   imports: [base, test],
   mod(_, $) {
     $.Class.new({

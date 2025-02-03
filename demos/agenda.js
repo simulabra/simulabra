@@ -169,7 +169,7 @@ function mod(_, $) {
 }
 
 export default await __.$().Module.new({
-  name: 'Agenda',
+  name: 'agenda',
   doc: 'what is needing to be done',
   imports: [__.base(), db],
   mod

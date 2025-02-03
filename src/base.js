@@ -295,7 +295,7 @@ function bootstrap() {
     impl._primary = this;
   };
   Function.prototype.description = function () {
-    return `Native Function ${this.name}`;
+    return `#Function.${this.name}`;
   }
   Function.prototype.overrides = function () {
     return true;
@@ -306,24 +306,24 @@ function bootstrap() {
         return false;
       },
       name() {
-        return 'native_function';
+        return 'Function';
       },
       uri() {
-        return 'simulabra://localhost/NativeClasses/function';
+        return 'simulabra://localhost/global/Function';
       },
       title() {
-        return '~NativeClass#function';
+        return '#Function';
       }
     }
   };
   Function.prototype.isa = function(it) {
-    return it.name() === 'function-primitive';;
+    return it.name() === 'FunctionPrimitive';;
   };
   Function.prototype.uri = function() {
-    return `simulabra://localhost/native_function/${this.name}`;
+    return `simulabra://localhost//${this.name}`;
   };
   Function.prototype.title = function() {
-    return `~native_function#${this.name}`;
+    return `#Function.${this.name}`;
   };
   Function.prototype.state = function() {
     return $fake_state.list_from_map({
@@ -1190,20 +1190,20 @@ function bootstrap() {
     slots: [
       $.Var,
       $.Var.new({
-        name: 'autoFunction',
+        name: 'auto',
         required: true
       }),
       $.Method.new({
         name: 'defval',
         do: function defval() {
-          return this.autoFunction().apply(this);
+          return this.auto().apply(this);
         }
       }),
       $.After.new({
         name: 'initInstance',
         override: true,
         do: function initInstance(inst) {
-          inst[this.name()](this.autoFunction().apply(inst));
+          inst[this.name()](this.auto().apply(inst));
         }
       }),
     ]
@@ -1222,7 +1222,7 @@ function bootstrap() {
   });
 
   $.Class.new({
-    name: 'primitive',
+    name: 'Primitive',
     slots: [
       $.Class,
       $.Deffed,
@@ -1234,16 +1234,16 @@ function bootstrap() {
         for (let c of this.slots()) {
           c.load(this.js_prototype());
         }
-        this.dlog('primitive init', this);
+        this.dlog('Primitive init', this);
       },
       function descended(cls) {
-        return cls === $.primitive;
+        return cls === $.Primitive;
       },
       function extend(methods) {
         methods.map(m => m.load(this.js_prototype())); // wee-woo!
       },
       function description() {
-        return `primitive ${this.name()}`;
+        return `Primitive ${this.name()}`;
       },
     ]
   });
@@ -1260,23 +1260,23 @@ function bootstrap() {
   });
 
 
-  $.primitive.new({
-    name: 'object_primitive',
+  $.Primitive.new({
+    name: 'ObjectPrimitive',
     js_prototype: Object.prototype,
   });
 
   // Object.prototype.Class = function() {
-  //   return $.object_primitive;
+  //   return $.ObjectPrimitive;
   // }
 
-  $.primitive.new({
-    name: 'string_primitive',
+  $.Primitive.new({
+    name: 'StringPrimitive',
     js_prototype: String.prototype,
     slots: [
       $.Method.new({
         name: 'class',
         do() {
-          return _.proxy('primitive').string_primitive;
+          return _.proxy('Primitive').StringPrimitive;
         },
       }),
       function description() {
@@ -1288,14 +1288,14 @@ function bootstrap() {
     ]
   });
 
-  $.primitive.new({
-    name: 'boolean_primitive',
+  $.Primitive.new({
+    name: 'BooleanPrimitive',
     js_prototype: Boolean.prototype,
     slots: [
       $Method.new({
         name: 'class',
         do() {
-          return _.proxy('primitive').boolean_primitive;
+          return _.proxy('Primitive').BooleanPrimitive;
         },
       }),
       function description() {
@@ -1307,8 +1307,8 @@ function bootstrap() {
     ]
   });
 
-  $.primitive.new({
-    name: 'number_primitive',
+  $.Primitive.new({
+    name: 'NumberPrimitive',
     js_prototype: Number.prototype,
     slots: [
       function to_dom() {
@@ -1317,7 +1317,7 @@ function bootstrap() {
       $Method.new({
         name: 'class',
         do() {
-          return _.proxy('primitive').number_primitive;
+          return _.proxy('Primitive').NumberPrimitive;
         },
       }),
       function description() {
@@ -1329,14 +1329,14 @@ function bootstrap() {
   $.Class.new({
     name: 'number',
     slots: [
-      function primitive() {
-        return _.find('primitive', 'number_primitive');
+      function Primitive() {
+        return _.find('Primitive', 'NumberPrimitive');
       }
     ]
   });
 
-  $.primitive.new({
-    name: 'array_primitive',
+  $.Primitive.new({
+    name: 'ArrayPrimitive',
     js_prototype: Array.prototype,
     slots: [
       function intoObject() {
@@ -1349,7 +1349,7 @@ function bootstrap() {
       $Method.new({
         name: 'class',
         do() {
-          return _.proxy('primitive').array_primitive;
+          return _.proxy('Primitive').ArrayPrimitive;
         },
       }),
       function description() {
@@ -1366,12 +1366,12 @@ function bootstrap() {
     ]
   });
 
-  $.primitive.new({
-    name: 'function_primitive',
+  $.Primitive.new({
+    name: 'FunctionPrimitive',
     js_prototype: Function.prototype,
     slots: [
       function description(seen = {}) {
-        return `<function_primitive ${this.name}>`;
+        return `#function.${this.name}`;
       },
       function wrap(ctx) {
         this._closure = $.closure.new({
@@ -1382,6 +1382,12 @@ function bootstrap() {
       },
       function to_dom() {
         return document.createTextNode(`{${this.toString()}}`);
+      },
+      function module(params) {
+        return $.Module.new({
+          mod: this,
+          ...params
+        });
       }
     ]
   });
