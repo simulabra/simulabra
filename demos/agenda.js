@@ -2,7 +2,7 @@ import db from '../src/db';
 
 const __ = globalThis.SIMULABRA;
 
-function mod(_, $) {
+export default await function (_, $) {
   $.Class.new({
     name: 'Todo',
     slots: [
@@ -30,7 +30,9 @@ function mod(_, $) {
       $.Command.new({
         name: 'create',
         run(command, agenda) {
-          agenda.todo(this);
+          agenda.todos().push(this);
+          this.save(agenda.db());
+          agenda.sysnote(`added ${this}`);
         }
       }),
       $.Command.new({
@@ -64,8 +66,15 @@ function mod(_, $) {
       }),
       $.Command.new({
         name: 'create',
-        run(command, agenda) {
-          agenda.note(this);
+        run(command, agenda, stdout = true) {
+          if (!this.created()) {
+            this.created(new Date());
+          }
+          agenda.notes().push(this);
+          this.save(agenda.db());
+          if (stdout) {
+            agenda.log(this.logline());
+          }
         }
       }),
     ]
@@ -128,33 +137,12 @@ function mod(_, $) {
         default: () => [],
       }),
       $.Method.new({
-        name: 'note',
-        do: function note(note, stdout = true) {
-          if (!note.created()) {
-            note.created(new Date());
-          }
-          this.notes().push(note);
-          note.save(this.db());
-          if (stdout) {
-            this.log(note.logline());
-          }
-        }
-      }),
-      $.Method.new({
         name: 'sysnote',
         do: function sysnote(message) {
-          this.note($.Note.new({
+          this.receive($.Note.new({
             source: 'system', 
             message
-          }));
-        }
-      }),
-      $.Method.new({
-        name: 'todo',
-        do: function todo(todo) {
-          this.todos().push(todo);
-          todo.save(this.db());
-          this.sysnote(`added ${todo}`);
+          }).create(this));
         }
       }),
       $.Method.new({
@@ -166,11 +154,8 @@ function mod(_, $) {
       }),
     ]
   });
-}
-
-export default await __.$().Module.new({
+}.module({
   name: 'agenda',
   doc: 'what is needing to be done',
   imports: [__.base(), db],
-  mod
 }).load();
