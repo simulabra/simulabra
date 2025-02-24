@@ -60,7 +60,7 @@ export default await function (_, $) {
       }),
       $.Method.new({
         name: 'logline',
-        do: function logline() {
+        do() {
           return `${this.title()} [${this.created().toISOString()}] <${this.source()}> ${this.message()}`;
         }
       }),
@@ -76,6 +76,17 @@ export default await function (_, $) {
             agenda.log(this.logline());
           }
         }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'Journal',
+    slots: [
+      $.Persisted,
+      $.Var.new({
+        name: 'notes',
+        default: () => [],
       }),
     ]
   });
@@ -114,7 +125,7 @@ export default await function (_, $) {
       }),
       $.After.new({
         name: 'init',
-        do: function init() {
+        do() {
           this.db($.SQLite.createDatabase(this.dbName()));
 
           $.Note.initDB(this.db());
@@ -138,16 +149,16 @@ export default await function (_, $) {
       }),
       $.Method.new({
         name: 'sysnote',
-        do: function sysnote(message) {
-          this.receive($.Note.new({
+        do(message) {
+          $.Note.new({
             source: 'system', 
             message
-          }).create(this));
+          }).create(this);
         }
       }),
       $.Method.new({
         name: 'receive',
-        do: function receive(cmd) {
+        do(cmd) {
           cmd.run(this);
           this.journal().push(cmd);
         }

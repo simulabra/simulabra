@@ -11,7 +11,7 @@ function mod(_, $) {
     do() {
       const message = 'time to test the agenda I think';
       const note = $.Note.new({ message });
-      const command = note.create(agenda);
+      const command = note.createCommand(agenda);
       this.assertEq(command.parent().message(), message);
       agenda.receive(command);
       this.assert(agenda.notes().length === 1 && agenda.notes()[0].message() === message, 'message not found in notes');
@@ -21,8 +21,7 @@ function mod(_, $) {
     name: 'SimpleTodo',
     do() {
       const todo = $.Todo.new({ content: 'test agenda' });
-      const command = todo.create(agenda);
-      agenda.receive(command);
+      todo.create(agenda);
       this.assertEq(agenda.todos().length, 1);
       this.assertEq(agenda.todos()[0].content(), 'test agenda');
       this.assertEq(agenda.notes()[1].message(), 'added todo "test agenda"');
@@ -53,7 +52,7 @@ function mod(_, $) {
     name: 'FinishTodo',
     do() {
       const todo = agenda.todos()[0];
-      agenda.receive(todo.finish(agenda));
+      todo.finish(agenda);
       this.assert(todo.finished() instanceof Date, `todo not finished: ${todo.finished()}`);
       this.assertEq(agenda.todos().length, 0);
       const dbTodos = $.Todo.loadAll(agenda.db());

@@ -1397,17 +1397,21 @@ function bootstrap() {
     slots: [
       $.Var.new({ name: 'run' }),
       $.Method.new({
-        name: 'combine',
-        do: function combine(impl) {
+        name: 'load',
+        do(parent) {
           const self = this;
-
-          impl._primary = function (...args) {
+          const cmdfn = `${this.name()}Command`;
+          parent._add(cmdfn, function(...args) {
+            self.log(this);
             return $.CommandContext.new({
               command: self,
               parent: this,
               args
             });
-          };
+          });
+          parent._add(this.name(), function(...args) {
+            return this[cmdfn](...args).run();
+          });
         },
       }),
     ],
