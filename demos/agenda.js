@@ -135,7 +135,7 @@ export default await function (_, $) {
         }
       }),
       $.Var.new({
-        name: 'journal',
+        name: 'history',
         doc: 'history of commands',
         default: () => [],
       }),
@@ -160,7 +160,7 @@ export default await function (_, $) {
         name: 'receive',
         do(cmd) {
           cmd.run(this);
-          this.journal().push(cmd);
+          this.history().push(cmd);
         }
       }),
     ]

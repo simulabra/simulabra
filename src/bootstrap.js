@@ -35,24 +35,24 @@ export default await __.$().Module.new({
           doc: 'more to come',
           default: false,
         }),
-        $.Method.new({
+        $.Command.new({
           name: 'streamData',
           doc: 'add new tokens from the response',
-          do: function streamData(data) {
+          run(data) {
             this.content(this.content() + data);
             this.streaming(true);
           },
         }),
-        $.Method.new({
+        $.Command.new({
           name: 'streamEnd',
-          do: function streamEnd() {
+          run() {
             this.streaming(false);
           },
         }),
         $.Method.new({
           name: 'render',
           do: function render() {
-            return $.sjsx`${this.role}: ${this.content}${this.streaming() ? '^' : ''}`;
+            return `${this.role}: ${this.content}${this.streaming() ? '^' : ''}`;
           },
         }),
       ],
@@ -66,10 +66,10 @@ export default await __.$().Module.new({
         $.ListElement.new({
           name: 'messages',
         }),
-        $.Method.new({
+        $.Command.new({
           name: 'streamBegin',
           doc: 'show loading indicator',
-          do: function streamBegin() {
+          run() {
             const streamingMessage = $.ChatMessage.new({ name: 'streamingMessage', role: 'assistant', content: '', streaming: true });
             this.messages().push(streamingMessage);
             return streamingMessage;
@@ -85,11 +85,7 @@ export default await __.$().Module.new({
         $.Method.new({
           name: 'render',
           do: function render() {
-            return $.sjsx`
-            <div>
-              ${this.messages()}
-            </div>
-            `;
+            return this.messages().join('\n');
           },
         }),
       ],
@@ -107,15 +103,15 @@ export default await __.$().Module.new({
           name: 'chatInput',
           placeholder: 'Message bootstrap...',
         }),
-        $.Method.new({
+        $.Command.new({
           name: 'ask',
           doc: 'submit a user message to a conversational agent',
-          do: function ask(prompt) {
+          run(prompt) {
             return new Promise((resolve, reject) => {
               this.addUserMessage(prompt);
               const conversation = this.messages().conversation();
               const message = this.messages().streamBegin();
-              const req = this.chatRequest(conversation);
+              const req = await this.chatRequest(conversation);
               req.on('data', data => message.streamData(data));
               req.on('error', err => reject(err));
               req.on('end', () => {
@@ -147,10 +143,7 @@ export default await __.$().Module.new({
         $.Method.new({
           name: 'render',
           do: function render() {
-            return $.sjsx`
-            ${this.messages()}
-            ${this.chatInput()}
-            `;
+            return this.messages().render() + '\n\n' + this.chatInput().render();
           },
         }),
       ],
