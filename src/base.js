@@ -800,7 +800,7 @@ function bootstrap() {
       $Fn,
       $Var.new({ name: 'name' }),
       function combine(impl) {
-        impl._afters.push(this.do());
+        impl._afters.unshift(this.do());
       }
     ]
   });
@@ -811,9 +811,9 @@ function bootstrap() {
     slots: [
       $Var.new({ name: 'name' }),
       function load(parent) {
-        this.dlog('virtual load', this);
-        parent[this.name()] = function () { throw new Error(`not implemented: ${this.name()}`); };
-        parent[this.name()].virtual = true;
+        this.log('virtual load', this);
+        parent._proto[this.name()] = function () { throw new Error(`not implemented: ${this.name()}`); };
+        parent._proto[this.name()].virtual = true;
       },
       function overrides() {
         return false;
@@ -1273,12 +1273,11 @@ function bootstrap() {
     name: 'StringPrimitive',
     js_prototype: String.prototype,
     slots: [
-      $.Method.new({
-        name: 'class',
-        do() {
+      {
+        class() {
           return _.proxy('Primitive').StringPrimitive;
-        },
-      }),
+        }
+      }['class'],
       function description() {
         return this;
       },
