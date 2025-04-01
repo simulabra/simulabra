@@ -3,64 +3,50 @@ function bootstrap() {
   if (__?._bootstrapped) {
     return __.base();
   }
-  console.log('~\\~\\~\\~\\~\\~\\~\\~\\~\\~\\~/~/~/~/~/~/~/~/~/~');
-  console.log('~STARTING SIMULABRA: INFINITE SOFTWARE~');
-  console.log('~/~/~/~/~/~/~/~/~/~/~\\~\\~\\~\\~\\~\\~\\~\\~\\~');
+  console.log(`STARTING SIMULABRA: INFINITE SOFTWARE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%`);
   globalThis.SIMULABRA = {
-    debug() {
-      return true;
-    },
     mod() {
       return this._mod;
-    },
-    trace() {
-      return true;
-    },
-    register(o) {
-      const u = o.uri();
-      this._tracked[u] = {};
-      this._objects.set(this._tracked[u], o);
     },
     stack() {
       return [];
     },
-    _tracked: {},
-    _objects: new WeakMap(),
+    display(obj) {
+      if (typeof obj === 'string') {
+        return obj;
+      } else {
+        return __.stringify(obj);
+      }
+    },
+    stringify(obj, seen = new Set()) {
+      if (seen.has(obj)) {
+        return "*circ*";
+      }
+      seen.add(obj);
+      if (obj === undefined || obj === null) {
+        return '' + obj;
+      } else if (Object.getPrototypeOf(obj) === ClassPrototype) {
+        return '#ClassPrototype.' + obj._name || '?';
+      } else if (typeof obj.description === 'function') {
+        return obj.description(seen);
+      } else if (typeof obj === 'object') {
+        const ps = [];
+        for (const [k, v] of Object.entries(obj)) {
+          ps.push(`${k}: ${__.stringify(v, seen)}`)
+        }
+        return '{' + ps.join(', ') + '}';
+      } else {
+        return obj.toString();
+      }
+    }
   };
   __ = globalThis.SIMULABRA;
 
 
-  function simulabra_display(obj) {
-    if (typeof obj === 'string') {
-      return obj;
-    } else {
-      return simulabra_string(obj);
-    }
-  }
-  function simulabra_string(obj, seen = new Set()) {
-    if (seen.has(obj)) {
-      return "*circ*";
-    }
-    seen.add(obj);
-    if (obj === undefined || obj === null) {
-      return '' + obj;
-    } else if (Object.getPrototypeOf(obj) === ClassPrototype) {
-      return '#ClassPrototype.' + obj._name || '?';
-    } else if (typeof obj.description === 'function') {
-      return obj.description(seen);
-    } else if (typeof obj === 'object') {
-      const ps = [];
-      for (const [k, v] of Object.entries(obj)) {
-        ps.push(`${k}: ${simulabra_string(v, seen)}`)
-      }
-      return '{' + ps.join(', ') + '}';
-    } else {
-      return obj.toString();
-    }
-  }
 
   Object.prototype.display = function display() {
-    return simulabra_display(this);
+    return __.display(this);
   }
 
   function debug(...args) {
@@ -68,7 +54,7 @@ function bootstrap() {
     if (__.$$DebugClass) {
       __.$$DebugClass.log(...args);
     } else {
-      console.log(...args.map(a => simulabra_display(a)));
+      console.log(...args.map(a => __.display(a)));
     }
   }
 
@@ -249,7 +235,7 @@ function bootstrap() {
       return `#BVar.${this._name}`;
     }
     state() {
-      return $fake_state.list_from_map({
+      return $FakeState.listFromMap({
         name: this._name,
       });
     }
@@ -326,7 +312,7 @@ function bootstrap() {
     return `#Function.${this.name}`;
   };
   Function.prototype.state = function() {
-    return $fake_state.list_from_map({
+    return $FakeState.listFromMap({
       name: this.name,
       fn: this.toString()
     });
@@ -415,7 +401,7 @@ function bootstrap() {
       return `simulabra://localhost/${this.class().name()}/${this.id()}`;
     },
     function log(...args) {
-      $Debug?.log(this.title(), ...args.map(a => simulabra_string(a)));
+      $Debug?.log(this.title(), ...args.map(a => __.stringify(a)));
     },
     function dlog(...args) {
       if ($Debug && this.class().debug()) {
@@ -704,14 +690,13 @@ function bootstrap() {
     ]
   });
 
-  const $fake_state = $Class.new({
-    name: 'fake_state',
+  const $FakeState = $Class.new({
+    name: 'FakeState',
     slots: [
       $Static.new({
-        name: 'list_from_map',
-        do: function list_from_map(map) {
+        name: 'listFromMap',
+        do: function listFromMap(map) {
           const list = Object.entries(map).map(([k, v]) => this.new({ name: k, value: v }));
-          this.log(list);
           return list;
         }
       }),
@@ -724,7 +709,7 @@ function bootstrap() {
         if (this.value().title instanceof Function) {
           d = this.value().title();
         } else {
-          d = simulabra_string(this.value(), seen);
+          d = __.stringify(this.value(), seen);
         }
         return `:${this.name()}=${d}`;
       }
@@ -746,7 +731,7 @@ function bootstrap() {
         } else if (!this.ref().debug()) {
           d = `<hidden>`;
         } else {
-          d = simulabra_string(this.value(), seen);
+          d = __.stringify(this.value(), seen);
         }
         return `:${this.ref().name()}=${d}`;
       }
@@ -771,11 +756,6 @@ function bootstrap() {
         }
         if (impl._primary) {
           fn._next = impl._primary;
-          // if (this.override()) {
-          //   fn._next = impl._primary;
-          // } else {
-          //   throw new Error(`invalid override on ${this.title()}!`);
-          // }
         }
         impl._primary = fn;
         impl._debug = this.debug();
@@ -811,8 +791,9 @@ function bootstrap() {
     slots: [
       $Var.new({ name: 'name' }),
       function load(parent) {
+        self = this;
         //this.log('virtual load', this);
-        parent._proto[this.name()] = function () { throw new Error(`not implemented: ${this.name()}`); };
+        parent._proto[this.name()] = function () { throw new Error(`not implemented: ${self.name()}`); };
         parent._proto[this.name()].virtual = true;
       },
       function overrides() {
@@ -1070,6 +1051,8 @@ function bootstrap() {
           }
         });
       },
+      __.display,
+      __.stringify,
     ]
   });
 
@@ -1100,7 +1083,7 @@ function bootstrap() {
       $Static.new({
         name: 'format',
         do: function format(...args) {
-          return args.map(a => simulabra_display(a));
+          return args.map(a => __.display(a));
         }
       }),
     ]
@@ -1210,7 +1193,7 @@ function bootstrap() {
   });
 
   $.Class.new({
-    name: 'event',
+    name: 'Event',
     slots: [
       $.Fn,
       $.Var.new({ name: 'type' }),
@@ -1259,15 +1242,10 @@ function bootstrap() {
     ]
   });
 
-
   $.Primitive.new({
     name: 'ObjectPrimitive',
     js_prototype: Object.prototype,
   });
-
-  // Object.prototype.Class = function() {
-  //   return $.ObjectPrimitive;
-  // }
 
   $.Primitive.new({
     name: 'StringPrimitive',
@@ -1281,9 +1259,6 @@ function bootstrap() {
       function description() {
         return this;
       },
-      function to_dom() {
-        return document.createTextNode(this);
-      }
     ]
   });
 
@@ -1291,17 +1266,13 @@ function bootstrap() {
     name: 'BooleanPrimitive',
     js_prototype: Boolean.prototype,
     slots: [
-      $Method.new({
-        name: 'class',
-        do() {
+      {
+        class() {
           return _.proxy('Primitive').BooleanPrimitive;
-        },
-      }),
+        }
+      }['class'],
       function description() {
         return this.toString();
-      },
-      function to_dom() {
-        return document.createTextNode(this.toString());
       },
     ]
   });
@@ -1313,12 +1284,11 @@ function bootstrap() {
       function to_dom() {
         return document.createTextNode(this.toString());
       },
-      $Method.new({
-        name: 'class',
-        do() {
+      {
+        class() {
           return _.proxy('Primitive').NumberPrimitive;
-        },
-      }),
+        }
+      }['class'],
       function description() {
         return this.toString();
       },
@@ -1345,23 +1315,17 @@ function bootstrap() {
         }
         return res;
       },
-      $Method.new({
-        name: 'class',
-        do() {
+      {
+        class() {
           return _.proxy('Primitive').ArrayPrimitive;
-        },
-      }),
+        }
+      }['class'],
       function description() {
-        return `(${this.map(it => { return simulabra_string(it) ?? '' + it }).join(' ')})`;
-        },
-          function to_dom() {
-            const el = document.createElement('span');
-            this.forEach(it => el.appendChild(it.to_dom()));
-            return el;
-          },
-          function last() {
-            return this[this.length - 1];
-          }
+        return `(${this.map(it => { return __.stringify(it) ?? '' + it }).join(' ')})`;
+      },
+      function last() {
+        return this[this.length - 1];
+      }
     ]
   });
 
@@ -1378,9 +1342,6 @@ function bootstrap() {
           mod: ctx
         });
         return this;
-      },
-      function to_dom() {
-        return document.createTextNode(`{${this.toString()}}`);
       },
       function module(params) {
         return $.Module.new({

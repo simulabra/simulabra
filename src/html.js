@@ -64,7 +64,7 @@ export default await function (_, $) {
           this.load(this.element());
         }
       }),
-      $.event.new({
+      $.Event.new({
         name: 'update',
         do: function update(e) {
         }
@@ -105,14 +105,6 @@ export default await function (_, $) {
               $el.span({
                 class: 'window-info'
               }, [
-                // $el.span({
-                //   class: 'window-layout',
-                //   onclick: e => {
-                //     e.preventDefault();
-                //     this.toggle();
-                //   },
-                //   onmousedown: e => e.preventDefault()
-                // }),
                 $el.span({
                   class: 'window-title'
                 }, this.windowTitle())
@@ -526,7 +518,7 @@ export default await function (_, $) {
       $.Var.new({ name: 'active', default: false }),
       $.Var.new({ name: 'preview_text', default: '' }),
       $.Var.new({ name: 'preview_hide', default: false }),
-      $.event.new({
+      $.Event.new({
         name: 'blur',
         do: function onblur(e) {
           this.active(false);
