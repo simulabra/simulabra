@@ -64,6 +64,12 @@ export default await function (_, $) {
           return `${this.title()} [${this.created().toISOString()}] <${this.source()}> ${this.message()}`;
         }
       }),
+      $.Method.new({
+        name: 'description',
+        do() {
+          return `${this.source()}: ${this.message()}`;
+        }
+      }),
       $.Command.new({
         name: 'create',
         run(command, agenda, stdout = true) {

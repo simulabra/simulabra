@@ -811,7 +811,7 @@ function bootstrap() {
     slots: [
       $Var.new({ name: 'name' }),
       function load(parent) {
-        this.log('virtual load', this);
+        //this.log('virtual load', this);
         parent._proto[this.name()] = function () { throw new Error(`not implemented: ${this.name()}`); };
         parent._proto[this.name()].virtual = true;
       },
