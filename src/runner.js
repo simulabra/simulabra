@@ -5,7 +5,7 @@ import test from './test.js';
 
 const __ = globalThis.SIMULABRA;
 
-export default await async function (_, $) {
+await async function (_, $) {
   $.Class.new({
     name: 'TestTimer',
     slots: [
