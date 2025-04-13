@@ -1,7 +1,5 @@
-import base from '../src/base.js';
+import { __, base } from '../src/base.js';
 import test from '../src/test.js';
-
-const __ = globalThis.SIMULABRA;
 
 export default await __.$().Module.new({
   name: 'test.bf',

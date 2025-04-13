@@ -1,5 +1,4 @@
-import base from './base.js';
-var __ = globalThis.SIMULABRA;
+import { __, base } from './base.js';
 
 export default await function (_, $) {
   $.Class.new({

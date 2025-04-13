@@ -1,9 +1,7 @@
 import { fetch } from 'node-fetch';
-import base from '../src/base.js';
+import { __, base } from '../src/base.js';
 import test from '../src/test.js';
 import http from '../src/http.js';
-
-const __ = globalThis.SIMULABRA;
 
 export default await __.$().Module.new({
   name: 'test.http',

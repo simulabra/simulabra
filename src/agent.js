@@ -1,4 +1,4 @@
-import base from './base.js';
+import { __, base } from './base.js';
 import http from './http.js';
 import chatConfig from '../.chatconfig.json';
 import { readFileSync } from 'fs';

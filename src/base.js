@@ -1219,9 +1219,11 @@ function bootstrap() {
         }
         this.dlog('Primitive init', this);
       },
+      // cls: $Class
       function descended(cls) {
         return cls === $.Primitive;
       },
+      // methods: #Array<%load>
       function extend(methods) {
         methods.map(m => m.load(this.js_prototype())); // wee-woo!
       },
@@ -1292,15 +1294,6 @@ function bootstrap() {
       function description() {
         return this.toString();
       },
-    ]
-  });
-
-  $.Class.new({
-    name: 'number',
-    slots: [
-      function Primitive() {
-        return _.find('Primitive', 'NumberPrimitive');
-      }
     ]
   });
 
@@ -1401,6 +1394,5 @@ function bootstrap() {
   return _;
 }
 
-const base = bootstrap();
-
-export default base;
+export const base = bootstrap();
+export const __ = globalThis.SIMULABRA;

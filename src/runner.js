@@ -1,9 +1,7 @@
 import { readdir } from 'fs/promises';
 import { join, dirname, relative } from 'path';
-import base from './base.js';
+import { __, base } from './base.js';
 import test from './test.js';
-
-const __ = globalThis.SIMULABRA;
 
 await async function (_, $) {
   $.Class.new({

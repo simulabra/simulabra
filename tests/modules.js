@@ -1,7 +1,5 @@
-import base from '../src/base.js';
+import { __, base } from '../src/base.js';
 import test from '../src/test.js';
-
-const __ = globalThis.SIMULABRA;
 
 export default await async function (_, $) {
   const a = function (_, $) {

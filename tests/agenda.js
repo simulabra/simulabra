@@ -1,8 +1,6 @@
-import base from '../src/base';
+import { __, base } from '../src/base';
 import test from '../src/test.js';
 import todos from '../demos/agenda.js';
-
-const __ = globalThis.SIMULABRA;
 
 function mod(_, $) {
   const agenda = $.Agenda.new();

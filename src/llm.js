@@ -1,4 +1,4 @@
-import base from './base.js';
+import { __, base } from './base.js';
 
 export default await function (_, $) {
   const __ = globalThis.SIMULABRA;

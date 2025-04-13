@@ -1,9 +1,7 @@
-import base from './base.js';
+import { __, base } from './base.js';
 import { createServer } from 'http';
 import fetch from 'node-fetch';
 import { readFileSync } from 'fs';
-
-const __ = globalThis.SIMULABRA;
 
 export default await function (_, $) {
  $.Class.new({
