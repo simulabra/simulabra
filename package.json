@@ -1,5 +1,7 @@
 {
   "name": "simulabra",
+  "version": "0.0.1",
+  "repository": "simulabra/simulabra",
   "module": "./src/base.js",
   "scripts": {
     "test": "watchexec -w . -e js -r -- bun run src/runner.js",
