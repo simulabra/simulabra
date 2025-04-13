@@ -15,54 +15,85 @@ export default await __.$().Module.new({
         $.Var.new({ name: 'dataPtr', default: 0 }),
         $.Var.new({ name: 'codePtr', default: 0 }),
         $.Var.new({ name: 'inputPtr', default: 0 }),
+
+        $.Method.new({
+          name: 'handleGreaterThan',
+          do() { this.dataPtr(this.dataPtr() + 1); }
+        }),
+        $.Method.new({
+          name: 'handleLessThan',
+          do() { this.dataPtr(this.dataPtr() - 1); }
+        }),
+        $.Method.new({
+          name: 'handlePlus',
+          do() { this.data()[this.dataPtr()]++; }
+        }),
+        $.Method.new({
+          name: 'handleMinus',
+          do() { this.data()[this.dataPtr()]--; }
+        }),
+        $.Method.new({
+          name: 'handleDot',
+          do() { this.output(this.output() + String.fromCharCode(this.data()[this.dataPtr()])); }
+        }),
+        $.Method.new({
+          name: 'handleComma',
+          do() {
+            this.data()[this.dataPtr()] = this.input().charCodeAt(this.inputPtr());
+            this.inputPtr(this.inputPtr() + 1);
+          }
+        }),
+        $.Method.new({
+          name: 'handleOpenBracket',
+          do() {
+            if (this.data()[this.dataPtr()] === 0) {
+              let balance = 1;
+              let ptr = this.codePtr();
+              while (balance > 0) {
+                ptr++;
+                if (this.code()[ptr] === '[') balance++;
+                if (this.code()[ptr] === ']') balance--;
+              }
+              this.codePtr(ptr); // Jump *to* the matching bracket
+            }
+          }
+        }),
+        $.Method.new({
+          name: 'handleCloseBracket',
+          do() {
+            if (this.data()[this.dataPtr()] !== 0) {
+              let balance = 1;
+              let ptr = this.codePtr();
+              while (balance > 0) {
+                ptr--;
+                if (this.code()[ptr] === ']') balance++;
+                if (this.code()[ptr] === '[') balance--;
+              }
+              this.codePtr(ptr); // Jump *to* the matching bracket
+            }
+          }
+        }),
+
         $.Method.new({
           name: 'execute',
           do() {
+            const handlers = {
+              '>': this.handleGreaterThan,
+              '<': this.handleLessThan,
+              '+': this.handlePlus,
+              '-': this.handleMinus,
+              '.': this.handleDot,
+              ',': this.handleComma,
+              '[': this.handleOpenBracket,
+              ']': this.handleCloseBracket,
+            };
+
             while (this.codePtr() < this.code().length) {
               const instruction = this.code()[this.codePtr()];
+              const handler = handlers[instruction];
 
-              switch (instruction) {
-                case '>':
-                  this.dataPtr(this.dataPtr() + 1);
-                  break;
-                case '<':
-                  this.dataPtr(this.dataPtr() - 1);
-                  break;
-                case '+':
-                  this.data()[this.dataPtr()]++;
-                  break;
-                case '-':
-                  this.data()[this.dataPtr()]--;
-                  break;
-                case '.':
-                  this.output(this.output() + String.fromCharCode(this.data()[this.dataPtr()]));
-                  break;
-                case ',':
-                  this.data()[this.dataPtr()] = this.input().charCodeAt(this.inputPtr());
-                  this.inputPtr(this.inputPtr() + 1);
-                  break;
-                case '[':
-                  if (this.data()[this.dataPtr()] === 0) {
-                    let openBrackets = 1;
-                    while (openBrackets > 0) {
-                      this.codePtr(this.codePtr() + 1);
-                      if (this.code()[this.codePtr()] === '[') openBrackets++;
-                      if (this.code()[this.codePtr()] === ']') openBrackets--;
-                    }
-                  }
-                  break;
-                case ']':
-                  if (this.data()[this.dataPtr()] !== 0) {
-                    let closeBrackets = 1;
-                    while (closeBrackets > 0) {
-                      this.codePtr(this.codePtr() - 1);
-                      if (this.code()[this.codePtr()] === ']') closeBrackets++;
-                      if (this.code()[this.codePtr()] === '[') closeBrackets--;
-                    }
-                  }
-                  break;
-                default:
-                  break;
+              if (handler) {
+                handler.call(this);
               }
 
               this.codePtr(this.codePtr() + 1);
@@ -71,7 +102,8 @@ export default await __.$().Module.new({
         }),
       ]
     });
-    // Test: Basic brainfuck interpreter initialization
+
+    // --- Tests remain the same ---
     $.Case.new({
       name: 'interpreter_init',
       do() {
@@ -80,7 +112,6 @@ export default await __.$().Module.new({
       }
     });
 
-    // Test: Simple brainfuck program execution
     $.Case.new({
       name: 'interpreter_exec_simple',
       do() {
@@ -90,7 +121,6 @@ export default await __.$().Module.new({
       }
     });
 
-    // Test: Brainfuck program execution with loops
     $.Case.new({
       name: 'interpreter_exec_loops',
       do() {
@@ -100,7 +130,6 @@ export default await __.$().Module.new({
       }
     });
 
-    // Test: Brainfuck program execution with input
     $.Case.new({
       name: 'interpreter_exec_input',
       do() {
@@ -110,7 +139,6 @@ export default await __.$().Module.new({
       }
     });
 
-    // Test: Hello World!
     $.Case.new({
       name: 'interpreter_hello_world',
       do() {

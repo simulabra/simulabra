@@ -65,7 +65,7 @@ export default await async function (_, $) {
       $.Point,
       $.Var.new({ name: 'phi', default: 0 }),
       $.Method.new({
-        name: 'phi_shift',
+        name: 'phiShift',
         do() { return this.dist() * this.phi() / Math.PI; }
       })
     ]
@@ -87,7 +87,7 @@ export default await async function (_, $) {
       const pe = $.PointExtended.new({ x: 3, y: 4, phi: Math.PI });
       this.assertEq(pe.x(), 3, 'Inherited var access failed');
       this.assertEq(pe.dist(), 5, 'Inherited method call failed');
-      this.assertEq(pe.phi_shift(), 5, 'New method call failed');
+      this.assertEq(pe.phiShift(), 5, 'New method call failed');
     }
   });
 

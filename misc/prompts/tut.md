@@ -39,5 +39,4 @@ $.TestCase.new({
   },
 });
 ```
-In Simulabra, you usually want tests for the things you are building to keep them stable. A basic test library is included.
-
+Be consistent with naming conventions and keep them general. Do not add comments unless they are necessary. The shortest solution is generally best. Consider different approaches and tradeoffs.
