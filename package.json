@@ -1,14 +1,18 @@
 {
   "name": "simulabra",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "repository": "simulabra/simulabra",
+  "type": "module",
+  "exports": {
+    ".": "./src/base.js",
+    "./html": "./src/html.js"
+  },
   "module": "./src/base.js",
   "scripts": {
     "test": "watchexec -w . -e js -r -- bun run src/runner.js",
     "agent": "watchexec -w . -e js -r -- bun run src/agent.js",
     "serve": "bun run src/agent.js"
   },
-  "type": "module",
   "devDependencies": {
     "bun-types": "^0.1.0",
     "mitata": "^0.1.6",

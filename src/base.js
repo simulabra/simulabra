@@ -647,7 +647,7 @@ function bootstrap() {
             this[pk] = assign;
             if (self.observable() && update) {
               const ev = new Event('update');
-              ev._Var = self;
+              ev._var = self;
               ev._value = assign;
               ev._target = this;
               this.dispatchEvent(ev); // best there is?
@@ -1132,7 +1132,7 @@ function bootstrap() {
               this[pk] = assign;
               if (self.observable() && update) {
                 const ev = new Event('update');
-                ev._Var = self; 
+                ev._var = self; 
                 ev._value = assign;
                 ev._target = this;
                 this.dispatchEvent(ev);
@@ -1230,17 +1230,6 @@ function bootstrap() {
       function description() {
         return `Primitive ${this.name()}`;
       },
-    ]
-  });
-
-  $.Class.new({
-    name: 'proc',
-    slots: [
-      $.Fn,
-      $.Deffed,
-      function proxied(ctx) {
-        return this.do().bind(ctx);
-      }
     ]
   });
 
@@ -1355,7 +1344,6 @@ function bootstrap() {
           const self = this;
           const cmdfn = `${this.name()}Command`;
           parent._add(cmdfn, function(...args) {
-            self.log(this);
             return $.CommandContext.new({
               command: self,
               parent: this,

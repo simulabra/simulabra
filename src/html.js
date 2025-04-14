@@ -39,6 +39,12 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
+        name: 'mount',
+        do() {
+          document.body.appendChild(this.toDOM());
+        }
+      }),
+      $.Method.new({
         name: 'load',
         do: function load(e) {
           // this.log('load', e);
