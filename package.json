@@ -1,6 +1,6 @@
 {
   "name": "simulabra",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "repository": "simulabra/simulabra",
   "type": "module",
   "exports": {
