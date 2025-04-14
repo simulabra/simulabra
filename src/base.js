@@ -45,10 +45,6 @@ function bootstrap() {
 
 
 
-  Object.prototype.display = function display() {
-    return __.display(this);
-  }
-
   function debug(...args) {
     let __ = globalThis.SIMULABRA;
     if (__.$$DebugClass) {
@@ -187,7 +183,7 @@ function bootstrap() {
   class ClassPrototype {
     constructor(parent) {
       this._impls = {};
-      this._proto = DebugProto(parent);
+      this._proto = new DebugProto();
       this._proto._class = parent;
     }
 
@@ -270,10 +266,6 @@ function bootstrap() {
 
   __._stack = new FrameStack();
 
-  Object.prototype._add = function add(name, op) {
-    if (!this) return;
-    this[name] = op;
-  }
   Function.prototype.load = function (proto) {
     proto._add(this.name, this);
   };
@@ -1204,135 +1196,12 @@ function bootstrap() {
     ]
   });
 
-  $.Class.new({
-    name: 'Primitive',
-    slots: [
-      $.Class,
-      $.Deffed,
-      $.Var.new({ name: 'slots', default: [] }),
-      $.Var.new({ name: 'js_prototype' }),
-      $.Var.new({ name: 'methods', default: {} }),
-      $.Var.new({ name: 'name' }),
-      function init() {
-        for (let c of this.slots()) {
-          c.load(this.js_prototype());
-        }
-        this.dlog('Primitive init', this);
-      },
-      // cls: $Class
-      function descended(cls) {
-        return cls === $.Primitive;
-      },
-      // methods: #Array<%load>
-      function extend(methods) {
-        methods.map(m => m.load(this.js_prototype())); // wee-woo!
-      },
-      function description() {
-        return `Primitive ${this.name()}`;
-      },
-    ]
-  });
-
-  $.Primitive.new({
-    name: 'ObjectPrimitive',
-    js_prototype: Object.prototype,
-  });
-
-  $.Primitive.new({
-    name: 'StringPrimitive',
-    js_prototype: String.prototype,
-    slots: [
-      {
-        class() {
-          return _.proxy('Primitive').StringPrimitive;
-        }
-      }['class'],
-      function description() {
-        return this;
-      },
-    ]
-  });
-
-  $.Primitive.new({
-    name: 'BooleanPrimitive',
-    js_prototype: Boolean.prototype,
-    slots: [
-      {
-        class() {
-          return _.proxy('Primitive').BooleanPrimitive;
-        }
-      }['class'],
-      function description() {
-        return this.toString();
-      },
-    ]
-  });
-
-  $.Primitive.new({
-    name: 'NumberPrimitive',
-    js_prototype: Number.prototype,
-    slots: [
-      function to_dom() {
-        return document.createTextNode(this.toString());
-      },
-      {
-        class() {
-          return _.proxy('Primitive').NumberPrimitive;
-        }
-      }['class'],
-      function description() {
-        return this.toString();
-      },
-    ]
-  });
-
-  $.Primitive.new({
-    name: 'ArrayPrimitive',
-    js_prototype: Array.prototype,
-    slots: [
-      function intoObject() {
-        const res = {};
-        for (const it of this) {
-          res[it.name()] = it;
-        }
-        return res;
-      },
-      {
-        class() {
-          return _.proxy('Primitive').ArrayPrimitive;
-        }
-      }['class'],
-      function description() {
-        return `(${this.map(it => { return __.stringify(it) ?? '' + it }).join(' ')})`;
-      },
-      function last() {
-        return this[this.length - 1];
-      }
-    ]
-  });
-
-  $.Primitive.new({
-    name: 'FunctionPrimitive',
-    js_prototype: Function.prototype,
-    slots: [
-      function description(seen = {}) {
-        return `#function.${this.name}`;
-      },
-      function wrap(ctx) {
-        this._closure = $.closure.new({
-          fn: this,
-          mod: ctx
-        });
-        return this;
-      },
-      function module(params) {
-        return $.Module.new({
-          mod: this,
-          ...params
-        });
-      }
-    ]
-  });
+  Function.prototype.module = function(params) {
+    return $.Module.new({
+      mod: this,
+      ...params
+    });
+  }
 
   $.Class.new({
     name: 'Command',
