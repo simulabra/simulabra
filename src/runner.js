@@ -91,8 +91,10 @@ await async function (_, $) {
     ]
   });
 
-  const runner = $.TestRunner.new();
-  await runner.run('tests');
+  if (require.main === module) {
+    const runner = $.TestRunner.new();
+    await runner.run('tests');
+  }
 }.module({
   name: 'runner',
   imports: [test],
