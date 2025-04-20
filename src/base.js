@@ -107,6 +107,44 @@ function bootstrap() {
     }
   }
 
+  const R = {
+    stk: [],                  // dependency‑capture stack
+    q: new Set(),             // pending effects
+    batched: false,
+    push(dep) {               // called by getters
+      const top = this.stk[this.stk.length - 1];
+      if (top) top.add(dep);
+    },
+    schedule(task) {            // called by setters
+      if (task instanceof Set) {
+        task.forEach(t => this.q.add(t));
+      } else {
+        this.q.add(task);
+      }
+      if (!this.batched) {
+        this.batched = true;
+        queueMicrotask(() => {
+          this.batched = false;
+          this.q.forEach(f => f());
+          this.q.clear();
+        });
+      }
+    }
+  };
+
+  globalThis.__R = R;
+
+  globalThis.effect = fn => { // public API
+    const run = () => {
+      const deps = new Set();
+      R.stk.push(deps);
+      fn();
+      R.stk.pop();
+      deps.forEach(d => d.add(run));
+    };
+    run();
+  };
+
   class MethodImpl {
     constructor(props) {
       const defaults = {
@@ -634,23 +672,31 @@ function bootstrap() {
       function combine(impl) {
         const pk = '_' + this.name();
         const self = this;
-        impl._primary = function mutableAccess(assign, update = true) {
-          if (assign !== undefined) {
-            this[pk] = assign;
-            if (self.observable() && update) {
-              const ev = new Event('update');
-              ev._var = self;
-              ev._value = assign;
-              ev._target = this;
-              this.dispatchEvent(ev); // best there is?
-            }
-            if (self._trace) {
-              self.log('muted to', assign);
-            }
-          } else if (!(pk in this)) {
-            this[pk] = self.defval(this);
+        const SUBMAP = new WeakMap();      // inst  -> Map<pk, Set<fn>>
+
+        impl._primary = function varAccess(v, notify = true) {
+          let map = SUBMAP.get(this);
+          if (!map) {
+            map = new Map();
+            SUBMAP.set(this, map);
           }
-          return this[pk];
+          let subs = map.get(pk);
+          if (!subs) {
+            subs = new Set();
+            map.set(pk, subs);
+          }
+          if (v !== undefined) {
+            this[pk] = v;
+            if (notify) {
+              R.schedule(subs);
+            }
+          } else {
+            if (!(pk in this)) {
+              this[pk] = self.defval(this);
+            }
+            R.push(subs);
+            return this[pk];
+          }
         };
         impl._direct = true;
       },

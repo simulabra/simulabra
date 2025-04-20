@@ -564,6 +564,33 @@ export default await async function (_, $) {
       this.assertEq(p2, foundById2, 'Failed to retrieve instance p2 by ID');
     }
   });
+
+  $.Case.new({
+    name: 'ObservableVar',
+    doc: 'Tests Var signals',
+    do() {
+      const Counter = $.Class.new({
+        name: 'Counter',
+        slots: [
+          $.Var.new({ name: 'count', default: 0 }),
+          $.Method.new({
+            name: 'inc',
+            do() { this.count(this.count() + 1); }
+          })
+        ]
+      });
+
+      const c = Counter.new();
+      let init = true;
+
+      effect(() => {
+        this.assertEq(c.count(), init ? 0 : 2);
+        init = false;
+      });
+      c.inc();
+      c.inc();
+    }
+  });
 }.module({
   name: 'test.core',
   imports: [test],
