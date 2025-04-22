@@ -107,44 +107,6 @@ function bootstrap() {
     }
   }
 
-  const R = {
-    stk: [],                  // dependency‑capture stack
-    q: new Set(),             // pending effects
-    batched: false,
-    push(dep) {               // called by getters
-      const top = this.stk[this.stk.length - 1];
-      if (top) top.add(dep);
-    },
-    schedule(task) {            // called by setters
-      if (task instanceof Set) {
-        task.forEach(t => this.q.add(t));
-      } else {
-        this.q.add(task);
-      }
-      if (!this.batched) {
-        this.batched = true;
-        queueMicrotask(() => {
-          this.batched = false;
-          this.q.forEach(f => f());
-          this.q.clear();
-        });
-      }
-    }
-  };
-
-  globalThis.__R = R;
-
-  globalThis.effect = fn => { // public API
-    const run = () => {
-      const deps = new Set();
-      R.stk.push(deps);
-      fn();
-      R.stk.pop();
-      deps.forEach(d => d.add(run));
-    };
-    run();
-  };
-
   class MethodImpl {
     constructor(props) {
       const defaults = {
@@ -645,6 +607,42 @@ function bootstrap() {
   $base._class = $Class;
   $base._name = 'base';
   $base.init();
+
+  const R = {
+    stk: [],                  // dependency‑capture stack
+    q: new Set(),             // pending effects
+    batched: false,
+    push(dep) {               // called by getters
+      const top = this.stk[this.stk.length - 1];
+      if (top) top.add(dep);
+    },
+    schedule(task) {            // called by setters
+      if (task instanceof Set) {
+        task.forEach(t => this.q.add(t));
+      } else {
+        this.q.add(task);
+      }
+      if (!this.batched) {
+        this.batched = true;
+        queueMicrotask(() => {
+          this.batched = false;
+          this.q.forEach(f => f());
+          this.q.clear();
+        });
+      }
+    }
+  };
+
+  globalThis.effect = fn => { // public API
+    const run = () => {
+      const deps = new Set();
+      R.stk.push(deps);
+      fn();
+      R.stk.pop();
+      deps.forEach(d => d.add(run));
+    };
+    run();
+  };
 
   // a missing middle
   var $Var = $Class.new({
