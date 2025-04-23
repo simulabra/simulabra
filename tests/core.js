@@ -513,15 +513,8 @@ export default await async function (_, $) {
     name: 'ModuleGetInstanceAcrossModules',
     doc: 'Tests retrieving a class instance defined in an imported module.',
     do() {
-      const WidgetClass = moduleB.find('Class', 'Widget'); // Get class def first
+      const WidgetClass = moduleB.find('Class', 'Widget');
       this.assert(WidgetClass, 'Could not find Widget class definition');
-
-      // Use moduleB to get the instance 'globalWidget' defined in moduleA
-      //const instance = moduleB.getInstance(WidgetClass, 'globalWidget');
-      //this.assert(instance, 'Could not get instance "globalWidget" via moduleB');
-      //this.assertEq(instance.name(), 'globalWidget', 'Instance found has wrong name');
-      //this.assertEq(instance.class().name(), 'Widget', 'Instance has wrong class name');
-      //this.assertEq(instance.ping(), 'pong from Widget globalWidget', 'Instance method call failed');
     }
   });
 
@@ -538,7 +531,7 @@ export default await async function (_, $) {
       this.assertEq(gadget.ping(), 'pong from Gadget myGadget', 'Gadget overridden ping method failed');
       this.assertEq(gadget.widgetProp(), 'widget-abc', 'Gadget instance missing inherited property');
 
-      const WidgetClass = moduleA.find('Class', 'Widget'); // Get original Widget class
+      const WidgetClass = moduleA.find('Class', 'Widget');
       this.assert(gadget.isa(WidgetClass), 'Gadget instance should report isa(Widget)');
       const GadgetClass = moduleB.find('Class', 'Gadget');
        this.assert(gadget.isa(GadgetClass), 'Gadget instance should report isa(Gadget)');
@@ -565,14 +558,13 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
-    name: 'ObservableVar',
-    doc: 'Tests Var signals',
-    do() {
+  $.AsyncCase.new({
+    name: 'Signal',
+    async do() {
       const Counter = $.Class.new({
         name: 'Counter',
         slots: [
-          $.Var.new({ name: 'count', default: 0 }),
+          $.Signal.new({ name: 'count', default: 0 }),
           $.Method.new({
             name: 'inc',
             do() { this.count(this.count() + 1); }
@@ -582,13 +574,16 @@ export default await async function (_, $) {
 
       const c = Counter.new();
       let init = true;
-
-      effect(() => {
+      let ran = 0;
+      const e = $.Effect.create(() => {
         this.assertEq(c.count(), init ? 0 : 2);
         init = false;
+        ran++;
       });
       c.inc();
       c.inc();
+      await __.reactor().flush();
+      this.assertEq(ran, 2);
     }
   });
 }.module({

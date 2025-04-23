@@ -608,42 +608,6 @@ function bootstrap() {
   $base._name = 'base';
   $base.init();
 
-  const R = {
-    stk: [],                  // dependency‑capture stack
-    q: new Set(),             // pending effects
-    batched: false,
-    push(dep) {               // called by getters
-      const top = this.stk[this.stk.length - 1];
-      if (top) top.add(dep);
-    },
-    schedule(task) {            // called by setters
-      if (task instanceof Set) {
-        task.forEach(t => this.q.add(t));
-      } else {
-        this.q.add(task);
-      }
-      if (!this.batched) {
-        this.batched = true;
-        queueMicrotask(() => {
-          this.batched = false;
-          this.q.forEach(f => f());
-          this.q.clear();
-        });
-      }
-    }
-  };
-
-  globalThis.effect = fn => { // public API
-    const run = () => {
-      const deps = new Set();
-      R.stk.push(deps);
-      fn();
-      R.stk.pop();
-      deps.forEach(d => d.add(run));
-    };
-    run();
-  };
-
   // a missing middle
   var $Var = $Class.new({
     name: 'Var',
@@ -651,7 +615,6 @@ function bootstrap() {
       BVar.new({ name: 'name', }),
       BVar.new({ name: 'debug', default: true }),
       BVar.new({ name: 'trace', default: false }),
-      BVar.new({ name: 'observable', default: true }),
       BVar.new({ name: 'default', }),
       BVar.new({ name: 'default_init', }),
       BVar.new({ name: 'required', }),
@@ -668,29 +631,14 @@ function bootstrap() {
       function combine(impl) {
         const pk = '_' + this.name();
         const self = this;
-        const SUBMAP = new WeakMap();      // inst  -> Map<pk, Set<fn>>
 
         impl._primary = function varAccess(v, notify = true) {
-          let map = SUBMAP.get(this);
-          if (!map) {
-            map = new Map();
-            SUBMAP.set(this, map);
-          }
-          let subs = map.get(pk);
-          if (!subs) {
-            subs = new Set();
-            map.set(pk, subs);
-          }
           if (v !== undefined) {
             this[pk] = v;
-            if (notify) {
-              R.schedule(subs);
-            }
           } else {
             if (!(pk in this)) {
               this[pk] = self.defval(this);
             }
-            R.push(subs);
             return this[pk];
           }
         };
@@ -776,9 +724,7 @@ function bootstrap() {
     name: 'Method',
     slots: [
       $Fn,
-      $Var.new({ name: 'message' }),
       $Var.new({ name: 'name' }),
-      $Var.new({ name: 'override', default: false }),
       $Var.new({ name: 'debug', default: true }),
       function combine(impl) {
         if (impl._name !== this.name()) {
@@ -1041,6 +987,7 @@ function bootstrap() {
       $.Var.new({ name: 'tick', default: 0 }),
       $.Var.new({ name: 'handlers', default: {} }),
       $.Var.new({ name: 'registry' }),
+      $.Var.new({ name: 'reactor' }),
       function startTicking() {
         setInterval(() => {
           this.tick(this.tick() + 1);
@@ -1088,6 +1035,119 @@ function bootstrap() {
     baseMod: _,
     bootstrapped: true,
     registry: $.ObjectRegistry.new(),
+  });
+
+  $.Class.new({
+    name: 'Reactor',
+    doc: 'central reactive system for managing dependencies and effects',
+    slots: [
+      $.Var.new({
+        name: 'stack',
+        default: () => [],
+      }),
+      $.Var.new({
+        name: 'pending',
+        default: () => new Set(),
+      }),
+      $.Var.new({
+        name: 'batched',
+        default: false,
+      }),
+      $.Method.new({
+        name: 'push',
+        do(dep) {
+          const top = this.stack()[this.stack().length - 1];
+          if (top) top.add(dep);
+        }
+      }),
+      $.Method.new({
+        name: 'flush',
+        async do() {
+          return new Promise(resolve => {
+            queueMicrotask(resolve);
+          });
+        }
+      }),
+      $.Method.new({
+        name: 'schedule',
+        do(task) {
+          this.log('schedule', task);
+          if (task instanceof Set) {
+            task.forEach(t => this.pending().add(t));
+          } else {
+            this.pending().add(task);
+          }
+          if (!this.batched()) {
+            this.batched(true);
+            queueMicrotask(() => {
+              this.batched(false);
+              this.pending().forEach(f => f());
+              this.pending().clear();
+            });
+          }
+        }
+      })
+    ]
+  });
+
+  __.reactor($.Reactor.new());
+
+  $.Class.new({
+    name: 'Effect',
+    doc: 'reactive effect that reruns when its dependencies change',
+    slots: [
+      $.Var.new({
+        name: 'fn',
+        doc: 'function to run',
+        required: true
+      }),
+      $.Var.new({
+        name: 'deps',
+        doc: 'set of dependencies',
+        default: () => new Set()
+      }),
+      $.Var.new({
+        name: 'active',
+        doc: 'whether this effect is active',
+        default: true
+      }),
+      $.Method.new({
+        name: 'run',
+        doc: 'execute the effect and track dependencies',
+        do() {
+          if (!this.active()) return;
+          const deps = new Set();
+          __.reactor().stack().push(deps);
+          try {
+            this.fn()();
+          } finally {
+            __.reactor().stack().pop();
+          }
+          // Clear old dependencies and register with new ones
+          this.deps().forEach(dep => dep.delete(this.run.bind(this)));
+          this.deps(deps);
+          deps.forEach(dep => dep.add(this.run.bind(this)));
+        }
+      }),
+      $.Method.new({
+        name: 'dispose',
+        doc: 'deactivate this effect and clean up dependencies',
+        do() {
+          this.active(false);
+          this.deps().forEach(dep => dep.delete(this.run.bind(this)));
+          this.deps(new Set());
+        }
+      }),
+      $.Static.new({
+        name: 'create',
+        doc: 'create and immediately run a new effect',
+        do(fn) {
+          const effect = this.new({ fn });
+          effect.run();
+          return effect;
+        }
+      })
+    ]
   });
 
   __.addEventListener('log', e => console.log(...e.args));
@@ -1152,18 +1212,7 @@ function bootstrap() {
               if (!self.choices().includes(assign)) {
                 throw new Error(`Invalid enum value '${assign}' for ${self.name()}. Valid choices are: ${self.choices().join(', ')}`);
               }
-
               this[pk] = assign;
-              if (self.observable() && update) {
-                const ev = new Event('update');
-                ev._var = self; 
-                ev._value = assign;
-                ev._target = this;
-                this.dispatchEvent(ev);
-              }
-              if (self._trace) {
-                self.log('mutated to', assign);
-              }
             } else if (!(pk in this)) {
               this[pk] = self.defval(this);
             }
@@ -1213,6 +1262,45 @@ function bootstrap() {
           inst[this.name()](this.auto().apply(inst));
         }
       }),
+    ]
+  });
+
+  globalThis.SUBMAP = new WeakMap();      // inst  -> Map<pk, Set<fn>>
+
+  $.Class.new({
+    name: 'Signal',
+    slots: [
+      $.Var,
+      function combine(impl) {
+        const pk = '_' + this.name();
+        const self = this;
+
+        impl._primary = function varAccess(v, notify = true) {
+          let map = SUBMAP.get(this);
+          if (!map) {
+            map = new Map();
+            SUBMAP.set(this, map);
+          }
+          let subs = map.get(pk);
+          if (!subs) {
+            subs = new Set();
+            map.set(pk, subs);
+          }
+          if (v !== undefined) {
+            this[pk] = v;
+            if (notify) {
+              SIMULABRA.reactor().schedule(subs);
+            }
+          } else {
+            if (!(pk in this)) {
+              this[pk] = self.defval(this);
+            }
+            SIMULABRA.reactor().push(subs);
+            return this[pk];
+          }
+        };
+        impl._direct = true;
+      },
     ]
   });
 
