@@ -657,8 +657,6 @@ function bootstrap() {
       BVar.new({ name: 'required', }),
       function defval(ctx) {
         if (this.default() instanceof Function) {
-          // console.log('fn', this.name());
-          // console.log(this.default());
           return this.default().apply(ctx);
         } else {
           return this.default();
@@ -828,7 +826,6 @@ function bootstrap() {
       $Var.new({ name: 'name' }),
       function load(parent) {
         self = this;
-        //this.log('virtual load', this);
         parent._proto[this.name()] = function () { throw new Error(`not implemented: ${self.name()}`); };
         parent._proto[this.name()].virtual = true;
       },
@@ -955,7 +952,6 @@ function bootstrap() {
             }
             const v = target.find(ClassName, p);
             if (v === undefined) {
-              // target.log(target.repo(ClassName))
               const err = new Error(`failed to find ~${ClassName}.${p}`);
               if (errFn) {
                 errFn(err);
@@ -970,8 +966,6 @@ function bootstrap() {
       },
       function def(name, obj) {
         const ClassName = obj.class().name();
-        // const ClassName = 'Class';
-        // this.log('def', ClassName, name);
         if (!this.repos().hasOwnProperty(ClassName)) {
           this.repos()[ClassName] = {};
         }
@@ -981,10 +975,6 @@ function bootstrap() {
       async function load() {
         if (!this.loaded() && this.mod()) {
           this.loaded(true);
-          // for (const imp of this.imports()) {
-          //   this.log('dynamic import', imp);
-          //   await import(`./${imp}.js`);
-          // }
           const om = $$().mod();
           $$().mod(this);
           await this.mod().apply(this, [this, this.proxy('Class')]);
@@ -1110,8 +1100,6 @@ function bootstrap() {
       $Static.new({
         name: 'log',
         do: function log(...args) {
-          // const stack = (new Error).stack;
-          // const source = stack.split('\n')[2];
           $$().dispatchEvent({ type: 'log', args });
           return this;
         }
