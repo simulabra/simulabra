@@ -1071,7 +1071,6 @@ function bootstrap() {
       $.Method.new({
         name: 'schedule',
         do(task) {
-          this.log('schedule', task);
           if (task instanceof Set) {
             task.forEach(t => this.pending().add(t));
           } else {
@@ -1111,10 +1110,16 @@ function bootstrap() {
         doc: 'whether this effect is active',
         default: true
       }),
+      $.Var.new({
+        name: 'boundRun',
+      }),
       $.Method.new({
         name: 'run',
         doc: 'execute the effect and track dependencies',
         do() {
+          if (!this.boundRun()) {
+            this.boundRun(this.run.bind(this));
+          }
           if (!this.active()) return;
           const deps = new Set();
           __.reactor().stack().push(deps);
@@ -1124,9 +1129,9 @@ function bootstrap() {
             __.reactor().stack().pop();
           }
           // Clear old dependencies and register with new ones
-          this.deps().forEach(dep => dep.delete(this.run.bind(this)));
+          this.deps().forEach(dep => dep.delete(this.boundRun()));
           this.deps(deps);
-          deps.forEach(dep => dep.add(this.run.bind(this)));
+          deps.forEach(dep => dep.add(this.boundRun()));
         }
       }),
       $.Method.new({
