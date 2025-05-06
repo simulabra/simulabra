@@ -3,7 +3,7 @@ import http from './http.js';
 import chatConfig from '../.chatconfig.json';
 import { readFileSync } from 'fs';
 
-export default await function (_, $) {
+export default await async function (_, $) {
   $.Class.new({
     name: 'AgentServer',
     slots: [
@@ -50,6 +50,12 @@ export default await function (_, $) {
         path: '/agenda',
         handler(app, req, res) {
           res.ok(app.templatize('agenda'));
+        }
+      }),
+      $.PathRequestHandler.new({
+        path: '/counter',
+        handler(app, req, res) {
+          res.ok(readFileSync('../demos/counter.html').toString());
         }
       }),
       $.PathRequestHandler.new({
