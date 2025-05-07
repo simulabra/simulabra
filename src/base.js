@@ -342,17 +342,7 @@ function bootstrap() {
   // base object inherited by everything
   const $BaseSlots = [
     function init() {
-      // mostly broken
-      if (globalThis.SIMULABRA._debug) {
-        const stack = (new Error()).stack;
-        const line = stack.split('\n')[2];
-        this.src_line(line);
-      }
       globalThis.SIMULABRA.mod()?.register(this);
-
-      for (const ev of (this.class().events() ?? [])) {
-        this.addEventListener(ev.name(), ev.do().bind(this));
-      }
       for (const slot of this.class().slots()) {
         if (slot.class()._fullSlot) {
           slot.initInstance(this);
@@ -404,45 +394,15 @@ function bootstrap() {
       proto._add(this.name(), this);
     },
     function isa(cls) {
-      // this.log('isa', this.class().name(), cls.name());
       return this.class().descended(cls);
     },
     function next(selector, ...args) {
       const fn = this[selector];
       return fn._next.apply(this, args);
     },
-    function toJSON() {
-      return this;
-    },
-    function message_observers(message) {
-      const observers = this.observers();
-      if (!observers) {
-        return [];
-      }
-      return observers[message] ?? [];
-    },
-    function dispatchEvent(event) {
-      for (const ob of this.message_observers(event.type)) {
-        ob(event);
-      }
-    },
-    function addEventListener(message, cb) {
-      if (this.observers() === undefined) {
-        this.observers({});
-      }
-      if (this.observers()[message] === undefined) {
-        this.observers()[message] = [];
-      }
-      this.observers()[message].push(cb.bind(this));
-    },
-    function json() {
-      return this.class().jsonify(this);
-    },
     ClassDef.class,
     BVar.new({ name: 'name' }),
     BVar.new({ name: 'id' }),
-    BVar.new({ name: 'src_line' }),
-    BVar.new({ name: 'observers' }),
   ];
 
   Array.prototype.load = function (target) {
@@ -451,7 +411,6 @@ function bootstrap() {
 
   const $ClassSlots = [
     function init() {
-      this.events([]);
       $BaseSlots[0].apply(this);
       this.id_ctr(0);
       this.proto(new ClassPrototype(this));
@@ -562,15 +521,10 @@ function bootstrap() {
     BVar.new({ name: 'fullSlot', default: false }),
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
-    BVar.new({ name: 'events' }),
     BVar.new({
       name: 'slots',
       default: [],
     }),
-    BVar.new({
-      name: 'debug',
-      default: false,
-    })
   ];
 
   const $ClassProto = new ClassPrototype();
@@ -1158,8 +1112,6 @@ function bootstrap() {
     ]
   });
 
-  __.addEventListener('log', e => console.log(...e.args));
-
   globalThis.SIMULABRA = __;
 
   var $Debug = $Class.new({
@@ -1168,7 +1120,7 @@ function bootstrap() {
       $Static.new({
         name: 'log',
         do: function log(...args) {
-          $$().dispatchEvent({ type: 'log', args });
+          console.log(...args);
           return this;
         }
       }),
@@ -1309,18 +1261,6 @@ function bootstrap() {
         };
         impl._direct = true;
       },
-    ]
-  });
-
-  $.Class.new({
-    name: 'Event',
-    slots: [
-      $.Fn,
-      $.Var.new({ name: 'type' }),
-      $.Var.new({ name: 'do' }),
-      function load(proto) {
-        proto._proto._class.events().push(this);
-      }
     ]
   });
 

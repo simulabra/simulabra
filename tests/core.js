@@ -427,47 +427,6 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
-    name: 'EventTester',
-    slots: [
-      $.Var.new({ name: 'eventTriggered', default: false }),
-      $.Var.new({ name: 'eventData', default: null }),
-      $.Method.new({
-        name: 'listen',
-        do() {
-          this.addEventListener('customEvent', (event) => {
-            this.eventTriggered(true);
-            this.eventData(event.detail);
-          });
-        }
-      }),
-      $.Method.new({
-        name: 'fire',
-        do(detail) {
-          this.dispatchEvent({ type: 'customEvent', detail: detail, target: this });
-        }
-      })
-    ]
-  });
-
-  $.Case.new({
-    name: 'EventSystemBasicListenDispatch',
-    doc: 'Tests basic event listener registration and event dispatching.',
-    do() {
-      const tester = $.EventTester.new();
-      tester.listen();
-
-      this.assertEq(tester.eventTriggered(), false, 'Event flag should be false initially');
-      this.assertEq(tester.eventData(), null, 'Event data should be null initially');
-
-      const payload = { data: 'test payload' };
-      tester.fire(payload);
-
-      this.assertEq(tester.eventTriggered(), true, 'Event flag should be true after dispatch');
-      this.assertEq(tester.eventData(), payload, 'Event data was not received correctly');
-    }
-  });
-
   const moduleA = await function (_modA, $A) {
     $A.Class.new({
       name: 'Widget',
