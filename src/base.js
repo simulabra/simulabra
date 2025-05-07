@@ -1024,6 +1024,9 @@ function bootstrap() {
           }
         });
       },
+      function instanceOf(obj, cls) {
+        return obj && typeof obj.isa === 'function' && obj.isa(cls);
+      },
       __.display,
       __.stringify,
     ]

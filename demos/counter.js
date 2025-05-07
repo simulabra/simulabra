@@ -12,22 +12,17 @@ export default await async function (_, $) {
       $.Method.new({
         name: 'inc',
         do() {
-          this.log('inc', this.count());
           this.count(this.count() + 1);
         }
       }),
       $.Method.new({
         name: 'render',
         do() {
+          // return __.h`<button onclick=${() => this.inc()}>clicked ${this.count()} times</button>`;
           return $.VNode.h(
             'button', 
-            { 
-              onclick: () => {
-                this.log('click');
-                this.inc()
-              }
-            },
-            () => `clicked ${this.count()} times`
+            { onclick: () => this.inc() },
+            () => `clicked ${this.count()} times`,
           );
         }
       }),

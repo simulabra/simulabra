@@ -23,12 +23,14 @@ export default await function (_, $) {
           });
 
           const append = child => {
-            if (child?.el) {
+            if (__.instanceOf(child, $.VNode)) {
               el.appendChild(child.el());
             } else if (typeof child === 'function') {
+              const node = document.createTextNode('')
+              el.appendChild(node);
               $.Effect.create(() => { 
-                el.replaceChildren();
-                el.appendChild(document.createTextNode(child())); 
+                const nodeValue = child();
+                node.nodeValue = nodeValue;
               });
             } else {
               el.appendChild(document.createTextNode(child));
