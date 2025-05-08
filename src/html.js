@@ -5,11 +5,9 @@ export default await function (_, $) {
     name: 'VNode',
     slots: [
       $.Var.new({ name: 'el' }),
-      $.Var.new({ name: 'mountPoint' }),
       $.Method.new({
         name: 'mount',
         do(parent) {
-          this.mountPoint(parent);
           parent.appendChild(this.el());
         }
       }),
@@ -18,25 +16,23 @@ export default await function (_, $) {
         do(tag, props = {}, ...kids) {
           const el = document.createElement(tag);
 
-          Object.entries(props).forEach(([k, v]) => {
+          for (const [k, v] of Object.entries(props)) {
             el[k] = v;
-          });
+          }
 
-          const append = child => {
+          for (const child of kids.flat()) {
             if (__.instanceOf(child, $.VNode)) {
               el.appendChild(child.el());
             } else if (typeof child === 'function') {
               const node = document.createTextNode('')
               el.appendChild(node);
               $.Effect.create(() => { 
-                const nodeValue = child();
-                node.nodeValue = nodeValue;
+                node.nodeValue = child();
               });
             } else {
               el.appendChild(document.createTextNode(child));
             }
-          };
-          kids.flat().forEach(append);
+          }
 
           return $.VNode.new({ el });
         }
