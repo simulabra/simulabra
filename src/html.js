@@ -141,10 +141,11 @@ export default await function (_, $) {
             if (__.instanceOf(child, $.VNode) || __.instanceOf(child, $.ComponentInstance)) {
               el.appendChild(child.el());
             } else if (typeof child === 'function') { // Reactive text node
-              const textNode = document.createTextNode('');
-              el.appendChild(textNode);
+              let node = document.createElement('span');
+              el.appendChild(node);
               $.Effect.create(() => {
-                textNode.nodeValue = String(child() ?? '');
+                const newNode = child();
+                node.innerHTML = newNode;
               });
             } else if (Array.isArray(child)) {
               child.forEach(appendChildToElement); // Flatten arrays of children
