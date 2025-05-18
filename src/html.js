@@ -134,27 +134,29 @@ export default await function (_, $) {
             }
           });
 
-          const appendChildToElement = (child) => {
-            if (child == null) {
-              return;
-            }
+          function domify(child) {
             if (__.instanceOf(child, $.VNode) || __.instanceOf(child, $.ComponentInstance)) {
-              el.appendChild(child.el());
+              return child.el();
             } else if (typeof child === 'function') { // Reactive text node
               let node = document.createElement('span');
-              el.appendChild(node);
               $.Effect.create(() => {
-                const newNode = child();
-                node.innerHTML = newNode;
+                const newNode = domify(child());
+                node.replaceChildren();
+                node.appendChild(newNode);
               });
+              return node;
             } else if (Array.isArray(child)) {
-              child.forEach(appendChildToElement); // Flatten arrays of children
+              let node = document.createElement('span');
+              for (const it of child) {
+                node.appendChild(domify(it));
+              }
+              return node;
             } else {
-              el.appendChild(document.createTextNode(String(child)));
+              return document.createTextNode(String(child));
             }
-          };
+          }
 
-          children.flat().forEach(appendChildToElement);
+          el.appendChild(domify(children));
 
           return $.VNode.new({ el: el });
         },

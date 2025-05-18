@@ -21,14 +21,35 @@ export default await function (_, $) {
   });
 
   $.Class.new({
+    name: 'CounterList',
+    slots: [
+      $.Var.new({ name: 'counter' }),
+      $.Method.new({
+        name: 'render',
+        do() { 
+          let els = [];
+          for (let i = 0; i < this.counter().count(); i++) {
+            els.push($.HTML.t`<div>${i}</div>`);
+          }
+          return els;
+          }
+      }),
+    ]
+  })
+
+  $.Class.new({
     name: 'App',
     slots: [
       $.Method.new({
         name: 'render',
         do() { 
+          const counter = $.Counter.new();
+          const counterList = $.CounterList.new({ counter });
           return $.HTML.t`
             <div>Here is a counter!
-            <$Counter /></div>
+              ${counter.render()}
+              ${() => counterList.render()}
+            </div>
           `; 
         }
       })
