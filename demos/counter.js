@@ -29,7 +29,7 @@ export default await function (_, $) {
         do() { 
           let els = [];
           for (let i = 0; i < this.counter().count(); i++) {
-            els.push($.HTML.t`<div>${i}</div>`);
+            els.push($.HTML.t`<div>${i + 1}</div>`);
           }
           return els;
           }
@@ -40,6 +40,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'App',
     slots: [
+      $.Component,
       $.Method.new({
         name: 'render',
         do() { 
@@ -47,14 +48,22 @@ export default await function (_, $) {
           const counterList = $.CounterList.new({ counter });
           return $.HTML.t`
             <div>Here is a counter!
-              ${counter.render()}
+              ${() => counter.render()}
               ${() => counterList.render()}
             </div>
           `; 
+        }
+      }),
+      $.Method.new({
+        name: 'css',
+        do() {
+          return `
+#clicky { color: red; }
+`
         }
       })
     ]
   });
 
-  $.App.new().render().mount(document.body);
+  $.App.new().mount();
 }.module({ name: 'demo.counter', imports: [base, htmlModule] }).load();

@@ -146,7 +146,7 @@ export default await function (_, $) {
               });
               return node;
             } else if (Array.isArray(child)) {
-              let node = document.createElement('span');
+              let node = document.createDocumentFragment();
               for (const it of child) {
                 node.appendChild(domify(it));
               }
@@ -442,6 +442,30 @@ export default await function (_, $) {
       }),
     ],
   });
+
+  $.Class.new({
+    name: 'Component',
+    slots: [
+      $.Method.new({
+        name: 'css',
+        do() {
+          return '';
+        }
+      }),
+      $.Virtual.new({
+        name: 'render',
+      }),
+      $.Method.new({
+        name: 'mount',
+        do(target = document.body) {
+          this.render().mount(target);
+          const style = document.createElement('style');
+          style.textContent = this.css();
+          target.appendChild(style);
+        }
+      })
+    ]
+  })
 
 }.module({
   name: 'HTML',
