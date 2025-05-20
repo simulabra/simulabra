@@ -27,15 +27,14 @@ export default await function (_, $) {
       $.Method.new({
         name: 'render',
         do() { 
-          let els = [];
-          for (let i = 0; i < this.counter().count(); i++) {
-            els.push($.HTML.t`<div>${i + 1}</div>`);
-          }
-          return els;
-          }
+          return Array.from(
+            { length: this.counter().count() },
+            (it, idx) => $.HTML.t`<div>${idx + 1}</div>`
+          );
+        }
       }),
     ]
-  })
+  });
 
   $.Class.new({
     name: 'App',
