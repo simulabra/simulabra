@@ -1,46 +1,37 @@
 :root {
-    --primary: #663C3C;
-    --secondary: #45628B;
-    --secondary-2: #72868B;
-    --background: #E2C79D;
-    --background-shadow: #A28062;
-    --background-light: #F2D8A3;
-    /*--background-light: #C3B075;*/
-    --background-text: #F3DAAA;
-    --background-secondary: var(--background-light);
+    --charcoal: #463C3C;
+    --sand: #E2C79D;
+    --light-sand: #F8DBA8;
+    --wood: #987867;
+    --ocean: #5893AF;
+    --sky: #82A6CB;
+    --dusk: #D8586A;
+    --grass: #40A472;
 
-    /* Additional Foreground Colors */
-    --foreground-1: #9A645A; /* Lighter shade of primary */
-    --foreground-2: #441F1F; /* Darker shade of primary */
-    --foreground-3: #6B82A8; /* Lighter shade of secondary */
-    --foreground-4: #334D6E; /* Darker shade of secondary */
-    --foreground-5: #4F6A48; /* Muted tone for secondary-2 */
-    --foreground-6: #A67C52; /* Complementary tone for backgrounds */
-
-    --box-shadow-args: 1px 1px 0px 0px var(--background-shadow), -1px -1px 0px 0px var(--background-light), -2px -2px var(--background-light), -2px 0 var(--background-light), 0 -2px var(--background-light), 2px 2px var(--background-shadow), 0 2px var(--background-shadow), 2px 0 var(--background-shadow), 2px -2px var(--background-light), -2px 2px var(--background-shadow);
+    --box-shadow-args: 1px 1px 0px 0px var(--wood), -1px -1px 0px 0px var(--light-sand), -2px -2px var(--light-sand), -2px 0 var(--light-sand), 0 -2px var(--light-sand), 2px 2px var(--wood), 0 2px var(--wood), 2px 0 var(--wood), 2px -2px var(--light-sand), -2px 2px var(--wood);
 }
 
 ::selection {
-    background-color: var(--secondary);
-    color: var(--background);
+    sand-color: var(--ocean);
+    color: var(--sand);
 }
 
 body, html {
     margin: 0;
     padding: 0;
     font-size: 14px;
-    background: var(--background);
-    color: var(--primary);
+    sand: var(--sand);
+    color: var(--charcoal);
     height: 100%;
     padding: 2px;
 }
 
 .link_body {
-    color: var(--secondary);
+    color: var(--ocean);
 }
 
 .link_body:hover {
-    color: var(--secondary-2);
+    color: var(--sky);
     cursor: pointer;
 }
 
@@ -55,37 +46,37 @@ textarea {
 }
 
 input, textarea {
-    background: var(--background-text);
-    border: 0px solid var(--primary);
+    sand: var(--light-sand);
+    border: 0px solid var(--charcoal);
     box-shadow: var(--box-shadow-args);
     font-family: inherit;
 }
 
 input:focus, textarea:focus {
-    outline: solid var(--secondary) 0px;
-    /*box-shadow: 0 0 0px var(--secondary);*/
+    outline: solid var(--ocean) 0px;
+    /*box-shadow: 0 0 0px var(--ocean);*/
 }
 
 button {
-    background: var(--background);
-    border: 0px solid var(--primary);
-    /*box-shadow: 1px 1px 0px 0px var(--background-shadow), -1px -1px 0px 0px var(--background-light);*/
+    sand: var(--sand);
+    border: 0px solid var(--charcoal);
+    /*box-shadow: 1px 1px 0px 0px var(--wood), -1px -1px 0px 0px var(--light-sand);*/
     box-shadow: var(--box-shadow-args);
     cursor: pointer;
 }
 
 button:hover {
-    background: var(--background-shadow);
-    /*border: 1px solid var(--secondary);*/
+    sand: var(--wood);
+    /*border: 1px solid var(--ocean);*/
 }
 
 button:active {
-    background: var(--background);
+    sand: var(--sand);
 }
 
 select {
-    background: var(--background-secondary);
-    /*border: 1px solid var(--primary);*/
+    sand: var(--light-sand);
+    /*border: 1px solid var(--charcoal);*/
 }
 
 .container {
@@ -111,10 +102,10 @@ select {
 }
 
 .window-bar {
-    background: var(--background-shadow);
-    color: var(--background-light);
-    /*border: 1px solid var(--primary);*/
-    /*border-bottom: 0px solid var(--primary);*/
+    sand: var(--wood);
+    color: var(--light-sand);
+    /*border: 1px solid var(--charcoal);*/
+    /*border-bottom: 0px solid var(--charcoal);*/
     display: flex;
     justify-content: space-between;
 }
@@ -128,20 +119,20 @@ select {
     width: 18px;
     height: 7px;
     display: inline-block;
-    background: var(--primary);
+    sand: var(--charcoal);
     align-self: flex-start;
 }
 
 .window-layout:hover {
-    background: var(--secondary);
+    sand: var(--ocean);
 }
 
 .window-menu {
     width: 18px;
     height: 6px;
     display: inline-block;
-    /*border-top: 1px solid var(--primary);*/
-    /*border-bottom: 1px solid var(--primary);*/
+    /*border-top: 1px solid var(--charcoal);*/
+    /*border-bottom: 1px solid var(--charcoal);*/
     align-self: center;
 }
 
@@ -154,7 +145,7 @@ select {
     padding: 2px;
     overflow-wrap: break-word;
     word-break: break-all;
-    /*border: 1px solid var(--primary);*/
+    /*border: 1px solid var(--charcoal);*/
     overflow-y: scroll;
     height: 100%;
 }
@@ -163,124 +154,4 @@ select {
     font-size: 0.6em;
     font-style: italic;
     margin-left: 2px;
-}
-
-.TogglyInputContainer {
-    white-space: pre-wrap;
-    min-height: 5em;
-    max-height: 50vh;
-    padding: 2px;
-    margin-left: 0px;
-    overflow-y: scroll;
-    box-shadow: var(--box-shadow-args);
-    background: var(--background-text);
-}
-
-#input-instruction {
-    height: 50em;
-    resize: none;
-    color: var(--primary);
-    font-size: 14px;
-}
-
-.TogglyInputName {
-    color: var(--foreground-5);
-    font-style: italic;
-    margin-right: 6px;
-}
-
-.TogglyInputPreview {
-    color: var(--foreground-1);
-}
-
-.NumberInput {
-    padding: 2px;
-    margin: 4px;
-    box-shadow: var(--box-shadow-args);
-}
-
-.cm-s-simulabra.CodeMirror, .cm-s-simulabra .CodeMirror-gutters {
-    background-color: var(--background); /* Beige background */
-    color: var(--foreground-1); /* Lighter primary for text */
-}
-.cm-s-simulabra .CodeMirror-gutters {
-    background: var(--primary); /* Dark primary for gutters */
-    border-right: 0px;
-}
-.cm-s-simulabra .CodeMirror-linenumber {
-    color: var(--foreground-2); /* Darker primary for line numbers */
-}
-.cm-s-simulabra .CodeMirror-cursor {
-    border-left: 1px solid var(--foreground-1); /* Lighter primary for cursor */
-}
-.cm-s-simulabra.cm-fat-cursor .CodeMirror-cursor {
-    background-color: var(--background-secondary) !important; /* Secondary background for fat cursor */
-}
-.cm-s-simulabra .cm-animate-fat-cursor {
-    background-color: var(--background-secondary) !important;
-}
-.cm-s-simulabra div.CodeMirror-selected {
-    background: var(--secondary-2); /* Muted secondary for selection */
-}
-.cm-s-simulabra span.cm-meta {
-    color: var(--foreground-5); /* Muted tone for secondary-2 */
-}
-
-.cm-s-simulabra span.cm-comment {
-    color: var(--secondary); /* Secondary color for comments */
-}
-.cm-s-simulabra span.cm-number, span.cm-atom {
-    color: var(--foreground-6); /* Complementary tone for numbers and atoms */
-}
-.cm-s-simulabra span.cm-keyword {
-    color: var(--primary); /* Primary color for keywords */
-}
-
-.cm-s-simulabra span.cm-variable {
-    color: var(--foreground-4); /* Text on background for variables */
-}
-.cm-s-simulabra span.cm-variable-2 {
-    color: var(--foreground-4);
-}
-.cm-s-simulabra span.cm-variable-3, .cm-s-simulabra span.cm-type {
-    color: var(--secondary-2); /* Muted secondary for type annotations */
-}
-.cm-s-simulabra span.cm-operator {
-    color: var(--foreground-4); /* Text on background for operators */
-}
-.cm-s-simulabra span.cm-callee {
-    color: var(--foreground-6);
-}
-.cm-s-simulabra span.cm-def {
-    color: var(--foreground-2);
-}
-.cm-s-simulabra span.cm-property {
-    color: var(--foreground-4);
-}
-.cm-s-simulabra span.cm-string {
-    color: var(--foreground-5); /* Lighter secondary for strings */
-}
-.cm-s-simulabra span.cm-string-2 {
-    color: var(--foreground-3);
-}
-.cm-s-simulabra span.cm-qualifier {
-    color: var(--foreground-3);
-}
-.cm-s-simulabra span.cm-attribute {
-    color: var(--foreground-3);
-}
-
-.cm-s-simulabra .CodeMirror-activeline-background {
-    background: var(--secondary-2); /* Muted secondary for active line */
-}
-.cm-s-simulabra .CodeMirror-matchingbracket {
-    background: var(--foreground-4); /* Darker secondary for matching brackets */
-    color: var(--background) !important; /* Inverted color for contrast */
-}
-
-.cm-s-simulabra span.cm-builtin {
-    color: var(--secondary); /* Secondary color for built-ins */
-}
-.cm-s-simulabra span.cm-tag {
-    color: var(--secondary); /* Secondary color for tags */
 }
