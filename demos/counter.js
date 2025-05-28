@@ -57,7 +57,7 @@ export default await function (_, $) {
         name: 'css',
         do() {
           return `
-#clicky { color: red; }
+#clicky { color: var(--dusk); }
 `
         }
       })

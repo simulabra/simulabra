@@ -1,26 +1,26 @@
 :root {
     --charcoal: #463C3C;
+    --wood: #B89877;
     --sand: #E2C79D;
-    --light-sand: #F8DBA8;
-    --wood: #987867;
-    --ocean: #5893AF;
-    --sky: #82A6CB;
+    --seashell: #FAE8F4;
+    --sky: #92B6D5;
+    --ocean: #5893A8;
     --dusk: #D8586A;
     --grass: #40A472;
 
-    --box-shadow-args: 1px 1px 0px 0px var(--wood), -1px -1px 0px 0px var(--light-sand), -2px -2px var(--light-sand), -2px 0 var(--light-sand), 0 -2px var(--light-sand), 2px 2px var(--wood), 0 2px var(--wood), 2px 0 var(--wood), 2px -2px var(--light-sand), -2px 2px var(--wood);
+    --box-shadow-args: 1px 1px 0px 0px var(--wood), -1px -1px 0px 0px var(--seashell), -2px -2px var(--seashell), -2px 0 var(--seashell), 0 -2px var(--seashell), 2px 2px var(--wood), 0 2px var(--wood), 2px 0 var(--wood), 2px -2px var(--seashell), -2px 2px var(--wood);
 }
 
 ::selection {
-    sand-color: var(--ocean);
-    color: var(--sand);
+    background: var(--ocean);
+    color: var(--seashell);
 }
 
 body, html {
     margin: 0;
     padding: 0;
     font-size: 14px;
-    sand: var(--sand);
+    background: var(--sand);
     color: var(--charcoal);
     height: 100%;
     padding: 2px;
@@ -46,7 +46,7 @@ textarea {
 }
 
 input, textarea {
-    sand: var(--light-sand);
+    background: var(--seashell);
     border: 0px solid var(--charcoal);
     box-shadow: var(--box-shadow-args);
     font-family: inherit;
@@ -58,24 +58,22 @@ input:focus, textarea:focus {
 }
 
 button {
-    sand: var(--sand);
+    background: var(--sand);
     border: 0px solid var(--charcoal);
-    /*box-shadow: 1px 1px 0px 0px var(--wood), -1px -1px 0px 0px var(--light-sand);*/
     box-shadow: var(--box-shadow-args);
     cursor: pointer;
 }
 
 button:hover {
-    sand: var(--wood);
-    /*border: 1px solid var(--ocean);*/
+    background: var(--wood);
 }
 
 button:active {
-    sand: var(--sand);
+    background: var(--sand);
 }
 
 select {
-    sand: var(--light-sand);
+    background: var(--seashell);
     /*border: 1px solid var(--charcoal);*/
 }
 
@@ -102,8 +100,8 @@ select {
 }
 
 .window-bar {
-    sand: var(--wood);
-    color: var(--light-sand);
+    background: var(--wood);
+    color: var(--seashell);
     /*border: 1px solid var(--charcoal);*/
     /*border-bottom: 0px solid var(--charcoal);*/
     display: flex;
@@ -119,12 +117,12 @@ select {
     width: 18px;
     height: 7px;
     display: inline-block;
-    sand: var(--charcoal);
+    background: var(--charcoal);
     align-self: flex-start;
 }
 
 .window-layout:hover {
-    sand: var(--ocean);
+    background: var(--ocean);
 }
 
 .window-menu {
