@@ -8,7 +8,7 @@
     --dusk: #D8586A;
     --grass: #40A472;
 
-    --box-shadow-args: 1px 1px 0px 0px var(--wood), -1px -1px 0px 0px var(--seashell), -2px -2px var(--seashell), -2px 0 var(--seashell), 0 -2px var(--seashell), 2px 2px var(--wood), 0 2px var(--wood), 2px 0 var(--wood), 2px -2px var(--seashell), -2px 2px var(--wood);
+    --box-shadow-args: 1px 1px 0px 0px var(--charcoal), -1px -1px 0px 0px var(--wood), -2px -2px var(--wood), -2px 0 var(--wood), 0 -2px var(--wood), 2px 2px var(--charcoal), 0 2px var(--charcoal), 2px 0 var(--charcoal), 2px -2px var(--wood), -2px 2px var(--charcoal);
 }
 
 ::selection {
@@ -62,6 +62,7 @@ button {
     border: 0px solid var(--charcoal);
     box-shadow: var(--box-shadow-args);
     cursor: pointer;
+    font-family: inherit;
 }
 
 button:hover {

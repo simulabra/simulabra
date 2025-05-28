@@ -138,13 +138,42 @@ export default await function (_, $) {
             if (__.instanceOf(child, $.VNode) || __.instanceOf(child, $.ComponentInstance)) {
               return child.el();
             } else if (typeof child === 'function') { // Reactive text node
-              let node = document.createElement('span');
+              // Use comment nodes as anchors for reactive content
+              const startAnchor = document.createComment('reactive-start');
+              const endAnchor = document.createComment('reactive-end');
+              const fragment = document.createDocumentFragment();
+              fragment.appendChild(startAnchor);
+              fragment.appendChild(endAnchor);
+
+              let currentNodes = [];
+
               $.Effect.create(() => {
-                const newNode = domify(child());
-                node.replaceChildren();
-                node.appendChild(newNode);
+                const newContent = child();
+                const newNodes = [];
+
+                // Convert new content to nodes
+                const tempFragment = document.createDocumentFragment();
+                const domified = domify(newContent);
+                if (domified.nodeType === 11) {
+                  // Collect all nodes from fragment
+                  while (domified.firstChild) {
+                    newNodes.push(domified.firstChild);
+                    tempFragment.appendChild(domified.firstChild);
+                  }
+                } else {
+                  newNodes.push(domified);
+                  tempFragment.appendChild(domified);
+                }
+
+                // Remove old nodes
+                currentNodes.forEach(node => node.remove());
+
+                // Insert new nodes before end anchor
+                endAnchor.parentNode?.insertBefore(tempFragment, endAnchor);
+                currentNodes = newNodes;
               });
-              return node;
+
+              return fragment;
             } else if (Array.isArray(child)) {
               let node = document.createDocumentFragment();
               for (const it of child) {

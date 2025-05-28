@@ -29,11 +29,36 @@ import test           from '../src/test.js';
         newNode.parentNode = parent;
       }
     }
+    remove() {
+      const parent = this.parentNode;
+      if (!parent) return;
+      const idx = parent.children.indexOf(this);
+      if (idx > -1) {
+        parent.children.splice(idx, 1);
+        this.parentNode = null;
+      }
+    }
+    insertBefore(newNode, referenceNode) {
+      this.children = this.children || [];
+      if (!referenceNode) {
+        this.appendChild(newNode);
+        return newNode;
+      }
+      const idx = this.children.indexOf(referenceNode);
+      if (idx > -1) {
+        this.children.splice(idx, 0, newNode);
+        newNode.parentNode = this;
+      }
+      return newNode;
+    }
     isEqualNode(other) {
       return this === other;
     }
     description() {
       return this.toString();
+    }
+    get firstChild() {
+      return this.children && this.children[0];
     }
   }
 
@@ -61,8 +86,9 @@ import test           from '../src/test.js';
     }
   }
 
-  class TextNode {
+  class TextNode extends Node {
     constructor(text) {
+      super();
       this.nodeValue = String(text);
       this.nodeType  = 3;
     }
@@ -71,10 +97,30 @@ import test           from '../src/test.js';
     }
   }
 
+  class CommentNode extends Node {
+    constructor(text) {
+      super();
+      this.nodeValue = String(text);
+      this.nodeType  = 8;
+    }
+    get textContent() {
+      return ''; // Comments don't contribute to textContent
+    }
+  }
+
   class Fragment extends Node {
     constructor() {
       super();
       this.nodeType = 11;
+    }
+    appendChild(child) {
+      // When appending a fragment to a parent, move all its children
+      if (this.parentNode && child instanceof Fragment) {
+        const children = [...(child.children || [])];
+        children.forEach(c => this.appendChild(c));
+        return child;
+      }
+      return super.appendChild(child);
     }
     dispatchEvent(evt) {
       const list = this.children || [];
@@ -89,10 +135,10 @@ import test           from '../src/test.js';
   globalThis.document = {
     createElement: tag => new Element(tag),
     createTextNode: txt => new TextNode(txt),
-    createDocumentFragment: () => new Fragment()
+    createDocumentFragment: () => new Fragment(),
+    createComment: txt => new CommentNode(txt)
   };
 })();
- /* ------------------------------------------------------------------------ */
 
 const htmlModule = (await import('../src/html.js')).default;
 

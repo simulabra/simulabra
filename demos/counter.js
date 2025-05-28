@@ -12,7 +12,7 @@ export default await function (_, $) {
         do() { 
           return $.HTML.t`
             <button id="clicky" onclick=${() => this.inc()}>
-              clicked ${() => this.count()} times
+              clicked <span id="clicky-number">${() => this.count()}</span> times
             </button>
           `; 
         }
@@ -57,7 +57,7 @@ export default await function (_, $) {
         name: 'css',
         do() {
           return `
-#clicky { color: var(--dusk); }
+#clicky-number { color: var(--dusk); }
 `
         }
       })
