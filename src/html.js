@@ -1,9 +1,8 @@
 import { __, base } from './base.js';
 
-const TEMPLATE_CACHE = new Map(); // Cache for compiled template factories
+const TEMPLATE_CACHE = new Map();
 
 export default await function (_, $) {
-
   $.Class.new({
     name: 'AstNodeCompilerBase',
     slots: [
@@ -22,11 +21,9 @@ export default await function (_, $) {
           node.attrs.forEach(attr => {
             props[attr.name] = attr.kind === 'expr' ? env[attr.idx] : attr.value;
           });
-
           const kids = node.children.map(childNode => {
             return compileRecursiveFn(childNode, env);
           });
-
           return $.VNode.h(node.tag, props, ...kids);
         },
       }),
@@ -40,21 +37,15 @@ export default await function (_, $) {
       $.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn) {
-          const ComponentClass = __.$()[node.tag.slice(1)]; // Remove '$' prefix
+          const ComponentClass = $[node.tag.slice(1)];
           if (!ComponentClass) {
             throw new Error(`Component ${node.tag} not found.`);
           }
-
           const props = {};
           node.attrs.forEach(attr => {
             props[attr.name] = attr.kind === 'expr' ? env[attr.idx] : attr.value;
           });
-          // Children for components are not directly passed during VNode creation here.
-          // Components are responsible for handling their children, often via props or slots.
-          // If children were to be compiled and passed, it'd be via props:
-          // props.children = node.children.map(childNode => compileRecursiveFn(childNode, env));
-          // For now, matching existing behavior: children are not automatically compiled and passed.
-
+          props.children = node.children.map(childNode => compileRecursiveFn(childNode, env));
           return $.ComponentInstance.new({ comp: ComponentClass.new(props) });
         },
       }),
@@ -119,7 +110,7 @@ export default await function (_, $) {
 
       $.Static.new({
         name: 'h',
-        doc: 'Hyperscript-like helper',
+        doc: 'html element template function',
         do(tag, props = {}, ...children) {
           const el = document.createElement(tag);
 
@@ -127,9 +118,6 @@ export default await function (_, $) {
             if (key.startsWith('on') && typeof value === 'function') {
               el.addEventListener(key.substring(2).toLowerCase(), value);
             } else if (value != null && value !== false) {
-              // Set other attributes, skip null/undefined/false
-              // For boolean attributes like 'disabled', presence matters.
-              // If value is true, set attribute name. If false, it's skipped.
               el.setAttribute(key, value === true ? '' : value);
             }
           });
@@ -137,25 +125,19 @@ export default await function (_, $) {
           function domify(child) {
             if (__.instanceOf(child, $.VNode) || __.instanceOf(child, $.ComponentInstance)) {
               return child.el();
-            } else if (typeof child === 'function') { // Reactive text node
-              // Use comment nodes as anchors for reactive content
-              const startAnchor = document.createComment('reactive-start');
-              const endAnchor = document.createComment('reactive-end');
+            } else if (typeof child === 'function') {
+              const startAnchor = document.createComment('$(');
+              const endAnchor = document.createComment(')$');
               const fragment = document.createDocumentFragment();
               fragment.appendChild(startAnchor);
               fragment.appendChild(endAnchor);
-
               let currentNodes = [];
-
               $.Effect.create(() => {
                 const newContent = child();
                 const newNodes = [];
-
-                // Convert new content to nodes
                 const tempFragment = document.createDocumentFragment();
                 const domified = domify(newContent);
                 if (domified.nodeType === 11) {
-                  // Collect all nodes from fragment
                   while (domified.firstChild) {
                     newNodes.push(domified.firstChild);
                     tempFragment.appendChild(domified.firstChild);
@@ -164,15 +146,10 @@ export default await function (_, $) {
                   newNodes.push(domified);
                   tempFragment.appendChild(domified);
                 }
-
-                // Remove old nodes
                 currentNodes.forEach(node => node.remove());
-
-                // Insert new nodes before end anchor
                 endAnchor.parentNode?.insertBefore(tempFragment, endAnchor);
                 currentNodes = newNodes;
               });
-
               return fragment;
             } else if (Array.isArray(child)) {
               let node = document.createDocumentFragment();
@@ -184,9 +161,7 @@ export default await function (_, $) {
               return document.createTextNode(String(child));
             }
           }
-
           el.appendChild(domify(children));
-
           return $.VNode.new({ el: el });
         },
       }),
@@ -211,7 +186,7 @@ export default await function (_, $) {
         name: 't',
         doc: 'Tagged template literal entry point for creating HTML structures.',
         do(strings, ...expressions) {
-          const templateKey = strings.join('${expr}'); // Create a unique key for the template structure
+          const templateKey = strings.join('${expr}');
           let factory = TEMPLATE_CACHE.get(templateKey);
 
           if (!factory) {
@@ -231,23 +206,19 @@ export default await function (_, $) {
           for (let i = 0; i < strings.length; i++) {
             source += strings[i];
             if (i < strings.length - 1) {
-              source += `{{${i}}}`; // Placeholder for expressions
+              source += `{{${i}}}`;
             }
           }
-
           const TOKEN_REGEX = /<\/?>|<[^>]+>|<>|<\/>|<\/[^>]+>|{{\d+}}|[^<]+/g;
           const OPEN_TAG_REGEX = /^<([\w$][\w$-]*)([^>]*)>/;
           const CLOSE_TAG_REGEX = /^<\/([\w$][\w$-]*)>/;
           const SELF_CLOSING_REGEX = /\/>$/;
           const EXPR_PLACEHOLDER_REGEX = /{{(\d+)}}/g;
-
           const rootNode = { kind: 'root', children: [] };
           const stack = [rootNode];
-
           let match;
           while ((match = TOKEN_REGEX.exec(source)) !== null) {
             const token = match[0];
-
             if (token === '<>') {
               pushNode({ kind: 'fragment', children: [] }, true);
               continue;
@@ -256,18 +227,15 @@ export default await function (_, $) {
               stack.pop();
               continue;
             }
-
-            if (/^{{\d+}}$/.test(token)) { // Top-level expression like `${foo}`
+            if (/^{{\d+}}$/.test(token)) {
               pushNode({ kind: 'expr', idx: Number(token.slice(2, -2)) });
               continue;
             }
-
             const closeTagMatch = token.match(CLOSE_TAG_REGEX);
             if (closeTagMatch) {
               stack.pop();
               continue;
             }
-
             const openTagMatch = token.match(OPEN_TAG_REGEX);
             if (openTagMatch) {
               const [, tagName, rawAttrs] = openTagMatch;
@@ -281,8 +249,6 @@ export default await function (_, $) {
               pushNode(node, !SELF_CLOSING_REGEX.test(token));
               continue;
             }
-
-            // Text content, possibly with inline expressions
             let lastIndex = 0;
             let exprMatch;
             while ((exprMatch = EXPR_PLACEHOLDER_REGEX.exec(token)) !== null) {
@@ -296,8 +262,6 @@ export default await function (_, $) {
               pushNode({ kind: 'text', value: token.slice(lastIndex) });
             }
           }
-
-          // If root has only one child, return it directly, otherwise wrap in a fragment
           if (rootNode.children.length === 1) {
             return rootNode.children[0];
           } else {
@@ -415,18 +379,15 @@ export default await function (_, $) {
     name: 'ComponentInstance',
     doc: 'Wraps a Simulabra component instance, managing its rendering and reactivity.',
     slots: [
-      $.Var.new({ name: 'comp' }),   // The actual Simulabra component instance
-      $.Var.new({ name: 'vnode' }),  // The VNode rendered by this component
-      $.Var.new({ name: 'effect' }), // The reactive effect for re-rendering
+      $.Var.new({ name: 'comp' }),
+      $.Var.new({ name: 'vnode' }),
+      $.Var.new({ name: 'effect' }),
 
       $.After.new({
         name: 'init',
         do() {
-          // Initial render
           const initialVNode = this.comp().render();
           this.vnode(initialVNode);
-
-          // Set up reactive re-rendering
           this.effect($.Effect.create(() => {
             const newVNode = this.comp().render();
             if (this.vnode() && this.vnode().el() && newVNode && newVNode.el()) {
@@ -463,10 +424,6 @@ export default await function (_, $) {
             this.effect().dispose();
             this.effect(null);
           }
-          // Optionally, remove element from DOM if managed here,
-          // but typically parent handles removal.
-          this.vnode(null);
-          this.comp(null);
         },
       }),
     ],
