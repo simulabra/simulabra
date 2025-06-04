@@ -115,9 +115,13 @@ export default await function (_, $) {
           const el = document.createElement(tag);
 
           Object.entries(props).forEach(([key, value]) => {
-            if (key.startsWith('on') && typeof value === 'function') {
-              el.addEventListener(key.substring(2).toLowerCase(), value);
-            } else if (value != null && value !== false) {
+            if (typeof value === 'function') {
+              if (key.startsWith('on')) {
+                el.addEventListener(key.substring(2).toLowerCase(), value);
+              } else {
+                el.setAttribute(key, value());
+              }
+            } else if (/^[a-zA-Z][a-zA-Z0-9\-\._]*$/.test(key) && value != null && value !== false) {
               el.setAttribute(key, value === true ? '' : value);
             }
           });
@@ -157,6 +161,8 @@ export default await function (_, $) {
                 node.appendChild(domify(it));
               }
               return node;
+            } else if (__.instanceOf(child, $.Component)) {
+              return domify(child.render());
             } else {
               return document.createTextNode(String(child));
             }
