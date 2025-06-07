@@ -14,8 +14,8 @@ export default await function (_, $) {
         do: async function completion(prompt, config) {
           const options = {
             prompt,
-            temperature: config.t(),
-            max_tokens: config.l(),
+            temperature: config.temp(),
+            max_tokens: config.toklen(),
           };
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
             method: 'POST',
@@ -35,17 +35,17 @@ export default await function (_, $) {
     slots: [
       $.Component,
       $.Signal.new({
-        name: 'n',
+        name: 'numthreads',
         doc: 'number of threads',
         default: 4,
       }),
       $.Signal.new({
-        name: 'l',
+        name: 'toklen',
         doc: 'length of thread in tokens',
         default: 8,
       }),
       $.Signal.new({
-        name: 't',
+        name: 'temp',
         doc: 'generation temperature',
         default: 1.0,
       }),
@@ -59,9 +59,9 @@ export default await function (_, $) {
         name: 'render',
         do() {
           return [
-            this.configline('n'),
-            this.configline('l'),
-            this.configline('t', 0.1),
+            this.configline('numthreads'),
+            this.configline('toklen'),
+            this.configline('temp', 0.1),
           ];
         }
       }),
@@ -73,6 +73,12 @@ export default await function (_, $) {
       $.Component,
       $.Var.new({ name: 'text' }),
       $.Var.new({ name: 'loom' }),
+      $.Method.new({
+        name: 'weave',
+        do() {
+          const cmd = this.loom().weave(this);
+        }
+      }),
       $.Method.new({
         name: 'render',
         do() {
@@ -99,6 +105,7 @@ export default await function (_, $) {
           this.client($.V1Client.new());
           this.text('there once was a brilliant loomer');
           this.choices([]);
+          this.history([]);
         }
       }),
       $.Method.new({
@@ -119,7 +126,7 @@ export default await function (_, $) {
         async: true,
         run: async function() {
           this.choices([]);
-          for (let i = 0; i < this.config().n(); i++) {
+          for (let i = 0; i < this.config().numthreads(); i++) {
             this.choices([...this.choices(), await this.spin()]);
           }
         },
@@ -128,8 +135,15 @@ export default await function (_, $) {
         name: 'weave',
         run: function(c, t) {
           this.text(this.text() + t.text());
-          this.log('woven', this.text());
+          this.log('woven', t.text());
           this.seek();
+        }
+      }),
+      $.Method.new({
+        name: 'runcommand',
+        do(cmd) {
+          cmd.run(this);
+          this.history([...this.history(), cmd]);
         }
       }),
       $.Method.new({
