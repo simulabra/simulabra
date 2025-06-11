@@ -166,6 +166,17 @@ select {
 .logprob {
     font-size: 0.6em;
     font-style: italic;
+    margin-top: 0px;
+}
+
+.logprob-token {
+    font-size: 0.8em;
+}
+
+.logprobs {
+  border: 2px solid var(--charcoal);
+  padding: 1em;
+  max-width: 40em;
 }
 
 .loom-text {
@@ -175,6 +186,16 @@ select {
   max-width: 40em;
   height: 20vh;
   overflow-y: scroll;
+  white-space: pre-wrap;
+}
+
+.loom-textarea {
+  /* border: 2px solid var(--charcoal); */
+  background: var(--light-sand);
+  padding: 1em;
+  max-width: 40em;
+  height: 20vh;
+  display: block;
 }
 
 .spinner {
@@ -184,9 +205,15 @@ select {
   border-top: 2px solid var(--sky);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.seek {
+  color: var(--dusk);
 }

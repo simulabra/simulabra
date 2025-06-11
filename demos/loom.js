@@ -16,7 +16,7 @@ export default await function (_, $) {
             prompt,
             temperature: config.temp(),
             max_tokens: config.toklen(),
-            logprobs: 100,
+            logprobs: 50,
           };
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
             method: 'POST',
@@ -109,7 +109,7 @@ export default await function (_, $) {
           // const opacity = Math.tanh(this.logprob()) + 0.5;
           return $.HTML.t`
           <button class="thread" onclick=${() => this.loom().weave(this).run()}>
-            "${this.text().replaceAll('\\', '\\\\')}" <span class="logprob">${this.logprob().toPrecision(2)}</span>
+            <div class="logprob-token">"${this.text().replaceAll('\\', '\\\\')}"</div><span class="logprob">${this.logprob().toPrecision(2)}</span>
           </button>
           `;
         }
@@ -125,6 +125,7 @@ export default await function (_, $) {
       $.Signal.new({ name: 'choices' }),
       $.Signal.new({ name: 'logprobs' }),
       $.Signal.new({ name: 'loading', default: false }),
+      $.Signal.new({ name: 'editing', default: false }),
       $.Var.new({ name: 'client' }),
       $.Var.new({ name: 'config' }),
       $.After.new({
@@ -132,7 +133,7 @@ export default await function (_, $) {
         do() {
           this.config($.LoomConfig.new());
           this.client($.V1Client.new());
-          this.text('there once was a brilliant loomer');
+          this.text('A text loom is');
           this.choices([]);
           this.logprobs([]);
           this.history([]);
@@ -173,6 +174,7 @@ export default await function (_, $) {
         doc: 'make new threads to search',
         async: true,
         run: async function() {
+          if (this.editing()) this.toggleEditing();
           this.choices([]);
           this.logprobs([]);
           this.loading(true);
@@ -186,8 +188,8 @@ export default await function (_, $) {
       $.Command.new({
         name: 'weave',
         run: function(c, t) {
+          if (this.editing()) this.toggleEditing();
           this.text(this.text() + t.text());
-          this.log('woven', t.text());
           this.seek();
         }
       }),
@@ -199,6 +201,26 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
+        name: 'loomText',
+        do() {
+          if (this.editing()) {
+            return $.HTML.t`<textarea class="loom-textarea">${() => this.text()}</textarea>`
+          } else {
+            return $.HTML.t`<div class="loom-text">${() => this.text()}</div>`;
+          }
+
+        }
+      }),
+      $.Method.new({
+        name: 'toggleEditing',
+        do() {
+          if (this.editing()) {
+            this.text(document.querySelector('.loom-textarea').value);
+          }
+          this.editing(!this.editing());
+        }
+      }),
+      $.Method.new({
         name: 'render',
         do() {
           return $.HTML.t`
@@ -206,17 +228,17 @@ export default await function (_, $) {
               <div>
                 ${() => this.config()}
               </div>
-              <div class="loom-text">
-                ${() => this.text()}
-              </div>
+              <button onclick=${() => this.toggleEditing()}>${() => this.editing() ? 'stop' : 'start'} editing</button>
+              <button class="seek" onclick=${() => this.seek()}>seek</button>
+              ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
+              ${() => this.loomText()}
               <div>
                 ${() => this.choices()}
               </div>
-              ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
-              <div>
+              <div class="logprobs">
+<div>logprobs (top 50)</div>
                 ${() => this.logprobs()}
               </div>
-              <button onclick=${() => this.seek()}>seek</button>
             </div>
           `;
         }
