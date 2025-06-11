@@ -2,6 +2,7 @@
     --charcoal: #463C3C;
     --wood: #B89877;
     --sand: #E2C79D;
+    --light-sand: #EEDAB8;
     --seashell: #FAE8F4;
     --sky: #92B6D5;
     --ocean: #5893A8;
@@ -46,7 +47,7 @@ textarea {
 }
 
 input, textarea {
-    background: var(--seashell);
+    background: var(--light-sand);
     border: 0px solid var(--charcoal);
     box-shadow: var(--box-shadow-args);
     font-family: inherit;
@@ -160,4 +161,32 @@ select {
 
 .config-number {
     width: 4em;
+}
+
+.logprob {
+    font-size: 0.6em;
+    font-style: italic;
+}
+
+.loom-text {
+  border: 2px solid var(--charcoal);
+  background: var(--light-sand);
+  padding: 1em;
+  max-width: 40em;
+  height: 20vh;
+  overflow-y: scroll;
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--wood);
+  border-top: 2px solid var(--sky);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

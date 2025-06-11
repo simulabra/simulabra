@@ -16,6 +16,7 @@ export default await function (_, $) {
             prompt,
             temperature: config.temp(),
             max_tokens: config.toklen(),
+            logprobs: 100,
           };
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
             method: 'POST',
@@ -90,12 +91,40 @@ export default await function (_, $) {
     ]
   });
   $.Class.new({
+    name: 'Logprob',
+    slots: [
+      $.Component,
+      $.Var.new({ name: 'text' }),
+      $.Var.new({ name: 'logprob' }),
+      $.Var.new({ name: 'loom' }),
+      $.Method.new({
+        name: 'weave',
+        do() {
+          const cmd = this.loom().weave(this);
+        }
+      }),
+      $.Method.new({
+        name: 'render',
+        do() {
+          // const opacity = Math.tanh(this.logprob()) + 0.5;
+          return $.HTML.t`
+          <button class="thread" onclick=${() => this.loom().weave(this).run()}>
+            "${this.text().replaceAll('\\', '\\\\')}" <span class="logprob">${this.logprob().toPrecision(2)}</span>
+          </button>
+          `;
+        }
+      }),
+    ]
+  });
+  $.Class.new({
     name: 'Loom',
     slots: [
       $.Component,
       $.Signal.new({ name: 'text' }),
       $.Signal.new({ name: 'history' }),
       $.Signal.new({ name: 'choices' }),
+      $.Signal.new({ name: 'logprobs' }),
+      $.Signal.new({ name: 'loading', default: false }),
       $.Var.new({ name: 'client' }),
       $.Var.new({ name: 'config' }),
       $.After.new({
@@ -105,6 +134,7 @@ export default await function (_, $) {
           this.client($.V1Client.new());
           this.text('there once was a brilliant loomer');
           this.choices([]);
+          this.logprobs([]);
           this.history([]);
         }
       }),
@@ -114,6 +144,24 @@ export default await function (_, $) {
         async: true,
         do: async function() {
           const res = await this.client().completion(this.text(), this.config());
+          if (this.logprobs().length === 0) {
+            const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
+            let lptot = 0;
+            for (const lp of logprobs) {
+              lp.logprob = Math.exp(lp.logprob);
+              lptot += lp.logprob;
+            }
+            for (const lp of logprobs) {
+              lp.logprob = lp.logprob / lptot;
+            }
+            this.logprobs(logprobs.map(l => $.Logprob.new({
+              text: l.token,
+              logprob: l.logprob,
+              loom: this,
+            })));
+
+            this.logprobs().sort((a, b) => b.logprob() - a.logprob());
+          }
           return $.Thread.new({
             text: res.choices[0].text,
             loom: this,
@@ -126,9 +174,13 @@ export default await function (_, $) {
         async: true,
         run: async function() {
           this.choices([]);
+          this.logprobs([]);
+          this.loading(true);
           for (let i = 0; i < this.config().numthreads(); i++) {
-            this.choices([...this.choices(), await this.spin()]);
+            const thread = await this.spin();
+            this.choices([...this.choices(), thread]);
           }
+          this.loading(false);
         },
       }),
       $.Command.new({
@@ -154,11 +206,15 @@ export default await function (_, $) {
               <div>
                 ${() => this.config()}
               </div>
-              <div>
+              <div class="loom-text">
                 ${() => this.text()}
               </div>
               <div>
                 ${() => this.choices()}
+              </div>
+              ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
+              <div>
+                ${() => this.logprobs()}
               </div>
               <button onclick=${() => this.seek()}>seek</button>
             </div>
