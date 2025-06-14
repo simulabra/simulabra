@@ -174,7 +174,7 @@ export default await function (_, $) {
         doc: 'make new threads to search',
         async: true,
         run: async function() {
-          if (this.editing()) this.toggleEditing();
+          this.text(document.querySelector('.loom-textarea').value);
           this.choices([]);
           this.logprobs([]);
           this.loading(true);
@@ -188,8 +188,9 @@ export default await function (_, $) {
       $.Command.new({
         name: 'weave',
         run: function(c, t) {
-          if (this.editing()) this.toggleEditing();
+          document.querySelector('.loom-textarea').blur();
           this.text(this.text() + t.text());
+          document.querySelector('.loom-textarea').value = this.text();
           this.seek();
         }
       }),
@@ -203,12 +204,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'loomText',
         do() {
-          if (this.editing()) {
-            return $.HTML.t`<textarea class="loom-textarea">${() => this.text()}</textarea>`
-          } else {
-            return $.HTML.t`<div class="loom-text">${() => this.text()}</div>`;
-          }
-
+          return $.HTML.t`<textarea class="loom-textarea">${() => this.text()}</textarea>`
         }
       }),
       $.Method.new({
