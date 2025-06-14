@@ -8,6 +8,7 @@
     --ocean: #5893A8;
     --dusk: #D8586A;
     --grass: #40A472;
+    --seaweed: #487455;
 
     --box-shadow-args: 1px 1px 0px 0px var(--charcoal), -1px -1px 0px 0px var(--wood), -2px -2px var(--wood), -2px 0 var(--wood), 0 -2px var(--wood), 2px 2px var(--charcoal), 0 2px var(--charcoal), 2px 0 var(--charcoal), 2px -2px var(--wood), -2px 2px var(--charcoal);
 }
@@ -167,15 +168,26 @@ select {
     font-size: 0.6em;
     font-style: italic;
     margin-top: 0px;
+    margin-left: 0px;
 }
 
 .logprob-token {
-    font-size: 0.8em;
+    margin-right: 0px;
+}
+
+.thread {
+  color: var(--seaweed);
+  padding: 0.1em;
+}
+
+.thread:hover {
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .logprobs {
-  border: 2px solid var(--charcoal);
-  padding: 1em;
+  box-shadow: var(--box-shadow-args);
+  padding: 0.5em;
   max-width: 40em;
 }
 

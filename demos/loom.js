@@ -84,7 +84,7 @@ export default await function (_, $) {
         name: 'render',
         do() {
           return $.HTML.t`
-          <div><button class="thread" onclick=${() => this.loom().weave(this).run()}>${this.text()}</button></div>
+          <div class="thread" onclick=${() => this.loom().weave(this).run()}>${this.text()}</div>
           `;
         }
       }),
@@ -107,10 +107,12 @@ export default await function (_, $) {
         name: 'render',
         do() {
           // const opacity = Math.tanh(this.logprob()) + 0.5;
+          let p = this.logprob().toPrecision(2);
+          if (p.length > 5) p = '<0.01';
           return $.HTML.t`
-          <button class="thread" onclick=${() => this.loom().weave(this).run()}>
-            <div class="logprob-token">"${this.text().replaceAll('\\', '\\\\')}"</div><span class="logprob">${this.logprob().toPrecision(2)}</span>
-          </button>
+          <span class="thread" onclick=${() => this.loom().weave(this).run()}>
+            <span class="logprob-token">"${this.text().replaceAll('\\', '\\\\')}"</span><span class="logprob">${p}</span>
+          </span>
           `;
         }
       }),
