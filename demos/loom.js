@@ -7,21 +7,42 @@ export default await function (_, $) {
     doc: 'wrapper for openai v1 api compatible apis',
     slots: [
       $.Var.new({ name: 'baseURL', default: 'http://localhost:3731' }),
-      $.Var.new({ name: 'model', default: 'none' }),
+      $.Var.new({ name: 'key', default: 'skfake' }),
+      $.Var.new({ name: 'localStorageKey', default: 'LOOM_API_KEY' }),
+      $.Var.new({ name: 'model', default: 'meta-llama/llama-3.1-405b' }),
+      $.After.new({
+        name: 'init',
+        do() {
+          this.key(localStorage.getItem(this.localStorageKey()) || '');
+        }
+      }),
+      $.Method.new({
+        name: 'changekey',
+        do(key) {
+          this.key(key);
+          localStorage.setItem(this.localStorageKey(), this.key());
+        }
+      }),
       $.Method.new({
         name: 'completion',
         async: true,
         do: async function completion(prompt, config) {
           const options = {
+            model: this.model(),
             prompt,
+            input: prompt,
             temperature: config.temp(),
             max_tokens: config.toklen(),
-            logprobs: 50,
+            top_logprobs: 50,
+            provider: {
+              only: ['hyperbolic/bf16'],
+            },
           };
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.key()}`,
             },
             body: JSON.stringify(options),
           });
@@ -35,6 +56,7 @@ export default await function (_, $) {
     name: 'LoomConfig',
     slots: [
       $.Component,
+      $.Var.new({ name: 'loom' }),
       $.Signal.new({
         name: 'numthreads',
         doc: 'number of threads',
@@ -56,10 +78,26 @@ export default await function (_, $) {
           return $.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min="0" value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
         }
       }),
+      $.Signal.new({
+        name: 'keymode',
+        doc: 'show api key input',
+        default: false,
+      }),
+      $.Method.new({
+        name: 'togglekeymode',
+        do() {
+          if (this.keymode()) {
+            this.loom().client().changekey(document.querySelector("#api-key-input").value);
+          }
+          this.keymode(!this.keymode());
+        }
+      }),
       $.Method.new({
         name: 'render',
         do() {
           return [
+            $.HTML.t`<button onclick=${() => this.togglekeymode()}>enter key</button>`,
+            this.keymode() ? $.HTML.t`<input id="api-key-input" type="text" placeholder="api key" value=${() => this.loom().client().key()} />` : '',
             this.configline('numthreads'),
             this.configline('toklen'),
             this.configline('temp', 0.1),
@@ -133,9 +171,11 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          this.config($.LoomConfig.new());
-          this.client($.V1Client.new());
-          this.text('A text loom is');
+          this.config($.LoomConfig.new({ loom: this }));
+          this.client($.V1Client.new({
+            baseURL: 'https://openrouter.ai/api',
+          }));
+          this.text('one hundred thousand miles per hour');
           this.choices([]);
           this.logprobs([]);
           this.history([]);
@@ -147,7 +187,7 @@ export default await function (_, $) {
         async: true,
         do: async function() {
           const res = await this.client().completion(this.text(), this.config());
-          if (this.logprobs().length === 0) {
+          if (res.choices[0].logprobs) {
             const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
             let lptot = 0;
             for (const lp of logprobs) {

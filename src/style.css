@@ -178,6 +178,7 @@ select {
 .thread {
   color: var(--seaweed);
   padding: 0.1em;
+  width: fit-content;
 }
 
 .thread:hover {
