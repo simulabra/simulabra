@@ -33,7 +33,8 @@ export default await function (_, $) {
             input: prompt,
             temperature: config.temp(),
             max_tokens: config.toklen(),
-            top_logprobs: 50,
+            // logprobs: true,
+            // top_logprobs: 50,
             provider: {
               only: ['hyperbolic/bf16'],
             },
@@ -168,6 +169,7 @@ export default await function (_, $) {
       $.Signal.new({ name: 'editing', default: false }),
       $.Var.new({ name: 'client' }),
       $.Var.new({ name: 'config' }),
+      $.Var.new({ name: 'localStorageKey', default: 'LOOM_TEXT' }),
       $.After.new({
         name: 'init',
         do() {
@@ -175,7 +177,7 @@ export default await function (_, $) {
           this.client($.V1Client.new({
             baseURL: 'https://openrouter.ai/api',
           }));
-          this.text('one hundred thousand miles per hour');
+          this.text(localStorage.getItem(this.localStorageKey()) || 'one hundred thousand miles per hour');
           this.choices([]);
           this.logprobs([]);
           this.history([]);
@@ -216,6 +218,7 @@ export default await function (_, $) {
         doc: 'make new threads to search',
         async: true,
         run: async function() {
+          localStorage.setItem(this.localStorageKey(), this.text());
           this.text(document.querySelector('.loom-textarea').value);
           this.choices([]);
           this.logprobs([]);
@@ -232,6 +235,7 @@ export default await function (_, $) {
         run: function(c, t) {
           document.querySelector('.loom-textarea').blur();
           this.text(this.text() + t.text());
+          localStorage.setItem(this.localStorageKey(), this.text());
           document.querySelector('.loom-textarea').value = this.text();
           this.seek();
         }
@@ -253,6 +257,7 @@ export default await function (_, $) {
         name: 'toggleEditing',
         do() {
           if (this.editing()) {
+            localStorage.setItem(this.localStorageKey(), this.text());
             this.text(document.querySelector('.loom-textarea').value);
           }
           this.editing(!this.editing());
