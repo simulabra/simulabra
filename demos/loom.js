@@ -9,7 +9,6 @@ export default await function (_, $) {
       $.Var.new({ name: 'baseURL', default: 'http://localhost:3731' }),
       $.Var.new({ name: 'key', default: 'skfake' }),
       $.Var.new({ name: 'localStorageKey', default: 'LOOM_API_KEY' }),
-      $.Var.new({ name: 'model', default: 'meta-llama/llama-3.1-405b' }),
       $.After.new({
         name: 'init',
         do() {
@@ -28,9 +27,8 @@ export default await function (_, $) {
         async: true,
         do: async function completion(prompt, config) {
           const options = {
-            model: this.model(),
+            model: 'meta-llama/llama-3.1-405b',
             prompt,
-            input: prompt,
             temperature: config.temp(),
             max_tokens: config.toklen(),
             // logprobs: true,
