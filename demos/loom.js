@@ -221,10 +221,11 @@ export default await function (_, $) {
           this.choices([]);
           this.logprobs([]);
           this.loading(true);
+          let threads = [];
           for (let i = 0; i < this.config().numthreads(); i++) {
-            const thread = await this.spin();
-            this.choices([...this.choices(), thread]);
+            threads.push(this.spin());
           }
+          this.choices(await Promise.all(threads));
           this.loading(false);
         },
       }),
