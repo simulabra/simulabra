@@ -69,7 +69,7 @@ export default await function (_, $) {
       $.Signal.new({
         name: 'temp',
         doc: 'generation temperature',
-        default: 1.0,
+        default: 0.8,
       }),
       $.Method.new({
         name: 'configline',
@@ -252,16 +252,6 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'toggleEditing',
-        do() {
-          if (this.editing()) {
-            localStorage.setItem(this.localStorageKey(), this.text());
-            this.text(document.querySelector('.loom-textarea').value);
-          }
-          this.editing(!this.editing());
-        }
-      }),
-      $.Method.new({
         name: 'render',
         do() {
           return $.HTML.t`
@@ -269,14 +259,13 @@ export default await function (_, $) {
               <div>
                 ${() => this.config()}
               </div>
-              <button onclick=${() => this.toggleEditing()}>${() => this.editing() ? 'stop' : 'start'} editing</button>
               <button class="seek" onclick=${() => this.seek()}>seek</button>
               ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
               ${() => this.loomText()}
               <div>
                 ${() => this.choices()}
               </div>
-              <div class="logprobs">
+              <div class="logprobs" hidden=${() => this.logprobs().length > 0}>
 <div>logprobs (top 50)</div>
                 ${() => this.logprobs()}
               </div>
