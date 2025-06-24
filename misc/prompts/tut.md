@@ -23,7 +23,7 @@ $.Class.new({
 });
 ```
 
-Simulabra is an object-oriented extension for Javascript. The class system (which does not use the ES5 `class` keyword) best resembles the Common Lisp Object System (specifically the original Flavors, without multiple dispatch). Classes are defined in a declarative style, with slots of methods, vars, and before/after method combination instead of `super`; docstrings; and multiple inheritance, differentiating it from contemporary takes on OOP. Included are a component library and other utilities for writing dynamic web applications.
+Simulabra is a metaobject system for Javascript. The custom class system (which does not use the ES5 `class` keyword) best resembles the Common Lisp Object System (specifically the original Flavors, without multiple dispatch). Classes are defined in a declarative style, with slots of methods, vars, and before/after method combination instead of `super`; docstrings; and multiple inheritance, differentiating it from contemporary takes on OOP. Included are a component library and other utilities for writing dynamic web applications.
 
 ##### A guide to writing Simulabra
  - Be consistent with naming  - do not use overly short names in public interfaces. 

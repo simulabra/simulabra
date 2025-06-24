@@ -1,3 +1,5 @@
+// SIMULABRA POWERLOOM
+
 import html from '../src/html.js';
 import { __, base } from '../src/base.js';
 
@@ -25,17 +27,10 @@ export default await function (_, $) {
       $.Method.new({
         name: 'completion',
         async: true,
-        do: async function completion(prompt, config) {
-          const options = {
-            model: 'meta-llama/llama-3.1-405b',
+        do: async function completion(prompt, config = {}) {
+          const body = {
             prompt,
-            temperature: config.temp(),
-            max_tokens: config.toklen(),
-            // logprobs: true,
-            // top_logprobs: 50,
-            provider: {
-              only: ['hyperbolic/bf16'],
-            },
+            ...config
           };
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
             method: 'POST',
@@ -43,7 +38,7 @@ export default await function (_, $) {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${this.key()}`,
             },
-            body: JSON.stringify(options),
+            body: JSON.stringify(body),
           });
           const json = await res.json();
           return json;
@@ -109,7 +104,7 @@ export default await function (_, $) {
     name: 'Thread',
     slots: [
       $.Component,
-      $.Var.new({ name: 'text' }),
+      $.Signal.new({ name: 'text', default: '(blank)' }),
       $.Var.new({ name: 'loom' }),
       $.Method.new({
         name: 'weave',
@@ -118,10 +113,49 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
+        name: 'config',
+        do() {
+          return {
+            temperature: 0.7,
+            max_tokens: 5,
+            model: 'meta-llama/llama-3.1-405b',
+          };
+        }
+      }),
+      $.Method.new({
+        name: 'spin',
+        doc: 'generate a possible thread from the model',
+        async: true,
+        do: async function() {
+          const res = await this.loom().client().completion(this.loom().text(), this.config());
+          if (res.choices[0].logprobs) {
+            const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
+            let lptot = 0;
+            for (const lp of logprobs) {
+              lp.logprob = Math.exp(lp.logprob);
+              lptot += lp.logprob;
+            }
+            for (const lp of logprobs) {
+              lp.logprob = lp.logprob / lptot;
+            }
+            this.logprobs(logprobs.map(l => $.Logprob.new({
+              text: l.token,
+              logprob: l.logprob,
+              loom: this,
+            })));
+
+            this.logprobs().sort((a, b) => b.logprob() - a.logprob());
+          }
+          this.text(res.choices[0].text);
+        }
+      }),
+      $.Method.new({
         name: 'render',
         do() {
           return $.HTML.t`
-          <div class="thread" onclick=${() => this.loom().weave(this).run()}>${this.text()}</div>
+          <div class="thread">
+            <div class="thread-text" onclick=${() => this.loom().weave(this).run()}>${() => this.text()}</div>
+          </div>
           `;
         }
       }),
@@ -163,6 +197,7 @@ export default await function (_, $) {
       $.Signal.new({ name: 'history' }),
       $.Signal.new({ name: 'choices' }),
       $.Signal.new({ name: 'logprobs' }),
+      $.Signal.new({ name: 'threads' }),
       $.Signal.new({ name: 'loading', default: false }),
       $.Signal.new({ name: 'editing', default: false }),
       $.Var.new({ name: 'client' }),
@@ -175,40 +210,21 @@ export default await function (_, $) {
           this.client($.V1Client.new({
             baseURL: 'https://openrouter.ai/api',
           }));
-          this.text(localStorage.getItem(this.localStorageKey()) || 'one hundred thousand miles per hour');
+          this.text(localStorage.getItem(this.localStorageKey()) || 'Opening the digital heart');
+          const storedThreads = localStorage.getItem('LOOM_THREADS');
+          if (storedThreads) {
+            this.threads(JSON.parse(storedThreads).map(t => $.Thread.new(t)));
+          } else {
+            this.threads([
+              $.Thread.new({ loom: this }),
+              $.Thread.new({ loom: this }),
+              $.Thread.new({ loom: this }),
+              $.Thread.new({ loom: this }),
+            ]);
+          }
           this.choices([]);
           this.logprobs([]);
           this.history([]);
-        }
-      }),
-      $.Method.new({
-        name: 'spin',
-        doc: 'generate a possible thread from the model',
-        async: true,
-        do: async function() {
-          const res = await this.client().completion(this.text(), this.config());
-          if (res.choices[0].logprobs) {
-            const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
-            let lptot = 0;
-            for (const lp of logprobs) {
-              lp.logprob = Math.exp(lp.logprob);
-              lptot += lp.logprob;
-            }
-            for (const lp of logprobs) {
-              lp.logprob = lp.logprob / lptot;
-            }
-            this.logprobs(logprobs.map(l => $.Logprob.new({
-              text: l.token,
-              logprob: l.logprob,
-              loom: this,
-            })));
-
-            this.logprobs().sort((a, b) => b.logprob() - a.logprob());
-          }
-          return $.Thread.new({
-            text: res.choices[0].text,
-            loom: this,
-          });
         }
       }),
       $.Command.new({
@@ -222,10 +238,9 @@ export default await function (_, $) {
           this.logprobs([]);
           this.loading(true);
           let threads = [];
-          for (let i = 0; i < this.config().numthreads(); i++) {
-            threads.push(this.spin());
+          for (const thread of this.threads()) {
+            thread.spin();
           }
-          this.choices(await Promise.all(threads));
           this.loading(false);
         },
       }),
@@ -264,7 +279,7 @@ export default await function (_, $) {
               ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
               ${() => this.loomText()}
               <div>
-                ${() => this.choices()}
+                ${() => this.threads()}
               </div>
               <div class="logprobs" hidden=${() => this.logprobs().length > 0}>
 <div>logprobs (top 50)</div>
