@@ -119,7 +119,14 @@ export default await function (_, $) {
               if (key.startsWith('on')) {
                 el.addEventListener(key.substring(2).toLowerCase(), value);
               } else {
-                el.setAttribute(key, value());
+                $.Effect.create(() => {
+                  const attrValue = value();
+                  if (attrValue === false || attrValue == null) {
+                    el.removeAttribute(key);
+                  } else {
+                    el.setAttribute(key, attrValue === true ? '' : attrValue);
+                  }
+                });
               }
             } else if (/^[a-zA-Z][a-zA-Z0-9\-\._]*$/.test(key) && value != null && value !== false) {
               el.setAttribute(key, value === true ? '' : value);

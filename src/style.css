@@ -67,7 +67,6 @@ button {
     font-family: inherit;
     color: var(--charcoal);
     font-size: 1em;
-    margin: 0.25em;
 }
 
 button:hover {
@@ -176,9 +175,7 @@ select {
 }
 
 .thread {
-  box-shadow: var(--box-shadow-args);
-  width: fit-content;
-  margin: 0.5em;
+  border: 2px solid var(--wood);
 }
 
 .thread-text {
@@ -187,15 +184,19 @@ select {
   width: fit-content;
 }
 
-.thread:hover {
+.thread-text:hover {
   text-decoration: underline;
   cursor: pointer;
 }
 
 .logprobs {
-  box-shadow: var(--box-shadow-args);
+  border: 2px solid var(--wood);
   padding: 0.5em;
-  max-width: 40em;
+}
+
+.loom {
+  display: flex;
+  flex-direction: row;
 }
 
 .loom-text {
@@ -216,6 +217,14 @@ select {
   max-width: 40em;
   height: 20vh;
   display: block;
+}
+
+.loom-col {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0.1em;
+    gap: 0.4em;
 }
 
 .spinner {

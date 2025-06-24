@@ -50,21 +50,35 @@ export default await function (_, $) {
     name: 'LoomConfig',
     slots: [
       $.Component,
-      $.Var.new({ name: 'loom' }),
       $.Signal.new({
-        name: 'numthreads',
-        doc: 'number of threads',
-        default: 4,
+        name: 'api_key',
+        doc: 'api key for calls',
+        default: '',
       }),
       $.Signal.new({
-        name: 'toklen',
+        name: 'max_tokens',
         doc: 'length of thread in tokens',
-        default: 8,
+        default: 5,
       }),
       $.Signal.new({
-        name: 'temp',
+        name: 'temperature',
         doc: 'generation temperature',
         default: 0.8,
+      }),
+      $.Signal.new({ 
+        name: 'model', 
+        doc: 'which model to loom with',
+        default: 'meta-llama/llama-3.1-405b' 
+      }),
+      $.Method.new({
+        name: 'json',
+        do() {
+          return {
+            temperature: this.temperature(),
+            max_tokens: this.max_tokens(),
+            model: this.model(),
+          };
+        }
       }),
       $.Method.new({
         name: 'configline',
@@ -81,7 +95,7 @@ export default await function (_, $) {
         name: 'togglekeymode',
         do() {
           if (this.keymode()) {
-            this.loom().client().changekey(document.querySelector("#api-key-input").value);
+            this.api_key(document.querySelector("#api-key-input").value);
           }
           this.keymode(!this.keymode());
         }
@@ -91,10 +105,9 @@ export default await function (_, $) {
         do() {
           return [
             $.HTML.t`<button onclick=${() => this.togglekeymode()}>enter key</button>`,
-            this.keymode() ? $.HTML.t`<input id="api-key-input" type="text" placeholder="api key" value=${() => this.loom().client().key()} />` : '',
-            this.configline('numthreads'),
-            this.configline('toklen'),
-            this.configline('temp', 0.1),
+            this.keymode() ? $.HTML.t`<input id="api-key-input" type="text" placeholder="api key" value=${() => this.api_key()} />` : '',
+            this.configline('max_tokens'),
+            this.configline('temperature', 0.1),
           ];
         }
       }),
@@ -105,24 +118,13 @@ export default await function (_, $) {
     slots: [
       $.Component,
       $.Signal.new({ name: 'text', default: '(blank)' }),
-      $.Signal.new({ name: 'max_tokens', default: 5 }),
-      $.Signal.new({ name: 'temperature', default: 0.8 }),
-      $.Signal.new({ name: 'model', default: 'meta-llama/llama-3.1-405b' }),
+      $.Signal.new({ name: 'showConfig', default: false }),
+      $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
       $.Var.new({ name: 'loom' }),
       $.Method.new({
         name: 'weave',
         do() {
           const cmd = this.loom().weave(this);
-        }
-      }),
-      $.Method.new({
-        name: 'config',
-        do() {
-          return {
-            temperature: this.temperature(),
-            max_tokens: this.max_tokens(),
-            model: this.model(),
-          };
         }
       }),
       $.Method.new({
@@ -150,7 +152,7 @@ export default await function (_, $) {
         doc: 'generate a possible thread from the model',
         async: true,
         do: async function() {
-          const res = await this.loom().client().completion(this.loom().text(), this.config());
+          const res = await this.loom().client().completion(this.loom().text(), this.config().json());
           if (res.choices[0].logprobs) {
             const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
             this.logprobs(this.normaliseLogprobs(logprobs));
@@ -163,8 +165,11 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
           <div class="thread">
-            <span class="thread-handle">wut</span>
+            <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>*</button></span>
             <span class="thread-text" onclick=${() => this.loom().weave(this).run()}>${() => this.text()}</span>
+            <div class="thread-config" hidden=${() => !this.showConfig()}>
+              ${this.config()}
+            </div>
           </div>
           `;
         }
@@ -211,12 +216,10 @@ export default await function (_, $) {
       $.Signal.new({ name: 'loading', default: false }),
       $.Signal.new({ name: 'editing', default: false }),
       $.Var.new({ name: 'client' }),
-      $.Var.new({ name: 'config' }),
       $.Var.new({ name: 'localStorageKey', default: 'LOOM_TEXT' }),
       $.After.new({
         name: 'init',
         do() {
-          this.config($.LoomConfig.new({ loom: this }));
           this.client($.V1Client.new({
             baseURL: 'https://openrouter.ai/api',
           }));
@@ -282,19 +285,16 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
             <div class="loom">
-              <div>
-                ${() => this.config()}
-              </div>
-              <button class="seek" onclick=${() => this.seek()}>seek</button>
-              ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
-              ${() => this.loomText()}
-              <div>
+              <div class="loom-col">
+                <button class="seek" onclick=${() => this.seek()}>seek</button>
+                ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
                 ${() => this.threads()}
+                <div class="logprobs" hidden=${() => this.logprobs().length > 0}>
+  <div>logprobs (top 50)</div>
+                  ${() => this.logprobs()}
+                </div>
               </div>
-              <div class="logprobs" hidden=${() => this.logprobs().length > 0}>
-<div>logprobs (top 50)</div>
-                ${() => this.logprobs()}
-              </div>
+              <div class="loom-col">${() => this.loomText()}</div>
             </div>
           `;
         }
