@@ -105,6 +105,9 @@ export default await function (_, $) {
     slots: [
       $.Component,
       $.Signal.new({ name: 'text', default: '(blank)' }),
+      $.Signal.new({ name: 'max_tokens', default: 5 }),
+      $.Signal.new({ name: 'temperature', default: 0.8 }),
+      $.Signal.new({ name: 'model', default: 'meta-llama/llama-3.1-405b' }),
       $.Var.new({ name: 'loom' }),
       $.Method.new({
         name: 'weave',
@@ -116,10 +119,30 @@ export default await function (_, $) {
         name: 'config',
         do() {
           return {
-            temperature: 0.7,
-            max_tokens: 5,
-            model: 'meta-llama/llama-3.1-405b',
+            temperature: this.temperature(),
+            max_tokens: this.max_tokens(),
+            model: this.model(),
           };
+        }
+      }),
+      $.Method.new({
+        name: 'normaliseLogprobs',
+        do(logprobs) {
+          let lptot = 0;
+          for (const lp of logprobs) {
+            lp.logprob = Math.exp(lp.logprob);
+            lptot += lp.logprob;
+          }
+          for (const lp of logprobs) {
+            lp.logprob = lp.logprob / lptot;
+          }
+          logprobs = logprobs.map(l => $.Logprob.new({
+            text: l.token,
+            logprob: l.logprob,
+            loom: this,
+          }));
+          logprobs.sort((a, b) => b.logprob() - a.logprob());
+          return logprob;
         }
       }),
       $.Method.new({
@@ -130,21 +153,7 @@ export default await function (_, $) {
           const res = await this.loom().client().completion(this.loom().text(), this.config());
           if (res.choices[0].logprobs) {
             const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
-            let lptot = 0;
-            for (const lp of logprobs) {
-              lp.logprob = Math.exp(lp.logprob);
-              lptot += lp.logprob;
-            }
-            for (const lp of logprobs) {
-              lp.logprob = lp.logprob / lptot;
-            }
-            this.logprobs(logprobs.map(l => $.Logprob.new({
-              text: l.token,
-              logprob: l.logprob,
-              loom: this,
-            })));
-
-            this.logprobs().sort((a, b) => b.logprob() - a.logprob());
+            this.logprobs(this.normaliseLogprobs(logprobs));
           }
           this.text(res.choices[0].text);
         }
@@ -154,7 +163,8 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
           <div class="thread">
-            <div class="thread-text" onclick=${() => this.loom().weave(this).run()}>${() => this.text()}</div>
+            <span class="thread-handle">wut</span>
+            <span class="thread-text" onclick=${() => this.loom().weave(this).run()}>${() => this.text()}</span>
           </div>
           `;
         }
