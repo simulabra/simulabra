@@ -166,6 +166,7 @@ export default await function (_, $) {
         doc: 'generate a possible thread from the model',
         async: true,
         do: async function() {
+          this.text('');
           const res = await this.loom().client().completion(this.loom().text(), this.config().json());
           if (res.choices[0].logprobs) {
             const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
@@ -304,10 +305,10 @@ export default await function (_, $) {
           return $.HTML.t`
             <div class="loom">
               <div class="loom-col">
-                <button class="seek" onclick=${() => this.seek()}>seek</button>
+                <button onclick=${() => this.seek()}>seek</button>
                 ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
                 ${() => this.threads()}
-                <div class="logprobs" hidden=${() => this.logprobs().length > 0}>
+                <div class="logprobs" hidden=${() => this.logprobs().length === 0}>
   <div>logprobs (top 50)</div>
                   ${() => this.logprobs()}
                 </div>

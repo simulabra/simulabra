@@ -66,17 +66,18 @@ button {
     box-shadow: var(--box-shadow-args);
     cursor: pointer;
     font-family: inherit;
-    color: var(--charcoal);
+    color: var(--seaweed);
     font-size: 1em;
     width: fit-content;
 }
 
 button:hover {
-    background: var(--wood);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 button:active {
-    background: var(--sand);
+    background: var(--wood);
 }
 
 select {
@@ -229,7 +230,7 @@ select {
     width: 100%;
     padding: 0.1em;
     gap: 0.4em;
-    border: 1px solid var(--wood);
+    /* border: 1px solid var(--wood); */
     box-sizing: border-box;
 }
 
@@ -251,8 +252,4 @@ select {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.seek {
-  color: var(--dusk);
 }
