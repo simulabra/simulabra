@@ -8,20 +8,35 @@ export default await function (_, $) {
     name: 'V1Client',
     doc: 'wrapper for openai v1 api compatible apis',
     slots: [
-      $.Var.new({ name: 'baseURL', default: 'http://localhost:3731' }),
-      $.Var.new({ name: 'key', default: 'skfake' }),
-      $.Var.new({ name: 'localStorageKey', default: 'LOOM_API_KEY' }),
+      $.Component,
+      $.Signal.new({ name: 'baseURL', default: 'http://localhost:3731' }),
+      $.Signal.new({ name: 'key', default: '' }),
+      $.Var.new({ name: 'localStorageKey', default: 'LOOM_' }),
+      $.Signal.new({
+        name: 'keymode',
+        doc: 'show api key input',
+        default: false,
+      }),
+      $.Method.new({
+        name: 'togglekeymode',
+        do() {
+          this.keymode(!this.keymode());
+        }
+      }),
       $.After.new({
         name: 'init',
         do() {
-          this.key(localStorage.getItem(this.localStorageKey()) || '');
+          this.key(localStorage.getItem(this.localStorageKey() + 'KEY') || '');
+          this.baseURL(localStorage.getItem(this.localStorageKey() + 'BASEURL') || '');
         }
       }),
       $.Method.new({
-        name: 'changekey',
-        do(key) {
-          this.key(key);
-          localStorage.setItem(this.localStorageKey(), this.key());
+        name: 'update',
+        do() {
+          this.key(document.getElementById('key-input').value);
+          localStorage.setItem(this.localStorageKey() + 'KEY', this.key());
+          this.baseURL(document.getElementById('baseURL-input').value);
+          localStorage.setItem(this.localStorageKey() + 'BASEURL', this.baseURL());
         }
       }),
       $.Method.new({
@@ -42,6 +57,21 @@ export default await function (_, $) {
           });
           const json = await res.json();
           return json;
+        }
+      }),
+      $.Method.new({
+        name: 'render',
+        do() {
+          const inp = (v) => $.HTML.t`<input id=${v + '-input'} type="text" placeholder=${v} value=${() => this[v]()} />`;
+          return $.HTML.t`
+          <div class="loom-col">
+            <button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>
+            <div class="loom-col" hidden=${() => !this.keymode()}>
+              <div>api key ${() => inp('key')}</div>
+              <div>base url ${() => inp('baseURL')}</div>
+              <button onclick=${() => this.update()}>update settings</button>
+            </div>
+          </div>`;
         }
       }),
     ]
@@ -86,26 +116,10 @@ export default await function (_, $) {
           return $.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min="0" value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
         }
       }),
-      $.Signal.new({
-        name: 'keymode',
-        doc: 'show api key input',
-        default: false,
-      }),
-      $.Method.new({
-        name: 'togglekeymode',
-        do() {
-          if (this.keymode()) {
-            this.api_key(document.querySelector("#api-key-input").value);
-          }
-          this.keymode(!this.keymode());
-        }
-      }),
       $.Method.new({
         name: 'render',
         do() {
           return [
-            $.HTML.t`<button onclick=${() => this.togglekeymode()}>enter key</button>`,
-            this.keymode() ? $.HTML.t`<input id="api-key-input" type="text" placeholder="api key" value=${() => this.api_key()} />` : '',
             this.configline('max_tokens'),
             this.configline('temperature', 0.1),
           ];
@@ -117,7 +131,7 @@ export default await function (_, $) {
     name: 'Thread',
     slots: [
       $.Component,
-      $.Signal.new({ name: 'text', default: '(blank)' }),
+      $.Signal.new({ name: 'text', default: '' }),
       $.Signal.new({ name: 'showConfig', default: false }),
       $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
       $.Var.new({ name: 'loom' }),
@@ -228,12 +242,16 @@ export default await function (_, $) {
           if (storedThreads) {
             this.threads(JSON.parse(storedThreads).map(t => $.Thread.new(t)));
           } else {
-            this.threads([
-              $.Thread.new({ loom: this }),
-              $.Thread.new({ loom: this }),
-              $.Thread.new({ loom: this }),
-              $.Thread.new({ loom: this }),
-            ]);
+            let threads = [];
+            for (let i = 0; i < 8; i++) {
+              threads.push($.Thread.new({
+                loom: this, 
+                config: $.LoomConfig.new({ 
+                  temperature: 0.5 + i * 0.1,
+                })
+              }));
+            }
+            this.threads(threads);
           }
           this.choices([]);
           this.logprobs([]);
@@ -293,6 +311,7 @@ export default await function (_, $) {
   <div>logprobs (top 50)</div>
                   ${() => this.logprobs()}
                 </div>
+                ${() => this.client()}
               </div>
               <div class="loom-col">${() => this.loomText()}</div>
             </div>
