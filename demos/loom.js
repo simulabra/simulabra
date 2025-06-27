@@ -217,10 +217,12 @@ export default await function (_, $) {
             <span class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</span>
             <div class="thread-config" hidden=${() => !this.showConfig()}>
               ${this.config()}
-              <button onclick=${() => this.up()}>up</button>
-              <button onclick=${() => this.down()}>down</button>
-              <button onclick=${() => this.spawn()}>spawn clone</button>
-              <button onclick=${() => this.die()}>delete thread</button>
+              <div class="loom-row">
+                <button onclick=${() => this.up()}>up</button>
+                <button onclick=${() => this.down()}>down</button>
+                <button onclick=${() => this.spawn()}>spawn clone</button>
+                <button onclick=${() => this.die()}>delete thread</button>
+              </div>
             </div>
           </div>
           `;
@@ -264,6 +266,7 @@ export default await function (_, $) {
       $.Signal.new({ name: 'history' }),
       $.Signal.new({ name: 'choices' }),
       $.Signal.new({ name: 'logprobs' }),
+      $.Signal.new({ name: 'errorMsg', default: '' }),
       $.Signal.new({ name: 'threads' }),
       $.Signal.new({ name: 'loading', default: false }),
       $.Signal.new({ name: 'editing', default: false }),
@@ -306,8 +309,14 @@ export default await function (_, $) {
           this.choices([]);
           this.logprobs([]);
           this.loading(true);
+          this.errorMsg('');
           let threads = [];
-          await Promise.all(this.threads().map(t => t.spin()));
+          try {
+            await Promise.all(this.threads().map(t => t.spin()));
+          } catch (e) {
+            console.log(e);
+            this.errorMsg(e.toString());
+          }
           this.loading(false);
         },
       }),
@@ -345,9 +354,10 @@ export default await function (_, $) {
   <div>logprobs (top 50)</div>
                   ${() => this.logprobs()}
                 </div>
-                <div>
+                <div class="loom-row">
                   <button onclick=${() => this.seek()}>seek</button>
                   <span class="spinner" hidden=${() => !this.loading()}></span>
+                  <span class="error">${() => this.errorMsg()}</span>
                 </div>
                 ${() => this.client()}
               </div>

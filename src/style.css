@@ -230,6 +230,16 @@ select {
     display: block;
 }
 
+.loom-row {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    padding: 0.1em;
+    gap: 0.4em;
+    /* border: 1px solid var(--wood); */
+    box-sizing: border-box;
+}
+
 .loom-col {
     display: flex;
     flex-direction: column;
@@ -253,6 +263,10 @@ select {
     animation: spin 1s linear infinite;
     display: inline-block;
     vertical-align: middle;
+}
+
+.error {
+    color: var(--dusk);
 }
 
 @keyframes spin {
