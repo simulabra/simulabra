@@ -183,7 +183,7 @@ function bootstrap() {
   class ClassPrototype {
     constructor(parent) {
       this._impls = {};
-      this._proto = new DebugProto();
+      this._proto = {};
       this._proto._class = parent;
     }
 
@@ -1316,6 +1316,47 @@ function bootstrap() {
       }),
     ]
   });
+
+  $.Class.new({
+    name: 'Clone',
+    slots: [
+      $.Method.new({
+        name: 'clone',
+        do: function clone(deep = true, cloneMap = new WeakMap()) {
+          if (cloneMap.has(this)) {
+            return cloneMap.get(this);
+          }
+          const cloned = this.class().new();
+          cloneMap.set(this, cloned);
+          for (const varSlot of this.class().Vars()) {
+            const varName = varSlot.name();
+            const value = this[varName]();
+            
+            if (value !== undefined && value !== varSlot.defval()) {
+              if (deep && value && typeof value === 'object') {
+                if (typeof value.clone === 'function') {
+                  cloned[varName](value.clone(true, cloneMap));
+                } else if (Array.isArray(value)) {
+                  cloned[varName](value.map(item => 
+                    (item && typeof item.clone === 'function') 
+                      ? item.clone(true, cloneMap) 
+                      : item
+                  ));
+                } else {
+                  cloned[varName](value);
+                }
+              } else {
+                cloned[varName](value);
+              }
+            }
+          }
+          
+          return cloned;
+        }
+      })
+    ]
+  });
+
   return _;
 }
 

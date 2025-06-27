@@ -80,11 +80,7 @@ export default await function (_, $) {
     name: 'LoomConfig',
     slots: [
       $.Component,
-      $.Signal.new({
-        name: 'api_key',
-        doc: 'api key for calls',
-        default: '',
-      }),
+      $.Clone,
       $.Signal.new({
         name: 'max_tokens',
         doc: 'length of thread in tokens',
@@ -131,6 +127,7 @@ export default await function (_, $) {
     name: 'Thread',
     slots: [
       $.Component,
+      $.Clone,
       $.Signal.new({ name: 'text', default: '' }),
       $.Signal.new({ name: 'showConfig', default: false }),
       $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
@@ -138,7 +135,19 @@ export default await function (_, $) {
       $.Method.new({
         name: 'weave',
         do() {
-          const cmd = this.loom().weave(this);
+          this.loom().weave(this);
+        }
+      }),
+      $.Method.new({
+        name: 'spawn',
+        do() {
+          this.loom().threads([...this.loom().threads(), this.clone()]);
+        }
+      }),
+      $.Method.new({
+        name: 'die',
+        do() {
+          this.loom().threads(this.loom().threads().filter(t => t !== this));
         }
       }),
       $.Method.new({
@@ -181,9 +190,11 @@ export default await function (_, $) {
           return $.HTML.t`
           <div class="thread">
             <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>*</button></span>
-            <span class="thread-text" onclick=${() => this.loom().weave(this).run()}>${() => this.text()}</span>
+            <span class="thread-text" onclick=${() => this.weave(this)}>${() => this.text()}</span>
             <div class="thread-config" hidden=${() => !this.showConfig()}>
               ${this.config()}
+              <button onclick=${() => this.spawn()}>spawn clone</button>
+              <button onclick=${() => this.die()}>delete thread</button>
             </div>
           </div>
           `;
