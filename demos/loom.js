@@ -213,8 +213,8 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
           <div class="thread">
-            <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>*</button></span>
-            <span class="thread-text" onclick=${() => this.weave(this)}>${() => this.text()}</span>
+            <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>=</button></span>
+            <span class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</span>
             <div class="thread-config" hidden=${() => !this.showConfig()}>
               ${this.config()}
               <button onclick=${() => this.up()}>up</button>
@@ -307,9 +307,7 @@ export default await function (_, $) {
           this.logprobs([]);
           this.loading(true);
           let threads = [];
-          for (const thread of this.threads()) {
-            thread.spin();
-          }
+          await Promise.all(this.threads().map(t => t.spin()));
           this.loading(false);
         },
       }),
@@ -342,12 +340,14 @@ export default await function (_, $) {
           return $.HTML.t`
             <div class="loom">
               <div class="loom-col">
-                <button onclick=${() => this.seek()}>seek</button>
-                ${() => (this.loading() ? $.HTML.t`<div class="spinner"></div>` : [])}
                 ${() => this.threads()}
                 <div class="logprobs" hidden=${() => this.logprobs().length === 0}>
   <div>logprobs (top 50)</div>
                   ${() => this.logprobs()}
+                </div>
+                <div>
+                  <button onclick=${() => this.seek()}>seek</button>
+                  <span class="spinner" hidden=${() => !this.loading()}></span>
                 </div>
                 ${() => this.client()}
               </div>
