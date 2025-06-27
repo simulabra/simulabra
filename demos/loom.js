@@ -185,6 +185,30 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
+        name: 'up',
+        do() {
+          const threads = this.loom().threads();
+          const index = threads.indexOf(this);
+          if (index > 0) {
+            const newThreads = [...threads];
+            [newThreads[index - 1], newThreads[index]] = [newThreads[index], newThreads[index - 1]];
+            this.loom().threads(newThreads);
+          }
+        }
+      }),
+      $.Method.new({
+        name: 'down',
+        do() {
+          const threads = this.loom().threads();
+          const index = threads.indexOf(this);
+          if (index < threads.length - 1) {
+            const newThreads = [...threads];
+            [newThreads[index], newThreads[index + 1]] = [newThreads[index + 1], newThreads[index]];
+            this.loom().threads(newThreads);
+          }
+        }
+      }),
+      $.Method.new({
         name: 'render',
         do() {
           return $.HTML.t`
@@ -193,6 +217,8 @@ export default await function (_, $) {
             <span class="thread-text" onclick=${() => this.weave(this)}>${() => this.text()}</span>
             <div class="thread-config" hidden=${() => !this.showConfig()}>
               ${this.config()}
+              <button onclick=${() => this.up()}>up</button>
+              <button onclick=${() => this.down()}>down</button>
               <button onclick=${() => this.spawn()}>spawn clone</button>
               <button onclick=${() => this.die()}>delete thread</button>
             </div>
