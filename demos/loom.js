@@ -263,6 +263,7 @@ export default await function (_, $) {
     slots: [
       $.Component,
       $.Signal.new({ name: 'text' }),
+      $.Signal.new({ name: 'savedText', default: '' }),
       $.Signal.new({ name: 'history' }),
       $.Signal.new({ name: 'choices' }),
       $.Signal.new({ name: 'logprobs' }),
@@ -279,6 +280,7 @@ export default await function (_, $) {
             baseURL: 'https://openrouter.ai/api',
           }));
           this.text(localStorage.getItem(this.localStorageKey()) || 'Opening the digital heart');
+          this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
           if (storedThreads) {
             this.threads(JSON.parse(storedThreads).map(t => $.Thread.new(t)));
@@ -304,7 +306,6 @@ export default await function (_, $) {
         doc: 'make new threads to search',
         async: true,
         run: async function() {
-          localStorage.setItem(this.localStorageKey(), this.text());
           this.text(document.querySelector('.loom-textarea').value);
           this.choices([]);
           this.logprobs([]);
@@ -320,13 +321,34 @@ export default await function (_, $) {
           this.loading(false);
         },
       }),
+      $.Method.new({
+        name: 'updateTextarea',
+        do() {
+          document.querySelector('.loom-textarea').blur();
+          document.querySelector('.loom-textarea').value = this.text();
+        }
+      }),
       $.Command.new({
         name: 'weave',
         run: function(c, t) {
-          document.querySelector('.loom-textarea').blur();
           this.text(this.text() + t.text());
+          this.updateTextarea();
+          this.seek();
+        }
+      }),
+      $.Method.new({
+        name: 'save',
+        do() {
+          this.text(document.querySelector('.loom-textarea').value);
+          this.savedText(this.text());
           localStorage.setItem(this.localStorageKey(), this.text());
-          document.querySelector('.loom-textarea').value = this.text();
+        }
+      }),
+      $.Method.new({
+        name: 'reset',
+        do() {
+          this.text(this.savedText());
+          this.updateTextarea();
           this.seek();
         }
       }),
@@ -358,6 +380,10 @@ export default await function (_, $) {
                   <button onclick=${() => this.seek()}>seek</button>
                   <span class="spinner" hidden=${() => !this.loading()}></span>
                   <span class="error">${() => this.errorMsg()}</span>
+                </div>
+                <div class="loom-row">
+                  <button onclick=${() => this.save()}>save</button>
+                  <button onclick=${() => this.reset()}>reset</button>
                 </div>
                 ${() => this.client()}
               </div>
