@@ -202,16 +202,33 @@ select {
 
 .thread {
     border: 2px solid var(--wood);
+    width: fit-content;
+    padding: 0px;
+    display: flex;
+}
+
+.thread-handle {
+    display: inline-flex;
 }
 
 .thread-handle > button {
+    display: inline-block;
     color: var(--wood);
+    margin: 0;
+    vertical-align: middle;
 }
 
 .thread-text {
+    display: inline-block;
     color: var(--seaweed);
-    padding: 0.1em;
+    background: var(--light-sand);
     width: fit-content;
+    height: 1em;
+    min-width: 3em;
+    margin: 0;
+    margin-left: 2px;
+    padding: 2px 0px 2px 2px;
+    vertical-align: top;
 }
 
 .thread-text:hover {
@@ -220,7 +237,6 @@ select {
 }
 
 .thread-config {
-    border-top: 1px solid var(--wood);
     padding: 0.2em;
 }
 
@@ -255,6 +271,7 @@ select {
     height: 100%;
     min-height: 50vh;
     display: block;
+    min-width: 65vw;
 }
 
 .loom-row {

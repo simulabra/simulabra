@@ -128,7 +128,7 @@ export default await function (_, $) {
     slots: [
       $.Component,
       $.Clone,
-      $.Signal.new({ name: 'text', default: '' }),
+      $.Signal.new({ name: 'text', default: ' ' }),
       $.Signal.new({ name: 'showConfig', default: false }),
       $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
       $.Var.new({ name: 'loom' }),
@@ -214,14 +214,16 @@ export default await function (_, $) {
           return $.HTML.t`
           <div class="thread">
             <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>☰</button></span>
-            <span class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</span>
-            <div class="thread-config" hidden=${() => !this.showConfig()}>
-              ${this.config()}
-              <div class="loom-row">
-                <button onclick=${() => this.up()}>up</button>
-                <button onclick=${() => this.down()}>down</button>
-                <button onclick=${() => this.spawn()}>spawn clone</button>
-                <button onclick=${() => this.die()}>delete thread</button>
+            <div class="loom-col">
+              <span class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</span>
+              <div class="thread-config" hidden=${() => !this.showConfig()}>
+                ${this.config()}
+                <div class="loom-row">
+                  <button onclick=${() => this.up()}>up</button>
+                  <button onclick=${() => this.down()}>down</button>
+                  <button onclick=${() => this.spawn()}>spawn clone</button>
+                  <button onclick=${() => this.die()}>delete thread</button>
+                </div>
               </div>
             </div>
           </div>
@@ -372,6 +374,7 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
             <div class="loom">
+              <div class="loom-col">${() => this.loomText()}</div>
               <div class="loom-col">
                 ${() => this.threads()}
                 <div class="logprobs" hidden=${() => this.logprobs().length === 0}>
@@ -389,7 +392,6 @@ export default await function (_, $) {
                 </div>
                 ${() => this.client()}
               </div>
-              <div class="loom-col">${() => this.loomText()}</div>
             </div>
           `;
         }
