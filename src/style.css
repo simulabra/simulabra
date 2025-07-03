@@ -10,26 +10,23 @@
     --grass: #40A472;
     --seaweed: #487455;
 
-  /* original raised frame */
-  --box-shadow-args: 1px 1px 0 0 var(--charcoal),
-                     -1px -1px 0 0 var(--wood),
-                     -2px -2px     var(--wood),
-                     -2px  0       var(--wood),
-                      0  -2px      var(--wood),
-                      2px  2px 0 0 var(--charcoal),
-                      0   2px 0 0  var(--charcoal),
-                      2px  0       var(--charcoal),
-                      2px -2px     var(--wood),
-                     -2px  2px     var(--charcoal);
+    --box-shadow-args: 1px 1px 0 0 var(--charcoal),
+                      -1px -1px 0 0 var(--wood),
+                      -2px -2px     var(--wood),
+                      -2px  0       var(--wood),
+                        0  -2px      var(--wood),
+                        2px  2px 0 0 var(--charcoal),
+                        0   2px 0 0  var(--charcoal),
+                        2px  0       var(--charcoal),
+                        2px -2px     var(--wood),
+                      -2px  2px     var(--charcoal);
 
-  /* same offsets, but colours swapped → inset “pressed” frame */
-  /* depressed 1-px inner frame */
-  --box-shadow-args-inset: inset  1px  1px 0   var(--wood),      /* bottom-right highlight  */
-                           inset  0    1px 0   var(--wood),
-                           inset  1px  0   0   var(--wood),
-                           inset -1px -1px 0   var(--charcoal), /* top-left shadow         */
-                           inset  0   -1px 0   var(--charcoal),
-                           inset -1px  0   0   var(--charcoal);
+    --box-shadow-args-inset: inset  1px  1px 0   var(--wood),
+                            inset  0    1px 0   var(--wood),
+                            inset  1px  0   0   var(--wood),
+                            inset -1px -1px 0   var(--charcoal),
+                            inset  0   -1px 0   var(--charcoal),
+                            inset -1px  0   0   var(--charcoal);
 }
 
 ::selection {
@@ -69,6 +66,7 @@ textarea {
 }
 
 input, textarea {
+    padding: 2px;
     background: var(--light-sand);
     border: 0px solid var(--charcoal);
     box-shadow: var(--box-shadow-args);
@@ -77,26 +75,27 @@ input, textarea {
 
 input:focus, textarea:focus {
     outline: solid var(--ocean) 0px;
-    /*box-shadow: 0 0 0px var(--ocean);*/
+    box-shadow: var(--box-shadow-args),   /* outer frame */
+                var(--box-shadow-args-inset); /* inner glow */
 }
 
 button {
-  background: var(--sand);
-  border: 0;
-  box-shadow: var(--box-shadow-args);
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--seaweed);
-  width: fit-content;
+    background: var(--sand);
+    border: 0;
+    box-shadow: var(--box-shadow-args);
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--seaweed);
+    width: fit-content;
 }
 
 button:hover {
-  box-shadow: var(--box-shadow-args),   /* outer frame */
-              var(--box-shadow-args-inset); /* inner glow */
+    box-shadow: var(--box-shadow-args),   /* outer frame */
+                var(--box-shadow-args-inset); /* inner glow */
 }
 
 button:active {
-  background: var(--wood);
+    background: var(--wood);
 }
 
 button:active {
