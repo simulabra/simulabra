@@ -213,7 +213,7 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
           <div class="thread">
-            <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>=</button></span>
+            <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>☰</button></span>
             <span class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</span>
             <div class="thread-config" hidden=${() => !this.showConfig()}>
               ${this.config()}
@@ -324,8 +324,10 @@ export default await function (_, $) {
       $.Method.new({
         name: 'updateTextarea',
         do() {
-          document.querySelector('.loom-textarea').blur();
-          document.querySelector('.loom-textarea').value = this.text();
+          const textarea = document.querySelector('.loom-textarea');
+          textarea.blur();
+          textarea.value = this.text();
+          textarea.scrollTop = textarea.scrollHeight;
         }
       }),
       $.Command.new({

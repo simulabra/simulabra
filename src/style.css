@@ -10,7 +10,26 @@
     --grass: #40A472;
     --seaweed: #487455;
 
-    --box-shadow-args: 1px 1px 0px 0px var(--charcoal), -1px -1px 0px 0px var(--wood), -2px -2px var(--wood), -2px 0 var(--wood), 0 -2px var(--wood), 2px 2px var(--charcoal), 0 2px var(--charcoal), 2px 0 var(--charcoal), 2px -2px var(--wood), -2px 2px var(--charcoal);
+  /* original raised frame */
+  --box-shadow-args: 1px 1px 0 0 var(--charcoal),
+                     -1px -1px 0 0 var(--wood),
+                     -2px -2px     var(--wood),
+                     -2px  0       var(--wood),
+                      0  -2px      var(--wood),
+                      2px  2px 0 0 var(--charcoal),
+                      0   2px 0 0  var(--charcoal),
+                      2px  0       var(--charcoal),
+                      2px -2px     var(--wood),
+                     -2px  2px     var(--charcoal);
+
+  /* same offsets, but colours swapped → inset “pressed” frame */
+  /* depressed 1-px inner frame */
+  --box-shadow-args-inset: inset  1px  1px 0   var(--wood),      /* bottom-right highlight  */
+                           inset  0    1px 0   var(--wood),
+                           inset  1px  0   0   var(--wood),
+                           inset -1px -1px 0   var(--charcoal), /* top-left shadow         */
+                           inset  0   -1px 0   var(--charcoal),
+                           inset -1px  0   0   var(--charcoal);
 }
 
 ::selection {
@@ -62,18 +81,22 @@ input:focus, textarea:focus {
 }
 
 button {
-    background: var(--sand);
-    border: 0px solid var(--charcoal);
-    box-shadow: var(--box-shadow-args);
-    cursor: pointer;
-    font-family: inherit;
-    color: var(--seaweed);
-    width: fit-content;
+  background: var(--sand);
+  border: 0;
+  box-shadow: var(--box-shadow-args);
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--seaweed);
+  width: fit-content;
 }
 
 button:hover {
-    text-decoration: underline;
-    cursor: pointer;
+  box-shadow: var(--box-shadow-args),   /* outer frame */
+              var(--box-shadow-args-inset); /* inner glow */
+}
+
+button:active {
+  background: var(--wood);
 }
 
 button:active {
@@ -179,6 +202,10 @@ select {
 
 .thread {
     border: 2px solid var(--wood);
+}
+
+.thread-handle > button {
+    color: var(--wood);
 }
 
 .thread-text {
