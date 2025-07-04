@@ -230,6 +230,11 @@ select {
     vertical-align: top;
 }
 
+.thread-text:active {
+    background: var(--sky);
+}
+
+
 .thread-text:hover {
     text-decoration: underline;
     cursor: pointer;

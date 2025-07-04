@@ -281,7 +281,7 @@ export default await function (_, $) {
           this.client($.V1Client.new({
             baseURL: 'https://openrouter.ai/api',
           }));
-          this.text(localStorage.getItem(this.localStorageKey()) || 'Opening the digital heart');
+          this.text(localStorage.getItem(this.localStorageKey()) || ' - metaobject system\n - reactive signals\n -');
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
           if (storedThreads) {
