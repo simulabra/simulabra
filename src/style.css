@@ -275,7 +275,6 @@ select {
     height: 100%;
     min-height: 50vh;
     display: block;
-    min-width: 65vw;
 }
 
 .loom-row {
@@ -292,7 +291,6 @@ select {
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: 0.1em;
     gap: 0.4em;
     /* border: 1px solid var(--wood); */
     box-sizing: border-box;

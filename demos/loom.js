@@ -219,6 +219,7 @@ export default await function (_, $) {
               <div class="thread-config" hidden=${() => !this.showConfig()}>
                 ${this.config()}
                 <div class="loom-row">
+                  <button onclick=${() => this.spin()}>spin</button>
                   <button onclick=${() => this.up()}>up</button>
                   <button onclick=${() => this.down()}>down</button>
                   <button onclick=${() => this.spawn()}>spawn clone</button>
