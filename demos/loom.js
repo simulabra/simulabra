@@ -45,6 +45,7 @@ export default await function (_, $) {
         do: async function completion(prompt, config = {}) {
           const body = {
             prompt,
+            logprobs: 20,
             ...config
           };
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
@@ -94,8 +95,7 @@ export default await function (_, $) {
       $.Signal.new({ 
         name: 'model', 
         doc: 'which model to loom with',
-        // default: 'meta-llama/llama-3.1-405b' 
-        default: 'deepseek/deepseek-r1-0528' 
+        default: 'meta-llama/Meta-Llama-3.1-405B' 
       }),
       $.Method.new({
         name: 'json',
@@ -136,7 +136,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'weave',
         do() {
-          this.loom().weave(this);
+          this.loom().weave(this.text());
         }
       }),
       $.Method.new({
@@ -165,10 +165,10 @@ export default await function (_, $) {
           logprobs = logprobs.map(l => $.Logprob.new({
             text: l.token,
             logprob: l.logprob,
-            loom: this,
+            loom: this.loom(),
           }));
           logprobs.sort((a, b) => b.logprob() - a.logprob());
-          return logprob;
+          return logprobs;
         }
       }),
       $.Method.new({
@@ -179,8 +179,8 @@ export default await function (_, $) {
           this.text('');
           const res = await this.loom().client().completion(this.loom().text(), this.config().json());
           if (res.choices[0].logprobs) {
-            const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
-            this.logprobs(this.normaliseLogprobs(logprobs));
+            const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
+            this.loom().logprobs(this.normaliseLogprobs(logprobs));
           }
           this.text(res.choices[0].text);
         }
@@ -216,7 +216,7 @@ export default await function (_, $) {
           <div class="thread">
             <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>☰</button></span>
             <div class="loom-col">
-              <span class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</span>
+              <button class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</button>
               <div class="thread-config" hidden=${() => !this.showConfig()}>
                 ${this.config()}
                 <div class="loom-row">
@@ -244,7 +244,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'weave',
         do() {
-          const cmd = this.loom().weave(this);
+          this.loom().weave(this.text());
         }
       }),
       $.Method.new({
@@ -254,9 +254,9 @@ export default await function (_, $) {
           let p = this.logprob().toPrecision(2);
           if (p.length > 5) p = '<0.01';
           return $.HTML.t`
-          <span class="thread" onclick=${() => this.loom().weave(this).run()}>
-            <span class="logprob-token">"${this.text().replaceAll('\\', '\\\\')}"</span><span class="logprob">${p}</span>
-          </span>
+            <button class="logprob-button" onclick=${() => this.weave()}>
+              <span class="logprob-token">"${this.text().replaceAll('\\', '\\\\')}"</span><span class="logprob">${p}</span>
+            </button>
           `;
         }
       }),
@@ -336,8 +336,8 @@ export default await function (_, $) {
       }),
       $.Command.new({
         name: 'weave',
-        run: function(c, t) {
-          this.text(this.text() + t.text());
+        run: function(ctx, text) {
+          this.text(this.text() + text);
           this.updateTextarea();
           this.seek();
         }
@@ -378,11 +378,11 @@ export default await function (_, $) {
             <div class="loom">
               <div class="loom-col">${() => this.loomText()}</div>
               <div class="loom-col">
-                ${() => this.threads()}
-                <div class="logprobs" hidden=${() => this.logprobs().length === 0}>
-  <div>logprobs (top 50)</div>
+                <div class="logprobs loom-row" hidden=${() => this.logprobs().length === 0}>
+  <div>logprobs</div>
                   ${() => this.logprobs()}
                 </div>
+                ${() => this.threads()}
                 <div class="loom-row">
                   <button onclick=${() => this.seek()}>seek</button>
                   <span class="spinner" hidden=${() => !this.loading()}></span>

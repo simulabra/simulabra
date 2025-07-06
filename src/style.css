@@ -188,6 +188,11 @@ select {
     width: 4em;
 }
 
+.logprob-button {
+    color: var(--seaweed);
+    background: var(--light-sand);
+}
+
 .logprob {
     font-size: 0.6em;
     font-style: italic;
@@ -222,7 +227,7 @@ select {
     color: var(--seaweed);
     background: var(--light-sand);
     width: fit-content;
-    height: 1em;
+    height: 1.5em;
     min-width: 3em;
     margin: 0;
     margin-left: 2px;
@@ -236,17 +241,11 @@ select {
 
 
 .thread-text:hover {
-    text-decoration: underline;
     cursor: pointer;
 }
 
 .thread-config {
     padding: 0.2em;
-}
-
-.logprobs {
-    border: 2px solid var(--wood);
-    padding: 0.5em;
 }
 
 .loom {
@@ -280,11 +279,11 @@ select {
 .loom-row {
     display: flex;
     flex-direction: row;
-    width: 100%;
     padding: 0.1em;
     gap: 0.4em;
     /* border: 1px solid var(--wood); */
     box-sizing: border-box;
+    flex-wrap: wrap;
 }
 
 .loom-col {
