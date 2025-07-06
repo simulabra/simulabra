@@ -64,15 +64,16 @@ export default await function (_, $) {
         name: 'render',
         do() {
           const inp = (v) => $.HTML.t`<input id=${v + '-input'} type="text" placeholder=${v} value=${() => this[v]()} />`;
-          return $.HTML.t`
-          <div class="loom-col">
-            <button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>
-            <div class="loom-col" hidden=${() => !this.keymode()}>
-              <div>api key ${() => inp('key')}</div>
-              <div>base url ${() => inp('baseURL')}</div>
-              <button onclick=${() => this.update()}>update settings</button>
-            </div>
-          </div>`;
+          return [
+            $.HTML.t`<button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>`,
+            $.HTML.t`
+              <div class="loom-col" hidden=${() => !this.keymode()}>
+                <div>api key ${() => inp('key')}</div>
+                <div>base url ${() => inp('baseURL')}</div>
+                <button onclick=${() => this.update()}>update settings</button>
+              </div>
+            `,
+          ];
         }
       }),
     ]
@@ -223,8 +224,8 @@ export default await function (_, $) {
                   <button onclick=${() => this.spin()}>spin</button>
                   <button onclick=${() => this.up()}>up</button>
                   <button onclick=${() => this.down()}>down</button>
-                  <button onclick=${() => this.spawn()}>spawn clone</button>
-                  <button onclick=${() => this.die()}>delete thread</button>
+                  <button onclick=${() => this.spawn()}>clone</button>
+                  <button onclick=${() => this.die()}>die</button>
                 </div>
               </div>
             </div>
@@ -382,7 +383,9 @@ export default await function (_, $) {
   <div>logprobs</div>
                   ${() => this.logprobs()}
                 </div>
-                ${() => this.threads()}
+                <div class="loom-col">
+                  ${() => this.threads()}
+                </div>
                 <div class="loom-row">
                   <button onclick=${() => this.seek()}>seek</button>
                   <span class="spinner" hidden=${() => !this.loading()}></span>
@@ -391,8 +394,8 @@ export default await function (_, $) {
                 <div class="loom-row">
                   <button onclick=${() => this.save()}>save</button>
                   <button onclick=${() => this.reset()}>reset</button>
+                  ${() => this.client()}
                 </div>
-                ${() => this.client()}
               </div>
             </div>
           `;

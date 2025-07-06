@@ -87,15 +87,12 @@ button {
     font-family: inherit;
     color: var(--seaweed);
     width: fit-content;
+    height: fit-content;
 }
 
 button:hover {
     box-shadow: var(--box-shadow-args),   /* outer frame */
                 var(--box-shadow-args-inset); /* inner glow */
-}
-
-button:active {
-    background: var(--wood);
 }
 
 button:active {
@@ -193,6 +190,10 @@ select {
     background: var(--light-sand);
 }
 
+.logprob-button:active {
+    background: var(--sky);
+}
+
 .logprob {
     font-size: 0.6em;
     font-style: italic;
@@ -207,12 +208,14 @@ select {
 .thread {
     border: 2px solid var(--wood);
     width: fit-content;
+    height: fit-content;
     padding: 0px;
     display: flex;
 }
 
 .thread-handle {
     display: inline-flex;
+    margin-right: 8px;
 }
 
 .thread-handle > button {
@@ -230,8 +233,7 @@ select {
     height: 1.5em;
     min-width: 3em;
     margin: 0;
-    margin-left: 2px;
-    padding: 2px 0px 2px 2px;
+    padding: 2px;
     vertical-align: top;
 }
 
