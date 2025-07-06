@@ -94,7 +94,8 @@ export default await function (_, $) {
       $.Signal.new({ 
         name: 'model', 
         doc: 'which model to loom with',
-        default: 'meta-llama/llama-3.1-405b' 
+        // default: 'meta-llama/llama-3.1-405b' 
+        default: 'deepseek/deepseek-r1-0528' 
       }),
       $.Method.new({
         name: 'json',
