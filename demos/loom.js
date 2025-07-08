@@ -70,6 +70,7 @@ export default await function (_, $) {
               <div class="loom-col" hidden=${() => !this.keymode()}>
                 <div>api key ${() => inp('key')}</div>
                 <div>base url ${() => inp('baseURL')}</div>
+
                 <button onclick=${() => this.update()}>update settings</button>
               </div>
             `,
@@ -134,10 +135,10 @@ export default await function (_, $) {
       $.Signal.new({ name: 'showConfig', default: false }),
       $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
       $.Var.new({ name: 'loom' }),
-      $.Method.new({
+      $.Command.new({
         name: 'weave',
-        do() {
-          this.loom().weave(this.text());
+        run() {
+          return this.loom().weave(this.text());
         }
       }),
       $.Method.new({
@@ -179,8 +180,11 @@ export default await function (_, $) {
         do: async function() {
           this.text('');
           const res = await this.loom().client().completion(this.loom().text(), this.config().json());
-          if (res.choices[0].logprobs) {
+          if (res.choices[0].logprobs.top_logprobs) {
             const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
+            this.loom().logprobs(this.normaliseLogprobs(logprobs));
+          } else if (res.choices[0].logprobs.content) {
+            const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
             this.loom().logprobs(this.normaliseLogprobs(logprobs));
           }
           this.text(res.choices[0].text);
@@ -338,25 +342,17 @@ export default await function (_, $) {
       $.Command.new({
         name: 'weave',
         run: function(ctx, text) {
+          const oldtext = this.text();
           this.text(this.text() + text);
+          localStorage.setItem('LOOM_TEXT', this.text());
           this.updateTextarea();
           this.seek();
-        }
-      }),
-      $.Method.new({
-        name: 'save',
-        do() {
-          this.text(document.querySelector('.loom-textarea').value);
-          this.savedText(this.text());
-          localStorage.setItem(this.localStorageKey(), this.text());
-        }
-      }),
-      $.Method.new({
-        name: 'reset',
-        do() {
-          this.text(this.savedText());
-          this.updateTextarea();
-          this.seek();
+
+          return function undo() {
+            this.text(oldtext);
+            this.updateTextarea();
+            this.seek();
+          }
         }
       }),
       $.Method.new({
@@ -369,7 +365,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'loomText',
         do() {
-          return $.HTML.t`<textarea class="loom-textarea">${() => this.text()}</textarea>`
+          return $.HTML.t`<textarea class="loom-textarea" onload=${e => e.target.scrollTop = e.target.scrollHeight}>${() => this.text()}</textarea>`
         }
       }),
       $.Method.new({
@@ -379,22 +375,24 @@ export default await function (_, $) {
             <div class="loom">
               <div class="loom-col">${() => this.loomText()}</div>
               <div class="loom-col">
-                <div class="logprobs loom-row" hidden=${() => this.logprobs().length === 0}>
-  <div>logprobs</div>
-                  ${() => this.logprobs()}
+                <div class="logprobs loom-col" hidden=${() => this.logprobs().length === 0}>
+                  <div class="section-label">logprobs</div>
+                  <div class="loom-row">
+                    ${() => this.logprobs()}
+                  </div>
                 </div>
                 <div class="loom-col">
+                  <div class="section-label">threads</div>
                   ${() => this.threads()}
                 </div>
+                  <div class="section-label">actions</div>
                 <div class="loom-row">
-                  <button onclick=${() => this.seek()}>seek</button>
+                  <button class="seek-button" onclick=${() => this.seek()}>seek</button>
+                  ${() => this.client()}
                   <span class="spinner" hidden=${() => !this.loading()}></span>
                   <span class="error">${() => this.errorMsg()}</span>
                 </div>
                 <div class="loom-row">
-                  <button onclick=${() => this.save()}>save</button>
-                  <button onclick=${() => this.reset()}>reset</button>
-                  ${() => this.client()}
                 </div>
               </div>
             </div>

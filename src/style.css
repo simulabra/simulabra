@@ -185,6 +185,10 @@ select {
     width: 4em;
 }
 
+.seek-button {
+    min-width: 8em;
+}
+
 .logprob-button {
     color: var(--seaweed);
     background: var(--light-sand);
@@ -203,6 +207,18 @@ select {
 
 .logprob-token {
     margin-right: 0px;
+}
+
+.section-label {
+    font-style: italic;
+    font-size: 0.7em;
+    text-decoration: underline;
+    width: fit-content;
+    line-height: 0.7em;
+}
+
+.logprobs {
+    max-width: 30em;
 }
 
 .thread {
