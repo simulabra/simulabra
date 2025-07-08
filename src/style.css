@@ -221,6 +221,10 @@ select {
     max-width: 30em;
 }
 
+.logprobs-err {
+    color: var(--dusk);
+}
+
 .thread {
     border: 2px solid var(--wood);
     width: fit-content;

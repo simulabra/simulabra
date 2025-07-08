@@ -180,12 +180,19 @@ export default await function (_, $) {
         do: async function() {
           this.text('');
           const res = await this.loom().client().completion(this.loom().text(), this.config().json());
-          if (res.choices[0].logprobs.top_logprobs) {
-            const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
-            this.loom().logprobs(this.normaliseLogprobs(logprobs));
-          } else if (res.choices[0].logprobs.content) {
-            const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
-            this.loom().logprobs(this.normaliseLogprobs(logprobs));
+          try {
+            if (res.choices[0].logprobs.top_logprobs) {
+              const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
+              this.loom().logprobs(this.normaliseLogprobs(logprobs));
+            } else if (res.choices[0].logprobs.content) {
+              const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
+              this.loom().logprobs(this.normaliseLogprobs(logprobs));
+            } else {
+              this.loom().logprobs($.HTML.t`<span class="logprobs-err">(not implemented for api type)</span>`);
+            }
+          } catch (e) {
+            console.log(e);
+            this.loom().logprobs($.HTML.t`<span class="logprobs-err">(error: ${e.toString()})</span>`);
           }
           this.text(res.choices[0].text);
         }
@@ -285,9 +292,7 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          this.client($.V1Client.new({
-            baseURL: 'https://openrouter.ai/api',
-          }));
+          this.client($.V1Client.new());
           this.text(localStorage.getItem(this.localStorageKey()) || ' - metaobject system\n - reactive signals\n -');
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
@@ -375,7 +380,7 @@ export default await function (_, $) {
             <div class="loom">
               <div class="loom-col">${() => this.loomText()}</div>
               <div class="loom-col">
-                <div class="logprobs loom-col" hidden=${() => this.logprobs().length === 0}>
+                <div class="logprobs loom-col" hidden=${() => !this.logprobs()}>
                   <div class="section-label">logprobs</div>
                   <div class="loom-row">
                     ${() => this.logprobs()}
