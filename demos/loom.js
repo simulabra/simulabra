@@ -127,11 +127,31 @@ export default await function (_, $) {
     ]
   });
   $.Class.new({
-    name: 'Thread',
+    name: 'TextCompletion',
     slots: [
       $.Component,
       $.Clone,
       $.Signal.new({ name: 'text', default: ' ' }),
+      $.Method.new({
+        name: 'spanify',
+        do() {
+          const processed = this.text().replace(/\n/g, '|||\\n|||');
+          const parts = processed.split('|||');
+          return parts.map(p => {
+            if (p === '\\n') {
+              return $.HTML.t`<span class="escape-char">${p}</span>`;
+            } else {
+              return p;
+            }
+          });
+        }
+      }),
+    ]
+  });
+  $.Class.new({
+    name: 'Thread',
+    slots: [
+      $.TextCompletion,
       $.Signal.new({ name: 'showConfig', default: false }),
       $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
       $.Var.new({ name: 'loom' }),
@@ -228,7 +248,7 @@ export default await function (_, $) {
           <div class="thread">
             <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>☰</button></span>
             <div class="loom-col">
-              <button class="thread-text" onclick=${() => this.weave()}>${() => this.text()}</button>
+              <button class="thread-text" onclick=${() => this.weave()}>${() => this.spanify()}</button>
               <div class="thread-config" hidden=${() => !this.showConfig()}>
                 ${this.config()}
                 <div class="loom-row">
@@ -249,8 +269,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'Logprob',
     slots: [
-      $.Component,
-      $.Var.new({ name: 'text' }),
+      $.TextCompletion,
       $.Var.new({ name: 'logprob' }),
       $.Var.new({ name: 'loom' }),
       $.Method.new({
@@ -267,7 +286,7 @@ export default await function (_, $) {
           if (p.length > 5) p = '<0.01';
           return $.HTML.t`
             <button class="logprob-button" onclick=${() => this.weave()}>
-              <span class="logprob-token">"${this.text().replaceAll('\\', '\\\\')}"</span><span class="logprob">${p}</span>
+              <span class="logprob-token">${() => this.spanify()}</span><span class="logprob">${p}</span>
             </button>
           `;
         }

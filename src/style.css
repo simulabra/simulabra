@@ -209,6 +209,11 @@ select {
     margin-right: 0px;
 }
 
+.escape-char {
+    color: var(--dusk);
+    font-size: 0.8em;
+}
+
 .section-label {
     font-style: italic;
     font-size: 0.7em;
@@ -228,7 +233,6 @@ select {
 .thread {
     border: 2px solid var(--wood);
     width: fit-content;
-    height: fit-content;
     padding: 0px;
     display: flex;
 }
@@ -236,6 +240,7 @@ select {
 .thread-handle {
     display: inline-flex;
     margin-right: 8px;
+    height: 1.33em;
 }
 
 .thread-handle > button {
@@ -243,6 +248,7 @@ select {
     color: var(--wood);
     margin: 0;
     vertical-align: middle;
+    height: 100%;
 }
 
 .thread-text {
@@ -344,5 +350,9 @@ select {
 @media (max-width: 768px) {
     .loom {
         flex-direction: column;
+    }
+
+    .loom-text {
+        max-height: 40em;
     }
 }
