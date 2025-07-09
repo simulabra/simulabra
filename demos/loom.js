@@ -155,6 +155,12 @@ export default await function (_, $) {
       $.Signal.new({ name: 'showConfig', default: false }),
       $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
       $.Var.new({ name: 'loom' }),
+      $.Method.new({
+        name: 'runcommand',
+        do(cmd) {
+          return this.loom().runcommand(cmd);
+        }
+      }),
       $.Command.new({
         name: 'weave',
         run() {
@@ -203,10 +209,14 @@ export default await function (_, $) {
           try {
             if (res.choices[0].logprobs.top_logprobs) {
               const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
-              this.loom().logprobs(this.normaliseLogprobs(logprobs));
+              if (logprobs.filter(l => l.token.indexOf('Ġ') >= 0).length === 0) {
+                this.loom().logprobs(this.normaliseLogprobs(logprobs));
+              }
             } else if (res.choices[0].logprobs.content) {
               const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
-              this.loom().logprobs(this.normaliseLogprobs(logprobs));
+              if (logprobs.filter(l => l.token.indexOf('Ġ') >= 0).length === 0) {
+                this.loom().logprobs(this.normaliseLogprobs(logprobs));
+              }
             } else {
               this.loom().logprobs($.HTML.t`<span class="logprobs-err">(not implemented for api type)</span>`);
             }
@@ -316,7 +326,7 @@ export default await function (_, $) {
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
           if (storedThreads) {
-            this.threads(JSON.parse(storedThreads).map(t => $.Thread.new(t)));
+            this.threads(JSON.parse(storedThreads).map(t => $.Thread.new({ loom: this, ...t })));
           } else {
             let threads = [];
             for (let i = 0; i < 8; i++) {
@@ -337,21 +347,19 @@ export default await function (_, $) {
       $.Command.new({
         name: 'seek',
         doc: 'make new threads to search',
-        async: true,
-        run: async function() {
+        run() {
           this.text(document.querySelector('.loom-textarea').value);
           this.choices([]);
           this.logprobs([]);
           this.loading(true);
           this.errorMsg('');
           let threads = [];
-          try {
-            await Promise.all(this.threads().map(t => t.spin()));
-          } catch (e) {
-            console.log(e);
-            this.errorMsg(e.toString());
-          }
-          this.loading(false);
+          Promise.all(this.threads().map(t => t.spin()))
+            .finally(() => this.loading(false))
+            .catch(e => {
+              console.log(e);
+              this.errorMsg(e.toString());
+            });
         },
       }),
       $.Method.new({
@@ -379,11 +387,29 @@ export default await function (_, $) {
           }
         }
       }),
+      $.Var.new({
+        name: 'undostack',
+        default: () => [],
+      }),
       $.Method.new({
         name: 'runcommand',
         do(cmd) {
-          cmd.run(this);
+          const undo = cmd.command().run().apply(cmd.parent(), [cmd, ...cmd.args()]);
+          console.log('runcommand', undo, cmd);
+          if (undo) {
+            this.undostack().push(undo);
+          }
           this.history([...this.history(), cmd]);
+        }
+      }),
+      $.Method.new({
+        name: 'undo',
+        async do() {
+          const undo = this.undostack().pop();
+          console.log('undo', undo);
+          if (undo) {
+            return (await undo).apply(this);
+          }
         }
       }),
       $.Method.new({
@@ -412,6 +438,7 @@ export default await function (_, $) {
                   <div class="section-label">actions</div>
                 <div class="loom-row">
                   <button class="seek-button" onclick=${() => this.seek()}>seek</button>
+                  <button onclick=${() => this.undo()}>undo</button>
                   ${() => this.client()}
                   <span class="spinner" hidden=${() => !this.loading()}></span>
                   <span class="error">${() => this.errorMsg()}</span>

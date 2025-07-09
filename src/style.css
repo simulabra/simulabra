@@ -300,8 +300,9 @@ select {
     background: var(--light-sand);
     padding: 1em;
     height: 100%;
-    min-height: 50vh;
+    min-height: 20em;
     display: block;
+    resize: none;
 }
 
 .loom-row {

@@ -1311,9 +1311,15 @@ function bootstrap() {
       $.Method.new({
         name: 'run',
         do: function run() {
-          return this.command().run().apply(this.parent(), [this, ...this.args()]);
+          return this.parent().runcommand(this);
         }
       }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'CommandChild',
+    slots: [
     ]
   });
 
