@@ -1,4 +1,4 @@
-// SIMULABRA POWERLOOM
+// SIMULABRA LOOMWORKS
 
 import html from '../src/html.js';
 import { __, base } from '../src/base.js';
@@ -15,7 +15,7 @@ export default await function (_, $) {
       $.Signal.new({
         name: 'keymode',
         doc: 'show api key input',
-        default: false,
+        default: true,
       }),
       $.Method.new({
         name: 'togglekeymode',
@@ -33,7 +33,6 @@ export default await function (_, $) {
       $.Method.new({
         name: 'update',
         do() {
-          this.key(document.getElementById('key-input').value);
           localStorage.setItem(this.localStorageKey() + 'KEY', this.key());
           this.baseURL(document.getElementById('baseURL-input').value);
           localStorage.setItem(this.localStorageKey() + 'BASEURL', this.baseURL());
@@ -45,7 +44,6 @@ export default await function (_, $) {
         do: async function completion(prompt, config = {}) {
           const body = {
             prompt,
-            logprobs: 20,
             ...config
           };
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
@@ -63,7 +61,15 @@ export default await function (_, $) {
       $.Method.new({
         name: 'render',
         do() {
-          const inp = (v) => $.HTML.t`<input id=${v + '-input'} type="text" placeholder=${v} value=${() => this[v]()} />`;
+          const inponchange = v => e => {
+            this[v](document.getElementById(v + '-input').value);
+          }
+          const inp = (v) => $.HTML.t`<input 
+            id=${v + '-input'}
+            type="text"
+            placeholder=${v}
+            onchange=${inponchange(v)}
+            value=${() => this[v]()} />`;
           return [
             $.HTML.t`<button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>`,
             $.HTML.t`
@@ -87,7 +93,11 @@ export default await function (_, $) {
       $.Signal.new({
         name: 'max_tokens',
         doc: 'length of thread in tokens',
-        default: 5,
+        default: 8,
+      }),
+      $.Var.new({
+        name: 'logprobs',
+        default: 20,
       }),
       $.Signal.new({
         name: 'temperature',
@@ -106,6 +116,7 @@ export default await function (_, $) {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
             model: this.model(),
+            logprobs: this.logprobs(),
           };
         }
       }),
@@ -191,7 +202,7 @@ export default await function (_, $) {
             lp.logprob = lp.logprob / lptot;
           }
           logprobs = logprobs.map(l => $.Logprob.new({
-            text: l.token,
+            text: l.token.replace(/Ġ/g, ' '),
             logprob: l.logprob,
             loom: this.loom(),
           }));
@@ -205,24 +216,26 @@ export default await function (_, $) {
         async: true,
         do: async function() {
           this.text('');
+          this.loom().logprobs(null);
           const res = await this.loom().client().completion(this.loom().text(), this.config().json());
           try {
+            if (!res.choices) {
+              return;
+            }
             if (res.choices[0].logprobs.top_logprobs) {
               const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
-              if (logprobs.filter(l => l.token.indexOf('Ġ') >= 0).length === 0) {
-                this.loom().logprobs(this.normaliseLogprobs(logprobs));
-              }
+              this.loom().logprobs(this.normaliseLogprobs(logprobs));
             } else if (res.choices[0].logprobs.content) {
               const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
-              if (logprobs.filter(l => l.token.indexOf('Ġ') >= 0).length === 0) {
-                this.loom().logprobs(this.normaliseLogprobs(logprobs));
-              }
+              this.loom().logprobs(this.normaliseLogprobs(logprobs));
             } else {
               this.loom().logprobs($.HTML.t`<span class="logprobs-err">(not implemented for api type)</span>`);
             }
           } catch (e) {
             console.log(e);
-            this.loom().logprobs($.HTML.t`<span class="logprobs-err">(error: ${e.toString()})</span>`);
+            if (!this.loom().logprobs()) {
+              this.loom().logprobs($.HTML.t`<span class="logprobs-err">(error: ${e.toString()})</span>`);
+            }
           }
           this.text(res.choices[0].text);
         }
@@ -256,7 +269,7 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
           <div class="thread">
-            <span class="thread-handle"><button onclick=${() => this.showConfig(!this.showConfig())}>☰</button></span>
+            <button class="thread-handle" onclick=${() => this.showConfig(!this.showConfig())}>☰</button>
             <div class="loom-col">
               <button class="thread-text" onclick=${() => this.weave()}>${() => this.spanify()}</button>
               <div class="thread-config" hidden=${() => !this.showConfig()}>

@@ -90,7 +90,11 @@ button {
     height: fit-content;
 }
 
-button:hover {
+button:disabled {
+  background: var(--wood);
+}
+
+button:not(:disabled):hover {
     box-shadow: var(--box-shadow-args),   /* outer frame */
                 var(--box-shadow-args-inset); /* inner glow */
 }
@@ -241,14 +245,10 @@ select {
     display: inline-flex;
     margin-right: 8px;
     height: 1.33em;
-}
-
-.thread-handle > button {
-    display: inline-block;
+    width: 1.33em;
     color: var(--wood);
-    margin: 0;
     vertical-align: middle;
-    height: 100%;
+    padding: 2px;
 }
 
 .thread-text {
@@ -256,7 +256,7 @@ select {
     color: var(--seaweed);
     background: var(--light-sand);
     width: fit-content;
-    height: 1.5em;
+    height: 1.33em;
     min-width: 3em;
     margin: 0;
     padding: 2px;
