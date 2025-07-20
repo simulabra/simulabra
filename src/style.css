@@ -249,6 +249,7 @@ select {
     color: var(--wood);
     vertical-align: middle;
     padding: 2px;
+    padding-top: 0px;
 }
 
 .thread-text {
@@ -260,6 +261,7 @@ select {
     min-width: 3em;
     margin: 0;
     padding: 2px;
+    padding-top: 0px;
     vertical-align: top;
 }
 

@@ -9,9 +9,7 @@ export default await function (_, $) {
     doc: 'wrapper for openai v1 api compatible apis',
     slots: [
       $.Component,
-      $.Signal.new({ name: 'baseURL', default: 'http://localhost:3731' }),
-      $.Signal.new({ name: 'key', default: '' }),
-      $.Var.new({ name: 'localStorageKey', default: 'LOOM_' }),
+      $.Var.new({ name: 'config' }),
       $.Signal.new({
         name: 'keymode',
         doc: 'show api key input',
@@ -23,21 +21,6 @@ export default await function (_, $) {
           this.keymode(!this.keymode());
         }
       }),
-      $.After.new({
-        name: 'init',
-        do() {
-          this.key(localStorage.getItem(this.localStorageKey() + 'KEY') || '');
-          this.baseURL(localStorage.getItem(this.localStorageKey() + 'BASEURL') || '');
-        }
-      }),
-      $.Method.new({
-        name: 'update',
-        do() {
-          localStorage.setItem(this.localStorageKey() + 'KEY', this.key());
-          this.baseURL(document.getElementById('baseURL-input').value);
-          localStorage.setItem(this.localStorageKey() + 'BASEURL', this.baseURL());
-        }
-      }),
       $.Method.new({
         name: 'completion',
         async: true,
@@ -46,11 +29,11 @@ export default await function (_, $) {
             prompt,
             ...config
           };
-          const res = await fetch(`${this.baseURL()}/v1/completions`, {
+          const res = await fetch(`${this.config().baseURL()}/v1/completions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.key()}`,
+              'Authorization': `Bearer ${this.config().key()}`,
             },
             body: JSON.stringify(body),
           });
@@ -62,14 +45,14 @@ export default await function (_, $) {
         name: 'render',
         do() {
           const inponchange = v => e => {
-            this[v](document.getElementById(v + '-input').value);
+            this.config()[v](document.getElementById(v + '-input').value);
           }
           const inp = (v) => $.HTML.t`<input 
             id=${v + '-input'}
             type="text"
             placeholder=${v}
             onchange=${inponchange(v)}
-            value=${() => this[v]()} />`;
+            value=${() => this.config()[v]()} />`;
           return [
             $.HTML.t`<button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>`,
             $.HTML.t`
@@ -77,7 +60,7 @@ export default await function (_, $) {
                 <div>api key ${() => inp('key')}</div>
                 <div>base url ${() => inp('baseURL')}</div>
 
-                <button onclick=${() => this.update()}>update settings</button>
+                <button onclick=${() => this.config().save()}>save settings</button>
               </div>
             `,
           ];
@@ -90,33 +73,62 @@ export default await function (_, $) {
     slots: [
       $.Component,
       $.Clone,
-      $.Signal.new({
-        name: 'max_tokens',
-        doc: 'length of thread in tokens',
-        default: 8,
+      $.After.new({
+        name: 'init',
+        do() {
+          this.key(localStorage.getItem(this.localStorageKey() + 'KEY') || '');
+          this.baseURL(localStorage.getItem(this.localStorageKey() + 'BASEURL') || '');
+        }
       }),
       $.Var.new({
         name: 'logprobs',
         default: 20,
+      }),
+      $.Method.new({ 
+        name: 'model', 
+        doc: 'which model to loom with',
+        do() {
+          if (this.baseURL() === 'https://api.hyperbolic.xyz') {
+            return 'meta-llama/Meta-Llama-3.1-405B';
+          }
+        }
+      }),
+      $.Signal.new({ name: 'baseURL', default: 'http://localhost:3731' }),
+      $.Signal.new({ name: 'key', default: '' }),
+      $.Var.new({ name: 'localStorageKey', default: 'LOOM_' }),
+      $.Method.new({
+        name: 'save',
+        do() {
+          localStorage.setItem(this.localStorageKey() + 'KEY', this.key());
+          localStorage.setItem(this.localStorageKey() + 'BASEURL', this.baseURL());
+        }
+      }),
+    ]
+  });
+  $.Class.new({
+    name: 'ThreadConfig',
+    slots: [
+      $.Component,
+      $.Clone,
+      $.Signal.new({
+        name: 'max_tokens',
+        doc: 'length of thread in tokens',
+        default: 8,
       }),
       $.Signal.new({
         name: 'temperature',
         doc: 'generation temperature',
         default: 0.8,
       }),
-      $.Signal.new({ 
-        name: 'model', 
-        doc: 'which model to loom with',
-        default: 'meta-llama/Meta-Llama-3.1-405B' 
-      }),
+      $.Var.new({ name: 'loomconfig' }),
       $.Method.new({
         name: 'json',
         do() {
           return {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
-            model: this.model(),
-            logprobs: this.logprobs(),
+            model: this.loomconfig().model(),
+            logprobs: this.loomconfig().logprobs(),
           };
         }
       }),
@@ -334,7 +346,8 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          this.client($.V1Client.new());
+          const config = $.LoomConfig.new();
+          this.client($.V1Client.new({ config }));
           this.text(localStorage.getItem(this.localStorageKey()) || ' - metaobject system\n - reactive signals\n -');
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
@@ -345,9 +358,7 @@ export default await function (_, $) {
             for (let i = 0; i < 8; i++) {
               threads.push($.Thread.new({
                 loom: this, 
-                config: $.LoomConfig.new({ 
-                  temperature: 0.5 + i * 0.1,
-                })
+                config: $.ThreadConfig.new({ loomconfig: config })
               }));
             }
             this.threads(threads);
