@@ -29,13 +29,16 @@ export default await function (_, $) {
             prompt,
             ...config
           };
+          const headers = {
+            'Content-Type': 'application/json',
+          };
+          if (this.config().key()) {
+            headers.Authorization = `Bearer ${this.config().key()}`;
+          }
           const res = await fetch(`${this.config().baseURL()}/v1/completions`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.config().key()}`,
-            },
             body: JSON.stringify(body),
+            headers,
           });
           const json = await res.json();
           return json;
@@ -382,7 +385,7 @@ export default await function (_, $) {
             .finally(() => this.loading(false))
             .catch(e => {
               console.log(e);
-              this.errorMsg(e.toString());
+              this.errorMsg(e.stack());
             });
         },
       }),
