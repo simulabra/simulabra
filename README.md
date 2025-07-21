@@ -1,8 +1,8 @@
 ### SIMULABRA
 
-Simulabra is a metaobject system for Javascript. It has an extensible slot system that powers builtin signals and commands; a reactive HTML templating system for dynamic web applications; before/after method combination and multiple inheritance; and a batteries-included mentality to standard library design. 
+SIMULABRA is a software project consisting of a metaobject system for Javascript and a set of tools. Classes are defined in terms of slots, which are themselves instances of classes. Inheritance is just in terms of slots. Before and after slots wrap methods. Extensibility is baked in. Signal slots and HTML templating power web applications like the loom demo. And more is yet to come.
 
-For a fuller tour of its features, read through `tests/core.js` and `demos/loom.js`.
+For a fuller tour of its features, read through `demos/loom.js` or `tests/core.js`.
 
 
 ```
@@ -37,3 +37,13 @@ bun install
 ./serve.sh
 ```
 Then navigate to e.g. http://localhost:8080/loom
+
+## SIMULABRA HYPERLOOM
+
+HYPERLOOM is a base model writing interface. It generates choices for the next N tokens as completions, not chat. The user selects, reseeks, or modifies the text.
+
+Try at 'https://simulabra.com/loom', by pointing the base url to a local llama.cpp server (like http://localhost:3731). To launch the llama.cpp server, for example:
+
+    ./llama.cpp/build/bin/llama-server --port 3731 -t 8 -m <model> -ngl 99 -np 8
+
+It will also work with an API key for 405b on Hyperbolic, (baseurl: https://api.hyperbolic.xyz). More providers and providers per thread coming soon.

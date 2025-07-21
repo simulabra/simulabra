@@ -385,7 +385,7 @@ export default await function (_, $) {
             .finally(() => this.loading(false))
             .catch(e => {
               console.log(e);
-              this.errorMsg(e.stack);
+              this.errorMsg(e.toString() + e.stack);
             });
         },
       }),
