@@ -1,4 +1,4 @@
-// SIMULABRA LOOMWORKS
+// SIMULABRA HYPERLOOM
 
 import html from '../src/html.js';
 import { __, base } from '../src/base.js';
