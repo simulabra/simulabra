@@ -1264,6 +1264,20 @@ function bootstrap() {
     ]
   });
 
+  $.Class.new({
+    name: 'Constant',
+    slots: [
+      $.Var.new({ name: 'value' }),
+      function combine(impl) {
+        const self = this;
+        impl._primary = function constantAccess() {
+          return self.value();
+        };
+        impl._direct = true;
+      }
+    ]
+  })
+
   Function.prototype.module = function(params) {
     return $.Module.new({
       mod: this,

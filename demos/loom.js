@@ -169,22 +169,18 @@ export default await function (_, $) {
     name: 'LlamaCPPServerProvider',
     slots: [
       $.APIProvider,
-      $.Method.new({
+      $.Constant.new({
+        name: 'savedSlots',
+        value: ['baseURL'],
+      }),
+      $.Constant.new({
         name: 'display',
-        do() {
-          return `llama.cpp server`;
-        }
+        value: 'llama.cpp server',
       }),
       $.Signal.new({
         name: 'baseURL',
         doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
         default: 'http://localhost:3731'
-      }),
-      $.Method.new({
-        name: 'savedSlots',
-        do() {
-          return ['baseURL'];
-        }
       }),
       $.Method.new({
         name: 'logprobs',
@@ -210,23 +206,17 @@ export default await function (_, $) {
         name: 'apiKey',
         doc: 'api credential (100% not leaked)'
       }),
-      $.Method.new({
+      $.Constant.new({
         name: 'savedSlots',
-        do() {
-          return ['apiKey'];
-        }
+        value: ['apiKey'],
       }),
-      $.Method.new({
+      $.Constant.new({
         name: 'display',
-        do() {
-          return 'hyperbolic 405b';
-        }
+        value: 'hyperbolic 405b',
       }),
-      $.Method.new({
+      $.Constant.new({
         name: 'baseURL',
-        do() {
-          return 'https://api.hyperbolic.xyz';
-        }
+        value: 'https://api.hyperbolic.xyz',
       }),
       $.Method.new({
         name: 'logprobs',
@@ -267,17 +257,13 @@ export default await function (_, $) {
         doc: "which model to use with the completions endpoint",
         default: 'gpt-4-base'
       }),
-      $.Method.new({
+      $.Constant.new({
         name: 'savedSlots',
-        do() {
-          return ['baseURL', 'apiKey', 'model'];
-        }
+        value: ['baseURL', 'apiKey', 'model'],
       }),
-      $.Method.new({
+      $.Constant.new({
         name: 'display',
-        do() {
-          return `generic openai-compatible api`;
-        }
+        value: 'generic openai-compatible api',
       }),
       $.Method.new({
         name: 'logprobs',
@@ -674,5 +660,6 @@ export default await function (_, $) {
       })
     ]
   });
+
   $.Loom.new().mount();
 }.module({ name: 'demo.loom', imports: [base, html] }).load();
