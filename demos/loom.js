@@ -519,7 +519,7 @@ export default await function (_, $) {
         name: 'init',
         do() {
           this.client($.V1Client.new());
-          this.text(localStorage.getItem(this.localStorageKey()) || ' - metaobject system\n - reactive signals\n -');
+          this.text(localStorage.getItem(this.localStorageKey()) || 'Once upon a time');
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
           if (storedThreads) {
