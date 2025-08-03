@@ -15,12 +15,13 @@ export default await function (_, $) {
         name: 'init',
         do() {
           this.providers([
-            $.ProviderHyperbolic.new(),
-            $.ProviderLlamaCPPServer.new()
+            $.LlamaCPPServerProvider.new(),
+            $.HyperbolicProvider.new(),
+            $.GenericOpenAIAPIProvider.new(),
           ]);
-          const savedProvider = localStorage.getItem('LOOM_PROVIDER');
+          const savedProvider = this.providers().find(p => p.class().name() === localStorage.getItem('LOOM_PROVIDER'));
           if (savedProvider) {
-            this.config(this.providers().find(p => p.class().name() === savedProvider));
+            this.config(savedProvider);
           } else {
             this.config(this.providers()[0]);
           }
@@ -98,7 +99,12 @@ export default await function (_, $) {
     name: 'APIProvider',
     doc: "if only every API were the same, we wouldn't need this class",
     slots: [
-      $.Var.new({ name: 'localStorageKey', default: 'LOOM_' }),
+      $.After.new({
+        name: 'init',
+        do() {
+          this.loadFromLocalStorage();
+        }
+      }),
       $.Method.new({
         name: 'message',
         do() {
@@ -107,8 +113,34 @@ export default await function (_, $) {
       }),
       $.Method.new({
         name: 'transformRequest',
-        do(body, headers) {
-          // pass
+        do(body, headers) {}
+      }),
+      $.Method.new({
+        name: 'savedSlots',
+        do() {
+          return [];
+        }
+      }),
+      $.Method.new({
+        name: 'loadFromLocalStorage',
+        do() {
+          for (let savedSlot of this.savedSlots()) {
+            this[savedSlot](localStorage.getItem(this.localStorageKey(savedSlot)));
+          }
+        }
+      }),
+      $.Method.new({
+        name: 'save',
+        do() {
+          for (const savedSlot of this.savedSlots()) {
+            localStorage.setItem(this.localStorageKey(savedSlot), this[savedSlot]());
+          }
+        }
+      }),
+      $.Method.new({
+        name: 'localStorageKey',
+        do(key) {
+          return 'LOOM_' + this.class().name().toUpperCase() + '_' + key.toUpperCase();
         }
       }),
       $.Method.new({
@@ -134,15 +166,9 @@ export default await function (_, $) {
   });
 
   $.Class.new({
-    name: 'ProviderLlamaCPPServer',
+    name: 'LlamaCPPServerProvider',
     slots: [
       $.APIProvider,
-      $.After.new({
-        name: 'init',
-        do() {
-          this.baseURL(localStorage.getItem(this.localStorageKey() + 'BASEURL') || '');
-        }
-      }),
       $.Method.new({
         name: 'display',
         do() {
@@ -155,15 +181,16 @@ export default await function (_, $) {
         default: 'http://localhost:3731'
       }),
       $.Method.new({
-        name: 'logprobs',
-        do(res) {
-          return Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
+        name: 'savedSlots',
+        do() {
+          return ['baseURL'];
         }
       }),
       $.Method.new({
-        name: 'save',
-        do() {
-          localStorage.setItem(this.localStorageKey() + 'BASEURL', this.baseURL());
+        name: 'logprobs',
+        do(res) {
+          return Object.entries(res.choices[0].logprobs.top_logprobs[0])
+            .map(([k, v]) => ({ token: k, logprob: v }));
         }
       }),
       $.Method.new({
@@ -176,18 +203,18 @@ export default await function (_, $) {
   });
 
   $.Class.new({
-    name: 'ProviderHyperbolic',
+    name: 'HyperbolicProvider',
     slots: [
       $.APIProvider,
-      $.After.new({
-        name: 'init',
-        do() {
-          this.apiKey(localStorage.getItem(this.localStorageKey() + 'KEY') || '');
-        }
-      }),
       $.Signal.new({
         name: 'apiKey',
         doc: 'api credential (100% not leaked)'
+      }),
+      $.Method.new({
+        name: 'savedSlots',
+        do() {
+          return ['apiKey'];
+        }
       }),
       $.Method.new({
         name: 'display',
@@ -215,12 +242,6 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'save',
-        do() {
-          localStorage.setItem(this.localStorageKey() + 'KEY', this.apiKey());
-        }
-      }),
-      $.Method.new({
         name: 'customfields',
         do() {
           return this.renderInput('apiKey', 'secret credential', 'api key');
@@ -228,6 +249,63 @@ export default await function (_, $) {
       })
     ]
   });
+  $.Class.new({
+    name: 'GenericOpenAIAPIProvider',
+    slots: [
+      $.APIProvider,
+      $.Signal.new({
+        name: 'apiKey',
+        doc: 'api credential (100% not leaked)'
+      }),
+      $.Signal.new({
+        name: 'baseURL',
+        doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
+        default: 'http://localhost:3731'
+      }),
+      $.Signal.new({
+        name: 'model',
+        doc: "which model to use with the completions endpoint",
+        default: 'gpt-4-base'
+      }),
+      $.Method.new({
+        name: 'savedSlots',
+        do() {
+          return ['baseURL', 'apiKey', 'model'];
+        }
+      }),
+      $.Method.new({
+        name: 'display',
+        do() {
+          return `generic openai-compatible api`;
+        }
+      }),
+      $.Method.new({
+        name: 'logprobs',
+        do(res) {
+          return Object.entries(res.choices[0].logprobs.top_logprobs[0])
+            .map(([k, v]) => ({ token: k, logprob: v }));
+        }
+      }),
+      $.Method.new({
+        name: 'transformRequest',
+        do(body, headers) {
+          body.model = this.model();
+          headers.Authorization = `Bearer ${this.apiKey()}`;
+        }
+      }),
+      $.Method.new({
+        name: 'customfields',
+        do() {
+          return $.HTML.t`<span>
+            ${this.renderInput('baseURL', 'eg https://api.openai.com', 'base url')}
+            ${this.renderInput('apiKey', 'secret!', 'api key')}
+            ${this.renderInput('model', 'eg davinci-002', 'model')}
+          </span>`
+        }
+      })
+    ]
+  });
+
   $.Class.new({
     name: 'ThreadConfig',
     slots: [
@@ -467,12 +545,7 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          const providers = [
-            $.ProviderHyperbolic.new(),
-            $.ProviderLlamaCPPServer.new()
-          ];
-          const config = $.ProviderHyperbolic.new();
-          this.client($.V1Client.new({ config }));
+          this.client($.V1Client.new());
           this.text(localStorage.getItem(this.localStorageKey()) || ' - metaobject system\n - reactive signals\n -');
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
