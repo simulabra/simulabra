@@ -32,9 +32,7 @@ export default await function (_, $) {
           const headers = {
             'Content-Type': 'application/json',
           };
-          if (this.config().key()) {
-            headers.Authorization = `Bearer ${this.config().key()}`;
-          }
+          this.config().transformRequest(body, headers);
           const res = await fetch(`${this.config().baseURL()}/v1/completions`, {
             method: 'POST',
             body: JSON.stringify(body),
@@ -60,9 +58,7 @@ export default await function (_, $) {
             $.HTML.t`<button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>`,
             $.HTML.t`
               <div class="loom-col" hidden=${() => !this.keymode()}>
-                <div>api key ${() => inp('key')}</div>
-                <div>base url ${() => inp('baseURL')}</div>
-
+                ${() => this.config().render()}
                 <button onclick=${() => this.config().save()}>save settings</button>
               </div>
             `,
@@ -71,41 +67,132 @@ export default await function (_, $) {
       }),
     ]
   });
+
   $.Class.new({
-    name: 'LoomConfig',
+    name: 'APIProvider',
+    doc: "if only every API were the same, we wouldn't need this class",
     slots: [
-      $.Component,
-      $.Clone,
+      $.Var.new({ name: 'localStorageKey', default: 'LOOM_' }),
+      $.Method.new({
+        name: 'message',
+        do() {
+          return `${this.display()} - ${this.baseURL()}`;
+        }
+      }),
+      $.Method.new({
+        name: 'transformRequest',
+        do(body, headers) {
+          
+        }
+      }),
+      $.Method.new({
+        name: 'renderInput',
+        do(id, placeholder, label) {
+          const htmlId = id + 'input';
+          return $.HTML.t`<div>${label} <input 
+            id=${htmlId}
+            type="text"
+            placeholder=${placeholder}
+            onchange=${e => this[id](document.getElementById(htmlId).value)}
+            value=${() => this[id]()} /></div>`;
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'ProviderLlamaCPPServer',
+    slots: [
+      $.APIProvider,
       $.After.new({
         name: 'init',
         do() {
-          this.key(localStorage.getItem(this.localStorageKey() + 'KEY') || '');
           this.baseURL(localStorage.getItem(this.localStorageKey() + 'BASEURL') || '');
         }
       }),
-      $.Var.new({
-        name: 'logprobs',
-        default: 20,
-      }),
-      $.Method.new({ 
-        name: 'model', 
-        doc: 'which model to loom with',
+      $.Method.new({
+        name: 'display',
         do() {
-          if (this.baseURL() === 'https://api.hyperbolic.xyz') {
-            return 'meta-llama/Meta-Llama-3.1-405B';
-          }
+          return `llama.cpp server`;
         }
       }),
-      $.Signal.new({ name: 'baseURL', default: 'http://localhost:3731' }),
-      $.Signal.new({ name: 'key', default: '' }),
-      $.Var.new({ name: 'localStorageKey', default: 'LOOM_' }),
+      $.Signal.new({
+        name: 'baseURL',
+        doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
+        default: 'http://localhost:3731'
+      }),
+      $.Method.new({
+        name: 'logprobs',
+        do(res) {
+          return Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
+        }
+      }),
+      $.Method.new({
+        name: 'save',
+        do() {
+          localStorage.setItem(this.localStorageKey() + 'BASEURL', this.baseURL());
+        }
+      }),
+      $.Method.new({
+        name: 'render',
+        do() {
+          return this.renderInput('baseURL', 'eg http://localhost:3731', 'base url');
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: 'ProviderHyperbolic',
+    slots: [
+      $.APIProvider,
+      $.After.new({
+        name: 'init',
+        do() {
+          this.apiKey(localStorage.getItem(this.localStorageKey() + 'KEY') || '');
+        }
+      }),
+      $.Signal.new({
+        name: 'apiKey',
+        doc: 'api credential (100% not leaked)'
+      }),
+      $.Method.new({
+        name: 'display',
+        do() {
+          return 'hyperbolic';
+        }
+      }),
+      $.Method.new({
+        name: 'baseURL',
+        do() {
+          return 'https://api.hyperbolic.xyz';
+        }
+      }),
+      $.Method.new({
+        name: 'logprobs',
+        do(res) {
+          return res.choices[0].logprobs.content[0].top_logprobs;
+        }
+      }),
+      $.Method.new({
+        name: 'transformRequest',
+        do(body, headers) {
+          body.model = 'meta-llama/Meta-Llama-3.1-405B';
+          headers.Authorization = `Bearer ${this.key()}`;
+        }
+      }),
       $.Method.new({
         name: 'save',
         do() {
           localStorage.setItem(this.localStorageKey() + 'KEY', this.key());
-          localStorage.setItem(this.localStorageKey() + 'BASEURL', this.baseURL());
         }
       }),
+      $.Method.new({
+        name: 'render',
+        do() {
+          return this.renderInput('apiKey', 'secret credential', 'api key');
+        }
+      })
     ]
   });
   $.Class.new({
@@ -130,8 +217,7 @@ export default await function (_, $) {
           return {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
-            model: this.loomconfig().model(),
-            logprobs: this.loomconfig().logprobs(),
+            logprobs: 20,
           };
         }
       }),
@@ -179,7 +265,7 @@ export default await function (_, $) {
     slots: [
       $.TextCompletion,
       $.Signal.new({ name: 'showConfig', default: false }),
-      $.Var.new({ name: 'config', default: () => $.LoomConfig.new() }),
+      $.Var.new({ name: 'config' }),
       $.Var.new({ name: 'loom' }),
       $.Method.new({
         name: 'runcommand',
@@ -237,10 +323,10 @@ export default await function (_, $) {
             if (!res.choices) {
               return;
             }
-            if (res.choices[0].logprobs.top_logprobs) {
+            if (res.choices[0].logprobs.top_logprobs) { // llama.cpp server
               const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
               this.loom().logprobs(this.normaliseLogprobs(logprobs));
-            } else if (res.choices[0].logprobs.content) {
+            } else if (res.choices[0].logprobs.content) { // hyperbolic
               const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
               this.loom().logprobs(this.normaliseLogprobs(logprobs));
             } else {
@@ -349,7 +435,7 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          const config = $.LoomConfig.new();
+          const config = $.ProviderLlamaCPPServer.new();
           this.client($.V1Client.new({ config }));
           this.text(localStorage.getItem(this.localStorageKey()) || ' - metaobject system\n - reactive signals\n -');
           this.savedText(this.text());
