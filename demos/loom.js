@@ -9,7 +9,23 @@ export default await function (_, $) {
     doc: 'wrapper for openai v1 api compatible apis',
     slots: [
       $.Component,
-      $.Var.new({ name: 'config' }),
+      $.Signal.new({ name: 'config' }),
+      $.Var.new({ name: 'providers' }),
+      $.After.new({
+        name: 'init',
+        do() {
+          this.providers([
+            $.ProviderHyperbolic.new(),
+            $.ProviderLlamaCPPServer.new()
+          ]);
+          const savedProvider = localStorage.getItem('LOOM_PROVIDER');
+          if (savedProvider) {
+            this.config(this.providers().find(p => p.class().name() === savedProvider));
+          } else {
+            this.config(this.providers()[0]);
+          }
+        }
+      }),
       $.Signal.new({
         name: 'keymode',
         doc: 'show api key input',
@@ -19,6 +35,15 @@ export default await function (_, $) {
         name: 'togglekeymode',
         do() {
           this.keymode(!this.keymode());
+        }
+      }),
+      $.Method.new({
+        name: 'switchConfig',
+        do() {
+          const idx = this.providers().indexOf(this.config());
+          this.log('switchConfig', idx);
+          this.config(this.providers()[(idx + 1) % this.providers().length]);
+          localStorage.setItem('LOOM_PROVIDER', this.config().class().name());
         }
       }),
       $.Method.new({
@@ -56,6 +81,7 @@ export default await function (_, $) {
             value=${() => this.config()[v]()} />`;
           return [
             $.HTML.t`<button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>`,
+            $.HTML.t`<button onclick=${() => this.switchConfig()}>switch provider</button>`,
             $.HTML.t`
               <div class="loom-col" hidden=${() => !this.keymode()}>
                 ${() => this.config().render()}
@@ -82,7 +108,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'transformRequest',
         do(body, headers) {
-          
+          // pass
         }
       }),
       $.Method.new({
@@ -97,6 +123,13 @@ export default await function (_, $) {
             value=${() => this[id]()} /></div>`;
         }
       }),
+      $.Method.new({
+        name: 'render',
+        do() {
+          return $.HTML.t`<div>${this.display()}</div>
+            ${this.customfields()}`;
+        }
+      })
     ]
   });
 
@@ -134,7 +167,7 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'render',
+        name: 'customfields',
         do() {
           return this.renderInput('baseURL', 'eg http://localhost:3731', 'base url');
         }
@@ -159,7 +192,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'display',
         do() {
-          return 'hyperbolic';
+          return 'hyperbolic 405b';
         }
       }),
       $.Method.new({
@@ -178,17 +211,17 @@ export default await function (_, $) {
         name: 'transformRequest',
         do(body, headers) {
           body.model = 'meta-llama/Meta-Llama-3.1-405B';
-          headers.Authorization = `Bearer ${this.key()}`;
+          headers.Authorization = `Bearer ${this.apiKey()}`;
         }
       }),
       $.Method.new({
         name: 'save',
         do() {
-          localStorage.setItem(this.localStorageKey() + 'KEY', this.key());
+          localStorage.setItem(this.localStorageKey() + 'KEY', this.apiKey());
         }
       }),
       $.Method.new({
-        name: 'render',
+        name: 'customfields',
         do() {
           return this.renderInput('apiKey', 'secret credential', 'api key');
         }
@@ -210,7 +243,6 @@ export default await function (_, $) {
         doc: 'generation temperature',
         default: 0.8,
       }),
-      $.Var.new({ name: 'loomconfig' }),
       $.Method.new({
         name: 'json',
         do() {
@@ -435,7 +467,11 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          const config = $.ProviderLlamaCPPServer.new();
+          const providers = [
+            $.ProviderHyperbolic.new(),
+            $.ProviderLlamaCPPServer.new()
+          ];
+          const config = $.ProviderHyperbolic.new();
           this.client($.V1Client.new({ config }));
           this.text(localStorage.getItem(this.localStorageKey()) || ' - metaobject system\n - reactive signals\n -');
           this.savedText(this.text());
@@ -447,7 +483,7 @@ export default await function (_, $) {
             for (let i = 0; i < 8; i++) {
               threads.push($.Thread.new({
                 loom: this, 
-                config: $.ThreadConfig.new({ loomconfig: config })
+                config: $.ThreadConfig.new()
               }));
             }
             this.threads(threads);
