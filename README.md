@@ -46,4 +46,4 @@ Try at 'https://simulabra.com/loom', by pointing the base url to a local llama.c
 
     ./llama.cpp/build/bin/llama-server --port 3731 -t 8 -m <model> -ngl 99 -np 8
 
-It will also work with an API key for 405b on Hyperbolic, (baseurl: https://api.hyperbolic.xyz). More providers and providers per thread coming soon.
+There is also a provider for 405b base on Hyperbolic which requires an API key, and a generic OpenAI-compatible API provider that has been tested with the OpenAI API using davinci-002 as the model and https://api.openai.com as the base URL.
