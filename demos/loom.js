@@ -9,7 +9,7 @@ export default await function (_, $) {
     doc: 'wrapper for openai v1 api compatible apis',
     slots: [
       $.Component,
-      $.Signal.new({ name: 'config' }),
+      $.Signal.new({ name: 'selectedProvider' }),
       $.Var.new({ name: 'providers' }),
       $.After.new({
         name: 'init',
@@ -21,72 +21,51 @@ export default await function (_, $) {
           ]);
           const savedProvider = this.providers().find(p => p.class().name() === localStorage.getItem('LOOM_PROVIDER'));
           if (savedProvider) {
-            this.config(savedProvider);
+            this.selectedProvider(savedProvider);
           } else {
-            this.config(this.providers()[0]);
+            this.selectedProvider(this.providers()[0]);
           }
         }
       }),
       $.Signal.new({
-        name: 'keymode',
-        doc: 'show api key input',
+        name: 'showSettings',
+        doc: 'show api settings',
         default: true,
       }),
       $.Method.new({
-        name: 'togglekeymode',
+        name: 'toggleSettings',
         do() {
-          this.keymode(!this.keymode());
+          this.showSettings(!this.showSettings());
         }
       }),
       $.Method.new({
         name: 'switchConfig',
         do() {
-          const idx = this.providers().indexOf(this.config());
-          this.log('switchConfig', idx);
-          this.config(this.providers()[(idx + 1) % this.providers().length]);
-          localStorage.setItem('LOOM_PROVIDER', this.config().class().name());
+          const idx = this.providers().indexOf(this.selectedProvider());
+          this.selectedProvider(this.providers()[(idx + 1) % this.providers().length]);
+          localStorage.setItem('LOOM_PROVIDER', this.selectedProvider().class().name());
         }
       }),
       $.Method.new({
         name: 'completion',
         async: true,
         do: async function completion(prompt, config = {}) {
-          const body = {
-            prompt,
-            ...config
-          };
-          const headers = {
-            'Content-Type': 'application/json',
-          };
-          this.config().transformRequest(body, headers);
-          const res = await fetch(`${this.config().baseURL()}/v1/completions`, {
-            method: 'POST',
-            body: JSON.stringify(body),
-            headers,
-          });
-          const json = await res.json();
-          return json;
+          const res = await this.selectedProvider().completion(prompt, config);
+          const text = res.choices[0].text;
+          const logprobs = this.selectedProvider().logprobs(res);
+          return { text, logprobs };
         }
       }),
       $.Method.new({
         name: 'render',
         do() {
-          const inponchange = v => e => {
-            this.config()[v](document.getElementById(v + '-input').value);
-          }
-          const inp = (v) => $.HTML.t`<input 
-            id=${v + '-input'}
-            type="text"
-            placeholder=${v}
-            onchange=${inponchange(v)}
-            value=${() => this.config()[v]()} />`;
           return [
-            $.HTML.t`<button onclick=${() => this.togglekeymode()}>${() => !this.keymode() ? 'show' : 'hide'} client settings</button>`,
+            $.HTML.t`<button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>`,
             $.HTML.t`<button onclick=${() => this.switchConfig()}>switch provider</button>`,
             $.HTML.t`
-              <div class="loom-col" hidden=${() => !this.keymode()}>
-                ${() => this.config().render()}
-                <button onclick=${() => this.config().save()}>save settings</button>
+              <div class="loom-col" hidden=${() => !this.showSettings()}>
+                ${() => this.selectedProvider().render()}
+                <button onclick=${() => this.selectedProvider().save()}>save settings</button>
               </div>
             `,
           ];
@@ -106,14 +85,29 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'message',
-        do() {
-          return `${this.display()} - ${this.baseURL()}`;
-        }
-      }),
-      $.Method.new({
         name: 'transformRequest',
         do(body, headers) {}
+      }),
+      $.Method.new({
+        name: 'completion',
+        async: true,
+        do: async function completion(prompt, config = {}) {
+          const body = {
+            prompt,
+            ...config
+          };
+          const headers = {
+            'Content-Type': 'application/json',
+          };
+          this.transformRequest(body, headers);
+          const res = await fetch(`${this.baseURL()}/v1/completions`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+            headers,
+          });
+          const json = await res.json();
+          return json;
+        }
       }),
       $.Method.new({
         name: 'savedSlots',
@@ -185,8 +179,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'logprobs',
         do(res) {
-          return Object.entries(res.choices[0].logprobs.top_logprobs[0])
-            .map(([k, v]) => ({ token: k, logprob: v }));
+          return res.choices[0].logprobs.content[0].top_logprobs;
         }
       }),
       $.Method.new({
@@ -221,7 +214,8 @@ export default await function (_, $) {
       $.Method.new({
         name: 'logprobs',
         do(res) {
-          return res.choices[0].logprobs.content[0].top_logprobs;
+          return Object.entries(res.choices[0].logprobs.top_logprobs[0])
+            .map(([k, v]) => ({ token: k, logprob: v }));
         }
       }),
       $.Method.new({
@@ -414,16 +408,10 @@ export default await function (_, $) {
         do: async function() {
           this.text('');
           this.loom().logprobs(null);
-          const res = await this.loom().client().completion(this.loom().text(), this.config().json());
           try {
-            if (!res.choices) {
-              return;
-            }
-            if (res.choices[0].logprobs.top_logprobs) { // llama.cpp server
-              const logprobs = Object.entries(res.choices[0].logprobs.top_logprobs[0]).map(([k, v]) => ({ token: k, logprob: v }));
-              this.loom().logprobs(this.normaliseLogprobs(logprobs));
-            } else if (res.choices[0].logprobs.content) { // hyperbolic
-              const logprobs = res.choices[0].logprobs.content[0].top_logprobs;
+            const { text, logprobs } = await this.loom().client().completion(this.loom().text(), this.config().json());
+            this.text(text);
+            if (logprobs) {
               this.loom().logprobs(this.normaliseLogprobs(logprobs));
             } else {
               this.loom().logprobs($.HTML.t`<span class="logprobs-err">(not implemented for api type)</span>`);
@@ -434,7 +422,6 @@ export default await function (_, $) {
               this.loom().logprobs($.HTML.t`<span class="logprobs-err">(error: ${e.toString()})</span>`);
             }
           }
-          this.text(res.choices[0].text);
         }
       }),
       $.Method.new({
