@@ -9,28 +9,17 @@ export default await function (_, $) {
     doc: 'wrapper for openai v1 api compatible apis', // first-class docstrings
     slots: [ // slot-based system like CLOS
       $.Component, // slot-based inheritance
-      $.Var.new({ name: 'providers' }), // standard variable slot
-      $.Signal.new({ name: 'selectedProvider' }), // reactive signal slot
+      $.Var.new({ name: 'provider' }), // standard variable slot
       $.After.new({ // CLOS-style method combination
         name: 'init',
         do() {
-          this.providers([ // variable assignment as method call
-            $.GenericOpenAIAPIProvider.new(),
-            $.LlamaCPPServerProvider.new(),
-            $.HyperbolicProvider.new(),
-          ]);
-          const savedProvider = this.providers().find(p => p.class().name() === localStorage.getItem('LOOM_PROVIDER'));
-          if (savedProvider) {
-            this.selectedProvider(savedProvider);
-          } else {
-            this.selectedProvider(this.providers()[0]);
-          }
+          this.provider($.GenericOpenAIAPIProvider.new()); // variable assignment as method call
         }
       }),
-      $.Signal.new({
+      $.Signal.new({ // reactive signal slot
         name: 'showSettings',
         doc: 'show api settings',
-        default: true,
+        default: true, // default value
       }),
       $.Method.new({
         name: 'toggleSettings',
@@ -39,20 +28,12 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'switchConfig',
-        do() {
-          const idx = this.providers().indexOf(this.selectedProvider());
-          this.selectedProvider(this.providers()[(idx + 1) % this.providers().length]);
-          localStorage.setItem('LOOM_PROVIDER', this.selectedProvider().class().name());
-        }
-      }),
-      $.Method.new({
         name: 'completion',
         async: true,
         do: async function completion(prompt, config = {}) {
-          const res = await this.selectedProvider().completion(prompt, config);
+          const res = await this.provider().completion(prompt, config);
           const text = res.choices[0].text;
-          const logprobs = this.selectedProvider().logprobs(res);
+          const logprobs = this.provider().logprobs(res);
           return { text, logprobs };
         }
       }),
@@ -61,11 +42,9 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`<span>
             <button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>
-            <button onclick=${() => this.switchConfig()}>switch provider</button>
-            
               <div class="loom-col" hidden=${() => !this.showSettings()}>
-                ${() => this.selectedProvider().render()}
-                <button onclick=${() => this.selectedProvider().save()}>save settings</button>
+                ${() => this.provider().render()}
+                <button onclick=${() => this.provider().save()}>save settings</button>
               </div>
           </span>`;
         }
@@ -156,81 +135,8 @@ export default await function (_, $) {
   });
 
   $.Class.new({
-    name: 'LlamaCPPServerProvider',
-    slots: [
-      $.APIProvider,
-      $.Constant.new({
-        name: 'savedSlots',
-        value: ['baseURL'],
-      }),
-      $.Constant.new({
-        name: 'display',
-        value: 'llama.cpp server',
-      }),
-      $.Signal.new({
-        name: 'baseURL',
-        doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
-        default: 'http://localhost:3731'
-      }),
-      $.Method.new({
-        name: 'logprobs',
-        do(res) {
-          return res.choices[0].logprobs.content[0].top_logprobs;
-        }
-      }),
-      $.Method.new({
-        name: 'customfields',
-        do() {
-          return this.renderInput('baseURL', 'eg http://localhost:3731', 'base url');
-        }
-      })
-    ]
-  });
-
-  $.Class.new({
-    name: 'HyperbolicProvider',
-    slots: [
-      $.APIProvider,
-      $.Signal.new({
-        name: 'apiKey',
-        doc: 'api credential (100% not leaked)'
-      }),
-      $.Constant.new({
-        name: 'savedSlots',
-        value: ['apiKey'],
-      }),
-      $.Constant.new({
-        name: 'display',
-        value: 'hyperbolic 405b',
-      }),
-      $.Constant.new({
-        name: 'baseURL',
-        value: 'https://api.hyperbolic.xyz',
-      }),
-      $.Method.new({
-        name: 'logprobs',
-        do(res) {
-          return Object.entries(res.choices[0].logprobs.top_logprobs[0])
-            .map(([k, v]) => ({ token: k, logprob: v }));
-        }
-      }),
-      $.Method.new({
-        name: 'transformRequest',
-        do(body, headers) {
-          body.model = 'meta-llama/Meta-Llama-3.1-405B';
-          headers.Authorization = `Bearer ${this.apiKey()}`;
-        }
-      }),
-      $.Method.new({
-        name: 'customfields',
-        do() {
-          return this.renderInput('apiKey', 'secret credential', 'api key');
-        }
-      })
-    ]
-  });
-  $.Class.new({
     name: 'GenericOpenAIAPIProvider',
+    doc: 'interact with an OpenAI-compatible API using a bearer token',
     slots: [
       $.APIProvider,
       $.Signal.new({
@@ -258,15 +164,35 @@ export default await function (_, $) {
       $.Method.new({
         name: 'logprobs',
         do(res) {
-          return Object.entries(res.choices[0].logprobs.top_logprobs[0])
-            .map(([k, v]) => ({ token: k, logprob: v }));
+          const lp = res.choices[0].logprobs;
+          if (!lp) {
+            this.log('no logprobs on completion response', res);
+            return null;
+          }
+          // llama.cpp server:
+          if (lp.content && Array.isArray(lp.content) && lp.content[0]?.top_logprobs) {
+            return lp.content[0].top_logprobs;
+          }
+          // OpenAI-compatible:
+          const tl = lp.top_logprobs;
+          if (Array.isArray(tl) && tl.length && tl[0] && typeof tl[0] === 'object' && !Array.isArray(tl[0])) {
+            return Object.entries(tl[0]).map(([token, logprob]) => ({ token, logprob }));
+          }
+          if (Array.isArray(lp) && lp.length && lp[0].token && typeof lp[0].logprob === 'number') {
+            return lp;
+          }
+          return null;
         }
       }),
       $.Method.new({
         name: 'transformRequest',
         do(body, headers) {
-          body.model = this.model();
-          headers.Authorization = `Bearer ${this.apiKey()}`;
+          if (this.model()) {
+            body.model = this.model();
+          }
+          if (this.apiKey()) {
+            headers.Authorization = `Bearer ${this.apiKey()}`;
+          }
         }
       }),
       $.Method.new({
