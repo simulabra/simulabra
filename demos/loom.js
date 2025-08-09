@@ -4,17 +4,17 @@ import html from '../src/html.js';
 import { __, base } from '../src/base.js';
 
 export default await function (_, $) {
-  $.Class.new({
+  $.Class.new({ // declarative class definitions
     name: 'V1Client',
-    doc: 'wrapper for openai v1 api compatible apis',
-    slots: [
-      $.Component,
-      $.Signal.new({ name: 'selectedProvider' }),
-      $.Var.new({ name: 'providers' }),
-      $.After.new({
+    doc: 'wrapper for openai v1 api compatible apis', // first-class docstrings
+    slots: [ // slot-based system like CLOS
+      $.Component, // slot-based inheritance
+      $.Var.new({ name: 'providers' }), // standard variable slot
+      $.Signal.new({ name: 'selectedProvider' }), // reactive signal slot
+      $.After.new({ // CLOS-style method combination
         name: 'init',
         do() {
-          this.providers([
+          this.providers([ // variable assignment as method call
             $.GenericOpenAIAPIProvider.new(),
             $.LlamaCPPServerProvider.new(),
             $.HyperbolicProvider.new(),
@@ -59,16 +59,15 @@ export default await function (_, $) {
       $.Method.new({
         name: 'render',
         do() {
-          return [
-            $.HTML.t`<button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>`,
-            $.HTML.t`<button onclick=${() => this.switchConfig()}>switch provider</button>`,
-            $.HTML.t`
+          return $.HTML.t`<span>
+            <button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>
+            <button onclick=${() => this.switchConfig()}>switch provider</button>
+            
               <div class="loom-col" hidden=${() => !this.showSettings()}>
                 ${() => this.selectedProvider().render()}
                 <button onclick=${() => this.selectedProvider().save()}>save settings</button>
               </div>
-            `,
-          ];
+          </span>`;
         }
       }),
     ]
@@ -509,7 +508,6 @@ export default await function (_, $) {
       $.Signal.new({ name: 'errorMsg', default: '' }),
       $.Signal.new({ name: 'threads' }),
       $.Signal.new({ name: 'loading', default: false }),
-      $.Signal.new({ name: 'editing', default: false }),
       $.Var.new({ name: 'client' }),
       $.Var.new({ name: 'localStorageKey', default: 'LOOM_TEXT' }),
       $.After.new({
@@ -626,11 +624,11 @@ export default await function (_, $) {
                 <div class="loom-row">
                   <button class="seek-button" onclick=${() => this.seek()}>seek</button>
                   <button onclick=${() => this.undo()}>undo</button>
-                  ${() => this.client()}
                   <span class="spinner" hidden=${() => !this.loading()}></span>
                   <span class="error">${() => this.errorMsg()}</span>
                 </div>
                 <div class="loom-row">
+                  ${() => this.client()}
                 </div>
               </div>
             </div>
