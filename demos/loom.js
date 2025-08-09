@@ -15,9 +15,9 @@ export default await function (_, $) {
         name: 'init',
         do() {
           this.providers([
+            $.GenericOpenAIAPIProvider.new(),
             $.LlamaCPPServerProvider.new(),
             $.HyperbolicProvider.new(),
-            $.GenericOpenAIAPIProvider.new(),
           ]);
           const savedProvider = this.providers().find(p => p.class().name() === localStorage.getItem('LOOM_PROVIDER'));
           if (savedProvider) {
@@ -105,15 +105,12 @@ export default await function (_, $) {
             body: JSON.stringify(body),
             headers,
           });
-          const json = await res.json();
-          return json;
+          return res.json();
         }
       }),
-      $.Method.new({
+      $.Constant.new({
         name: 'savedSlots',
-        do() {
-          return [];
-        }
+        value: []
       }),
       $.Method.new({
         name: 'loadFromLocalStorage',
@@ -294,12 +291,12 @@ export default await function (_, $) {
       $.Signal.new({
         name: 'max_tokens',
         doc: 'length of thread in tokens',
-        default: 8,
+        default: 10,
       }),
       $.Signal.new({
         name: 'temperature',
         doc: 'generation temperature',
-        default: 0.8,
+        default: 0.6,
       }),
       $.Method.new({
         name: 'json',
@@ -590,7 +587,7 @@ export default await function (_, $) {
         name: 'runcommand',
         do(cmd) {
           const undo = cmd.command().run().apply(cmd.parent(), [cmd, ...cmd.args()]);
-          console.log('runcommand', undo, cmd);
+          // console.log('runcommand', undo, cmd);
           if (undo) {
             this.undostack().push(undo);
           }
@@ -601,16 +598,9 @@ export default await function (_, $) {
         name: 'undo',
         async do() {
           const undo = this.undostack().pop();
-          console.log('undo', undo);
           if (undo) {
             return (await undo).apply(this);
           }
-        }
-      }),
-      $.Method.new({
-        name: 'loomText',
-        do() {
-          return $.HTML.t`<textarea class="loom-textarea" onload=${e => e.target.scrollTop = e.target.scrollHeight}>${() => this.text()}</textarea>`
         }
       }),
       $.Method.new({
@@ -618,7 +608,9 @@ export default await function (_, $) {
         do() {
           return $.HTML.t`
             <div class="loom">
-              <div class="loom-col">${() => this.loomText()}</div>
+              <div class="loom-col">
+                <textarea class="loom-textarea" onload=${e => e.target.scrollTop = e.target.scrollHeight}>${() => this.text()}</textarea>
+              </div>
               <div class="loom-col">
                 <div class="logprobs loom-col" hidden=${() => !this.logprobs()}>
                   <div class="section-label">logprobs</div>
