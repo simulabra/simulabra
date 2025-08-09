@@ -5,66 +5,48 @@ import { __, base } from '../src/base.js';
 
 export default await function (_, $) {
   $.Class.new({ // declarative class definitions
-    name: 'V1Client',
-    doc: 'wrapper for openai v1 api compatible apis', // first-class docstrings
+    name: 'OpenAIAPIClient',
+    doc: "consume and configure an openai-compatible api",
     slots: [ // slot-based system like CLOS
       $.Component, // slot-based inheritance
-      $.Var.new({ name: 'provider' }), // standard variable slot
-      $.After.new({ // CLOS-style method combination
-        name: 'init',
-        do() {
-          this.provider($.GenericOpenAIAPIProvider.new()); // variable assignment as method call
-        }
-      }),
       $.Signal.new({ // reactive signal slot
         name: 'showSettings',
         doc: 'show api settings',
         default: true, // default value
       }),
+      $.Signal.new({
+        name: 'apiKey',
+        doc: 'api credential (100% not leaked)'
+      }),
+      $.Signal.new({
+        name: 'baseURL',
+        doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
+        default: 'https://api.openai.com'
+      }),
+      $.Signal.new({
+        name: 'model',
+        doc: "which model to use with the completions endpoint",
+        default: 'davinci-002'
+      }),
+      $.Constant.new({ // constant slot, same across all instances of class
+        name: 'savedSlots',
+        value: ['baseURL', 'apiKey', 'model'],
+      }),
+      $.Constant.new({
+        name: 'display',
+        value: 'generic openai-compatible api',
+      }),
       $.Method.new({
         name: 'toggleSettings',
         do() {
-          this.showSettings(!this.showSettings());
+          this.showSettings(!this.showSettings()); // variable assignment as method call; triggers effect
         }
       }),
-      $.Method.new({
-        name: 'completion',
-        async: true,
-        do: async function completion(prompt, config = {}) {
-          const res = await this.provider().completion(prompt, config);
-          const text = res.choices[0].text;
-          const logprobs = this.provider().logprobs(res);
-          return { text, logprobs };
-        }
-      }),
-      $.Method.new({
-        name: 'render',
-        do() {
-          return $.HTML.t`<span>
-            <button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>
-              <div class="loom-col" hidden=${() => !this.showSettings()}>
-                ${() => this.provider().render()}
-                <button onclick=${() => this.provider().save()}>save settings</button>
-              </div>
-          </span>`;
-        }
-      }),
-    ]
-  });
-
-  $.Class.new({
-    name: 'APIProvider',
-    doc: "if only every API were the same, we wouldn't need this class",
-    slots: [
-      $.After.new({
+      $.After.new({ // CLOS-style method combination
         name: 'init',
         do() {
           this.loadFromLocalStorage();
         }
-      }),
-      $.Method.new({
-        name: 'transformRequest',
-        do(body, headers) {}
       }),
       $.Method.new({
         name: 'completion',
@@ -83,12 +65,11 @@ export default await function (_, $) {
             body: JSON.stringify(body),
             headers,
           });
-          return res.json();
+          const json = await res.json();
+          const text = json.choices[0].text;
+          const logprobs = this.logprobs(json);
+          return { text, logprobs };
         }
-      }),
-      $.Constant.new({
-        name: 'savedSlots',
-        value: []
       }),
       $.Method.new({
         name: 'loadFromLocalStorage',
@@ -109,7 +90,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'localStorageKey',
         do(key) {
-          return 'LOOM_' + this.class().name().toUpperCase() + '_' + key.toUpperCase();
+          return 'LOOM_CLIENT_' + key.toUpperCase();
         }
       }),
       $.Method.new({
@@ -127,39 +108,17 @@ export default await function (_, $) {
       $.Method.new({
         name: 'render',
         do() {
-          return $.HTML.t`<div>${this.display()}</div>
-            ${this.customfields()}`;
+          return $.HTML.t`<span>
+            <button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>
+              <div class="loom-col" hidden=${() => !this.showSettings()}>
+                <div>${this.display()}</div>
+                ${this.renderInput('baseURL', 'eg https://api.openai.com', 'base url')}
+                ${this.renderInput('apiKey', 'secret!', 'api key')}
+                ${this.renderInput('model', 'eg davinci-002', 'model')}
+                <button onclick=${() => this.save()}>save settings</button>
+              </div>
+          </span>`;
         }
-      })
-    ]
-  });
-
-  $.Class.new({
-    name: 'GenericOpenAIAPIProvider',
-    doc: 'interact with an OpenAI-compatible API using a bearer token',
-    slots: [
-      $.APIProvider,
-      $.Signal.new({
-        name: 'apiKey',
-        doc: 'api credential (100% not leaked)'
-      }),
-      $.Signal.new({
-        name: 'baseURL',
-        doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
-        default: 'http://localhost:3731'
-      }),
-      $.Signal.new({
-        name: 'model',
-        doc: "which model to use with the completions endpoint",
-        default: 'gpt-4-base'
-      }),
-      $.Constant.new({
-        name: 'savedSlots',
-        value: ['baseURL', 'apiKey', 'model'],
-      }),
-      $.Constant.new({
-        name: 'display',
-        value: 'generic openai-compatible api',
       }),
       $.Method.new({
         name: 'logprobs',
@@ -195,16 +154,6 @@ export default await function (_, $) {
           }
         }
       }),
-      $.Method.new({
-        name: 'customfields',
-        do() {
-          return $.HTML.t`<span>
-            ${this.renderInput('baseURL', 'eg https://api.openai.com', 'base url')}
-            ${this.renderInput('apiKey', 'secret!', 'api key')}
-            ${this.renderInput('model', 'eg davinci-002', 'model')}
-          </span>`
-        }
-      })
     ]
   });
 
@@ -439,7 +388,7 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          this.client($.V1Client.new());
+          this.client($.OpenAIAPIClient.new());
           this.text(localStorage.getItem(this.localStorageKey()) || 'Once upon a time');
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
