@@ -395,18 +395,26 @@ export default await function (_, $) {
           if (storedThreads) {
             this.threads(JSON.parse(storedThreads).map(t => $.Thread.new({ loom: this, ...t })));
           } else {
-            let threads = [];
-            for (let i = 0; i < 8; i++) {
-              threads.push($.Thread.new({
-                loom: this, 
-                config: $.ThreadConfig.new()
-              }));
-            }
-            this.threads(threads);
+            this.threads([
+              this.thread({ max_tokens: 4, temperature: 1.0 }),
+              this.thread({ max_tokens: 4, temperature: 1.0 }),
+              this.thread({ max_tokens: 6, temperature: 0.9 }),
+              this.thread({ max_tokens: 6, temperature: 0.8 }),
+              this.thread({ max_tokens: 8, temperature: 0.7 }),
+              this.thread({ max_tokens: 8, temperature: 0.6 }),
+              this.thread({ max_tokens: 10, temperature: 0.5 }),
+              this.thread({ max_tokens: 10, temperature: 0.5 }),
+            ]);
           }
           this.choices([]);
           this.logprobs([]);
           this.history([]);
+        }
+      }),
+      $.Method.new({
+        name: 'thread',
+        do(config) {
+          return $.Thread.new({ loom: this, config: $.ThreadConfig.new(config) });
         }
       }),
       $.Command.new({
