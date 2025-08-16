@@ -1,12 +1,13 @@
 import { __, base } from './base.js';
 
 const TEMPLATE_CACHE = new Map();
+let CURRENT_RENDERING_COMPONENT = null;
 
 export default await function (_, $) {
   $.Class.new({
     name: 'AstNodeCompilerBase',
     slots: [
-      $.Virtual.new({ name: 'compile' }), // (node, env, compileRecursiveFn) -> VNode | ComponentInstance | string | array | any
+      $.Virtual.new({ name: 'compile' }), // (node, env, compileRecursiveFn, parentComponent) -> VNode | ComponentInstance | string | array | any
     ],
   });
 
@@ -16,13 +17,13 @@ export default await function (_, $) {
       $.AstNodeCompilerBase,
       $.Method.new({
         name: 'compile',
-        do(node, env, compileRecursiveFn) {
+        do(node, env, compileRecursiveFn, parentComponent) {
           const props = {};
           node.attrs.forEach(attr => {
             props[attr.name] = attr.kind === 'expr' ? env[attr.idx] : attr.value;
           });
           const kids = node.children.map(childNode => {
-            return compileRecursiveFn(childNode, env);
+            return compileRecursiveFn(childNode, env, parentComponent);
           });
           return $.VNode.h(node.tag, props, ...kids);
         },
@@ -36,7 +37,7 @@ export default await function (_, $) {
       $.AstNodeCompilerBase,
       $.Method.new({
         name: 'compile',
-        do(node, env, compileRecursiveFn) {
+        do(node, env, compileRecursiveFn, parentComponent) {
           const ComponentClass = $[node.tag.slice(1)];
           if (!ComponentClass) {
             throw new Error(`Component ${node.tag} not found.`);
@@ -45,8 +46,8 @@ export default await function (_, $) {
           node.attrs.forEach(attr => {
             props[attr.name] = attr.kind === 'expr' ? env[attr.idx] : attr.value;
           });
-          props.children = node.children.map(childNode => compileRecursiveFn(childNode, env));
-          return $.ComponentInstance.new({ comp: ComponentClass.new(props) });
+          props.children = node.children.map(childNode => compileRecursiveFn(childNode, env, parentComponent));
+          return $.ComponentInstance.new({ comp: ComponentClass.new(props), parent: parentComponent });
         },
       }),
     ],
@@ -58,9 +59,9 @@ export default await function (_, $) {
       $.AstNodeCompilerBase,
       $.Method.new({
         name: 'compile',
-        do(node, env, compileRecursiveFn) {
+        do(node, env, compileRecursiveFn, parentComponent) {
           return node.children.map(childNode => {
-            return compileRecursiveFn(childNode, env);
+            return compileRecursiveFn(childNode, env, parentComponent);
           });
         },
       }),
@@ -73,7 +74,7 @@ export default await function (_, $) {
       $.AstNodeCompilerBase,
       $.Method.new({
         name: 'compile',
-        do(node, env, compileRecursiveFn) {
+        do(node, env, compileRecursiveFn, parentComponent) {
           return node.value;
         },
       }),
@@ -86,7 +87,7 @@ export default await function (_, $) {
       $.AstNodeCompilerBase,
       $.Method.new({
         name: 'compile',
-        do(node, env, compileRecursiveFn) {
+        do(node, env, compileRecursiveFn, parentComponent) {
           return env[node.idx];
         },
       }),
@@ -123,8 +124,17 @@ export default await function (_, $) {
                   const attrValue = value();
                   if (attrValue === false || attrValue == null) {
                     el.removeAttribute(key);
+                    // Special handling for form control properties
+                    if (key === 'value' || key === 'checked' || key === 'selected') {
+                      el[key] = null;
+                    }
                   } else {
-                    el.setAttribute(key, attrValue === true ? '' : attrValue);
+                    // Special handling for form control properties that need property updates
+                    if (key === 'value' || key === 'checked' || key === 'selected') {
+                      el[key] = attrValue;
+                    } else {
+                      el.setAttribute(key, attrValue === true ? '' : attrValue);
+                    }
                   }
                 });
               }
@@ -169,7 +179,7 @@ export default await function (_, $) {
               }
               return node;
             } else if (__.instanceOf(child, $.Component)) {
-              return domify(child.render());
+              return domify(child.render(CURRENT_RENDERING_COMPONENT));
             } else {
               return document.createTextNode(String(child));
             }
@@ -327,16 +337,16 @@ export default await function (_, $) {
             expr: $.ExprNodeCompiler.new(),
           };
 
-          const compileRecursive = (node, env) => {
+          const compileRecursive = (node, env, parentComponent) => {
             const compiler = compilers[node.kind];
             if (!compiler) {
               throw new Error(`No compiler for AST node kind: ${node.kind}`);
             }
-            return compiler.compile(node, env, compileRecursive);
+            return compiler.compile(node, env, compileRecursive, parentComponent);
           };
 
           return (...expressions) => {
-            const compiledRoot = compileRecursive(ast, expressions);
+            const compiledRoot = compileRecursive(ast, expressions, null);
 
             // Normalize the output to always be something mountable (VNode or ComponentInstance)
             if (Array.isArray(compiledRoot)) { // Result from FragmentNodeCompiler
@@ -393,21 +403,34 @@ export default await function (_, $) {
     doc: 'Wraps a Simulabra component instance, managing its rendering and reactivity.',
     slots: [
       $.Var.new({ name: 'comp' }),
+      $.Var.new({ name: 'parent' }),
       $.Var.new({ name: 'vnode' }),
       $.Var.new({ name: 'effect' }),
 
       $.After.new({
         name: 'init',
         do() {
-          const initialVNode = this.comp().render();
-          this.vnode(initialVNode);
-          this.effect($.Effect.create(() => {
-            const newVNode = this.comp().render();
-            if (this.vnode() && this.vnode().el() && newVNode && newVNode.el()) {
-              $.HTML.patch(this.vnode().el(), newVNode.el());
-            }
-            this.vnode(newVNode);
-          }));
+          const prevComponent = CURRENT_RENDERING_COMPONENT;
+          CURRENT_RENDERING_COMPONENT = this.comp();
+          try {
+            const initialVNode = this.comp().render(this.parent());
+            this.vnode(initialVNode);
+            this.effect($.Effect.create(() => {
+              const prevComponent = CURRENT_RENDERING_COMPONENT;
+              CURRENT_RENDERING_COMPONENT = this.comp();
+              try {
+                const newVNode = this.comp().render(this.parent());
+                if (this.vnode() && this.vnode().el() && newVNode && newVNode.el()) {
+                  $.HTML.patch(this.vnode().el(), newVNode.el());
+                }
+                this.vnode(newVNode);
+              } finally {
+                CURRENT_RENDERING_COMPONENT = prevComponent;
+              }
+            }));
+          } finally {
+            CURRENT_RENDERING_COMPONENT = prevComponent;
+          }
         },
       }),
 
@@ -454,13 +477,32 @@ export default await function (_, $) {
       $.Virtual.new({
         name: 'render',
       }),
+      $.Before.new({
+        name: 'render',
+        do() {
+          this._prevComponent = CURRENT_RENDERING_COMPONENT;
+          CURRENT_RENDERING_COMPONENT = this;
+        }
+      }),
+      $.After.new({
+        name: 'render',
+        do() {
+          CURRENT_RENDERING_COMPONENT = this._prevComponent;
+        }
+      }),
       $.Method.new({
         name: 'mount',
         do(target = document.body) {
-          this.render().mount(target);
-          const style = document.createElement('style');
-          style.textContent = this.css();
-          target.appendChild(style);
+          const prevComponent = CURRENT_RENDERING_COMPONENT;
+          CURRENT_RENDERING_COMPONENT = this;
+          try {
+            this.render(null).mount(target);
+            const style = document.createElement('style');
+            style.textContent = this.css();
+            target.appendChild(style);
+          } finally {
+            CURRENT_RENDERING_COMPONENT = prevComponent;
+          }
         }
       })
     ]

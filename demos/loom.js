@@ -40,14 +40,14 @@ export default await function (_, $) {
       }),
       $.Method.new({
         name: "save",
-        do() {
-          let store = this.configStore();
-          store[this.id()] = {
-            baseURL: this.baseURL(),
-            apiKey: this.apiKey(),
-            model: this.model(),
+        do(client) {
+          let store = this.fetchStore();
+          store[client.id()] = {
+            baseURL: client.baseURL(),
+            apiKey: client.apiKey(),
+            model: client.model(),
           };
-          localStorage.setItem("loom-config-selected", this.id());
+          localStorage.setItem("loom-config-selected", client.id());
           this.updateStore(store);
         }
       }),
@@ -65,13 +65,15 @@ export default await function (_, $) {
       }),
       $.Method.new({
         name: "render",
-        do() {
+        do(parent) {
+          console.log(parent);
           const configRow = id => $.HTML.t`<div class="loom-row">
             ${id}
             <button onclick=${() => this.delete(id)}>delete</button>
-            <button onclick=${() => this.parent().load(id)}>restore</button>
+            <button onclick=${() => parent.loadId(id)}>restore</button>
           </div>`;
           return $.HTML.t`<div>
+            <button onclick=${() => this.save(parent)}>save settings</button>
             ${() => this.configIDs().map(id => configRow(id))}
           </div>`;
         }
@@ -121,12 +123,12 @@ export default await function (_, $) {
           this.store($.ConfigStore.new());
           const lastId = localStorage.getItem("loom-config-selected");
           if (lastId) {
-            this.load(lastId);
+            this.loadId(lastId);
           }
         }
       }),
       $.Method.new({
-        name: "load",
+        name: "loadId",
         do(id) {
           const config = this.store().get(id);
           if (config) {
@@ -188,7 +190,6 @@ export default await function (_, $) {
                 ${this.renderInput("baseURL", "eg https://api.openai.com", "base url")}
                 ${this.renderInput("apiKey", "secret!", "api key")}
                 ${this.renderInput("model", "eg davinci-002", "model")}
-                <button onclick=${() => this.save()}>save settings</button>
                 ${() => this.store()}
               </div>
           </span>`;
