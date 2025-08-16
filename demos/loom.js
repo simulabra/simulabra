@@ -4,82 +4,6 @@ import html from "../src/html.js";
 import { __, base } from "../src/base.js";
 
 export default await function (_, $) {
-  $.Class.new({
-    name: "ConfigStore",
-    doc: "manages saved configs in localStorage",
-    slots: [
-      $.Component,
-      $.After.new({
-        name: 'init',
-        do() {
-          this.configIDs(Object.keys(this.fetchStore()));
-        }
-      }),
-      $.Signal.new({
-        name: 'id',
-      }),
-      $.Method.new({
-        name: "fetchStore",
-        do() {
-          return JSON.parse(localStorage.getItem("loom-config-store") || "{}");
-        }
-      }),
-      $.Method.new({
-        name: "get",
-        do(id) {
-          return this.fetchStore()[id];
-        }
-      }),
-      $.Method.new({
-        name: "delete",
-        do(id) {
-          let store = this.fetchStore();
-          delete store[id];
-          this.updateStore(store);
-        }
-      }),
-      $.Method.new({
-        name: "save",
-        do(client) {
-          let store = this.fetchStore();
-          store[client.id()] = {
-            baseURL: client.baseURL(),
-            apiKey: client.apiKey(),
-            model: client.model(),
-          };
-          localStorage.setItem("loom-config-selected", client.id());
-          this.updateStore(store);
-        }
-      }),
-      $.Method.new({
-        name: 'updateStore',
-        do(store) {
-          localStorage.setItem("loom-config-store", JSON.stringify(store));
-          this.configIDs(Object.keys(store));
-        }
-      }),
-      $.Signal.new({
-        name: "configIDs",
-        doc: "list of config ids that can be loaded",
-        default: [],
-      }),
-      $.Method.new({
-        name: "render",
-        do(parent) {
-          console.log(parent);
-          const configRow = id => $.HTML.t`<div class="loom-row">
-            ${id}
-            <button onclick=${() => this.delete(id)}>delete</button>
-            <button onclick=${() => parent.loadId(id)}>restore</button>
-          </div>`;
-          return $.HTML.t`<div>
-            <button onclick=${() => this.save(parent)}>save settings</button>
-            ${() => this.configIDs().map(id => configRow(id))}
-          </div>`;
-        }
-      }),
-    ]
-  })
   $.Class.new({ // declarative class definitions
     name: "OpenAIAPIClient",
     doc: "consume and configure an openai-compatible api",
@@ -132,6 +56,7 @@ export default await function (_, $) {
         do(id) {
           const config = this.store().get(id);
           if (config) {
+            localStorage.setItem("loom-config-selected", id);
             const { baseURL, apiKey, model } = config;
             this.baseURL(baseURL);
             this.apiKey(apiKey);
@@ -227,6 +152,82 @@ export default await function (_, $) {
           if (this.apiKey()) {
             headers.Authorization = `Bearer ${this.apiKey()}`;
           }
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: "ConfigStore",
+    doc: "manages saved configs in localStorage",
+    slots: [
+      $.Component,
+      $.After.new({
+        name: 'init',
+        do() {
+          this.configIDs(Object.keys(this.fetchStore()));
+        }
+      }),
+      $.Signal.new({
+        name: 'id',
+      }),
+      $.Method.new({
+        name: "fetchStore",
+        do() {
+          return JSON.parse(localStorage.getItem("loom-config-store") || "{}");
+        }
+      }),
+      $.Method.new({
+        name: "get",
+        do(id) {
+          return this.fetchStore()[id];
+        }
+      }),
+      $.Method.new({
+        name: "delete",
+        do(id) {
+          let store = this.fetchStore();
+          delete store[id];
+          this.updateStore(store);
+        }
+      }),
+      $.Method.new({
+        name: "save",
+        do(client) {
+          let store = this.fetchStore();
+          store[client.id()] = {
+            baseURL: client.baseURL(),
+            apiKey: client.apiKey(),
+            model: client.model(),
+          };
+          localStorage.setItem("loom-config-selected", client.id());
+          this.updateStore(store);
+        }
+      }),
+      $.Method.new({
+        name: 'updateStore',
+        do(store) {
+          localStorage.setItem("loom-config-store", JSON.stringify(store));
+          this.configIDs(Object.keys(store));
+        }
+      }),
+      $.Signal.new({
+        name: "configIDs",
+        doc: "list of config ids that can be loaded",
+        default: [],
+      }),
+      $.Method.new({
+        name: "render",
+        do(parent) {
+          const configRow = id => $.HTML.t`<div class="loom-row">
+            ${id}
+            <button onclick=${() => this.delete(id)}>delete</button>
+            <button onclick=${() => parent.loadId(id)}>restore</button>
+          </div>`;
+          return $.HTML.t`<div>
+            <button onclick=${() => this.save(parent)}>save settings</button>
+            ${() => this.configIDs().map(id => configRow(id))}
+          </div>`;
         }
       }),
     ]
