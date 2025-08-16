@@ -4,6 +4,80 @@ import html from "../src/html.js";
 import { __, base } from "../src/base.js";
 
 export default await function (_, $) {
+  $.Class.new({
+    name: "ConfigStore",
+    doc: "manages saved configs in localStorage",
+    slots: [
+      $.Component,
+      $.After.new({
+        name: 'init',
+        do() {
+          this.configIDs(Object.keys(this.fetchStore()));
+        }
+      }),
+      $.Signal.new({
+        name: 'id',
+      }),
+      $.Method.new({
+        name: "fetchStore",
+        do() {
+          return JSON.parse(localStorage.getItem("loom-config-store") || "{}");
+        }
+      }),
+      $.Method.new({
+        name: "get",
+        do(id) {
+          return this.fetchStore()[id];
+        }
+      }),
+      $.Method.new({
+        name: "delete",
+        do(id) {
+          let store = this.fetchStore();
+          delete store[id];
+          this.updateStore(store);
+        }
+      }),
+      $.Method.new({
+        name: "save",
+        do() {
+          let store = this.configStore();
+          store[this.id()] = {
+            baseURL: this.baseURL(),
+            apiKey: this.apiKey(),
+            model: this.model(),
+          };
+          localStorage.setItem("loom-config-selected", this.id());
+          this.updateStore(store);
+        }
+      }),
+      $.Method.new({
+        name: 'updateStore',
+        do(store) {
+          localStorage.setItem("loom-config-store", JSON.stringify(store));
+          this.configIDs(Object.keys(store));
+        }
+      }),
+      $.Signal.new({
+        name: "configIDs",
+        doc: "list of config ids that can be loaded",
+        default: [],
+      }),
+      $.Method.new({
+        name: "render",
+        do() {
+          const configRow = id => $.HTML.t`<div class="loom-row">
+            ${id}
+            <button onclick=${() => this.delete(id)}>delete</button>
+            <button onclick=${() => this.parent().load(id)}>restore</button>
+          </div>`;
+          return $.HTML.t`<div>
+            ${() => this.configIDs().map(id => configRow(id))}
+          </div>`;
+        }
+      }),
+    ]
+  })
   $.Class.new({ // declarative class definitions
     name: "OpenAIAPIClient",
     doc: "consume and configure an openai-compatible api",
@@ -32,6 +106,9 @@ export default await function (_, $) {
         name: "display",
         value: "generic openai-compatible api",
       }),
+      $.Signal.new({
+        name: "store",
+      }),
       $.Method.new({
         name: "toggleSettings",
         do() {
@@ -41,11 +118,23 @@ export default await function (_, $) {
       $.After.new({ // CLOS-style method combination
         name: "init",
         do() {
+          this.store($.ConfigStore.new());
           const lastId = localStorage.getItem("loom-config-selected");
           if (lastId) {
-            this.loadFromStore(lastId);
+            this.load(lastId);
           }
-          this.configs(Object.keys(this.configStore()));
+        }
+      }),
+      $.Method.new({
+        name: "load",
+        do(id) {
+          const config = this.store().get(id);
+          if (config) {
+            const { baseURL, apiKey, model } = config;
+            this.baseURL(baseURL);
+            this.apiKey(apiKey);
+            this.model(model);
+          }
         }
       }),
       $.Method.new({
@@ -72,48 +161,9 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: "configStore",
-        do() {
-          return JSON.parse(localStorage.getItem("loom-config-store") || "{}");
-        }
-      }),
-      $.Method.new({
-        name: "loadFromStore",
-        do(id) {
-          this.log("loadFromStore", id);
-          const config = this.configStore()[id];
-          if (config) {
-            const { baseURL, apiKey, model } = config;
-            this.baseURL(baseURL);
-            this.apiKey(apiKey);
-            this.model(model);
-          }
-        }
-      }),
-      $.Method.new({
-        name: "save",
-        do() {
-          let cs = this.configStore();
-          cs[this.id()] = {
-            baseURL: this.baseURL(),
-            apiKey: this.apiKey(),
-            model: this.model(),
-          };
-          localStorage.setItem("loom-config-store", JSON.stringify(cs));
-          localStorage.setItem("loom-config-selected", this.id());
-          this.configs(Object.keys(cs));
-        }
-      }),
-      $.Method.new({
         name: 'id',
         do() {
-          return this.baseURL() + "::" + this.model()
-        }
-      }),
-      $.Method.new({
-        name: "localStorageKey",
-        do() {
-          return "LOOM-CLIENT/" + this.id();
+          return `${this.baseURL()}(${this.model()})`;
         }
       }),
       $.Method.new({
@@ -128,16 +178,6 @@ export default await function (_, $) {
             value=${() => this[id]()} /></div>`;
         }
       }),
-      $.Signal.new({
-        name: "configs",
-        default: [],
-      }),
-      $.Method.new({
-        name: "configlink",
-        do(id) {
-          return $.HTML.t`<button onclick=${() => this.loadFromStore(id)}>restore ${id}</button>`;
-        }
-      }),
       $.Method.new({
         name: "render",
         do() {
@@ -149,7 +189,7 @@ export default await function (_, $) {
                 ${this.renderInput("apiKey", "secret!", "api key")}
                 ${this.renderInput("model", "eg davinci-002", "model")}
                 <button onclick=${() => this.save()}>save settings</button>
-                ${() => this.configs().map(id => this.configlink(id))}
+                ${() => this.store()}
               </div>
           </span>`;
         }
