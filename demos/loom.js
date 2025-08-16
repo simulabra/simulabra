@@ -1,55 +1,55 @@
 // SIMULABRA HYPERLOOM
 
-import html from '../src/html.js';
-import { __, base } from '../src/base.js';
+import html from "../src/html.js";
+import { __, base } from "../src/base.js";
 
 export default await function (_, $) {
   $.Class.new({ // declarative class definitions
-    name: 'OpenAIAPIClient',
+    name: "OpenAIAPIClient",
     doc: "consume and configure an openai-compatible api",
     slots: [ // slot-based system like CLOS
       $.Component, // slot-based inheritance
       $.Signal.new({ // reactive signal slot
-        name: 'showSettings',
-        doc: 'show api settings',
+        name: "showSettings",
+        doc: "show api settings",
         default: true, // default value
       }),
       $.Signal.new({
-        name: 'apiKey',
-        doc: 'api credential (100% not leaked)'
+        name: "apiKey",
+        doc: "api credential (100% not leaked)"
       }),
       $.Signal.new({
-        name: 'baseURL',
+        name: "baseURL",
         doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
-        default: 'https://api.openai.com'
+        default: "https://api.openai.com"
       }),
       $.Signal.new({
-        name: 'model',
+        name: "model",
         doc: "which model to use with the completions endpoint",
-        default: 'davinci-002'
+        default: "davinci-002"
       }),
       $.Constant.new({ // constant slot, same across all instances of class
-        name: 'savedSlots',
-        value: ['baseURL', 'apiKey', 'model'],
-      }),
-      $.Constant.new({
-        name: 'display',
-        value: 'generic openai-compatible api',
+        name: "display",
+        value: "generic openai-compatible api",
       }),
       $.Method.new({
-        name: 'toggleSettings',
+        name: "toggleSettings",
         do() {
           this.showSettings(!this.showSettings()); // variable assignment as method call; triggers effect
         }
       }),
       $.After.new({ // CLOS-style method combination
-        name: 'init',
+        name: "init",
         do() {
-          this.loadFromLocalStorage();
+          const lastId = localStorage.getItem("loom-config-selected");
+          if (lastId) {
+            this.loadFromStore(lastId);
+          }
+          this.configs(Object.keys(this.configStore()));
         }
       }),
       $.Method.new({
-        name: 'completion',
+        name: "completion",
         async: true,
         do: async function completion(prompt, config = {}) {
           const body = {
@@ -57,11 +57,11 @@ export default await function (_, $) {
             ...config
           };
           const headers = {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           };
           this.transformRequest(body, headers);
           const res = await fetch(`${this.baseURL()}/v1/completions`, {
-            method: 'POST',
+            method: "POST",
             body: JSON.stringify(body),
             headers,
           });
@@ -72,31 +72,54 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'loadFromLocalStorage',
+        name: "configStore",
         do() {
-          for (let savedSlot of this.savedSlots()) {
-            this[savedSlot](localStorage.getItem(this.localStorageKey(savedSlot)));
+          return JSON.parse(localStorage.getItem("loom-config-store") || "{}");
+        }
+      }),
+      $.Method.new({
+        name: "loadFromStore",
+        do(id) {
+          this.log("loadFromStore", id);
+          const config = this.configStore()[id];
+          if (config) {
+            const { baseURL, apiKey, model } = config;
+            this.baseURL(baseURL);
+            this.apiKey(apiKey);
+            this.model(model);
           }
         }
       }),
       $.Method.new({
-        name: 'save',
+        name: "save",
         do() {
-          for (const savedSlot of this.savedSlots()) {
-            localStorage.setItem(this.localStorageKey(savedSlot), this[savedSlot]());
-          }
+          let cs = this.configStore();
+          cs[this.id()] = {
+            baseURL: this.baseURL(),
+            apiKey: this.apiKey(),
+            model: this.model(),
+          };
+          localStorage.setItem("loom-config-store", JSON.stringify(cs));
+          localStorage.setItem("loom-config-selected", this.id());
+          this.configs(Object.keys(cs));
         }
       }),
       $.Method.new({
-        name: 'localStorageKey',
-        do(key) {
-          return 'LOOM_CLIENT_' + key.toUpperCase();
+        name: 'id',
+        do() {
+          return this.baseURL() + "::" + this.model()
         }
       }),
       $.Method.new({
-        name: 'renderInput',
+        name: "localStorageKey",
+        do() {
+          return "LOOM-CLIENT/" + this.id();
+        }
+      }),
+      $.Method.new({
+        name: "renderInput",
         do(id, placeholder, label) {
-          const htmlId = id + 'input';
+          const htmlId = id + "input";
           return $.HTML.t`<div>${label} <input 
             id=${htmlId}
             type="text"
@@ -105,27 +128,38 @@ export default await function (_, $) {
             value=${() => this[id]()} /></div>`;
         }
       }),
+      $.Signal.new({
+        name: "configs",
+        default: [],
+      }),
       $.Method.new({
-        name: 'render',
+        name: "configlink",
+        do(id) {
+          return $.HTML.t`<button onclick=${() => this.loadFromStore(id)}>restore ${id}</button>`;
+        }
+      }),
+      $.Method.new({
+        name: "render",
         do() {
           return $.HTML.t`<span>
-            <button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>
+            <button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? "show" : "hide"} client settings</button>
               <div class="loom-col" hidden=${() => !this.showSettings()}>
                 <div>${this.display()}</div>
-                ${this.renderInput('baseURL', 'eg https://api.openai.com', 'base url')}
-                ${this.renderInput('apiKey', 'secret!', 'api key')}
-                ${this.renderInput('model', 'eg davinci-002', 'model')}
+                ${this.renderInput("baseURL", "eg https://api.openai.com", "base url")}
+                ${this.renderInput("apiKey", "secret!", "api key")}
+                ${this.renderInput("model", "eg davinci-002", "model")}
                 <button onclick=${() => this.save()}>save settings</button>
+                ${() => this.configs().map(id => this.configlink(id))}
               </div>
           </span>`;
         }
       }),
       $.Method.new({
-        name: 'logprobs',
+        name: "logprobs",
         do(res) {
           const lp = res.choices[0].logprobs;
           if (!lp) {
-            this.log('no logprobs on completion response', res);
+            this.log("no logprobs on completion response", res);
             return null;
           }
           // llama.cpp server:
@@ -134,17 +168,17 @@ export default await function (_, $) {
           }
           // OpenAI-compatible:
           const tl = lp.top_logprobs;
-          if (Array.isArray(tl) && tl.length && tl[0] && typeof tl[0] === 'object' && !Array.isArray(tl[0])) {
+          if (Array.isArray(tl) && tl.length && tl[0] && typeof tl[0] === "object" && !Array.isArray(tl[0])) {
             return Object.entries(tl[0]).map(([token, logprob]) => ({ token, logprob }));
           }
-          if (Array.isArray(lp) && lp.length && lp[0].token && typeof lp[0].logprob === 'number') {
+          if (Array.isArray(lp) && lp.length && lp[0].token && typeof lp[0].logprob === "number") {
             return lp;
           }
           return null;
         }
       }),
       $.Method.new({
-        name: 'transformRequest',
+        name: "transformRequest",
         do(body, headers) {
           if (this.model()) {
             body.model = this.model();
@@ -158,22 +192,22 @@ export default await function (_, $) {
   });
 
   $.Class.new({
-    name: 'ThreadConfig',
+    name: "ThreadConfig",
     slots: [
       $.Component,
       $.Clone,
       $.Signal.new({
-        name: 'max_tokens',
-        doc: 'length of thread in tokens',
+        name: "max_tokens",
+        doc: "length of thread in tokens",
         default: 10,
       }),
       $.Signal.new({
-        name: 'temperature',
-        doc: 'generation temperature',
+        name: "temperature",
+        doc: "generation temperature",
         default: 0.6,
       }),
       $.Method.new({
-        name: 'json',
+        name: "json",
         do() {
           return {
             temperature: this.temperature(),
@@ -183,35 +217,35 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'configline',
+        name: "configline",
         do(c, step=1) {
           return $.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min="0" value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
         }
       }),
       $.Method.new({
-        name: 'render',
+        name: "render",
         do() {
           return [
-            this.configline('max_tokens'),
-            this.configline('temperature', 0.1),
+            this.configline("max_tokens"),
+            this.configline("temperature", 0.1),
           ];
         }
       }),
     ]
   });
   $.Class.new({
-    name: 'TextCompletion',
+    name: "TextCompletion",
     slots: [
       $.Component,
       $.Clone,
-      $.Signal.new({ name: 'text', default: ' ' }),
+      $.Signal.new({ name: "text", default: " " }),
       $.Method.new({
-        name: 'spanify',
+        name: "spanify",
         do() {
-          const processed = this.text().replace(/\n/g, '|||\\n|||');
-          const parts = processed.split('|||');
+          const processed = this.text().replace(/\n/g, "|||\\n|||");
+          const parts = processed.split("|||");
           return parts.map(p => {
-            if (p === '\\n') {
+            if (p === "\\n") {
               return $.HTML.t`<span class="escape-char">${p}</span>`;
             } else {
               return p;
@@ -222,38 +256,38 @@ export default await function (_, $) {
     ]
   });
   $.Class.new({
-    name: 'Thread',
+    name: "Thread",
     slots: [
       $.TextCompletion,
-      $.Signal.new({ name: 'showConfig', default: false }),
-      $.Var.new({ name: 'config' }),
-      $.Var.new({ name: 'loom' }),
+      $.Signal.new({ name: "showConfig", default: false }),
+      $.Var.new({ name: "config" }),
+      $.Var.new({ name: "loom" }),
       $.Method.new({
-        name: 'runcommand',
+        name: "runcommand",
         do(cmd) {
           return this.loom().runcommand(cmd);
         }
       }),
       $.Command.new({
-        name: 'weave',
+        name: "weave",
         run() {
           return this.loom().weave(this.text());
         }
       }),
       $.Method.new({
-        name: 'spawn',
+        name: "spawn",
         do() {
           this.loom().threads([...this.loom().threads(), this.clone()]);
         }
       }),
       $.Method.new({
-        name: 'die',
+        name: "die",
         do() {
           this.loom().threads(this.loom().threads().filter(t => t !== this));
         }
       }),
       $.Method.new({
-        name: 'normaliseLogprobs',
+        name: "normaliseLogprobs",
         do(logprobs) {
           let lptot = 0;
           for (const lp of logprobs) {
@@ -264,7 +298,7 @@ export default await function (_, $) {
             lp.logprob = lp.logprob / lptot;
           }
           logprobs = logprobs.map(l => $.Logprob.new({
-            text: l.token.replace(/Ġ/g, ' '),
+            text: l.token.replace(/Ġ/g, " "),
             logprob: l.logprob,
             loom: this.loom(),
           }));
@@ -273,11 +307,11 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'spin',
-        doc: 'generate a possible thread from the model',
+        name: "spin",
+        doc: "generate a possible thread from the model",
         async: true,
         do: async function() {
-          this.text('');
+          this.text("");
           this.loom().logprobs(null);
           try {
             const { text, logprobs } = await this.loom().client().completion(this.loom().text(), this.config().json());
@@ -296,7 +330,7 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'up',
+        name: "up",
         do() {
           const threads = this.loom().threads();
           const index = threads.indexOf(this);
@@ -308,7 +342,7 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'down',
+        name: "down",
         do() {
           const threads = this.loom().threads();
           const index = threads.indexOf(this);
@@ -320,7 +354,7 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'render',
+        name: "render",
         do() {
           return $.HTML.t`
           <div class="thread">
@@ -345,23 +379,23 @@ export default await function (_, $) {
     ]
   });
   $.Class.new({
-    name: 'Logprob',
+    name: "Logprob",
     slots: [
       $.TextCompletion,
-      $.Var.new({ name: 'logprob' }),
-      $.Var.new({ name: 'loom' }),
+      $.Var.new({ name: "logprob" }),
+      $.Var.new({ name: "loom" }),
       $.Method.new({
-        name: 'weave',
+        name: "weave",
         do() {
           this.loom().weave(this.text());
         }
       }),
       $.Method.new({
-        name: 'render',
+        name: "render",
         do() {
           // const opacity = Math.tanh(this.logprob()) + 0.5;
           let p = this.logprob().toPrecision(2);
-          if (p.length > 5) p = '<0.01';
+          if (p.length > 5) p = "<0.01";
           return $.HTML.t`
             <button class="logprob-button" onclick=${() => this.weave()}>
               <span class="logprob-token">${() => this.spanify()}</span><span class="logprob">${p}</span>
@@ -371,27 +405,28 @@ export default await function (_, $) {
       }),
     ]
   });
+
   $.Class.new({
-    name: 'Loom',
+    name: "Loom",
     slots: [
       $.Component,
-      $.Signal.new({ name: 'text' }),
-      $.Signal.new({ name: 'savedText', default: '' }),
-      $.Signal.new({ name: 'history' }),
-      $.Signal.new({ name: 'choices' }),
-      $.Signal.new({ name: 'logprobs' }),
-      $.Signal.new({ name: 'errorMsg', default: '' }),
-      $.Signal.new({ name: 'threads' }),
-      $.Signal.new({ name: 'loading', default: false }),
-      $.Var.new({ name: 'client' }),
-      $.Var.new({ name: 'localStorageKey', default: 'LOOM_TEXT' }),
+      $.Signal.new({ name: "text" }),
+      $.Signal.new({ name: "savedText", default: "" }),
+      $.Signal.new({ name: "history" }),
+      $.Signal.new({ name: "choices" }),
+      $.Signal.new({ name: "logprobs" }),
+      $.Signal.new({ name: "errorMsg", default: "" }),
+      $.Signal.new({ name: "threads" }),
+      $.Signal.new({ name: "loading", default: false }),
+      $.Var.new({ name: "client" }),
+      $.Var.new({ name: "localStorageKey", default: "LOOM_TEXT" }),
       $.After.new({
-        name: 'init',
+        name: "init",
         do() {
           this.client($.OpenAIAPIClient.new());
-          this.text(localStorage.getItem(this.localStorageKey()) || 'Once upon a time');
+          this.text(localStorage.getItem(this.localStorageKey()) || "Once upon a time");
           this.savedText(this.text());
-          const storedThreads = localStorage.getItem('LOOM_THREADS');
+          const storedThreads = localStorage.getItem("LOOM_THREADS");
           if (storedThreads) {
             this.threads(JSON.parse(storedThreads).map(t => $.Thread.new({ loom: this, ...t })));
           } else {
@@ -412,20 +447,20 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'thread',
+        name: "thread",
         do(config) {
           return $.Thread.new({ loom: this, config: $.ThreadConfig.new(config) });
         }
       }),
       $.Command.new({
-        name: 'seek',
-        doc: 'make new threads to search',
+        name: "seek",
+        doc: "make new threads to search",
         run() {
-          this.text(document.querySelector('.loom-textarea').value);
+          this.text(document.querySelector(".loom-textarea").value);
           this.choices([]);
           this.logprobs([]);
           this.loading(true);
-          this.errorMsg('');
+          this.errorMsg("");
           let threads = [];
           Promise.all(this.threads().map(t => t.spin()))
             .finally(() => this.loading(false))
@@ -436,20 +471,20 @@ export default await function (_, $) {
         },
       }),
       $.Method.new({
-        name: 'updateTextarea',
+        name: "updateTextarea",
         do() {
-          const textarea = document.querySelector('.loom-textarea');
+          const textarea = document.querySelector(".loom-textarea");
           textarea.blur();
           textarea.value = this.text();
           textarea.scrollTop = textarea.scrollHeight;
         }
       }),
       $.Command.new({
-        name: 'weave',
+        name: "weave",
         run: function(ctx, text) {
           const oldtext = this.text();
           this.text(this.text() + text);
-          localStorage.setItem('LOOM_TEXT', this.text());
+          localStorage.setItem("LOOM_TEXT", this.text());
           this.updateTextarea();
           this.seek();
 
@@ -461,14 +496,13 @@ export default await function (_, $) {
         }
       }),
       $.Var.new({
-        name: 'undostack',
+        name: "undostack",
         default: () => [],
       }),
       $.Method.new({
-        name: 'runcommand',
+        name: "runcommand",
         do(cmd) {
           const undo = cmd.command().run().apply(cmd.parent(), [cmd, ...cmd.args()]);
-          // console.log('runcommand', undo, cmd);
           if (undo) {
             this.undostack().push(undo);
           }
@@ -476,7 +510,7 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'undo',
+        name: "undo",
         async do() {
           const undo = this.undostack().pop();
           if (undo) {
@@ -485,7 +519,7 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
-        name: 'render',
+        name: "render",
         do() {
           return $.HTML.t`
             <div class="loom">
@@ -522,4 +556,4 @@ export default await function (_, $) {
   });
 
   $.Loom.new().mount();
-}.module({ name: 'demo.loom', imports: [base, html] }).load();
+}.module({ name: "demo.loom", imports: [base, html] }).load();
