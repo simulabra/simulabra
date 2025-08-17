@@ -128,16 +128,14 @@ export default await function (_, $) {
             this.log("no logprobs on completion response", res);
             return null;
           }
-          // llama.cpp server:
-          if (lp.content && Array.isArray(lp.content) && lp.content[0]?.top_logprobs) {
+          if (/*llama.cpp server*/lp.content && Array.isArray(lp.content) && lp.content[0]?.top_logprobs) {
             return lp.content[0].top_logprobs;
           }
-          // OpenAI-compatible:
           const tl = lp.top_logprobs;
-          if (Array.isArray(tl) && tl.length && tl[0] && typeof tl[0] === "object" && !Array.isArray(tl[0])) {
+          if (/*openai-compatible*/Array.isArray(tl) && tl.length && tl[0] && typeof tl[0] === "object" && !Array.isArray(tl[0])) {
             return Object.entries(tl[0]).map(([token, logprob]) => ({ token, logprob }));
           }
-          if (Array.isArray(lp) && lp.length && lp[0].token && typeof lp[0].logprob === "number") {
+          if (/*openrouter?*/Array.isArray(lp) && lp.length && lp[0].token && typeof lp[0].logprob === "number") {
             return lp;
           }
           return null;

@@ -179,7 +179,7 @@ export default await function (_, $) {
               }
               return node;
             } else if (__.instanceOf(child, $.Component)) {
-              return domify(child.render(CURRENT_RENDERING_COMPONENT));
+              return domify(child.render($.Component.__current_rendering));
             } else {
               return document.createTextNode(String(child));
             }
@@ -410,27 +410,15 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          const prevComponent = CURRENT_RENDERING_COMPONENT;
-          CURRENT_RENDERING_COMPONENT = this.comp();
-          try {
-            const initialVNode = this.comp().render(this.parent());
-            this.vnode(initialVNode);
-            this.effect($.Effect.create(() => {
-              const prevComponent = CURRENT_RENDERING_COMPONENT;
-              CURRENT_RENDERING_COMPONENT = this.comp();
-              try {
-                const newVNode = this.comp().render(this.parent());
-                if (this.vnode() && this.vnode().el() && newVNode && newVNode.el()) {
-                  $.HTML.patch(this.vnode().el(), newVNode.el());
-                }
-                this.vnode(newVNode);
-              } finally {
-                CURRENT_RENDERING_COMPONENT = prevComponent;
-              }
-            }));
-          } finally {
-            CURRENT_RENDERING_COMPONENT = prevComponent;
-          }
+          const initialVNode = this.comp().render(this.parent());
+          this.vnode(initialVNode);
+          this.effect($.Effect.create(() => {
+            const newVNode = this.comp().render(this.parent());
+            if (this.vnode() && this.vnode().el() && newVNode && newVNode.el()) {
+              $.HTML.patch(this.vnode().el(), newVNode.el());
+            }
+            this.vnode(newVNode);
+          }));
         },
       }),
 
@@ -480,29 +468,23 @@ export default await function (_, $) {
       $.Before.new({
         name: 'render',
         do() {
-          this._prevComponent = CURRENT_RENDERING_COMPONENT;
-          CURRENT_RENDERING_COMPONENT = this;
+          this.__prevComponent = $.Component.__current_rendering;
+          $.Component.__current_rendering = this;
         }
       }),
       $.After.new({
         name: 'render',
         do() {
-          CURRENT_RENDERING_COMPONENT = this._prevComponent;
+          $.Component.__current_rendering = this.__prevComponent;
         }
       }),
       $.Method.new({
         name: 'mount',
         do(target = document.body) {
-          const prevComponent = CURRENT_RENDERING_COMPONENT;
-          CURRENT_RENDERING_COMPONENT = this;
-          try {
-            this.render(null).mount(target);
-            const style = document.createElement('style');
-            style.textContent = this.css();
-            target.appendChild(style);
-          } finally {
-            CURRENT_RENDERING_COMPONENT = prevComponent;
-          }
+          this.render($.Component.__current_rendering).mount(target);
+          const style = document.createElement('style');
+          style.textContent = this.css();
+          target.appendChild(style);
         }
       })
     ]
