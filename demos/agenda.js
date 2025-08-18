@@ -4,8 +4,21 @@ const __ = globalThis.SIMULABRA;
 
 export default await function (_, $) {
   $.Class.new({
+    name: 'ActComponent',
+    slots: [
+      $.Method.new({
+        name: "runcommand",
+        do(cmd) {
+          cmd.command().run().apply(cmd.parent(), [cmd, ...cmd.args()]);
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
     name: 'Todo',
     slots: [
+      $.ActComponent,
       $.Persisted,
       $.DBVar.new({
         name: 'content',
@@ -50,6 +63,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'Note',
     slots: [
+      $.ActComponent,
       $.Persisted,
       $.DBVar.new({
         name: 'source',
@@ -67,7 +81,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'description',
         do() {
-          return `${this.source()}: ${this.message()}`;
+          return `[${this.source()}] ${this.message()}`;
         }
       }),
       $.Command.new({
@@ -89,6 +103,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'Journal',
     slots: [
+      $.ActComponent,
       $.Persisted,
       $.Var.new({
         name: 'notes',
@@ -100,6 +115,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'ScheduleMemo',
     slots: [
+      $.ActComponent,
       $.Var.new({
         name: 'memo',
         type: 'string',
@@ -120,6 +136,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'Agenda',
     slots: [
+      $.ActComponent,
       $.Var.new({
         name: 'dbName',
         doc: 'name of db file or :memory:',

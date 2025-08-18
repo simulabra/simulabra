@@ -422,9 +422,7 @@ function bootstrap() {
     },
     function load(target) {
       for (const v of this.slots()) {
-        if (typeof v !== 'string') {
-          v.load(target);
-        }
+        v.load(target);
       }
     },
     function extend(comp) {
@@ -719,7 +717,6 @@ function bootstrap() {
     ]
   });
 
-
   const $Virtual = $Class.new({
     name: 'Virtual',
     slots: [
@@ -789,7 +786,6 @@ function bootstrap() {
 
   const $module = $Class.new({
     name: 'Module',
-    // debug: true,
     slots: [
       $Deffed,
       $Var.new({ name: 'name' }),
@@ -1324,7 +1320,8 @@ function bootstrap() {
       }),
       $.Method.new({
         name: 'run',
-        do: function run() {
+        do: function run(ctx) {
+          this.log(this.parent());
           return this.parent().runcommand(this);
         }
       }),

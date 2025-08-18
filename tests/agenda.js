@@ -11,7 +11,7 @@ function mod(_, $) {
       const note = $.Note.new({ message });
       const command = note.createCommand(agenda);
       this.assertEq(command.parent().message(), message);
-      agenda.receive(command);
+      command.run();
       this.assert(agenda.notes().length === 1 && agenda.notes()[0].message() === message, 'message not found in notes');
     }
   });

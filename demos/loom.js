@@ -252,7 +252,7 @@ export default await function (_, $) {
           return {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
-            logprobs: 20,
+            logprobs: 40,
           };
         }
       }),
