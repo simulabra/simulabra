@@ -1,3 +1,10 @@
+@font-face {
+  font-family: 'Radley';
+  src: url('./assets/Radley/Radley-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
     --charcoal: #463C3C;
     --wood: #B89877;
@@ -38,6 +45,7 @@ body, html {
     margin: 0;
     padding: 0;
     font-size: 0.95em;
+    font-family: 'Radley';
     background: var(--sand);
     color: var(--charcoal);
     height: 100%;
