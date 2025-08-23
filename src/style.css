@@ -330,6 +330,17 @@ select {
     display: none !important;
 }
 
+input[type="checkbox"] {
+  width: 10px;
+  height: 10px;
+  accent-color: var(--ocean);
+  color: var(--sand);
+  background: var(--light-sand);
+  cursor: pointer;
+  border: 1px solid var(--wood);
+  box-shadow: none;
+}
+
 .spinner {
     width: 1em;
     height: 1em;

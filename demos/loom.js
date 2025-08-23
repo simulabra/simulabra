@@ -35,6 +35,11 @@ export default await function (_, $) {
       $.Signal.new({
         name: "store",
       }),
+      $.Signal.new({
+        name: "sequential",
+        doc: "run threads sequentially instead of in parallel",
+        default: false,
+      }),
       $.Method.new({
         name: "toggleSettings",
         do() {
@@ -57,10 +62,11 @@ export default await function (_, $) {
           const config = this.store().get(id);
           if (config) {
             localStorage.setItem("loom-config-selected", id);
-            const { baseURL, apiKey, model } = config;
+            const { baseURL, apiKey, model, sequential } = config;
             this.baseURL(baseURL);
             this.apiKey(apiKey);
             this.model(model);
+            this.sequential(sequential ?? false);
           }
         }
       }),
@@ -106,6 +112,17 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
+        name: "renderCheckbox",
+        do(id, label) {
+          const htmlId = id + "checkbox";
+          return $.HTML.t`<div><label>${label} <input
+            id=${htmlId}
+            type="checkbox"
+            onchange=${e => this[id](document.getElementById(htmlId).checked)}
+            checked=${() => this[id]()} /></label></div>`;
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           return $.HTML.t`<span>
@@ -115,6 +132,7 @@ export default await function (_, $) {
                 ${this.renderInput("baseURL", "eg https://api.openai.com", "base url")}
                 ${this.renderInput("apiKey", "secret!", "api key")}
                 ${this.renderInput("model", "eg davinci-002", "model")}
+                ${this.renderCheckbox("sequential", "run threads sequentially")}
                 ${() => this.store()}
               </div>
           </span>`;
@@ -197,6 +215,7 @@ export default await function (_, $) {
             baseURL: client.baseURL(),
             apiKey: client.apiKey(),
             model: client.model(),
+            sequential: client.sequential(),
           };
           localStorage.setItem("loom-config-selected", client.id());
           this.updateStore(store);
@@ -252,7 +271,7 @@ export default await function (_, $) {
           return {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
-            logprobs: 40,
+            logprobs: 20,
           };
         }
       }),
@@ -463,7 +482,9 @@ export default await function (_, $) {
       $.After.new({
         name: "init",
         do() {
-          this.client($.OpenAIAPIClient.new());
+          const client = $.OpenAIAPIClient.new();
+          client.loom = this;
+          this.client(client);
           this.text(localStorage.getItem(this.localStorageKey()) || "Once upon a time");
           this.savedText(this.text());
           const storedThreads = localStorage.getItem("LOOM_THREADS");
@@ -471,14 +492,14 @@ export default await function (_, $) {
             this.threads(JSON.parse(storedThreads).map(t => $.Thread.new({ loom: this, ...t })));
           } else {
             this.threads([
-              this.thread({ max_tokens: 4, temperature: 1.0 }),
-              this.thread({ max_tokens: 4, temperature: 1.0 }),
-              this.thread({ max_tokens: 6, temperature: 0.9 }),
-              this.thread({ max_tokens: 6, temperature: 0.8 }),
-              this.thread({ max_tokens: 8, temperature: 0.7 }),
-              this.thread({ max_tokens: 8, temperature: 0.6 }),
-              this.thread({ max_tokens: 10, temperature: 0.5 }),
-              this.thread({ max_tokens: 10, temperature: 0.5 }),
+              this.thread({ max_tokens: 8, temperature: 1.0 }),
+              this.thread({ max_tokens: 8, temperature: 1.0 }),
+              this.thread({ max_tokens: 10, temperature: 0.9 }),
+              this.thread({ max_tokens: 10, temperature: 0.8 }),
+              this.thread({ max_tokens: 12, temperature: 0.7 }),
+              this.thread({ max_tokens: 12, temperature: 0.6 }),
+              this.thread({ max_tokens: 16, temperature: 0.5 }),
+              this.thread({ max_tokens: 16, temperature: 0.5 }),
             ]);
           }
           this.choices([]);
@@ -492,6 +513,19 @@ export default await function (_, $) {
           return $.Thread.new({ loom: this, config: $.ThreadConfig.new(config) });
         }
       }),
+      $.Method.new({
+        name: "spinThreads",
+        async: true,
+        do: async function() {
+          if (this.client().sequential()) {
+            for (const thread of this.threads()) {
+              await thread.spin();
+            }
+          } else {
+            return Promise.all(this.threads().map(t => t.spin()));
+          }
+        }
+      }),
       $.Command.new({
         name: "seek",
         doc: "make new threads to search",
@@ -502,7 +536,7 @@ export default await function (_, $) {
           this.loading(true);
           this.errorMsg("");
           let threads = [];
-          Promise.all(this.threads().map(t => t.spin()))
+          this.spinThreads()
             .finally(() => this.loading(false))
             .catch(e => {
               console.log(e);

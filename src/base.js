@@ -1321,7 +1321,6 @@ function bootstrap() {
       $.Method.new({
         name: 'run',
         do: function run(ctx) {
-          this.log(this.parent());
           return this.parent().runcommand(this);
         }
       }),
