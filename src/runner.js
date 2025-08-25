@@ -65,8 +65,15 @@ await async function (_, $) {
       $.Method.new({
         name: 'run',
         async: true,
-        async do(path) {
-          const files = await readdir(path);
+        async do(path, testName) {
+          let files;
+          if (testName) {
+            const testFile = `${testName}.js`;
+            files = [testFile];
+          } else {
+            files = await readdir(path);
+          }
+          
           for (const file of files) {
             // this.log('load', file);
             const filePath = join(dirname(__dirname), join(path, file));
@@ -93,7 +100,9 @@ await async function (_, $) {
 
   if (require.main === module) {
     const runner = $.TestRunner.new();
-    await runner.run('tests');
+    const testName = process.argv[2];
+    await runner.run('tests', testName);
+    process.exit(0);
   }
 }.module({
   name: 'runner',
