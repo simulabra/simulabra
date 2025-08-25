@@ -626,7 +626,7 @@ export default await function (_, $) {
       $.event.new({
         name: 'update',
         do: function update(e) {
-          if (e._Var.name() === 'count') {
+          if (e._Var.name === 'count') {
             document.querySelector('.CompletionCandidates').style['min-height'] = `${this.count() * 1.5}em`;
           }
         }

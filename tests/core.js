@@ -75,8 +75,8 @@ export default await async function (_, $) {
     name: 'ClassName',
     doc: 'Tests retrieving the correct name for base and derived classes.',
     do() {
-      this.assertEq($.Point.name(), 'Point');
-      this.assertEq($.PointExtended.name(), 'PointExtended');
+      this.assertEq($.Point.name, 'Point');
+      this.assertEq($.PointExtended.name, 'PointExtended');
     }
   });
 
@@ -432,7 +432,7 @@ export default await async function (_, $) {
       name: 'Widget',
       slots: [
         $A.Var.new({ name: 'widgetProp', default: 'widget-abc' }),
-        $A.Method.new({ name: 'ping', do() { return 'pong from Widget ' + this.name(); } })
+        $A.Method.new({ name: 'ping', do() { return 'pong from Widget ' + this.name; } })
       ]
     });
     $A.Widget.new({ name: 'globalWidget' });
@@ -447,7 +447,7 @@ export default await async function (_, $) {
       slots: [
         $B.Widget,
         $B.Var.new({ name: 'gadgetProp', default: 'gadget-xyz' }),
-        $B.Method.new({ name: 'ping', override: true, do() { return 'pong from Gadget ' + this.name(); } })
+        $B.Method.new({ name: 'ping', override: true, do() { return 'pong from Gadget ' + this.name; } })
       ]
     });
   }.module({
@@ -461,7 +461,7 @@ export default await async function (_, $) {
     do() {
       const WidgetClass = moduleB.find('Class', 'Widget');
       this.assert(WidgetClass, 'Could not find Widget class definition via moduleB');
-      this.assertEq(WidgetClass.name(), 'Widget', 'Found class has incorrect name');
+      this.assertEq(WidgetClass.name, 'Widget', 'Found class has incorrect name');
 
       const WidgetClassA = moduleA.find('Class', 'Widget');
       this.assertEq(WidgetClass, WidgetClassA, 'Class definitions found from different modules do not match');
@@ -485,7 +485,7 @@ export default await async function (_, $) {
       const gadget = $B.Gadget.new({ name: 'myGadget' });
 
       this.assert(gadget, 'Failed to create Gadget instance');
-      this.assertEq(gadget.name(), 'myGadget', 'Gadget instance has wrong name');
+      this.assertEq(gadget.name, 'myGadget', 'Gadget instance has wrong name');
       this.assertEq(gadget.gadgetProp(), 'gadget-xyz', 'Gadget instance missing own property');
       this.assertEq(gadget.ping(), 'pong from Gadget myGadget', 'Gadget overridden ping method failed');
       this.assertEq(gadget.widgetProp(), 'widget-abc', 'Gadget instance missing inherited property');

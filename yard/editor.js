@@ -325,13 +325,13 @@ export default await base.find('class', 'module').new({
         $.Method.new({
           name: 'load_modules',
           do: function load_modules() {
-            this.modules(__.base().instances($.module).map(it => $.module_browser.new({ name: it.name(), module: it, parent: this })));
+            this.modules(__.base().instances($.module).map(it => $.module_browser.new({ name: it.name, module: it, parent: this })));
           }
         }),
         $.Method.new({
           name: 'add_module',
           do: function add_module(mod) {
-            this.modules([...this.modules().filter(m => m.name() !== mod.name()), $.module_browser.new({ name: mod.name(), module: mod, parent: this })]);
+            this.modules([...this.modules().filter(m => m.name !== mod.name), $.module_browser.new({ name: mod.name, module: mod, parent: this })]);
           }
         }),
         $.Method.new({
