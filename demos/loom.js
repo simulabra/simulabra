@@ -89,8 +89,12 @@ export default await function (_, $) {
           });
           const json = await res.json();
           const text = json.choices[0].text;
-          const logprobs = this.logprobs(json);
-          return { text, logprobs };
+          if (json) {
+            const logprobs = this.logprobs(json);
+            return { text, logprobs };
+          } else {
+            return { text };
+          }
         }
       }),
       $.Method.new({
@@ -143,7 +147,8 @@ export default await function (_, $) {
         do(res) {
           const lp = res.choices[0].logprobs;
           if (!lp) {
-            this.log("no logprobs on completion response", res);
+            this.log("no logprobs on completion response");
+            console.log(res);
             return null;
           }
           if (/*llama.cpp server*/lp.content && Array.isArray(lp.content) && lp.content[0]?.top_logprobs) {
@@ -271,7 +276,7 @@ export default await function (_, $) {
           return {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
-            logprobs: 20,
+            logprobs: 20
           };
         }
       }),
@@ -325,6 +330,14 @@ export default await function (_, $) {
         name: "runcommand",
         do(cmd) {
           return this.loom().runcommand(cmd);
+        }
+      }),
+      $.Command.new({
+        name: "clear",
+        run() {
+          const oldtext = this.text();
+          this.text("");
+          return () => this.text(oldtext);
         }
       }),
       $.Command.new({
@@ -514,6 +527,14 @@ export default await function (_, $) {
         }
       }),
       $.Method.new({
+        name: "clearThreads",
+        do() {
+          for (const thread of this.threads()) {
+            thread.text("");
+          }
+        }
+      }),
+      $.Method.new({
         name: "spinThreads",
         async: true,
         do: async function() {
@@ -595,10 +616,22 @@ export default await function (_, $) {
       $.Method.new({
         name: "render",
         do() {
+          let debounceTimer;
+          const textchange = e => {
+            console.log('textchange');
+            this.clearThreads();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              this.seek();
+            }, 1000);
+          }
           return $.HTML.t`
             <div class="loom">
               <div class="loom-col">
-                <textarea class="loom-textarea" onload=${e => e.target.scrollTop = e.target.scrollHeight}>${() => this.text()}</textarea>
+                <textarea
+                  class="loom-textarea"
+                  onload=${e => e.target.scrollTop = e.target.scrollHeight}
+                  oninput=${textchange}>${() => this.text()}</textarea>
               </div>
               <div class="loom-col">
                 <div class="logprobs loom-col" hidden=${() => !this.logprobs()}>
