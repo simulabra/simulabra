@@ -619,9 +619,14 @@ export default await function (_, $) {
           let debounceTimer;
           const textchange = e => {
             console.log('textchange');
+            this.text(document.querySelector(".loom-textarea").value);
+            localStorage.setItem("LOOM_TEXT", this.text());
             this.clearThreads();
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
+              if (this.text().charAt(this.text().length - 1) === " ") {
+                this.text(this.text().slice(0, -1));
+              }
               this.seek();
             }, 1000);
           }
