@@ -587,8 +587,9 @@ export default await function (_, $) {
           span.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${style.font}`;
           span.textContent = lastLine;
           document.body.appendChild(span);
-          const x = parseInt(style.paddingLeft) + span.offsetWidth;
-          const y = parseInt(style.paddingTop) + (lines.length - 1) * (parseInt(style.lineHeight) || 20);
+          const rect = textarea.getBoundingClientRect();
+          const x = rect.left + span.offsetWidth + 4;
+          const y = rect.top + parseInt(style.paddingTop) + (lines.length - 1) * (parseInt(style.lineHeight) || 20);
           this.cursor({ x, y });
           document.body.removeChild(span);
         }

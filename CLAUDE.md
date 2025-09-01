@@ -27,7 +27,7 @@ Simulabra is a metaobject system for Javascript. The custom class system (which 
 
 ## A guide to writing Simulabra
  - Be consistent with naming  - do not use overly short names in public interfaces. 
- - Only add comments when they are necessary, prefer doc strings and readable code.
+ - DO NOT ADD COMMENTS unless they are necessary, prefer doc strings and readable code.
  - The shortest solution is generally best, but it is most important to handle complexity. 
  - Consider different approaches and tradeoffs when encountering difficult problems. 
  - Try to always do things the Simulabra way, in style and idiom.  
