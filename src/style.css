@@ -315,6 +315,24 @@ select {
     resize: none;
 }
 
+.loom-textarea-container {
+    position: relative;
+}
+
+.cursor-spinner {
+    position: absolute;
+    width: 0.7em;
+    height: 0.7em;
+    border: 1px solid var(--wood);
+    border-top: 1px solid var(--sky);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    pointer-events: none;
+    z-index: 10;
+    margin-left: 2px;
+}
+
 .loom-row {
     display: flex;
     flex-direction: row;

@@ -490,6 +490,7 @@ export default await function (_, $) {
       $.Signal.new({ name: "errorMsg", default: "" }),
       $.Signal.new({ name: "threads" }),
       $.Signal.new({ name: "loading", default: false }),
+      $.Signal.new({ name: "cursor", default: { x: 0, y: 0 } }),
       $.Var.new({ name: "client" }),
       $.Var.new({ name: "localStorageKey", default: "LOOM_TEXT" }),
       $.After.new({
@@ -505,14 +506,14 @@ export default await function (_, $) {
             this.threads(JSON.parse(storedThreads).map(t => $.Thread.new({ loom: this, ...t })));
           } else {
             this.threads([
-              this.thread({ max_tokens: 8, temperature: 1.0 }),
-              this.thread({ max_tokens: 8, temperature: 1.0 }),
-              this.thread({ max_tokens: 10, temperature: 0.9 }),
-              this.thread({ max_tokens: 10, temperature: 0.8 }),
-              this.thread({ max_tokens: 12, temperature: 0.7 }),
+              this.thread({ max_tokens: 6, temperature: 1.0 }),
+              this.thread({ max_tokens: 7, temperature: 1.0 }),
+              this.thread({ max_tokens: 8, temperature: 0.9 }),
+              this.thread({ max_tokens: 9, temperature: 0.8 }),
+              this.thread({ max_tokens: 10, temperature: 0.7 }),
+              this.thread({ max_tokens: 11, temperature: 0.6 }),
               this.thread({ max_tokens: 12, temperature: 0.6 }),
-              this.thread({ max_tokens: 16, temperature: 0.5 }),
-              this.thread({ max_tokens: 16, temperature: 0.5 }),
+              this.thread({ max_tokens: 13, temperature: 0.6 }),
             ]);
           }
           this.choices([]);
@@ -574,6 +575,24 @@ export default await function (_, $) {
           textarea.scrollTop = textarea.scrollHeight;
         }
       }),
+      $.Method.new({
+        name: "updateCursorPosition",
+        do() {
+          const textarea = document.querySelector(".loom-textarea");
+          const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+          const lines = textBeforeCursor.split('\n');
+          const lastLine = lines[lines.length - 1];
+          const style = getComputedStyle(textarea);
+          const span = document.createElement('span');
+          span.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${style.font}`;
+          span.textContent = lastLine;
+          document.body.appendChild(span);
+          const x = parseInt(style.paddingLeft) + span.offsetWidth;
+          const y = parseInt(style.paddingTop) + (lines.length - 1) * (parseInt(style.lineHeight) || 20);
+          this.cursor({ x, y });
+          document.body.removeChild(span);
+        }
+      }),
       $.Command.new({
         name: "weave",
         run: function(ctx, text) {
@@ -622,6 +641,7 @@ export default await function (_, $) {
             this.text(document.querySelector(".loom-textarea").value);
             localStorage.setItem("LOOM_TEXT", this.text());
             this.clearThreads();
+            this.updateCursorPosition();
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
               if (this.text().charAt(this.text().length - 1) === " ") {
@@ -630,13 +650,20 @@ export default await function (_, $) {
               this.seek();
             }, 1000);
           }
+          const cursorchange = e => {
+            this.updateCursorPosition();
+          }
           return $.HTML.t`
             <div class="loom">
-              <div class="loom-col">
+              <div class="loom-col loom-textarea-container">
                 <textarea
                   class="loom-textarea"
                   onload=${e => e.target.scrollTop = e.target.scrollHeight}
-                  oninput=${textchange}>${() => this.text()}</textarea>
+                  oninput=${textchange}
+                  onclick=${cursorchange}
+                  onkeyup=${cursorchange}
+                  onselect=${cursorchange}>${() => this.text()}</textarea>
+                <span class="cursor-spinner" hidden=${() => !this.loading()} style=${() => `left: ${this.cursor().x}px; top: ${this.cursor().y}px;`}></span>
               </div>
               <div class="loom-col">
                 <div class="logprobs loom-col" hidden=${() => !this.logprobs()}>
