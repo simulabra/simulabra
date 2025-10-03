@@ -1,29 +1,7 @@
-# SIMULABRA: infinite software
-```
-$.Class.new({
-  name: 'Point',
-  doc: 'a 2d point in Euclidean space',
-  slots: [
-    $.Var.new({
-      name: 'x',
-      default: 0,
-    }),
-    $.Var.new({
-      name: 'y',
-      default: 0,
-    }),
-    $.Method.new({
-      name: 'dist',
-      doc: 'the distance to another point',
-      do: function dist(other) {
-        return Math.sqrt((this.x() - other.x())**2 + (this.y() - other.y())**2);
-      },
-    }),
-  ],
-});
-```
+# CLAUDE.md
 
-Simulabra is a metaobject system for Javascript. The custom class system (which does not use the ES5 `class` keyword) best resembles the Common Lisp Object System (specifically the original Flavors, without multiple dispatch). Classes are defined in a declarative style, with slots of methods, vars, and before/after method combination instead of `super`; docstrings; and multiple inheritance, differentiating it from contemporary takes on OOP. Included are a component library and other utilities for writing dynamic web applications.
+## SIMULABRA: INFINITE SOFTWARE
+Simulabra is a metaobject system and software universe for Javascript. 
 
 ## A guide to writing Simulabra
  - Be consistent with naming  - do not use overly short names in public interfaces. 
@@ -32,8 +10,46 @@ Simulabra is a metaobject system for Javascript. The custom class system (which 
  - Consider different approaches and tradeoffs when encountering difficult problems. 
  - Try to always do things the Simulabra way, in style and idiom.  
 
-## Reference files
-src/base.js - core implementation
-src/html.js - html implementation
-tests/core.js - core unit tests
-demos/loom.js - in depth ui demo
+## Commands
+
+### Development Commands
+- `bun run test` - Run tests
+- `bun run serve` - Start the server (port 3031)
+- `./build.sh` - Build demos to `out/` directory
+
+## Architecture
+
+### Core System
+This is **Simulabra**, a JavaScript metaobject system that implements a custom class system resembling the Common Lisp Object System (specifically the original Flavors). It provides:
+
+- **Declarative class definitions** with slots, methods, and multiple inheritance
+- **Method combination** using Before/After hooks instead of `super` calls
+- **Reactive programming** with Signals and Effects
+- **Module system** with dependency injection
+- **Component-based UI** system
+
+### Key Modules
+
+#### Base System (`src/base.js`)
+The core metaobject system providing the foundational classes:
+- Custom class system with multiple inheritance
+- Variable slots with automatic getters/setters
+- Method combination (Before/After hooks)
+- Reactive Signal/Effect system
+- Module system with imports and namespacing
+
+#### HTML System (`src/html.js`)
+Template-based reactive UI system:
+- Virtual DOM with `$.VNode.h()` factory
+- Tagged template literals (`$.HTML.t`)
+- Component system with automatic reactive updates
+- AST-based template compilation
+
+#### Test System (`src/test.js`)
+Testing framework integrated with the class system:
+- Test cases as classes
+- Assertion methods
+- Async test support
+
+### Testing
+Tests are in `tests/` directory using the built-in test framework.
