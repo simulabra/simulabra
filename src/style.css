@@ -260,6 +260,13 @@ select {
     padding-top: 0px;
 }
 
+.thread-number {
+    font-size: 0.7em;
+    color: var(--ocean);
+    margin-right: 8px;
+    align-self: center;
+}
+
 .thread-text {
     display: inline-block;
     color: var(--seaweed);

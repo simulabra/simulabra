@@ -428,9 +428,11 @@ export default await function (_, $) {
       $.Method.new({
         name: "render",
         do() {
+          const threadNumber = () => this.loom().threads().indexOf(this) + 1;
           return $.HTML.t`
           <div class="thread">
             <button class="thread-handle" onclick=${() => this.showConfig(!this.showConfig())}>☰</button>
+            <span class="thread-number">${threadNumber}</span>
             <div class="loom-col">
               <button class="thread-text" onclick=${() => this.weave()}>${() => this.spanify()}</button>
               <div class="thread-config" hidden=${() => !this.showConfig()}>
@@ -519,6 +521,32 @@ export default await function (_, $) {
           this.choices([]);
           this.logprobs([]);
           this.history([]);
+          document.addEventListener('keydown', e => {
+            const textarea = document.querySelector(".loom-textarea");
+            if (document.activeElement === textarea) {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                textarea.blur();
+              }
+              return;
+            }
+            const key = e.key;
+            if (key >= '1' && key <= '9') {
+              const index = parseInt(key) - 1;
+              const threads = this.threads();
+              if (threads[index] && threads[index].text()) {
+                e.preventDefault();
+                threads[index].weave();
+              }
+            } else if (key === ' ') {
+              e.preventDefault();
+              this.seek();
+            } else if (key === 'i') {
+              e.preventDefault();
+              textarea.focus();
+              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+          });
         }
       }),
       $.Method.new({
