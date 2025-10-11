@@ -1,13 +1,13 @@
 import { __, base } from './base.js';
 
-export default await function (_, $) {
+export default await function (_, $, $base) {
   const __ = globalThis.SIMULABRA;
 
-  $.Class.new({
+  $base.Class.new({
     name: 'pyserver',
     slots: [
-      $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3032' }),
-      $.Method.new({
+      $base.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3032' }),
+      $base.Method.new({
         name: 'completion',
         do: async function completion({
           prompt,
@@ -41,27 +41,27 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'CompletionResults',
     slots: [
-      $.Var.new({
+      $base.Var.new({
         name: 'content',
         doc: 'the tokens sampled from the completion',
       }),
-      $.Var.new({
+      $base.Var.new({
         name: 'probs',
         doc: 'the logprobs of the tokens',
       }),
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'PyserverCompletionResults',
     slots: [
-      $.Var.new({ name: 'content' }),
-      $.Var.new({ name: 'tops' }),
-      $.Var.new({ name: 'tokens' }),
-      $.Method.new({
+      $base.Var.new({ name: 'content' }),
+      $base.Var.new({ name: 'tops' }),
+      $base.Var.new({ name: 'tokens' }),
+      $base.Method.new({
         name: 'sumProb',
         do: function sumProb() {
           let sum = 0.0;
@@ -78,13 +78,13 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'LocalLlamaTokenizeCommand',
     slots: [
-      $.Command,
-      $.Var.new({ name: 'prompt' }),
-      $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
-      $.Method.new({
+      $base.Command,
+      $base.Var.new({ name: 'prompt' }),
+      $base.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
+      $base.Method.new({
         name: 'run',
         do: async function run() {
           const res = await fetch(`${this.serverUrl()}/tokenize`, {
@@ -109,11 +109,11 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'LlamacppCompletionResults',
     slots: [
       $.CompletionResults,
-      $.Method.new({
+      $base.Method.new({
         name: 'sumProb',
         do: function sumProb() {
           let sum = 0.0;
@@ -130,17 +130,17 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'LocalLlamaCompletionCommand',
     slots: [
-      $.Command,
-      $.Var.new({ name: 'prompt' }),
-      $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
-      $.Var.new({ name: 'nPredict', default: 4 }),
-      $.Var.new({ name: 'temperature', default: 5.0 }),
-      $.Var.new({ name: 'nProbs', default: 0 }),
-      $.Var.new({ name: 'logitBias', default: [] }),
-      $.Method.new({
+      $base.Command,
+      $base.Var.new({ name: 'prompt' }),
+      $base.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
+      $base.Var.new({ name: 'nPredict', default: 4 }),
+      $base.Var.new({ name: 'temperature', default: 5.0 }),
+      $base.Var.new({ name: 'nProbs', default: 0 }),
+      $base.Var.new({ name: 'logitBias', default: [] }),
+      $base.Method.new({
         name: 'run',
         do: async function run() {
           const res = await fetch(`${this.serverUrl()}/completion`, {
@@ -172,13 +172,13 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'LocalLlamaTokenizeCommand',
     slots: [
-      $.Command,
-      $.Var.new({ name: 'prompt' }),
-      $.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
-      $.Method.new({
+      $base.Command,
+      $base.Var.new({ name: 'prompt' }),
+      $base.Var.new({ name: 'serverUrl', default: 'http://100.64.172.3:3731' }),
+      $base.Method.new({
         name: 'run',
         do: async function run() {
           const res = await fetch(`${this.serverUrl()}/tokenize`, {
@@ -203,16 +203,16 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'BaseModel',
     slots: [
-      $.Method.new({
+      $base.Method.new({
         name: 'system',
         do: function system() {
           return 'You are an intelligent assistant.';
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'prompt',
         do: function prompt(user, output) {
           return `${user}${output}`;
@@ -221,12 +221,12 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ChatMLModel',
     slots: [
       $.BaseModel,
-      $.Var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
-      $.Method.new({
+      $base.Var.new({ name: 'system', default: 'You are an intelligent assistant.', }),
+      $base.Method.new({
         name: 'prompt',
         do: function prompt(user, output, system) {
           return `<|im_start|>system
@@ -242,11 +242,11 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'MistralModel',
     slots: [
       $.BaseModel,
-      $.Method.new({
+      $base.Method.new({
         name: 'prompt',
         do: function prompt(user, output) {
           return `[INST]${user}[\INST]${output}`;
@@ -255,11 +255,11 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'AlpacaModel',
     slots: [
       $.BaseModel,
-      $.Method.new({
+      $base.Method.new({
         name: 'prompt',
         do: function prompt(user, output, system) {
           return `${system}

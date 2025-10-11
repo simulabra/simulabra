@@ -1,34 +1,34 @@
 import { __, base } from '../src/base.js';
 import test from '../src/test.js';
 
-export default await async function (_, $) {
-  $.Class.new({
+export default await async function (_, $, $base, $test) {
+  $base.Class.new({
     name: 'BasicTestClass',
     slots: []
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'Point',
     slots: [
-      $.Var.new({ name: 'x', default: 0 }),
-      $.Var.new({ name: 'y', default: 0 }),
-      $.Method.new({
+      $base.Var.new({ name: 'x', default: 0 }),
+      $base.Var.new({ name: 'y', default: 0 }),
+      $base.Method.new({
         name: 'dist',
         do() { return Math.sqrt(this.x() ** 2 + this.y() ** 2); }
       })
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'Color',
     slots: [
-      $.Var.new({ name: 'r', default: 0 }),
-      $.Var.new({ name: 'g', default: 0 }),
-      $.Var.new({ name: 'b', default: 0 }),
+      $base.Var.new({ name: 'r', default: 0 }),
+      $base.Var.new({ name: 'g', default: 0 }),
+      $base.Var.new({ name: 'b', default: 0 }),
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassDef',
     doc: 'Tests basic class definition and retrieving the class from an instance.',
     do() {
@@ -38,7 +38,7 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassVarAccessAndSet',
     doc: 'Tests defining, accessing, and setting variables (Vars) on an instance.',
     do() {
@@ -50,7 +50,7 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassMethodCall',
     doc: 'Tests defining and calling a method on an instance.',
     do() {
@@ -59,19 +59,19 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'PointExtended',
     slots: [
       $.Point,
-      $.Var.new({ name: 'phi', default: 0 }),
-      $.Method.new({
+      $base.Var.new({ name: 'phi', default: 0 }),
+      $base.Method.new({
         name: 'phiShift',
         do() { return this.dist() * this.phi() / Math.PI; }
       })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassName',
     doc: 'Tests retrieving the correct name for base and derived classes.',
     do() {
@@ -80,7 +80,7 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassInheritanceSingle',
     doc: 'Tests single inheritance: accessing inherited vars and methods, and using new methods.',
     do() {
@@ -91,12 +91,12 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ColorPoint',
     slots: [
       $.Color,
       $.Point,
-      $.Method.new({
+      $base.Method.new({
         name: 'g',
         override: true,
         do() { return this.dist(); }
@@ -104,7 +104,7 @@ export default await async function (_, $) {
     ],
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassMultipleInheritanceOverride',
     doc: 'Tests multiple inheritance and method overriding.',
     do() {
@@ -116,16 +116,16 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'BeforeBasic',
     slots: [
-      $.Var.new({ name: 'x', default: 0 }),
-      $.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
-      $.Before.new({ name: 'bump', do() { this.x(this.x() + 1); } }) // Runs before primary
+      $base.Var.new({ name: 'x', default: 0 }),
+      $base.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
+      $base.Before.new({ name: 'bump', do() { this.x(this.x() + 1); } }) // Runs before primary
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'BeforeModifierBasic',
     doc: 'Tests basic functionality of the Before method modifier.',
     do() {
@@ -135,16 +135,16 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'AfterBasic',
     slots: [
-      $.Var.new({ name: 'x', default: 0 }),
-      $.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
-      $.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
+      $base.Var.new({ name: 'x', default: 0 }),
+      $base.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
+      $base.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'AfterModifierBasic',
     doc: 'Tests basic functionality of the After method modifier.',
     do() {
@@ -154,15 +154,15 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'AfterBeforeCombined',
     slots: [
       $.BeforeBasic,
-      $.After.new({ name: 'bump', do() { this.x(this.x() * 2); } })
+      $base.After.new({ name: 'bump', do() { this.x(this.x() * 2); } })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'AfterBeforeCombinedInheritance',
     doc: 'Tests combining Before and After modifiers through inheritance.',
     do() {
@@ -172,15 +172,15 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'AfterBeforeCombinedOverride',
     slots: [
       $.AfterBeforeCombined,
-      $.Method.new({ name: 'bump', override: true, do() { this.x(this.x() + 3); } })
+      $base.Method.new({ name: 'bump', override: true, do() { this.x(this.x() + 3); } })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'AfterBeforeCombinedWithOverride',
     doc: 'Tests modifier execution order when the primary method is overridden.',
     do() {
@@ -190,15 +190,15 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'AfterMultiple',
     slots: [
       $.AfterBasic,
-      $.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
+      $base.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'AfterModifierMultiple',
     doc: 'Tests multiple After modifiers for the same method.',
     do() {
@@ -208,27 +208,27 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ModifierBase',
     slots: [
-      $.Var.new({ name: 'journal', default: () => [] }),
-      $.Method.new({ name: 'exec', do() { this.journal().push('Base Exec'); } }),
-      $.Before.new({ name: 'exec', do() { this.journal().push('Base Before'); } }),
-      $.After.new({ name: 'exec', do() { this.journal().push('Base After'); } }),
+      $base.Var.new({ name: 'journal', default: () => [] }),
+      $base.Method.new({ name: 'exec', do() { this.journal().push('Base Exec'); } }),
+      $base.Before.new({ name: 'exec', do() { this.journal().push('Base Before'); } }),
+      $base.After.new({ name: 'exec', do() { this.journal().push('Base After'); } }),
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ModifierChildOverride',
     slots: [
       $.ModifierBase,
-      $.Method.new({ name: 'exec', override: true, do() { this.journal().push('Child Override Exec'); } }),
-      $.Before.new({ name: 'exec', do() { this.journal().push('Child Before'); } }),
-      $.After.new({ name: 'exec', do() { this.journal().push('Child After'); } }),
+      $base.Method.new({ name: 'exec', override: true, do() { this.journal().push('Child Override Exec'); } }),
+      $base.Before.new({ name: 'exec', do() { this.journal().push('Child Before'); } }),
+      $base.After.new({ name: 'exec', do() { this.journal().push('Child After'); } }),
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'MethodModifiersOverrideWithInherited',
     doc: 'Tests the execution order of base and child method modifiers with override.',
     do() {
@@ -245,15 +245,15 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'StaticTest',
     slots: [
-      $.Static.new({ name: 'frob', do(n) { return n * 2; } }),
-      $.Static.new({ name: 'combine', do(a, b) { return `${a}-${b}`; } })
+      $base.Static.new({ name: 'frob', do(n) { return n * 2; } }),
+      $base.Static.new({ name: 'combine', do(a, b) { return `${a}-${b}`; } })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'StaticMethodCall',
     doc: 'Tests defining and calling static methods directly on the class.',
     do() {
@@ -262,17 +262,17 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassExtend',
     doc: 'Tests extending a class with new methods/modifiers after its initial definition.',
     do() {
-      $.Class.new({
+      $base.Class.new({
         name: 'Extendable',
-        slots: [ $.Method.new({ name: 'process', do(val) { return val; } }) ]
+        slots: [ $base.Method.new({ name: 'process', do(val) { return val; } }) ]
       });
 
       let sideEffect = 0;
-      $.Extendable.extend($.After.new({
+      $.Extendable.extend($base.After.new({
         name: 'process',
         do() { sideEffect++; }
       }));
@@ -285,10 +285,10 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'Task',
     slots: [
-      $.EnumVar.new({
+      $base.EnumVar.new({
         name: 'status',
         choices: ['pending', 'active', 'complete'],
         default: 'pending'
@@ -296,7 +296,7 @@ export default await async function (_, $) {
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'EnumVarBasic',
     doc: 'Tests basic EnumVar functionality: default value and valid assignment.',
     do() {
@@ -307,7 +307,7 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'EnumVarInvalidAssignment',
     doc: 'Tests that assigning an invalid value to an EnumVar throws an error.',
     do() {
@@ -322,15 +322,15 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'EnumVarInvalidDefault',
     doc: 'Tests that defining an EnumVar with an invalid default value throws an error during class definition.',
     do() {
       const errorMessage = this.assertThrows(() => {
-        $.Class.new({
+        $base.Class.new({
           name: 'BadTask',
           slots: [
-            $.EnumVar.new({
+            $base.EnumVar.new({
               name: 'status',
               choices: ['pending', 'active', 'complete'],
               default: 'invalid_default'
@@ -345,22 +345,22 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'AutoVarTester',
     slots: [
-      $.Var.new({ name: 'baseValue', default: 10 }),
-      $.AutoVar.new({
+      $base.Var.new({ name: 'baseValue', default: 10 }),
+      $base.AutoVar.new({
         name: 'computedValue',
         auto() { return this.baseValue() * 2; }
       }),
-       $.AutoVar.new({
+       $base.AutoVar.new({
         name: 'fixedValue',
         auto() { return 42; }
       })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'AutoVarBasic',
     doc: 'Tests AutoVar initialization with fixed and dependent values.',
     do() {
@@ -380,15 +380,15 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'VirtualBase',
     slots: [
-      $.Virtual.new({ name: 'mustImplement' }),
-      $.Method.new({ name: 'concreteMethod', do() { return 'Concrete'; } })
+      $base.Virtual.new({ name: 'mustImplement' }),
+      $base.Method.new({ name: 'concreteMethod', do() { return 'Concrete'; } })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'VirtualMethodThrowsWhenUnimplemented',
     doc: 'Tests that calling an unimplemented virtual method throws an error.',
     do() {
@@ -401,15 +401,15 @@ export default await async function (_, $) {
     }
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'VirtualImpl',
     slots: [
       $.VirtualBase,
-      $.Method.new({ name: 'mustImplement', do() { return 'Implemented!'; } })
+      $base.Method.new({ name: 'mustImplement', do() { return 'Implemented!'; } })
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'VirtualMethodWorksWhenImplemented',
     doc: 'Tests that calling an implemented virtual method executes correctly.',
     do() {
@@ -427,27 +427,27 @@ export default await async function (_, $) {
     }
   });
 
-  const moduleA = await function (_modA, $A) {
-    $A.Class.new({
+  const moduleA = await function (_, $, $base) {
+    $base.Class.new({
       name: 'Widget',
       slots: [
-        $A.Var.new({ name: 'widgetProp', default: 'widget-abc' }),
-        $A.Method.new({ name: 'ping', do() { return 'pong from Widget ' + this.name; } })
+        $base.Var.new({ name: 'widgetProp', default: 'widget-abc' }),
+        $base.Method.new({ name: 'ping', do() { return 'pong from Widget ' + this.name; } })
       ]
     });
-    $A.Widget.new({ name: 'globalWidget' });
+    $.Widget.new({ name: 'globalWidget' });
   }.module({
     name: 'test.core.moduleA',
     imports: [base]
   }).load();
 
-  const moduleB = await function (_modB, $B) {
-    $B.Class.new({
+  const moduleB = await function (_, $, $base, $moduleA) {
+    $base.Class.new({
       name: 'Gadget',
       slots: [
-        $B.Widget,
-        $B.Var.new({ name: 'gadgetProp', default: 'gadget-xyz' }),
-        $B.Method.new({ name: 'ping', override: true, do() { return 'pong from Gadget ' + this.name; } })
+        $moduleA.Widget,
+        $base.Var.new({ name: 'gadgetProp', default: 'gadget-xyz' }),
+        $base.Method.new({ name: 'ping', override: true, do() { return 'pong from Gadget ' + this.name; } })
       ]
     });
   }.module({
@@ -455,7 +455,7 @@ export default await async function (_, $) {
     imports: [base, moduleA]
   }).load();
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ModuleFindClassAcrossModules',
     doc: 'Tests finding a class definition from an imported module.',
     do() {
@@ -468,7 +468,7 @@ export default await async function (_, $) {
     }
   });
 
-   $.Case.new({
+   $test.Case.new({
     name: 'ModuleGetInstanceAcrossModules',
     doc: 'Tests retrieving a class instance defined in an imported module.',
     do() {
@@ -477,7 +477,7 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ModuleUseInheritedClassAcrossModules',
     doc: 'Tests creating and using an instance of a class that inherits from a class in another module.',
     do() {
@@ -497,7 +497,7 @@ export default await async function (_, $) {
     }
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'ClassGetInstanceByNameAndId',
     doc: 'Tests retrieving instances from the registry using both name and ID.',
     do() {
@@ -517,14 +517,14 @@ export default await async function (_, $) {
     }
   });
 
-  $.AsyncCase.new({
+  $test.AsyncCase.new({
     name: 'Signal',
     async do() {
-      const Counter = $.Class.new({
+      const Counter = $base.Class.new({
         name: 'Counter',
         slots: [
-          $.Signal.new({ name: 'count', default: 0 }),
-          $.Method.new({
+          $base.Signal.new({ name: 'count', default: 0 }),
+          $base.Method.new({
             name: 'inc',
             do() { this.count(this.count() + 1); }
           })
@@ -534,7 +534,7 @@ export default await async function (_, $) {
       const c = Counter.new();
       let init = true;
       let ran = 0;
-      const e = $.Effect.create(() => {
+      const e = $base.Effect.create(() => {
         this.assertEq(c.count(), init ? 0 : 2);
         init = false;
         ran++;
@@ -547,5 +547,5 @@ export default await async function (_, $) {
   });
 }.module({
   name: 'test.core',
-  imports: [test],
+  imports: [base, test],
 }).load();

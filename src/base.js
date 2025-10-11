@@ -940,9 +940,9 @@ function bootstrap() {
             if (p === 'then' || p === 'format') {
               return target[p];
             }
-            const v = target.find(ClassName, p);
+              const v = target.repo(ClassName)[p];
             if (v === undefined) {
-              const err = new Error(`failed to find ~${ClassName}.${p}`);
+                const err = new Error(`failed to find ~${ClassName}.${p} in \$${target.name}`);
               if (errFn) {
                 errFn(err);
               } else {
@@ -967,7 +967,7 @@ function bootstrap() {
           this.loaded(true);
           const om = $$().mod();
           $$().mod(this);
-          await this.mod().apply(this, [this, this.proxy('Class')]);
+            await this.mod().apply(this, [this, this.proxy('Class'), ...this.imports().map(i => i.proxy('Class'))]);
           $$().mod(om);
         }
         return this;

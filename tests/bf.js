@@ -1,49 +1,46 @@
 import { __, base } from '../src/base.js';
 import test from '../src/test.js';
 
-export default await __.$().Module.new({
-  name: 'test.bf',
-  imports: [base, test],
-  mod(_, $) {
-    $.Class.new({
+export default await function (_, $, $base, $test) {
+    $base.Class.new({
       name: 'BrainfuckInterpreter',
       slots: [
-        $.Var.new({ name: 'code', default: '' }),
-        $.Var.new({ name: 'input', default: '' }),
-        $.Var.new({ name: 'output', default: '' }),
-        $.Var.new({ name: 'data', default: () => Array(30000).fill(0) }),
-        $.Var.new({ name: 'dataPtr', default: 0 }),
-        $.Var.new({ name: 'codePtr', default: 0 }),
-        $.Var.new({ name: 'inputPtr', default: 0 }),
+        $base.Var.new({ name: 'code', default: '' }),
+        $base.Var.new({ name: 'input', default: '' }),
+        $base.Var.new({ name: 'output', default: '' }),
+        $base.Var.new({ name: 'data', default: () => Array(30000).fill(0) }),
+        $base.Var.new({ name: 'dataPtr', default: 0 }),
+        $base.Var.new({ name: 'codePtr', default: 0 }),
+        $base.Var.new({ name: 'inputPtr', default: 0 }),
 
-        $.Method.new({
+        $base.Method.new({
           name: 'handleGreaterThan',
           do() { this.dataPtr(this.dataPtr() + 1); }
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'handleLessThan',
           do() { this.dataPtr(this.dataPtr() - 1); }
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'handlePlus',
           do() { this.data()[this.dataPtr()]++; }
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'handleMinus',
           do() { this.data()[this.dataPtr()]--; }
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'handleDot',
           do() { this.output(this.output() + String.fromCharCode(this.data()[this.dataPtr()])); }
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'handleComma',
           do() {
             this.data()[this.dataPtr()] = this.input().charCodeAt(this.inputPtr());
             this.inputPtr(this.inputPtr() + 1);
           }
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'handleOpenBracket',
           do() {
             if (this.data()[this.dataPtr()] === 0) {
@@ -58,7 +55,7 @@ export default await __.$().Module.new({
             }
           }
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'handleCloseBracket',
           do() {
             if (this.data()[this.dataPtr()] !== 0) {
@@ -74,7 +71,7 @@ export default await __.$().Module.new({
           }
         }),
 
-        $.Method.new({
+        $base.Method.new({
           name: 'execute',
           do() {
             const handlers = {
@@ -104,7 +101,7 @@ export default await __.$().Module.new({
     });
 
     // --- Tests remain the same ---
-    $.Case.new({
+    $test.Case.new({
       name: 'interpreter_init',
       do() {
         const bf = $.BrainfuckInterpreter.new({ code: '++.' });
@@ -112,7 +109,7 @@ export default await __.$().Module.new({
       }
     });
 
-    $.Case.new({
+    $test.Case.new({
       name: 'interpreter_exec_simple',
       do() {
         const bf = $.BrainfuckInterpreter.new({ code: '++.' });
@@ -121,7 +118,7 @@ export default await __.$().Module.new({
       }
     });
 
-    $.Case.new({
+    $test.Case.new({
       name: 'interpreter_exec_loops',
       do() {
         const bf = $.BrainfuckInterpreter.new({ code: '++[>++<-]>.' });
@@ -130,7 +127,7 @@ export default await __.$().Module.new({
       }
     });
 
-    $.Case.new({
+    $test.Case.new({
       name: 'interpreter_exec_input',
       do() {
         const bf = $.BrainfuckInterpreter.new({ code: ',+.', input: String.fromCharCode(2) });
@@ -139,7 +136,7 @@ export default await __.$().Module.new({
       }
     });
 
-    $.Case.new({
+    $test.Case.new({
       name: 'interpreter_hello_world',
       do() {
         const bf = $.BrainfuckInterpreter.new({
@@ -149,5 +146,7 @@ export default await __.$().Module.new({
         this.assertEq(bf.output(), "Hello World!\n");
       }
     });
-  }
+}.module({
+  name: 'test.bf',
+  imports: [base, test],
 }).load();

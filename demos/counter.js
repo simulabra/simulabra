@@ -1,16 +1,16 @@
 import htmlModule from '../src/html.js';   // loads the classes
 import { __, base } from '../src/base.js';
 
-export default await function (_, $) {
-  $.Class.new({
+export default await function (_, $, $base, $html) {
+  $base.Class.new({
     name: 'Counter',
     slots: [
-      $.Signal.new({ name: 'count', default: 0 }),
-      $.Method.new({ name: 'inc', do() { this.count(this.count() + 1); } }),
-      $.Method.new({
+      $base.Signal.new({ name: 'count', default: 0 }),
+      $base.Method.new({ name: 'inc', do() { this.count(this.count() + 1); } }),
+      $base.Method.new({
         name: 'render',
         do() { 
-          return $.HTML.t`
+          return $html.HTML.t`
             <button id="clicky" onclick=${() => this.inc()}>
               clicked <span id="clicky-number">${() => this.count()}</span> times
             </button>
@@ -20,32 +20,32 @@ export default await function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'CounterList',
     slots: [
-      $.Var.new({ name: 'counter' }),
-      $.Method.new({
+      $base.Var.new({ name: 'counter' }),
+      $base.Method.new({
         name: 'render',
         do() { 
           return Array.from(
             { length: this.counter().count() },
-            (it, idx) => $.HTML.t`<div>${idx + 1}</div>`
+            (it, idx) => $html.HTML.t`<div>${idx + 1}</div>`
           );
         }
       }),
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'App',
     slots: [
-      $.Component,
-      $.Method.new({
+      $html.Component,
+      $base.Method.new({
         name: 'render',
         do() { 
           const counter = $.Counter.new();
           const counterList = $.CounterList.new({ counter });
-          return $.HTML.t`
+          return $html.HTML.t`
             <div>Here is a counter!
               ${() => counter.render()}
               ${() => counterList.render()}
@@ -53,7 +53,7 @@ export default await function (_, $) {
           `; 
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'css',
         do() {
           return `

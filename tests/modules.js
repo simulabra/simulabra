@@ -1,16 +1,16 @@
 import { __, base } from '../src/base.js';
 import test from '../src/test.js';
 
-export default await async function (_, $) {
-  const a = function (_, $) {
-    $.Class.new({
+export default await async function (_, $, $base, $test) {
+  const a = function (_, $, $base) {
+    $base.Class.new({
       name: 'A',
       slots: [
-        $.Var.new({
+        $base.Var.new({
           name: 'x',
           default: 1,
         }),
-        $.Method.new({
+        $base.Method.new({
           name: 'frob',
           do() {
             this.x(this.x() * 3);
@@ -23,12 +23,12 @@ export default await async function (_, $) {
     imports: [base],
   });
   await a.load();
-  const b = function (_, $) {
-    $.Class.new({
+  const b = function (_, $, $base, $a) {
+    $base.Class.new({
       name: 'B',
       slots: [
-        $.A,
-        $.After.new({
+        $a.A,
+        $base.After.new({
           name: 'frob',
           do() {
             this.x(this.x() - 1);
@@ -42,7 +42,7 @@ export default await async function (_, $) {
   });
   await b.load();
 
-  $.Case.new({
+  $test.Case.new({
     name: 'module inheritance',
     do() {
       const binst = b.$().B.new();

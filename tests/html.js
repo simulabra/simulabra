@@ -1,6 +1,6 @@
 // tests/html.js
-import { __, base }   from '../src/base.js';
-import test           from '../src/test.js';
+import { __, base } from '../src/base.js';
+import test from '../src/test.js';
 
 /* --- tiny DOM shim ------------------------------------------------------ */
 (function mockDOM() {
@@ -142,17 +142,17 @@ import test           from '../src/test.js';
 
 const htmlModule = (await import('../src/html.js')).default;
 
-export default await async function (_, $) {
+export default await function (_, $, $base, $test, $html) {
 
-  $.Class.new({
+  $base.Class.new({
     name: 'TestCounter',
     slots: [
-      $.Signal.new({ name:'count', default: 0 }),
-      $.Method.new({ name:'inc', do(){this.count(this.count()+1)} }),
-      $.Method.new({
+      $base.Signal.new({ name:'count', default: 0 }),
+      $base.Method.new({ name:'inc', do(){this.count(this.count()+1)} }),
+      $base.Method.new({
         name:'render',
         do(){
-          return $.HTML.t`
+          return $html.HTML.t`
           <button id="btn" onclick=${() => this.inc()}>
             clicked ${() => this.count()} times
           </button>`;
@@ -161,17 +161,17 @@ export default await async function (_, $) {
     ]
   });
 
-  $.Case.new({
+  $test.Case.new({
     name: 'HTMLVNodeBasic',
     do(){
-      const v = $.HTML.t`<div id="x" class="y"></div>`;
+      const v = $html.HTML.t`<div id="x" class="y"></div>`;
       this.assertEq(v.el().tagName, 'DIV');
       this.assertEq(v.el().getAttribute('id'), 'x');
       this.assertEq(v.el().getAttribute('class'), 'y');
     }
   });
 
-  $.AsyncCase.new({
+  $test.AsyncCase.new({
     name: 'ReactiveTextUpdates',
     async do(){
       const counter = $.TestCounter.new();
@@ -186,7 +186,7 @@ export default await async function (_, $) {
     }
   });
 
-  $.AsyncCase.new({
+  $test.AsyncCase.new({
     name: 'EventListenerWorks',
     async do() {
       const counter = $.TestCounter.new();
@@ -202,5 +202,5 @@ export default await async function (_, $) {
 
 }.module({
   name: 'test.html',
-  imports: [test, htmlModule],
+  imports: [base, test, htmlModule],
 }).load();

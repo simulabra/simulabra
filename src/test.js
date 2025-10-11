@@ -1,10 +1,10 @@
 import { __, base } from './base.js';
 
-export default await function (_, $) {
-  $.Class.new({
+export default await function (_, $, $base) {
+  $base.Class.new({
     name: 'Case',
     slots: [
-      $.Method.new({
+      $base.Method.new({
         name: 'run',
         do() {
           try {
@@ -17,8 +17,8 @@ export default await function (_, $) {
           }
         }
       }),
-      $.Var.new({ name: 'do' }),
-      $.Method.new({
+      $base.Var.new({ name: 'do' }),
+      $base.Method.new({
         name: 'assert',
         do(statement, msg = '') {
           if (!statement) {
@@ -26,7 +26,7 @@ export default await function (_, $) {
           }
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'assertEq',
         do(a, b, msg = '') {
           if (a !== b) {
@@ -34,7 +34,7 @@ export default await function (_, $) {
           }
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'assertErrorMessageIncludes',
         do(errorMessage, messageFragment) {
           if (!errorMessage.includes(messageFragment)) {
@@ -42,7 +42,7 @@ export default await function (_, $) {
           }
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'assertThrows',
         do(fn, expectedErrorSubstring = '', msg = '') {
           let caught = false;
@@ -64,11 +64,11 @@ export default await function (_, $) {
       }),
     ]
   });
-  $.Class.new({
+  $base.Class.new({
     name: 'AsyncCase',
     slots: [
       $.Case,
-      $.Method.new({
+      $base.Method.new({
         name: 'run',
         override: true,
         async do() {

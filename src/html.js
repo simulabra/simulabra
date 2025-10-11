@@ -3,19 +3,19 @@ import { __, base } from './base.js';
 const TEMPLATE_CACHE = new Map();
 let CURRENT_RENDERING_COMPONENT = null;
 
-export default await function (_, $) {
-  $.Class.new({
+export default await function (_, $, $base) {
+  $base.Class.new({
     name: 'AstNodeCompilerBase',
     slots: [
-      $.Virtual.new({ name: 'compile' }), // (node, env, compileRecursiveFn, parentComponent) -> VNode | ComponentInstance | string | array | any
+      $base.Virtual.new({ name: 'compile' }), // (node, env, compileRecursiveFn, parentComponent) -> VNode | ComponentInstance | string | array | any
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ElementNodeCompiler',
     slots: [
       $.AstNodeCompilerBase,
-      $.Method.new({
+      $base.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           const props = {};
@@ -31,11 +31,11 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ComponentNodeCompiler',
     slots: [
       $.AstNodeCompilerBase,
-      $.Method.new({
+      $base.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           const ComponentClass = $[node.tag.slice(1)];
@@ -53,11 +53,11 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'FragmentNodeCompiler',
     slots: [
       $.AstNodeCompilerBase,
-      $.Method.new({
+      $base.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           return node.children.map(childNode => {
@@ -68,11 +68,11 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'TextNodeCompiler',
     slots: [
       $.AstNodeCompilerBase,
-      $.Method.new({
+      $base.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           return node.value;
@@ -81,11 +81,11 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ExprNodeCompiler',
     slots: [
       $.AstNodeCompilerBase,
-      $.Method.new({
+      $base.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           return env[node.idx];
@@ -94,22 +94,22 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'VNode',
     slots: [
-      $.Var.new({ 
+      $base.Var.new({
         name: 'el',
         doc: 'Native DOM element or DocumentFragment',
       }),
 
-      $.Method.new({
+      $base.Method.new({
         name: 'mount',
         do(parentElement) {
           parentElement.appendChild(this.el());
         },
       }),
 
-      $.Static.new({
+      $base.Static.new({
         name: 'h',
         doc: 'html element template function',
         do(tag, props = {}, ...children) {
@@ -120,7 +120,7 @@ export default await function (_, $) {
               if (key.startsWith('on')) {
                 el.addEventListener(key.substring(2).toLowerCase(), value);
               } else {
-                $.Effect.create(() => {
+                $base.Effect.create(() => {
                   const attrValue = value();
                   if (attrValue === false || attrValue == null) {
                     el.removeAttribute(key);
@@ -153,7 +153,7 @@ export default await function (_, $) {
               fragment.appendChild(startAnchor);
               fragment.appendChild(endAnchor);
               let currentNodes = [];
-              $.Effect.create(() => {
+              $base.Effect.create(() => {
                 const newContent = child();
                 const newNodes = [];
                 const tempFragment = document.createDocumentFragment();
@@ -191,11 +191,11 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'HTML',
     doc: 'HTML utilities for manipulating the DOM',
     slots: [
-      $.Static.new({
+      $base.Static.new({
         name: 'patch',
         doc: 'Naive DOM patch: replaces the old element with the new one if different.',
         do(oldEl, newEl) {
@@ -205,7 +205,7 @@ export default await function (_, $) {
         },
       }),
 
-      $.Static.new({
+      $base.Static.new({
         name: 't',
         doc: 'Tagged template literal entry point for creating HTML structures.',
         do(strings, ...expressions) {
@@ -221,7 +221,7 @@ export default await function (_, $) {
         },
       }),
 
-      $.Static.new({
+      $base.Static.new({
         name: 'parseTemplate',
         doc: 'Converts template literal strings and expressions into an AST.',
         do(strings) {
@@ -325,7 +325,7 @@ export default await function (_, $) {
         },
       }),
 
-      $.Static.new({
+      $base.Static.new({
         name: 'compileAstToFactory',
         doc: 'Compiles an AST into a factory function that generates VNodes or ComponentInstances.',
         do(ast) {
@@ -360,7 +360,7 @@ export default await function (_, $) {
                 } else if (typeof child === 'function') { // Reactive text from an expression
                   const textNode = document.createTextNode('');
                   fragmentElement.appendChild(textNode);
-                  $.Effect.create(() => {
+                  $base.Effect.create(() => {
                     textNode.nodeValue = String(child() ?? '');
                   });
                 } else {
@@ -384,7 +384,7 @@ export default await function (_, $) {
               // This VNode will manage the reactive text update.
               const fragmentParent = document.createDocumentFragment();
               fragmentParent.appendChild(textNode);
-              $.Effect.create(() => {
+              $base.Effect.create(() => {
                 textNode.nodeValue = String(compiledRoot() ?? '');
               });
               return $.VNode.new({ el: fragmentParent });
@@ -398,21 +398,21 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ComponentInstance',
     doc: 'Wraps a Simulabra component instance, managing its rendering and reactivity.',
     slots: [
-      $.Var.new({ name: 'comp' }),
-      $.Var.new({ name: 'parent' }),
-      $.Var.new({ name: 'vnode' }),
-      $.Var.new({ name: 'effect' }),
+      $base.Var.new({ name: 'comp' }),
+      $base.Var.new({ name: 'parent' }),
+      $base.Var.new({ name: 'vnode' }),
+      $base.Var.new({ name: 'effect' }),
 
-      $.After.new({
+      $base.After.new({
         name: 'init',
         do() {
           const initialVNode = this.comp().render(this.parent());
           this.vnode(initialVNode);
-          this.effect($.Effect.create(() => {
+          this.effect($base.Effect.create(() => {
             const newVNode = this.comp().render(this.parent());
             if (this.vnode() && this.vnode().el() && newVNode && newVNode.el()) {
               $.HTML.patch(this.vnode().el(), newVNode.el());
@@ -422,7 +422,7 @@ export default await function (_, $) {
         },
       }),
 
-      $.Method.new({
+      $base.Method.new({
         name: 'el',
         doc: 'Returns the root DOM element of this component instance.',
         do() {
@@ -430,7 +430,7 @@ export default await function (_, $) {
         },
       }),
 
-      $.Method.new({
+      $base.Method.new({
         name: 'mount',
         doc: 'Appends this component instance to a parent DOM element.',
         do(parentElement) {
@@ -440,7 +440,7 @@ export default await function (_, $) {
         },
       }),
 
-      $.Method.new({
+      $base.Method.new({
         name: 'dispose',
         doc: 'Cleans up the component instance, removing its reactive effect.',
         do() {
@@ -453,32 +453,32 @@ export default await function (_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'Component',
     slots: [
-      $.Method.new({
+      $base.Method.new({
         name: 'css',
         do() {
           return '';
         }
       }),
-      $.Virtual.new({
+      $base.Virtual.new({
         name: 'render',
       }),
-      $.Before.new({
+      $base.Before.new({
         name: 'render',
         do() {
           this.__prevComponent = $.Component.__current_rendering;
           $.Component.__current_rendering = this;
         }
       }),
-      $.After.new({
+      $base.After.new({
         name: 'render',
         do() {
           $.Component.__current_rendering = this.__prevComponent;
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'mount',
         do(target = document.body) {
           this.render($.Component.__current_rendering).mount(target);

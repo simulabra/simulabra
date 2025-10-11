@@ -4,36 +4,36 @@ import llm from './llm.js';
 
 const __ = globalThis.SIMULABRA;
 
-export default await function(_, $) {
-  const $el = $.HTMLElement.proxy();
+export default await function(_, $, $base, $html, $llm) {
+  const $el = $html.HTMLElement.proxy();
 
   // DEAR BOOTSTRAP WRITES THE REST OF YOUR CODE
   // chat ui
   // - input text
   // - streaming assistant response
   // - links to code locations
-  $.Class.new({
+  $base.Class.new({
     name: 'ChatMessage',
     doc: 'a turn in a conversation between a user and an assistant',
     slots: [
-      $.Component,
-      $.EnumVar.new({
+      $html.Component,
+      $base.EnumVar.new({
         name: 'role',
         doc: 'who is talking',
         choices: ['user', 'assistant'],
         default: 'user',
       }),
-      $.Var.new({
+      $base.Var.new({
         name: 'content',
         doc: 'what is being said',
         type: 'string',
       }),
-      $.Var.new({
+      $base.Var.new({
         name: 'streaming',
         doc: 'more to come',
         default: false,
       }),
-      $.Command.new({
+      $base.Command.new({
         name: 'streamData',
         doc: 'add new tokens from the response',
         run(data) {
@@ -41,13 +41,13 @@ export default await function(_, $) {
           this.streaming(true);
         },
       }),
-      $.Command.new({
+      $base.Command.new({
         name: 'streamEnd',
         run() {
           this.streaming(false);
         },
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'render',
         do: function render() {
           return `${this.role}: ${this.content}${this.streaming() ? '^' : ''}`;
@@ -56,15 +56,15 @@ export default await function(_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'ChatList',
     doc: 'the back and forth conversation between a user and an llm assistant',
     slots: [
-      $.Component,
-      $.ListElement.new({
+      $html.Component,
+      $html.ListElement.new({
         name: 'messages',
       }),
-      $.Command.new({
+      $base.Command.new({
         name: 'streamBegin',
         doc: 'show loading indicator',
         run() {
@@ -73,14 +73,14 @@ export default await function(_, $) {
           return streamingMessage;
         },
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'conversation',
         doc: 'get the API-formatted conversation of a chat in a pojso',
         do: function conversation() {
           return this.messages().map(m => ({ role: m.role(), content: m.content() }));
         },
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'render',
         do: function render() {
           return this.messages().join('\n');
@@ -89,19 +89,19 @@ export default await function(_, $) {
     ],
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'Chat',
     slots: [
-      $.Component,
-      $.Window,
+      $html.Component,
+      $html.Window,
       $.ChatList.new({
         name: 'messages',
       }),
-      $.Input.new({
+      $html.Input.new({
         name: 'chatInput',
         placeholder: 'Message bootstrap...',
       }),
-      $.Command.new({
+      $base.Command.new({
         name: 'ask',
         doc: 'submit a user message to a conversational agent',
         run(prompt) {
@@ -119,7 +119,7 @@ export default await function(_, $) {
           });
         },
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'chatRequest',
         do: async function chatRequest(conversation) {
           // send chat request
@@ -138,7 +138,7 @@ export default await function(_, $) {
           return $.PyserverCompletionResults.new(json);
         },
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'render',
         do: function render() {
           return this.messages().render() + '\n\n' + this.chatInput().render();

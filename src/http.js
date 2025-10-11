@@ -3,23 +3,23 @@ import { createServer } from 'http';
 import fetch from 'node-fetch';
 import { readFileSync } from 'fs';
 
-export default await function (_, $) {
- $.Class.new({
+export default await function (_, $, $base) {
+ $base.Class.new({
    name: 'HTTPRequest',
    slots: [
-     $.Var.new({
+     $base.Var.new({
        name: 'inner'
      }),
-     $.Var.new({
+     $base.Var.new({
        name: 'start'
      }),
-     $.Method.new({
+     $base.Method.new({
        name: 'elapsed',
        do() {
          return +new Date() - +this.start();
        }
      }),
-     $.Method.new({
+     $base.Method.new({
        name: 'drain',
        do: function drain() {
          const req = this.inner();
@@ -44,13 +44,13 @@ export default await function (_, $) {
      }),
    ]
  });
- $.Class.new({
+ $base.Class.new({
    name: 'HTTPResponse',
    slots: [
-     $.Var.new({
+     $base.Var.new({
        name: 'inner'
      }),
-     $.Method.new({
+     $base.Method.new({
        name: 'ok',
        do(message, ct = 'text/html') {
          this.inner().writeHead(200, { 'Content-type': ct });
@@ -59,19 +59,19 @@ export default await function (_, $) {
      }),
    ]
  });
- $.Class.new({
+ $base.Class.new({
    name: 'HTTPServer',
    slots: [
-     $.Var.new({ name: 'nodeServer' }),
-     $.Var.new({
+     $base.Var.new({ name: 'nodeServer' }),
+     $base.Var.new({
        name: 'port',
        default: '3030',
      }),
-     $.Var.new({
+     $base.Var.new({
        name: 'slots',
        default: [],
      }),
-     $.After.new({
+     $base.After.new({
        name: 'init',
        do() {
          this.nodeServer(createServer((req, res) => {
@@ -88,22 +88,22 @@ export default await function (_, $) {
      }),
    ]
  });
- $.Class.new({
+ $base.Class.new({
    name: 'RequestHandler',
    slots: [
-     $.Virtual.new({
+     $base.Virtual.new({
        name: 'match'
      }),
-     $.Virtual.new({
+     $base.Virtual.new({
        name: 'handle',
      }),
    ]
  });
 
- $.Class.new({
+ $base.Class.new({
    name: 'HandlerLogger',
    slots: [
-     $.After.new({
+     $base.After.new({
        name: 'handle',
        do(app, req, res) {
          this.log(`handle ${req.inner().url} in ${req.elapsed()} ms`);
@@ -111,13 +111,13 @@ export default await function (_, $) {
      })
    ]
  })
- $.Class.new({
+ $base.Class.new({
    name: 'VarHandler',
    slots: [
-     $.Var.new({
+     $base.Var.new({
        name: 'handler',
      }),
-     $.Method.new({
+     $base.Method.new({
        name: 'handle',
        do(...args) {
          this.handler().apply(this, args)
@@ -125,16 +125,16 @@ export default await function (_, $) {
      }),
    ]
  });
- $.Class.new({
+ $base.Class.new({
    name: 'PathRequestHandler',
    slots: [
      $.RequestHandler,
      $.VarHandler,
      $.HandlerLogger,
-     $.Var.new({
+     $base.Var.new({
        name: 'path',
      }),
-     $.Method.new({
+     $base.Method.new({
        name: 'match',
        do(url) {
          return this.path() === url;
@@ -142,14 +142,14 @@ export default await function (_, $) {
      }),
    ]
  });
- $.Class.new({
+ $base.Class.new({
    name: 'FiletypeRequestHandler',
    slots: [
      $.RequestHandler,
      $.HandlerLogger,
-     $.Var.new({ name: 'filetypes' }),
-     $.Var.new({ name: 'mimeType' }),
-     $.Method.new({
+     $base.Var.new({ name: 'filetypes' }),
+     $base.Var.new({ name: 'mimeType' }),
+     $base.Method.new({
        name: 'match',
        do(url) {
          const filetype = /\.([^\.]+)$/.exec(url)[1];
@@ -157,7 +157,7 @@ export default await function (_, $) {
          return this.filetypes().includes(filetype);
        }
      }),
-     $.Method.new({
+     $base.Method.new({
        name: 'handle',
        do: function handle(app, req, res) {
          const path = req.inner().url;
@@ -168,15 +168,15 @@ export default await function (_, $) {
    ]
  });
 
- $.Class.new({
+ $base.Class.new({
    name: 'HTTPRequestCommand',
    slots: [
-     $.Command,
-     $.Var.new({ name: 'url' }),
-     $.Var.new({ name: 'Method' }),
-     $.Var.new({ name: 'responseType' }),
-     $.Var.new({ name: 'data' }),
-     $.Method.new({
+     $base.Command,
+     $base.Var.new({ name: 'url' }),
+     $base.Var.new({ name: 'Method' }),
+     $base.Var.new({ name: 'responseType' }),
+     $base.Var.new({ name: 'data' }),
+     $base.Method.new({
        name: 'run',
        async: true,
        do: async function run() {

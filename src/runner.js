@@ -3,18 +3,18 @@ import { join, dirname, relative } from 'path';
 import { __, base } from './base.js';
 import test from './test.js';
 
-await async function (_, $) {
-  $.Class.new({
+await async function (_, $, $base, $test) {
+  $base.Class.new({
     name: 'TestTimer',
     slots: [
-      $.Var.new({ name: 'start' }),
-      $.After.new({
+      $base.Var.new({ name: 'start' }),
+      $base.After.new({
         name: 'init',
         do() {
           this.start(+new Date());
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'mark',
         do() {
           return `[${+new Date() - this.start()}ms]`;
@@ -23,26 +23,26 @@ await async function (_, $) {
     ]
   });
 
-  $.Class.new({
+  $base.Class.new({
     name: 'TestRunner',
     slots: [
-      $.Var.new({
+      $base.Var.new({
         name: 'timer',
       }),
-      $.After.new({
+      $base.After.new({
         name: 'init',
         do() {
           this.timer($.TestTimer.new({ name: 'runnerTimer' }));
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'runMod',
         async: true,
         async do(mod) {
           this.log(`run ${mod.title()}`);
           const baseMod = __.mod();
           __.mod(mod);
-          const cases = mod.instances($.Case);
+          const cases = mod.instances($test.Case);
           if (cases === undefined) {
             throw new Error(`no cases in module ${mod.description()}`);
           }
@@ -54,7 +54,7 @@ await async function (_, $) {
           __.mod(baseMod);
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'loadFile',
         async: true,
         async do(filePath) {
@@ -62,7 +62,7 @@ await async function (_, $) {
           return esm.default;
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'run',
         async: true,
         async do(path, testName) {
@@ -73,7 +73,7 @@ await async function (_, $) {
           } else {
             files = await readdir(path);
           }
-          
+
           for (const file of files) {
             // this.log('load', file);
             const filePath = join(dirname(__dirname), join(path, file));
@@ -88,7 +88,7 @@ await async function (_, $) {
           this.log('done running');
         }
       }),
-      $.Method.new({
+      $base.Method.new({
         name: 'log',
         override: true,
         do(...args) {
@@ -106,5 +106,5 @@ await async function (_, $) {
   }
 }.module({
   name: 'runner',
-  imports: [test],
+  imports: [base, test],
 }).load();
