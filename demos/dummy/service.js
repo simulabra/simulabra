@@ -1,13 +1,15 @@
-import { __, base } from '../src/base.js';
-import live from '../src/live.js';
+import { __, base } from '../../src/base.js';
+import live from '../../src/live.js';
 
 export default await async function (_, $, $base, $live) {
-  const host = process.env['SIMULABRA_HOST'];
-  const client = $live.WebsocketClient.new();
-  client.connect(host);
   $base.Class.new({
     name: 'DummyService',
     slots: [
+      $live.NodeClient,
+      $base.Constant.new({
+        name: 'localname',
+        value: 'dummy-service'
+      }),
       $base.Method.new({
         name: 'bonk',
         do() {
@@ -17,8 +19,8 @@ export default await async function (_, $, $base, $live) {
     ]
   });
   const dummy = $.DummyService.new();
-  client.register('dummy', dummy);
+  await dummy.connect();
 }.module({
-  name: 'leader',
+  name: 'dummy',
   imports: [base, live],
 }).load();
