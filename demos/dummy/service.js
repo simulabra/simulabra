@@ -7,10 +7,10 @@ export default await async function (_, $, $base, $live) {
     slots: [
       $live.NodeClient,
       $base.Constant.new({
-        name: 'localname',
+        name: 'id',
         value: 'dummy-service'
       }),
-      $base.Method.new({
+      $live.RpcMethod.new({
         name: 'bonk',
         do() {
           return 'oof, you hit a dummy!';
@@ -18,6 +18,7 @@ export default await async function (_, $, $base, $live) {
       })
     ]
   });
+  await __.sleep(50);
   const dummy = $.DummyService.new();
   await dummy.connect();
 }.module({

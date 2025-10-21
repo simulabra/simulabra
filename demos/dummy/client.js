@@ -7,12 +7,13 @@ export default await async function (_, $, $base, $live) {
     slots: [
       $live.NodeClient,
       $base.Constant.new({
-        name: 'localname',
+        name: 'id',
         value: 'dummy-client'
       }),
     ]
   });
   const client = $.DummyClient.new();
+  await __.sleep(100);
   await client.connect();
   const service = await client.serviceProxy('dummy-service');
   await service.bonk();

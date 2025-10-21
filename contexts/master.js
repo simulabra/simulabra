@@ -5,13 +5,21 @@ export default await async function (_, $, $base, $live) {
   $base.Class.new({
     name: 'WebsocketServer',
     slots: [
-      $base.Var.new({
-        name: 'handlers'
-      }),
+      $base.Var.new({ name: 'nodes' }),
+      $base.Var.new({ name: 'handlers' }),
       $base.Method.new({
         name: 'registerHandler',
         do(handler) {
           this.handlers()[handler.topic()] = handler;
+        }
+      }),
+      $base.Method.new({
+        name: 'send',
+        do(to, topic, data) {
+          const node = this.nodes()[to];
+          if (node) {
+            node.send(topic, data);
+          }
         }
       }),
       $base.Method.new({
@@ -55,7 +63,6 @@ export default await async function (_, $, $base, $live) {
           });
         }
       }),
-      $base.Var.new({ name: 'nodes' }),
       $base.After.new({
         name: 'init',
         do() {
@@ -72,16 +79,9 @@ export default await async function (_, $, $base, $live) {
   });
 
   $base.Class.new({
-    name: 'MessageHandler',
-    slots: [
-      $base.Virtual.new({ name: 'topic' }),
-      $base.Virtual.new({ name: 'handle' })
-    ]
-  });
-
-  $base.Class.new({
     name: 'HandshakeHandler',
     slots: [
+      $live.MessageHandler,
       $base.Constant.new({
         name: 'topic',
         value: 'handshake'
@@ -90,10 +90,12 @@ export default await async function (_, $, $base, $live) {
         name: 'handle',
         do({ master, message, socket }) {
           const { id } = message.data;
-          master.nodes()[id] = $live.LiveNode.new({
+          const node = $live.NodeClient.new({
             id,
             socket
           });
+          node.connected(true);
+          master.nodes()[id] = node;
         }
       })
     ]
@@ -102,6 +104,7 @@ export default await async function (_, $, $base, $live) {
   $base.Class.new({
     name: 'RPCHandler',
     slots: [
+      $live.MessageHandler,
       $base.Constant.new({
         name: 'topic',
         value: 'rpc'
@@ -109,11 +112,36 @@ export default await async function (_, $, $base, $live) {
       $base.Method.new({
         name: 'handle',
         do({ master, message }) {
-          const { id, method } = message.data;
-          const node = master.nodes()[id];
+          const { id, from, data } = message;
+          const { to, method, args } = data;
+          const node = master.nodes()[to];
           if (!node) {
-            throw new Exception(`couldn't find node ${id}`);
+            throw new Error(`couldn't find node ${to}`);
           }
+          node.send('rpc', { caller: from, ...data });
+        }
+      })
+    ]
+  });
+
+  $base.Class.new({
+    name: 'ResponseHandler',
+    slots: [
+      $live.MessageHandler,
+      $base.Constant.new({
+        name: 'topic',
+        value: 'response'
+      }),
+      $base.Method.new({
+        name: 'handle',
+        do({ master, message }) {
+          const { id, from, data } = message;
+          const { to, value } = data;
+          const node = master.nodes()[to];
+          if (!node) {
+            throw new Error(`couldn't find node ${to}`);
+          }
+          node.send('response', value);
         }
       })
     ]
