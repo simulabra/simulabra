@@ -61,6 +61,36 @@ export default await function (_, $, $base) {
   });
 
   $base.Class.new({
+    name: 'ReifiedPromise',
+    slots: [
+      $base.Var.new({ name: 'promise' }),
+      $base.Var.new({ name: 'resolveFn' }),
+      $base.Var.new({ name: 'rejectFn' }),
+      $base.After.new({
+        name: 'init',
+        do() {
+          return this.promise(new Promise((resolve, reject) => {
+            this.resolveFn(resolve);
+            this.rejectFn(reject);
+          }));
+        }
+      }),
+      $base.Method.new({
+        name: 'resolve',
+        do(value) {
+          this.resolveFn()(value);
+        }
+      }),
+      $base.Method.new({
+        name: 'reject',
+        do(value) {
+          this.rejectFn()(value);
+        }
+      }),
+    ]
+  });
+
+  $base.Class.new({
     name: 'MessageDispatcher',
     slots: [
       $base.Var.new({ name: 'handlers' }),
@@ -91,36 +121,6 @@ export default await function (_, $, $base) {
           }
         }
       })
-    ]
-  })
-
-  $base.Class.new({
-    name: 'ReifiedPromise',
-    slots: [
-      $base.Var.new({ name: 'promise' }),
-      $base.Var.new({ name: 'resolveFn' }),
-      $base.Var.new({ name: 'rejectFn' }),
-      $base.After.new({
-        name: 'init',
-        do() {
-          return this.promise(new Promise((resolve, reject) => {
-            this.resolveFn(resolve);
-            this.rejectFn(reject);
-          }));
-        }
-      }),
-      $base.Method.new({
-        name: 'resolve',
-        do(value) {
-          this.resolveFn()(value);
-        }
-      }),
-      $base.Method.new({
-        name: 'reject',
-        do(value) {
-          this.rejectFn()(value);
-        }
-      }),
     ]
   });
 
@@ -170,24 +170,6 @@ export default await function (_, $, $base) {
     slots: [
       $.LiveNode,
       $.MessageDispatcher,
-      $base.Method.new({
-        name: 'message',
-        do(event) {
-          this.log('socket message', event);
-        }
-      }),
-      $base.Method.new({
-        name: 'error',
-        do(event) {
-          this.log('socket error', event);
-        }
-      }),
-      $base.Method.new({
-        name: 'close',
-        do(event) {
-          this.log('socket close', event);
-        }
-      }),
       $base.Var.new({
         name: 'responseMap',
       }),
@@ -199,7 +181,7 @@ export default await function (_, $, $base) {
       }),
       $base.Method.new({
         name: 'waitForResponse',
-        do(id, timeout=3) {
+        do(id, timeout=5) {
           if (this.checkResponse(id) === undefined) {
             this.responseMap()[id] = $.ReifiedPromise.new();
           }
