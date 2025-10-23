@@ -15,10 +15,10 @@ export default await async function (_, $, $base, $live) {
       }),
       $base.Method.new({
         name: 'send',
-        do(to, topic, data) {
+        do(topic, to, data) {
           const node = this.nodes()[to];
           if (node) {
-            node.send(topic, data);
+            node.send(topic, to, data);
           }
         }
       }),
@@ -70,7 +70,8 @@ export default await async function (_, $, $base, $live) {
           this.handlers({});
           const handlers = [
             $.HandshakeHandler.new(),
-            $.RPCHandler.new()
+            $.RPCHandler.new(),
+            $.ResponseHandler.new()
           ];
           handlers.forEach(h => this.registerHandler(h));
         }
@@ -91,9 +92,9 @@ export default await async function (_, $, $base, $live) {
         do({ master, message, socket }) {
           const { id } = message.data;
           const node = $live.NodeClient.new({
-            id,
             socket
           });
+          node.id(id);
           node.connected(true);
           master.nodes()[id] = node;
         }
@@ -112,13 +113,14 @@ export default await async function (_, $, $base, $live) {
       $base.Method.new({
         name: 'handle',
         do({ master, message }) {
-          const { id, from, data } = message;
-          const { to, method, args } = data;
+          console.log(message);
+          const { id, to, from, data } = message;
+          data.id = id;
           const node = master.nodes()[to];
           if (!node) {
             throw new Error(`couldn't find node ${to}`);
           }
-          node.send('rpc', { caller: from, ...data });
+          node.send('rpc', to, data);
         }
       })
     ]
@@ -135,13 +137,12 @@ export default await async function (_, $, $base, $live) {
       $base.Method.new({
         name: 'handle',
         do({ master, message }) {
-          const { id, from, data } = message;
-          const { to, value } = data;
+          const { id, to, from, data } = message;
           const node = master.nodes()[to];
           if (!node) {
             throw new Error(`couldn't find node ${to}`);
           }
-          node.send('response', value);
+          node.send('response', to, data);
         }
       })
     ]

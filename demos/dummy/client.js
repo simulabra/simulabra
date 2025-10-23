@@ -16,7 +16,8 @@ export default await async function (_, $, $base, $live) {
   await __.sleep(100);
   await client.connect();
   const service = await client.serviceProxy('dummy-service');
-  await service.bonk();
+  const response = await service.bonk();
+  console.log(response);
 }.module({
   name: 'dummy',
   imports: [base, live],

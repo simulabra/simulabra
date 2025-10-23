@@ -27,14 +27,14 @@ export default await function (_, $, $base) {
       $base.Method.new({
         name: 'handle',
         async do({ client, message }) {
-          const { id, from, data } = message;
-          const { to, method, args } = data;
+          const { data, to } = message;
+          const { method, args, from, id } = data;
           if (client.id() !== to) {
             throw new Error(`received message not meant for me ${client.id()} ${JSON.stringify(message)}`);
           }
-          this.log('rpc', method, from);
           const responseValue = await client[method](...args);
-          client.send('response', { to: from, value: responseValue });
+          this.log('rpc', method, from, responseValue);
+          client.send('response', from, { id, value: responseValue });
         }
       })
     ]
@@ -51,9 +51,10 @@ export default await function (_, $, $base) {
       $base.Method.new({
         name: 'handle',
         do({ client, message }) {
-          const { id, data } = message;
+          const { data } = message;
+          const { id, value } = data;
           if (client.checkResponse(id)) {
-            client.checkResponse(id).resolve(data)
+            client.checkResponse(id).resolve(data.value)
           }
         }
       }),
@@ -117,7 +118,7 @@ export default await function (_, $, $base) {
               message
             });
           } else {
-            this.log(`couldn't find handler for message ${messageStr}`);
+            this.log(`couldn't find handler for message ${message.topic}`);
           }
         }
       })
@@ -147,7 +148,7 @@ export default await function (_, $, $base) {
       }),
       $base.Method.new({
         name: 'send',
-        do(topic, data) {
+        do(topic, to, data) {
           if (!this.connected()) {
             throw new Error('tried to send data on unconnected socket');
           }
@@ -155,6 +156,7 @@ export default await function (_, $, $base) {
             id: this.genMessageId(),
             sent: new Date().toISOString(),
             from: this.id(),
+            to,
             topic,
             data
           };
@@ -203,9 +205,10 @@ export default await function (_, $, $base) {
             this.socket(new WebSocket(`ws://${host}:${port}`));
             this.responseMap({});
             this.registerHandler($.RPCHandler.new());
+            this.registerHandler($.ResponseHandler.new());
             this.socket().addEventListener("open", event => {
               this.connected(true);
-              this.send('handshake', { id: this.id() })
+              this.send('handshake', 'master', { id: this.id() })
               resolve();
             });
             this.socket().addEventListener("message", event => {
@@ -229,9 +232,7 @@ export default await function (_, $, $base) {
         name: 'register',
         doc: 'makes the object available to other clients at the address',
         do(handle, object) {
-          this.send('register', {
-            handle,
-          })
+          this.send('register', 'master', { handle });
         }
       }),
       $base.Method.new({
@@ -244,10 +245,9 @@ export default await function (_, $, $base) {
                 return target[p];
               }
               return async function (...args) {
-                const rpcMessage = self.send('rpc', {
+                const rpcMessage = self.send('rpc', handle, {
                   method: p,
                   from: self.id(),
-                  to: handle,
                   args
                 });
                 return await self.waitForResponse(rpcMessage.id);
