@@ -126,6 +126,32 @@ export default await function (_, $, $base) {
   });
 
   $base.Class.new({
+    name: 'LiveMessage',
+    slots: [
+      $base.Clone,
+      $base.JSON,
+      $base.Var.new({
+        name: 'id',
+      }),
+      $base.Var.new({
+        name: 'sent'
+      }),
+      $base.Var.new({
+        name: 'from'
+      }),
+      $base.Var.new({
+        name: 'to'
+      }),
+      $base.Var.new({
+        name: 'topic'
+      }),
+      $base.Var.new({
+        name: 'data'
+      }),
+    ]
+  })
+
+  $base.Class.new({
     name: 'LiveNode',
     slots: [
       $base.Var.new({ name: 'id' }),
@@ -148,19 +174,11 @@ export default await function (_, $, $base) {
       }),
       $base.Method.new({
         name: 'send',
-        do(topic, to, data) {
+        do(message) {
           if (!this.connected()) {
             throw new Error('tried to send data on unconnected socket');
           }
-          const msg = {
-            id: this.genMessageId(),
-            sent: new Date().toISOString(),
-            from: this.id(),
-            to,
-            topic,
-            data
-          };
-          this.socket().send(JSON.stringify(msg));
+          this.socket().send(JSON.stringify(message.json()));
           return msg;
         }
       }),

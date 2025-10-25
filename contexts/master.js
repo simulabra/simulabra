@@ -15,11 +15,23 @@ export default await async function (_, $, $base, $live) {
       }),
       $base.Method.new({
         name: 'send',
-        do(topic, to, data) {
+        do({ topic, to, data }) {
           const node = this.nodes()[to];
           if (node) {
-            node.send(topic, to, data);
+            node.send({ topic, to, data });
           }
+        }
+      }),
+      $base.Method.new({
+        name: 'routeMessage',
+        do(message) {
+          const { id, to, from, data } = message;
+          data.id = id;
+          const node = self.nodes()[to];
+          if (!node) {
+            throw new Error(`couldn't find node ${to}`);
+          }
+          node.send('rpc', to, data);
         }
       }),
       $base.Method.new({
@@ -38,8 +50,12 @@ export default await async function (_, $, $base, $live) {
             websocket: {
               message(socket, messageStr) {
                 const message = JSON.parse(messageStr);
-                console.log('message', message);
+                self.log('message', message);
                 const handler = self.handlers()[message.topic];
+                if (message.to !== 'master') {
+                  self.routeMessage(message);
+
+                }
                 if (handler) {
                   handler.handle({
                     master: self,
