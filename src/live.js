@@ -27,14 +27,21 @@ export default await function (_, $, $base) {
       $base.Method.new({
         name: 'handle',
         async do({ client, message }) {
-          const { data, to } = message;
-          const { method, args, from, id } = data;
-          if (client.id() !== to) {
+          const data = message.data();
+          const { method, args, from } = data;
+          if (client.id() !== message.to()) {
             throw new Error(`received message not meant for me ${client.id()} ${JSON.stringify(message)}`);
           }
           const responseValue = await client[method](...args);
           this.log('rpc', method, from, responseValue);
-          client.send('response', from, { id, value: responseValue });
+          client.send($.LiveMessage.new({
+            topic: 'response',
+            to: from,
+            data: {
+              id: message.id(),
+              value: responseValue
+            }
+          }))
         }
       })
     ]
@@ -51,7 +58,8 @@ export default await function (_, $, $base) {
       $base.Method.new({
         name: 'handle',
         do({ client, message }) {
-          const { data } = message;
+          const data = message.data();
+          this.log('response', data);
           const { id, value } = data;
           if (client.checkResponse(id)) {
             client.checkResponse(id).resolve(data.value)
@@ -110,7 +118,7 @@ export default await function (_, $, $base) {
       $base.Method.new({
         name: 'handle',
         do(socket, message) {
-          const handler = this.handlers()[message.topic];
+          const handler = this.handlers()[message.topic()];
           if (handler) {
             handler.handle({
               client: this,
@@ -118,7 +126,7 @@ export default await function (_, $, $base) {
               message
             });
           } else {
-            this.log(`couldn't find handler for message ${message.topic}`);
+            this.log(`couldn't find handler for message ${message.topic()}`);
           }
         }
       })
@@ -178,8 +186,10 @@ export default await function (_, $, $base) {
           if (!this.connected()) {
             throw new Error('tried to send data on unconnected socket');
           }
+          message.from(this.id());
+          this.log('send', message);
           this.socket().send(JSON.stringify(message.json()));
-          return msg;
+          return message;
         }
       }),
     ]
@@ -226,11 +236,14 @@ export default await function (_, $, $base) {
             this.registerHandler($.ResponseHandler.new());
             this.socket().addEventListener("open", event => {
               this.connected(true);
-              this.send('handshake', 'master', { id: this.id() })
+              this.send($.LiveMessage.new({
+                topic: 'handshake',
+                to: 'master',
+              }));
               resolve();
             });
             this.socket().addEventListener("message", event => {
-              const message = JSON.parse(event.data);
+              const message = $.LiveMessage.new(JSON.parse(event.data));
               this.handle(this.socket(), message);
             });
             this.socket().addEventListener("error", event => {
@@ -250,7 +263,11 @@ export default await function (_, $, $base) {
         name: 'register',
         doc: 'makes the object available to other clients at the address',
         do(handle, object) {
-          this.send('register', 'master', { handle });
+          this.send($.LiveMessage.new({
+            topic: 'register',
+            to: 'master',
+            data: { handle }
+          }));
         }
       }),
       $base.Method.new({
@@ -263,12 +280,16 @@ export default await function (_, $, $base) {
                 return target[p];
               }
               return async function (...args) {
-                const rpcMessage = self.send('rpc', handle, {
-                  method: p,
-                  from: self.id(),
-                  args
-                });
-                return await self.waitForResponse(rpcMessage.id);
+                const rpcMessage = self.send($.LiveMessage.new({
+                  topic: 'rpc',
+                  to: handle,
+                  data: {
+                    method: p,
+                    from: self.id(),
+                    args
+                  }
+                }));
+                return await self.waitForResponse(rpcMessage.id());
               };
             }
           });

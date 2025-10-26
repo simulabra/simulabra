@@ -1447,15 +1447,15 @@ function bootstrap() {
           for (const varSlot of this.class().Vars()) {
             const varName = varSlot.name;
             const value = this[varName]();
-            
+
             if (value !== undefined && value !== varSlot.defval()) {
               if (deep && value && typeof value === 'object') {
                 if (typeof value.clone === 'function') {
                   cloned[varName](value.clone(true, cloneMap));
                 } else if (Array.isArray(value)) {
-                  cloned[varName](value.map(item => 
-                    (item && typeof item.clone === 'function') 
-                      ? item.clone(true, cloneMap) 
+                  cloned[varName](value.map(item =>
+                    (item && typeof item.clone === 'function')
+                      ? item.clone(true, cloneMap)
                       : item
                   ));
                 } else {
@@ -1466,8 +1466,45 @@ function bootstrap() {
               }
             }
           }
-          
+
           return cloned;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: 'JSON',
+    slots: [
+      $.Method.new({
+        name: 'json',
+        do: function json() {
+          function jsonifyValue(value) {
+            if (value === null || value === undefined) return value;
+            if (typeof value.json === 'function') return value.json();
+            if (typeof value.uri === 'function') return value.uri();
+            if (Array.isArray(value)) return value.map(jsonifyValue);
+            if (value && typeof value === 'object' && value.constructor === Object) {
+              const result = {};
+              for (const [k, v] of Object.entries(value)) {
+                result[k] = jsonifyValue(v);
+              }
+              return result;
+            }
+            return value;
+          }
+
+          const result = {};
+          for (const key in this) {
+            if (key[0] === '_' && this.hasOwnProperty(key)) {
+              const slotName = key.slice(1);
+              const slot = this.class().getslot(slotName);
+              if (slot) {
+                result[slotName] = jsonifyValue(this[key]);
+              }
+            }
+          }
+          return result;
         }
       })
     ]

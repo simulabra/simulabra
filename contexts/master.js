@@ -14,24 +14,14 @@ export default await async function (_, $, $base, $live) {
         }
       }),
       $base.Method.new({
-        name: 'send',
-        do({ topic, to, data }) {
-          const node = this.nodes()[to];
-          if (node) {
-            node.send({ topic, to, data });
-          }
-        }
-      }),
-      $base.Method.new({
         name: 'routeMessage',
         do(message) {
-          const { id, to, from, data } = message;
-          data.id = id;
-          const node = self.nodes()[to];
+          const to = message.to();
+          const node = this.nodes()[to];
           if (!node) {
             throw new Error(`couldn't find node ${to}`);
           }
-          node.send('rpc', to, data);
+          node.send(message);
         }
       }),
       $base.Method.new({
@@ -49,13 +39,12 @@ export default await async function (_, $, $base, $live) {
             },
             websocket: {
               message(socket, messageStr) {
-                const message = JSON.parse(messageStr);
+                const message = $live.LiveMessage.new(JSON.parse(messageStr));
                 self.log('message', message);
-                const handler = self.handlers()[message.topic];
-                if (message.to !== 'master') {
-                  self.routeMessage(message);
-
+                if (message.to() !== 'master') {
+                  return self.routeMessage(message);
                 }
+                const handler = self.handlers()[message.topic()];
                 if (handler) {
                   handler.handle({
                     master: self,
@@ -106,13 +95,13 @@ export default await async function (_, $, $base, $live) {
       $base.Method.new({
         name: 'handle',
         do({ master, message, socket }) {
-          const { id } = message.data;
+          const from = message.from();
           const node = $live.NodeClient.new({
             socket
           });
-          node.id(id);
+          node.id(from);
           node.connected(true);
-          master.nodes()[id] = node;
+          master.nodes()[from] = node;
         }
       })
     ]
@@ -136,7 +125,11 @@ export default await async function (_, $, $base, $live) {
           if (!node) {
             throw new Error(`couldn't find node ${to}`);
           }
-          node.send('rpc', to, data);
+          node.send($live.LiveMessage.new({
+            topic: 'rpc',
+            to,
+            data
+          }))
         }
       })
     ]
@@ -158,7 +151,11 @@ export default await async function (_, $, $base, $live) {
           if (!node) {
             throw new Error(`couldn't find node ${to}`);
           }
-          node.send('response', to, data);
+          node.send($live.LiveMessage.new({
+            topic: 'response',
+            to,
+            data
+          }))
         }
       })
     ]
