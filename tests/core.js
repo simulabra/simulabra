@@ -51,6 +51,18 @@ export default await async function (_, $, $base, $test) {
   });
 
   $test.Case.new({
+    name: 'ClassVarProperties',
+    doc: 'Tests defining, accessing, and setting variables (Vars) on an instance.',
+    do() {
+      const p = $.Point.new({ x: 2 });
+      this.assertEq(p._x, 2, 'Initial value check failed');
+      p._x = 3;
+      this.assertEq(p._x, 3, 'Setting value check failed');
+      this.assertEq(p._y, 0, 'Default value check failed');
+    }
+  });
+
+  $test.Case.new({
     name: 'ClassMethodCall',
     doc: 'Tests defining and calling a method on an instance.',
     do() {

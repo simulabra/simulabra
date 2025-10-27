@@ -107,31 +107,32 @@ function bootstrap() {
     }
   }
 
-  class MethodImpl {
+  class SlotImpl {
     constructor(props) {
       const defaults = {
-        _name: '',
-        _primary: null,
-        _befores: [],
-        _afters: [],
-        _debug: true,
-        _next: null,
+        __name: '',
+        __primary: null,
+        __befores: [],
+        __afters: [],
+        __properties: [],
+        __debug: true,
+        __next: null,
       };
       Object.assign(this, defaults);
       Object.assign(this, props);
     }
     reify(proto) {
-      if (!this._name) {
+      if (!this.__name) {
         throw new Error('tried to reify without a name!');
       }
       const self = this;
-      const key = this._name;
-      if (!$$()._debug && this._befores.length === 0 && this._afters.length === 0) {
-        proto[key] = this._primary;
+      const key = this.__name;
+      if (!$$()._debug && this.__befores.length === 0 && this.__afters.length === 0) {
+        proto[key] = this.__primary;
       } else {
         proto[key] = function (...args) {
           const __ = $$();
-          if (self._debug) {
+          if (self.__debug) {
             const frame = new Frame(this, self, args);
             __.stack().push(frame); // uhh
             if (__._trace) {
@@ -139,22 +140,31 @@ function bootstrap() {
             }
           }
           try {
-            self._befores.forEach(b => b.apply(this, args));
-            let res = self._primary.apply(this, args);
-            self._afters.forEach(a => a.apply(this, args)); // res too?
-            if (self._debug) {
-              __._stack.pop();
+            self.__befores.forEach(b => b.apply(this, args));
+            let res = self.__primary.apply(this, args);
+            self.__afters.forEach(a => a.apply(this, args)); // res too?
+            if (self.__debug) {
+              __.__stack.pop();
             }
             return res;
           } catch (e) {
-            if (!e._logged && self._debug) {
+            if (!e._logged && self.__debug) {
               e._logged = true;
-              debug('failed message: call', self._name, 'on', this._class._name);
-              //__._stack.trace();
+              debug('failed message: call', self.__name, 'on', this.__class._name);
+              //__.__stack.trace();
             }
             throw e;
           }
         };
+
+        console.log('slotimpl', this.__properties);
+        for (const prop of this.__properties) {
+          console.log('define', prop);
+          Object.defineProperty(proto, '_' + prop.name, {
+            get() { console.log('get', prop); return self[prop.name](); },
+            set(value) { return self[prop.name](value); }
+          });
+        }
       }
     }
   }
@@ -163,28 +173,11 @@ function bootstrap() {
     return (typeof name === 'symbol') || ['then', 'fetch', 'toSource'].includes(name);
   }
 
-  function DebugProto() {
-    return new Proxy({}, {
-      get(target, p, receiver) {
-        if (target[p] !== undefined) {
-          return target[p];
-        } else if (p[0] === '_') {
-          return undefined; // default? nullable?
-        } else if (p[0] === '$') {
-          return globalThis.SIMULABRA.mod().getInstance(receiver, p.slice(1));
-        } else if (nativePassthrough(p)) {
-          return target[p];
-        }
-        throw new Error(`not found: ${p} on ${receiver.title()}`);
-      }
-    });
-  }
-
   class ClassPrototype {
     constructor(parent) {
       this._impls = {};
       this._proto = {};
-      this._proto._class = parent;
+      this._proto.__class = parent;
     }
 
     _reify() {
@@ -199,24 +192,24 @@ function bootstrap() {
 
     _getImpl(name) {
       if (!this._impls.hasOwnProperty(name)) {
-        this._impls[name] = new MethodImpl({ _name: name });
+        this._impls[name] = new SlotImpl({ __name: name });
       }
       return this._impls[name];
     }
 
     description() {
-      return `#ClassPrototype.${this._proto._class.name}`;
+      return `#ClassPrototype.${this._proto.__class.name}`;
     }
   }
 
   // bootstrapping the var slot
   class BVar {
     constructor({ name, ...desc }) {
-      this._name = name;
-      this._desc = desc;
+      this.__name = name;
+      this.__desc = desc;
     }
     get name() {
-      return this._name;
+      return this.__name;
     }
     static new(args) {
       return new this(args);
@@ -226,13 +219,13 @@ function bootstrap() {
     }
     state() {
       return $FakeState.listFromMap({
-        name: this._name,
+        name: this.__name,
       });
     }
     load(proto) {
-      const key = '_' + this._name;
+      const key = '__' + this.name;
       const self = this;
-      proto._add(self._name, function (assign) {
+      proto._add(self.name, function (assign) {
         if (assign !== undefined) {
           this[key] = assign;
         } else if (!(key in this)) {
@@ -242,13 +235,13 @@ function bootstrap() {
       });
     }
     defval() {
-      return typeof this._desc.default === 'function' ? this._desc.default.apply(this) : this._desc.default;
+      return typeof this.__desc.default === 'function' ? this.__desc.default.apply(this) : this.__desc.default;
     }
     class() {
       return BVar;
     }
     debug() {
-      return this._desc.debug || false;
+      return this.__desc.debug || false;
     }
     description() {
       return this.title();
@@ -258,14 +251,14 @@ function bootstrap() {
     }
   }
 
-  // bootstrapping the property slot  
+  // bootstrapping the property slot
   class BProperty {
     constructor({ name, ...desc }) {
-      this._name = name;
-      this._desc = desc;
+      this.__name = name;
+      this.__desc = desc;
     }
     get name() {
-      return this._name;
+      return this.__name;
     }
     static new(args) {
       return new this(args);
@@ -275,14 +268,14 @@ function bootstrap() {
     }
     state() {
       return $FakeState.listFromMap({
-        name: this._name,
+        name: this.__name,
       });
     }
     load(proto) {
-      const key = '_' + this._name;
+      const key = '__' + this.name;
       const self = this;
       // Define as property instead of method
-      Object.defineProperty(proto._proto, self._name, {
+      Object.defineProperty(proto._proto, self.name, {
         get: function() {
           if (!(key in this)) {
             this[key] = self.defval();
@@ -297,32 +290,32 @@ function bootstrap() {
       });
     }
     defval() {
-      return typeof this._desc.default === 'function' ? this._desc.default.apply(this) : this._desc.default;
+      return typeof this.__desc.default === 'function' ? this.__desc.default.apply(this) : this.__desc.default;
     }
     class() {
       return BProperty;
     }
     debug() {
-      return this._desc.debug || false;
+      return this.__desc.debug || false;
     }
     description() {
       return this.title();
     }
     title() {
-      return `#BProperty.${this._name}`;
+      return `#BProperty.${this.name}`;
     }
     isa(it) {
       return it === BProperty;
     }
   }
 
-  __._stack = new FrameStack();
+  __.__stack = new FrameStack();
 
   Function.prototype.load = function (proto) {
     proto._add(this.name, this);
   };
   Function.prototype.combine = function (impl) {
-    impl._primary = this;
+    impl.__primary = this;
   };
   Function.prototype.description = function () {
     return `#Function.${this.name}`;
@@ -371,7 +364,7 @@ function bootstrap() {
   function parametize(props, obj) {
     for (const [k, v] of Object.entries(props)) {
       if (k[0] !== '_') {
-        obj['_' + k] = v;
+        obj['__' + k] = v;
       } else {
         throw new Error('unneeded _');
       }
@@ -387,7 +380,7 @@ function bootstrap() {
 
   const ClassDef = {
     class() {
-      return this._class;
+      return this.__class;
     }
   }
 
@@ -411,7 +404,7 @@ function bootstrap() {
     },
     function state() {
       return this.class().Vars().map(ref => {
-        const value = this[`_${ref.name}`];
+        const value = this[`__${ref.name}`];
         if (value !== undefined) {
           return $VarState.new({ ref, value });
         } else {
@@ -443,7 +436,7 @@ function bootstrap() {
       }
     },
     function load(proto) {
-      proto._add(this._name, this);
+      proto._add(this.name, this);
     },
     function isa(cls) {
       return this.class().descended(cls);
@@ -467,7 +460,7 @@ function bootstrap() {
       this.id_ctr(0);
       this.proto(new ClassPrototype(this));
       $BaseSlots.load(this.proto());
-      this._proto._class = this;
+      this.__proto.__class = this;
       this.load(this.proto());
       this.proto()._reify();
       $$().mod()?.def(this.name, this)
@@ -561,7 +554,7 @@ function bootstrap() {
           if (recur) {
             return recur;
           }
-        } else if (slot._name === name) {
+        } else if (slot.name === name) {
           return slot;
         }
       }
@@ -596,10 +589,10 @@ function bootstrap() {
   manload($ClassSlots, $ClassProto);
   $ClassProto._reify();
   const $Class = Object.create($ClassProto._proto);
-  $Class._class = $Class;
-  $Class._name = 'Class';
-  $Class._fullSlot = true;
-  $Class._proto = $Class;
+  $Class.__class = $Class;
+  $Class.__name = 'Class';
+  $Class.__fullSlot = true;
+  $Class.__proto = $Class;
   $Class.slots($ClassSlots);
   $Class.init();
 
@@ -608,8 +601,8 @@ function bootstrap() {
   manload($ClassSlots, $base_proto);
   $base_proto._reify();
   const $base = Object.create($base_proto._proto);
-  $base._class = $Class;
-  $base._name = 'base';
+  $base.__class = $Class;
+  $base.__name = 'base';
   $base.init();
 
   // a missing middle
@@ -633,10 +626,10 @@ function bootstrap() {
         return this.debug() || $Debug.debug();
       },
       function combine(impl) {
-        const pk = '_' + this.name;
+        const pk = '__' + this.name;
         const self = this;
 
-        impl._primary = function varAccess(v, notify = true) {
+        impl.__primary = function varAccess(v, notify = true) {
           if (v !== undefined) {
             this[pk] = v;
           } else {
@@ -646,7 +639,9 @@ function bootstrap() {
             return this[pk];
           }
         };
-        impl._direct = true;
+        impl.__direct = true;
+        console.log('var combine', this.name);
+        impl.__properties = [{ name: this.name }];
       },
       function initInstance(inst) {
       }
@@ -673,7 +668,7 @@ function bootstrap() {
         return this.debug() || $Debug.debug();
       },
       function load(proto) {
-        const key = '_' + this._name;
+        const key = '__' + this._name;
         const self = this;
         // Define as property instead of method
         Object.defineProperty(proto._proto, self._name, {
@@ -707,13 +702,13 @@ function bootstrap() {
     slots: [
       $Fn,
       function load(proto) {
-        const impl = new MethodImpl({ _name: this.name });
         let fn = this.do();
         if (typeof fn !== 'function') {
           fn = fn.fn();
         }
-        impl._primary = fn;
-        impl.reify(proto._proto._class);
+        const impl = new SlotImpl({ __name: this.name });
+        impl.__primary = fn;
+        impl.reify(proto._proto.__class);
       }
     ]
   });
@@ -773,18 +768,18 @@ function bootstrap() {
       $Property.new({ name: 'name' }),
       $Var.new({ name: 'debug', default: true }),
       function combine(impl) {
-        if (impl._name !== this.name) {
+        if (impl.__name !== this.name) {
           throw new Error('tried to combine Method on non-same named impl');
         }
         let fn = this.do();
         if (typeof fn !== 'function') {
           fn = fn.fn();
         }
-        if (impl._primary) {
-          fn._next = impl._primary;
+        if (impl.__primary) {
+          fn._next = impl.__primary;
         }
-        impl._primary = fn;
-        impl._debug = this.debug();
+        impl.__primary = fn;
+        impl.__debug = this.debug();
       },
     ]
   });
@@ -795,7 +790,7 @@ function bootstrap() {
       $Fn,
       $Property.new({ name: 'name' }),
       function combine(impl) {
-        impl._befores.push(this.do());
+        impl.__befores.push(this.do());
       }
     ]
   });
@@ -806,7 +801,7 @@ function bootstrap() {
       $Fn,
       $Property.new({ name: 'name' }),
       function combine(impl) {
-        impl._afters.unshift(this.do());
+        impl.__afters.unshift(this.do());
       }
     ]
   });
@@ -952,7 +947,7 @@ function bootstrap() {
 
             return v.proxied(this);
           }
-        })
+        });
       },
       function def(name, obj) {
         const ClassName = obj.class().name;
@@ -1015,7 +1010,7 @@ function bootstrap() {
       $.After.new({
         name: 'load',
         do: function load() {
-          this._getImpl(this.name).reify(this._proto._class);
+          this._getImpl(this.name).reify(this._proto.__class);
         }
       })
     ]
@@ -1260,10 +1255,10 @@ function bootstrap() {
       $.Method.new({
         name: 'combine',
         do: function combine(impl) {
-          const pk = '_' + this.name;
+          const pk = '__' + this.name;
           const self = this;
 
-          impl._primary = function enumAccess(assign, update = true) {
+          impl.__primary = function enumAccess(assign, update = true) {
             if (assign !== undefined) {
               if (!self.choices().includes(assign)) {
                 throw new Error(`Invalid enum value '${assign}' for ${self.name}. Valid choices are: ${self.choices().join(', ')}`);
@@ -1275,7 +1270,7 @@ function bootstrap() {
             return this[pk];
           };
 
-          impl._direct = true;
+          impl.__direct = true;
         }
       }),
 
@@ -1328,10 +1323,10 @@ function bootstrap() {
     slots: [
       $.Var,
       function combine(impl) {
-        const pk = '_' + this.name;
+        const pk = '__' + this.name;
         const self = this;
 
-        impl._primary = function varAccess(v, notify = true) {
+        impl.__primary = function varAccess(v, notify = true) {
           let map = SUBMAP.get(this);
           if (!map) {
             map = new Map();
@@ -1355,7 +1350,7 @@ function bootstrap() {
             return this[pk];
           }
         };
-        impl._direct = true;
+        impl.__direct = true;
       },
     ]
   });
@@ -1366,10 +1361,10 @@ function bootstrap() {
       $.Var.new({ name: 'value' }),
       function combine(impl) {
         const self = this;
-        impl._primary = function constantAccess() {
+        impl.__primary = function constantAccess() {
           return self.value();
         };
-        impl._direct = true;
+        impl.__direct = true;
       }
     ]
   })
@@ -1496,8 +1491,8 @@ function bootstrap() {
 
           const result = {};
           for (const key in this) {
-            if (key[0] === '_' && this.hasOwnProperty(key)) {
-              const slotName = key.slice(1);
+            if (key.startsWith('__') && this.hasOwnProperty(key)) {
+              const slotName = key.slice(2);
               const slot = this.class().getslot(slotName);
               if (slot) {
                 result[slotName] = jsonifyValue(this[key]);
