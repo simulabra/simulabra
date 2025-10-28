@@ -127,7 +127,7 @@ function bootstrap() {
       }
       const self = this;
       const key = this.__name;
-      if (!$$()._debug && this.__befores.length === 0 && this.__afters.length === 0) {
+      if (!$$().__debug && this.__befores.length === 0 && this.__afters.length === 0) {
         proto[key] = this.__primary;
       } else {
         proto[key] = function (...args) {
@@ -135,7 +135,7 @@ function bootstrap() {
           if (self.__debug) {
             const frame = new Frame(this, self, args);
             __.stack().push(frame); // uhh
-            if (__._trace) {
+            if (__.__trace) {
               console.log('call', frame.description());
             }
           }
@@ -156,15 +156,13 @@ function bootstrap() {
             throw e;
           }
         };
+      }
 
-        console.log('slotimpl', this.__properties);
-        for (const prop of this.__properties) {
-          console.log('define', prop);
-          Object.defineProperty(proto, '_' + prop.name, {
-            get() { console.log('get', prop); return self[prop.name](); },
-            set(value) { return self[prop.name](value); }
-          });
-        }
+      for (const prop of this.__properties) {
+        Object.defineProperty(proto, '_' + prop.name, {
+          get() { return this[prop.name](); },
+          set(value) { return this[prop.name](value); }
+        });
       }
     }
   }
@@ -640,7 +638,6 @@ function bootstrap() {
           }
         };
         impl.__direct = true;
-        console.log('var combine', this.name);
         impl.__properties = [{ name: this.name }];
       },
       function initInstance(inst) {
@@ -1288,31 +1285,6 @@ function bootstrap() {
           return def;
         }
       })
-    ]
-  });
-
-  $.Class.new({
-    name: 'AutoVar',
-    fullSlot: true,
-    slots: [
-      $.Var,
-      $.Var.new({
-        name: 'auto',
-        required: true
-      }),
-      $.Method.new({
-        name: 'defval',
-        do: function defval() {
-          return this.auto().apply(this);
-        }
-      }),
-      $.After.new({
-        name: 'initInstance',
-        override: true,
-        do: function initInstance(inst) {
-          inst[this.name](this.auto().apply(inst));
-        }
-      }),
     ]
   });
 

@@ -358,41 +358,6 @@ export default await async function (_, $, $base, $test) {
   });
 
   $base.Class.new({
-    name: 'AutoVarTester',
-    slots: [
-      $base.Var.new({ name: 'baseValue', default: 10 }),
-      $base.AutoVar.new({
-        name: 'computedValue',
-        auto() { return this.baseValue() * 2; }
-      }),
-       $base.AutoVar.new({
-        name: 'fixedValue',
-        auto() { return 42; }
-      })
-    ]
-  });
-
-  $test.Case.new({
-    name: 'AutoVarBasic',
-    doc: 'Tests AutoVar initialization with fixed and dependent values.',
-    do() {
-      const tester = $.AutoVarTester.new({ baseValue: 5 });
-
-      this.assertEq(tester.fixedValue(), 42, 'Fixed AutoVar value incorrect');
-      this.assertEq(tester.computedValue(), 10, 'Dependent AutoVar value incorrect'); // 5 * 2
-
-      tester.fixedValue(99);
-      tester.computedValue(100);
-      this.assertEq(tester.fixedValue(), 99, 'Setting fixed AutoVar failed');
-      this.assertEq(tester.computedValue(), 100, 'Setting computed AutoVar failed');
-
-      const defaultTester = $.AutoVarTester.new();
-      this.assertEq(defaultTester.fixedValue(), 42, 'Default fixed AutoVar value incorrect');
-      this.assertEq(defaultTester.computedValue(), 20, 'Default computed AutoVar value incorrect'); // 10 * 2
-    }
-  });
-
-  $base.Class.new({
     name: 'VirtualBase',
     slots: [
       $base.Virtual.new({ name: 'mustImplement' }),
