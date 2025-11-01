@@ -5,11 +5,7 @@ export default await async function (_, $, $base, $live) {
   $base.Class.new({
     name: 'DummyService',
     slots: [
-      $live.NodeClient,
-      $base.Constant.new({
-        name: 'id',
-        value: 'dummy-service'
-      }),
+      $live.LiveClass,
       $live.RpcMethod.new({
         name: 'bonk',
         do() {
@@ -18,9 +14,12 @@ export default await async function (_, $, $base, $live) {
       })
     ]
   });
-  await __.sleep(50);
-  const dummy = $.DummyService.new();
-  await dummy.connect();
+
+  if (require.main === module) {
+    await __.sleep(50);
+    const dummy = $.DummyService.new();
+    await dummy.connect();
+  }
 }.module({
   name: 'dummy',
   imports: [base, live],

@@ -272,7 +272,9 @@ export default await function (_, $, $base) {
       }),
       $base.Method.new({
         name: 'serviceProxy',
-        async do(handle) {
+        async do(c) {
+          this.log(c);
+          const handle = c.name;
           const self = this;
           return new Proxy({}, {
             get(target, p, receiver) {
@@ -297,6 +299,20 @@ export default await function (_, $, $base) {
       })
     ]
   });
+
+  $base.Class.new({
+    name: 'LiveClass',
+    slots: [
+      $.NodeClient,
+      $base.Method.new({
+        name: 'id',
+        do() {
+          return this.class().name;
+        }
+      }),
+    ]
+
+  })
 }.module({
   name: 'live',
   imports: [base],
