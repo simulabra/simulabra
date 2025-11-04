@@ -21,7 +21,7 @@ export default await async function (_, $, $base, $live) {
           if (!node) {
             throw new Error(`couldn't find node ${to}`);
           }
-          node.send(message);
+          node.send(message, message.from());
         }
       }),
       $base.Method.new({
@@ -32,7 +32,6 @@ export default await async function (_, $, $base, $live) {
             port: 3030,
             fetch(req, server) {
               if (server.upgrade(req)) {
-                this.log('upgrade', req);
                 return;
               }
               return new Response("failed upgrade", 500);
@@ -40,7 +39,7 @@ export default await async function (_, $, $base, $live) {
             websocket: {
               message(socket, messageStr) {
                 const message = $live.LiveMessage.new(JSON.parse(messageStr));
-                self.log('message', message);
+                self.tlog('message', message);
                 if (message.to() !== 'master') {
                   return self.routeMessage(message);
                 }
@@ -52,17 +51,8 @@ export default await async function (_, $, $base, $live) {
                     message
                   });
                 } else {
-                  self.log(`couldn't find handler for message ${messageStr}`);
+                  self.tlog(`couldn't find handler for message ${messageStr}`);
                 }
-              },
-              open(socket) {
-                console.log('open');
-              },
-              close(socket, code, message) {
-                console.log('close')
-              },
-              drain(socket) {
-                console.log('drain');
               }
             }
           });
@@ -97,9 +87,9 @@ export default await async function (_, $, $base, $live) {
         do({ master, message, socket }) {
           const from = message.from();
           const node = $live.NodeClient.new({
-            socket
+            socket,
           });
-          node.id(from);
+          node.uid(from);
           node.connected(true);
           master.nodes()[from] = node;
         }
@@ -118,9 +108,9 @@ export default await async function (_, $, $base, $live) {
       $base.Method.new({
         name: 'handle',
         do({ master, message }) {
-          console.log(message);
           const { id, to, from, data } = message;
           data.id = id;
+          data.from = from;
           const node = master.nodes()[to];
           if (!node) {
             throw new Error(`couldn't find node ${to}`);

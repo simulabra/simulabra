@@ -29,16 +29,15 @@ export default await function (_, $, $base) {
         async do({ client, message }) {
           const data = message.data();
           const { method, args, from } = data;
-          if (client.id() !== message.to()) {
-            throw new Error(`received message not meant for me ${client.id()} ${JSON.stringify(message)}`);
+          if (client.uid() !== message.to()) {
+            throw new Error(`received message not meant for me ${client.uid()} ${JSON.stringify(message)}`);
           }
           const responseValue = await client[method](...args);
-          this.log('rpc', method, from, responseValue);
           client.send($.LiveMessage.new({
             topic: 'response',
             to: from,
             data: {
-              id: message.id(),
+              mid: message.mid(),
               value: responseValue
             }
           }))
@@ -59,11 +58,8 @@ export default await function (_, $, $base) {
         name: 'handle',
         do({ client, message }) {
           const data = message.data();
-          this.log('response', data);
-          const { id, value } = data;
-          if (client.checkResponse(id)) {
-            client.checkResponse(id).resolve(data.value)
-          }
+          const { mid, value } = data;
+          client._responseMap[mid].resolve(data.value);
         }
       }),
     ]
@@ -126,7 +122,7 @@ export default await function (_, $, $base) {
               message
             });
           } else {
-            this.log(`couldn't find handler for message ${message.topic()}`);
+            this.tlog(`couldn't find handler for message ${message.topic()}`);
           }
         }
       })
@@ -139,7 +135,7 @@ export default await function (_, $, $base) {
       $base.Clone,
       $base.JSON,
       $base.Var.new({
-        name: 'id',
+        name: 'mid',
       }),
       $base.Var.new({
         name: 'sent'
@@ -162,7 +158,7 @@ export default await function (_, $, $base) {
   $base.Class.new({
     name: 'LiveNode',
     slots: [
-      $base.Var.new({ name: 'id' }),
+      $base.Var.new({ name: 'uid' }),
       $base.Var.new({ name: 'socket' }),
       $base.Var.new({
         name: 'connected',
@@ -186,8 +182,13 @@ export default await function (_, $, $base) {
           if (!this.connected()) {
             throw new Error('tried to send data on unconnected socket');
           }
-          message.from(this.id());
-          this.log('send', message);
+          if (message.from() === undefined) {
+            message.from(this.uid());
+          }
+          if (message.mid() === undefined) {
+            message.mid(crypto.randomUUID());
+          }
+          this.tlog('send', message);
           this.socket().send(JSON.stringify(message.json()));
           return message;
         }
@@ -204,32 +205,35 @@ export default await function (_, $, $base) {
         name: 'responseMap',
       }),
       $base.Method.new({
+        name: 'base',
+        do() {
+          return this.class().name;
+        }
+      }),
+      $base.Method.new({
         name: 'checkResponse',
         do(id) {
-          return this.responseMap()[id];
+          return this._responseMap[id];
         }
       }),
       $base.Method.new({
         name: 'waitForResponse',
         do(id, timeout=5) {
-          if (this.checkResponse(id) === undefined) {
-            this.responseMap()[id] = $.ReifiedPromise.new();
+          if (this._responseMap[id] === undefined) {
+            this._responseMap[id] = $.ReifiedPromise.new();
           }
           setTimeout(() => {
-            this.checkResponse(id).reject(`message ${id}: timed out after ${timeout} seconds`)
+            this._responseMap[id].reject(`message ${id}: timed out after ${timeout} seconds`)
           }, timeout * 1000);
-          return this.checkResponse(id).promise();
+          return this._responseMap[id].promise();
         }
       }),
       $base.Method.new({
         name: 'connect',
         do() {
           return new Promise((resolve, reject) => {
-            if (!this.id()) {
-              throw new Error('cannot connect without id set!');
-            }
-            const host = process.env['SIMULABRA_HOST'] || 'localhost';
-            const port = process.env['SIMULABRA_PORT'] || 3030;
+            const host = (typeof process !== 'undefined' && process.env['SIMULABRA_HOST']) || 'localhost';
+            const port = (typeof process !== 'undefined' && process.env['SIMULABRA_PORT']) || 3030;
             this.socket(new WebSocket(`ws://${host}:${port}`));
             this.responseMap({});
             this.registerHandler($.RPCHandler.new());
@@ -273,7 +277,6 @@ export default await function (_, $, $base) {
       $base.Method.new({
         name: 'serviceProxy',
         async do(c) {
-          this.log(c);
           const handle = c.name;
           const self = this;
           return new Proxy({}, {
@@ -287,11 +290,12 @@ export default await function (_, $, $base) {
                   to: handle,
                   data: {
                     method: p,
-                    from: self.id(),
+                    from: self.uid(),
                     args
                   }
                 }));
-                return await self.waitForResponse(rpcMessage.id());
+                self.tlog("waitForResponse", rpcMessage.mid())
+                return await self.waitForResponse(rpcMessage.mid());
               };
             }
           });
@@ -305,7 +309,7 @@ export default await function (_, $, $base) {
     slots: [
       $.NodeClient,
       $base.Method.new({
-        name: 'id',
+        name: 'uidBase',
         do() {
           return this.class().name;
         }

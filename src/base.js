@@ -428,6 +428,9 @@ function bootstrap() {
     function log(...args) {
       $Debug?.log(this.title(), ...args.map(a => __.stringify(a)));
     },
+    function tlog(...args) {
+      $Debug?.log(`[${new Date().toISOString()}]`, this.title(), ...args.map(a => __.stringify(a)));
+    },
     function dlog(...args) {
       if ($Debug && this.class().debug()) {
         this.log(...args);

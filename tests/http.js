@@ -8,7 +8,7 @@ export default await function (_, $, $test, $http) {
     name: 'ServerCreation',
     async do() {
       const server = $http.HTTPServer.new({
-        port: 3030,
+        port: 3034,
         slots: [
           $http.PathRequestHandler.new({
             path: '/',
@@ -19,7 +19,7 @@ export default await function (_, $, $test, $http) {
           }),
         ]
       });
-      const response = await fetch('http://localhost:3030');
+      const response = await fetch('http://localhost:3034');
       const text = await response.text();
 
       this.assertEq(response.status, 200);

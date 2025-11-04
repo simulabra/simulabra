@@ -17,7 +17,7 @@ export default await async function (_, $, $base, $live) {
 
   if (require.main === module) {
     await __.sleep(50);
-    const dummy = $.DummyService.new();
+    const dummy = $.DummyService.new({ uid: 'DummyService' });
     await dummy.connect();
   }
 }.module({

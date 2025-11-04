@@ -65,7 +65,7 @@ export default await function (_, $, $base) {
      $base.Var.new({ name: 'nodeServer' }),
      $base.Var.new({
        name: 'port',
-       default: '3030',
+       default: '3034',
      }),
      $base.Var.new({
        name: 'slots',
