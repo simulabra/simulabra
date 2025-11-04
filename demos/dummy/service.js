@@ -6,10 +6,15 @@ export default await async function (_, $, $base, $live) {
     name: 'DummyService',
     slots: [
       $live.LiveClass,
+      $base.Var.new({
+        name: 'bonks',
+        default: 0
+      }),
       $live.RpcMethod.new({
         name: 'bonk',
         do() {
-          return 'oof, you hit a dummy!';
+          this._bonks++;
+          return `oof, you hit a dummy ${this._bonks} times!`;
         }
       })
     ]
