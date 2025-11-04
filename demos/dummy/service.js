@@ -5,7 +5,7 @@ export default await async function (_, $, $base, $live) {
   $base.Class.new({
     name: 'DummyService',
     slots: [
-      $live.LiveClass,
+      $live.NodeClient,
       $base.Var.new({
         name: 'bonks',
         default: 0

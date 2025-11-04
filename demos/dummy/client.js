@@ -5,13 +5,6 @@ import service from './service.js';
 
 export default await async function (_, $, $base, $html, $live, $service) {
   $base.Class.new({
-    name: 'DummyClient',
-    slots: [
-      $live.LiveClass,
-    ]
-  });
-
-  $base.Class.new({
     name: 'LiveClientDemo',
     slots: [
       $html.Component,
@@ -29,7 +22,7 @@ export default await async function (_, $, $base, $html, $live, $service) {
             this.connected(false);
             this.response('');
 
-            const client = $.DummyClient.new({ uid: 'DummyClient_Web' });
+            const client = $live.NodeClient.new({ uid: 'DummyClient_Web' });
             this.client(client);
             await __.sleep(100);
 
@@ -85,7 +78,7 @@ export default await async function (_, $, $base, $html, $live, $service) {
   });
 
   if (typeof require !== 'undefined' && require.main === module) {
-    const client = $.DummyClient.new({ uid: 'DummyClient_Bun' });
+    const client = $live.NodeClient.new({ uid: 'DummyClient_Bun' });
     await __.sleep(100);
     await client.connect();
     const service = await client.serviceProxy($service.DummyService);

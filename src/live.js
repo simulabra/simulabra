@@ -303,20 +303,6 @@ export default await function (_, $, $base) {
       })
     ]
   });
-
-  $base.Class.new({
-    name: 'LiveClass',
-    slots: [
-      $.NodeClient,
-      $base.Method.new({
-        name: 'uidBase',
-        do() {
-          return this.class().name;
-        }
-      }),
-    ]
-
-  })
 }.module({
   name: 'live',
   imports: [base],
