@@ -393,15 +393,16 @@ function bootstrap() {
       }
     },
     function description(seen) { //TODO: add depth
-      const Vars = this.state().filter(v => v.value() !== v.ref().defval());
-      const VarDesc = Vars.length > 0 ? `{\n${Vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
-      return `${this.class().description(seen)}.${this.ident()}${VarDesc}`;
+      const vars = this.state().filter(v => v.value() !== v.ref().defval());
+      const varDesc = vars.length > 0 ? `{\n${vars.map(vs => ' ' + vs?.description(seen)).join('\n')}\n}` : '';
+      return JSON.stringify(this.jsonify(), null, 2);
+      return `${this.class().description(seen)}.${this.ident()}${varDesc}`;
     },
     function toString() {
       return this.description();
     },
     function state() {
-      return this.class().Vars().map(ref => {
+      return this.class().vars().map(ref => {
         const value = this[`__${ref.name}`];
         if (value !== undefined) {
           return $VarState.new({ ref, value });
@@ -424,6 +425,9 @@ function bootstrap() {
     },
     function uri() {
       return `simulabra://localhost/${this.class().name}/${this.id()}`;
+    },
+    function jsonify() {
+      return this.class().jsonify(this);
     },
     function log(...args) {
       $Debug?.log(this.title(), ...args.map(a => __.stringify(a)));
@@ -518,21 +522,21 @@ function bootstrap() {
     function proxied(ctx) {
       return this;
     },
-    function Vars(visited = new Set()) {
+    function vars(visited = new Set()) {
       if (visited.has(this)) return [];
       visited.add(this);
 
-      let Vars = [];
+      let vars = [];
       for (const slot of this.slots()) {
         if (typeof slot === 'function') {
           // skip
         } else if (slot.class() === BVar || slot.isa($Var)) {
-          Vars.push(slot);
+          vars.push(slot);
         } else if (slot.isa($Class)) {
-          Vars = [...Vars, ...slot.Vars()];
+          vars = [...vars, ...slot.vars()];
         }
       }
-      return Vars;
+      return vars;
     },
     function genid() {
       let id = this.id_ctr();
@@ -540,12 +544,60 @@ function bootstrap() {
       return id;
     },
     function jsonify(object) {
-      const json = {};
-      for (const slot of this.slots()) {
-        if (slot._json) {
-          json[slot.name] = JSON.parse(JSON.stringify(object[slot.name]()));
+      function isSerializable(value) {
+        if (value === null || value === undefined) return true;
+        const type = typeof value;
+        if (type === 'string' || type === 'number' || type === 'boolean') return true;
+        if (Array.isArray(value)) return true;
+        if (type === 'object' && value.constructor === Object) return true;
+        if (type === 'function' || type === 'symbol') return false;
+        if (value instanceof Promise || value instanceof WeakMap || value instanceof WeakSet) return false;
+        if (value instanceof Date || value instanceof RegExp) return true;
+        return true;
+      }
+
+      function jsonifyValue(value) {
+        if (value === null || value === undefined) return value;
+        if (typeof value.json === 'function') return value.json();
+        if (typeof value.jsonify === 'function') return value.jsonify();
+        if (typeof value.uri === 'function') return value.uri();
+        if (Array.isArray(value)) return value.map(jsonifyValue);
+        if (value && typeof value === 'object' && value.constructor === Object) {
+          const result = {};
+          for (const [k, v] of Object.entries(value)) {
+            result[k] = jsonifyValue(v);
+          }
+          return result;
+        }
+        if (!isSerializable(value)) {
+          return undefined;
+        }
+        return value;
+      }
+
+      const json = {
+        $class: this.name,
+      };
+
+      const module = __.mod();
+      if (module && module.name) {
+        json.$module = module.name;
+      }
+
+      for (const varSlot of this.vars()) {
+        const varName = varSlot.name;
+        const key = '__' + varName;
+        if (object.hasOwnProperty(key)) {
+          const value = object[key];
+          if (value !== undefined && isSerializable(value)) {
+            const jsonified = jsonifyValue(value);
+            if (jsonified !== undefined) {
+              json[varName] = jsonified;
+            }
+          }
         }
       }
+
       return json;
     },
     function getslot(name) {
@@ -1414,7 +1466,7 @@ function bootstrap() {
           }
           const cloned = this.class().new();
           cloneMap.set(this, cloned);
-          for (const varSlot of this.class().Vars()) {
+          for (const varSlot of this.class().vars()) {
             const varName = varSlot.name;
             const value = this[varName]();
 

@@ -522,6 +522,100 @@ export default await async function (_, $, $base, $test) {
       this.assertEq(ran, 2);
     }
   });
+
+  $base.Class.new({
+    name: 'Message',
+    slots: [
+      $base.Var.new({ name: 'text' }),
+      $base.Var.new({ name: 'count' }),
+      $base.Var.new({ name: 'tags' }),
+      $base.Var.new({ name: 'metadata' }),
+      $base.Var.new({ name: 'callback' }),
+    ]
+  });
+
+  $test.Case.new({
+    name: 'JsonifyIncludesMetadata',
+    doc: 'Tests that jsonify includes $class and $module metadata for object transport.',
+    do() {
+      const msg = $.Message.new({
+        text: 'Hello',
+        count: 42
+      });
+      const json = msg.jsonify();
+      this.assertEq(json.$class, 'Message', 'jsonify should include $class');
+      this.assertEq(json.$module, 'test.core', 'jsonify should include $module');
+    }
+  });
+
+  $test.Case.new({
+    name: 'JsonifySerializesAllSlots',
+    doc: 'Tests that jsonify serializes all slot values, not just marked ones.',
+    do() {
+      const msg = $.Message.new({
+        text: 'Test message',
+        count: 123,
+        tags: ['a', 'b', 'c'],
+        metadata: { key: 'value' }
+      });
+      const json = msg.jsonify();
+      this.assertEq(json.text, 'Test message', 'jsonify should serialize text');
+      this.assertEq(json.count, 123, 'jsonify should serialize count');
+      this.assertEq(json.tags.length, 3, 'jsonify should serialize arrays');
+      this.assertEq(json.metadata.key, 'value', 'jsonify should serialize plain objects');
+    }
+  });
+
+  $test.Case.new({
+    name: 'JsonifyFiltersUnserializable',
+    doc: 'Tests that jsonify filters out unserializable native JavaScript values like functions.',
+    do() {
+      const msg = $.Message.new({
+        text: 'Test',
+        callback: () => console.log('test')
+      });
+      const json = msg.jsonify();
+      this.assert(!json.hasOwnProperty('callback'), 'jsonify should filter out functions');
+      this.assertEq(json.text, 'Test', 'jsonify should still include serializable values');
+    }
+  });
+
+  $base.Class.new({
+    name: 'NestedMessage',
+    slots: [
+      $base.Var.new({ name: 'inner' }),
+      $base.Var.new({ name: 'value' })
+    ]
+  });
+
+  $test.Case.new({
+    name: 'JsonifyHandlesNestedObjects',
+    doc: 'Tests that jsonify properly handles nested objects with json() methods.',
+    do() {
+      const inner = $.Message.new({ text: 'inner', count: 1 });
+      const outer = $.NestedMessage.new({
+        inner: inner,
+        value: 'outer'
+      });
+      const json = outer.jsonify();
+      this.assertEq(json.$class, 'NestedMessage', 'outer object should have correct $class');
+      this.assert(json.inner, 'jsonify should include nested object');
+      this.assertEq(json.inner.text, 'inner', 'nested object should be serialized');
+      this.assertEq(json.inner.$class, 'Message', 'nested object should have $class');
+    }
+  });
+
+  $test.Case.new({
+    name: 'JsonifyOnlyIncludesSetVars',
+    doc: 'Tests that jsonify only includes Vars that have been explicitly set.',
+    do() {
+      const msg = $.Message.new({ text: 'Only text' });
+      const json = msg.jsonify();
+      this.assertEq(json.text, 'Only text', 'jsonify should include set value');
+      this.assert(!json.hasOwnProperty('count'), 'jsonify should not include unset values');
+      this.assert(!json.hasOwnProperty('tags'), 'jsonify should not include unset values');
+    }
+  });
 }.module({
   name: 'test.core',
   imports: [base, test],
