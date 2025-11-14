@@ -66,6 +66,25 @@ export default await function (_, $, $base) {
   });
 
   $base.Class.new({
+    name: 'ErrorHandler',
+    slots: [
+      $.MessageHandler,
+      $base.Constant.new({
+        name: 'topic',
+        value: 'error'
+      }),
+      $base.Method.new({
+        name: 'handle',
+        do({ client, message }) {
+          const data = message.data();
+          const { mid, value } = data;
+          client._responseMap[mid].reject(data.value);
+        }
+      }),
+    ]
+  });
+
+  $base.Class.new({
     name: 'ReifiedPromise',
     slots: [
       $base.Var.new({ name: 'promise' }),
@@ -238,6 +257,7 @@ export default await function (_, $, $base) {
             this.responseMap({});
             this.registerHandler($.RPCHandler.new());
             this.registerHandler($.ResponseHandler.new());
+            this.registerHandler($.ErrorHandler.new());
             this.socket().addEventListener("open", event => {
               this.connected(true);
               this.send($.LiveMessage.new({

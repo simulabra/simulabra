@@ -14,14 +14,41 @@ export default await async function (_, $, $base, $live) {
         }
       }),
       $base.Method.new({
-        name: 'routeMessage',
+        name: 'node',
+        do(name) {
+          return this.nodes()[name];
+        }
+      }),
+      $base.Method.new({
+        name: 'to',
         do(message) {
-          const to = message.to();
-          const node = this.nodes()[to];
+          return this.node(message._to);
+        }
+      }),
+      $base.Method.new({
+        name: 'from',
+        do(message) {
+          return this.node(message._from);
+        }
+      }),
+      $base.Method.new({
+        name: 'routeMessage',
+        do(message, socket) {
+          const node = this.to(message);
           if (!node) {
-            throw new Error(`couldn't find node ${to}`);
+            this.tlog('node not found', message._to);
+            this.from(message).send($live.LiveMessage.new({
+              topic: 'error',
+              to: message.from(),
+              from: 'master',
+              data: {
+                mid: message.mid(),
+                value: `unknown node ${message._to}`
+              }
+            }));
+          } else {
+            node.send(message, message.from());
           }
-          node.send(message, message.from());
         }
       }),
       $base.Method.new({
@@ -41,7 +68,7 @@ export default await async function (_, $, $base, $live) {
                 const message = $live.LiveMessage.new(JSON.parse(messageStr));
                 self.tlog('message', message);
                 if (message.to() !== 'master') {
-                  return self.routeMessage(message);
+                  return self.routeMessage(message, socket);
                 }
                 const handler = self.handlers()[message.topic()];
                 if (handler) {
