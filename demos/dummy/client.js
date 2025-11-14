@@ -5,43 +5,31 @@ import service from './service.js';
 
 export default await async function (_, $, $base, $html, $live, $service) {
   $base.Class.new({
-    name: 'LiveClientDemo',
+    name: 'DummyClient',
     slots: [
       $html.Component,
-      $base.Signal.new({ name: 'status', default: 'ready' }),
       $base.Signal.new({ name: 'response', default: '' }),
       $base.Signal.new({ name: 'connected', default: false }),
       $base.Signal.new({ name: 'loading', default: false }),
+      $base.Var.new({ name: 'domain' }),
+      $base.Var.new({ name: 'service' }),
       $base.Var.new({ name: 'client' }),
       $base.Method.new({
-        name: 'connectAndCall',
+        name: 'connect',
         async do() {
-          try {
-            this.loading(true);
-            this.status('connecting to server...');
-            this.connected(false);
-            this.response('');
+          const client = $live.NodeClient.new({ uid: `DummyClient_${this._domain}` });
+          this._client = client;
+          await __.sleep(100);
 
-            const client = $live.NodeClient.new({ uid: 'DummyClient_Web' });
-            this.client(client);
-            await __.sleep(100);
-
-            await client.connect();
-            this.connected(true);
-            this.status('connected! calling service...');
-
-            const dummyService = await client.serviceProxy($service.DummyService);
-            const response = await dummyService.bonk();
-
-            this.response(response);
-            this.status('success');
-          } catch (error) {
-            this.status(`error: ${error.message}`);
-            this.response('');
-            console.error('Error:', error);
-          } finally {
-            this.loading(false);
-          }
+          await client.connect();
+          this._service = await client.serviceProxy($service.DummyService);
+          this._connected = true;
+        }
+      }),
+      $base.Method.new({
+        name: 'bonk',
+        async do() {
+          this._response = await this._service.bonk();
         }
       }),
       $base.Method.new({
@@ -54,18 +42,13 @@ export default await async function (_, $, $base, $html, $live, $service) {
               </div>
               <div class="window-body">
                 <div class="loom-col">
-                  <div class="section-label">connection</div>
                   <div class="loom-row">
-                    <button onclick=${() => this.connectAndCall()}>connect & call service</button>
-                    <span class="spinner" hidden=${() => !this.loading()}></span>
+                    <button onclick=${() => this.bonk()}>bonk</button>
+                    <span class="spinner" hidden=${() => this.connected()}></span>
                   </div>
-                  <div class="loom-col">
-                    <div>status: ${() => this.status()}</div>
-                  </div>
-                  <div class="section-label">response</div>
                   <div class="loom-col">
                     <div style="padding: 1em; background: var(--light-sand); min-height: 2em;">
-                      ${() => this.response() || '(waiting for service call)'}
+                      ${() => this.response() || '(remaining unbonked)'}
                     </div>
                   </div>
                 </div>
@@ -78,14 +61,14 @@ export default await async function (_, $, $base, $html, $live, $service) {
   });
 
   if (typeof require !== 'undefined' && require.main === module) {
-    const client = $live.NodeClient.new({ uid: 'DummyClient_Bun' });
-    await __.sleep(100);
+    const client = $.DummyClient.new({ domain: 'Bun' });
     await client.connect();
-    const service = await client.serviceProxy($service.DummyService);
-    const response = await service.bonk();
+    const response = await client._service.bonk();
     console.log(response);
   } else if (typeof window !== 'undefined') {
-    $.LiveClientDemo.new().mount();
+    const client = $.DummyClient.new({ domain: 'Web' });
+    await client.connect();
+    client.mount();
   }
 }.module({
   name: 'dummy',

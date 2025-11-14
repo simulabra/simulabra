@@ -254,11 +254,12 @@ export default await function (_, $, $base) {
               if (!this.connected()) {
                 reject(event);
               } else {
-                this.error(event)
+                this.tlog('error', event)
               }
             });
             this.socket().addEventListener("close", event => {
               this.connected(false);
+              this.tlog('close');
             });
           })
         }

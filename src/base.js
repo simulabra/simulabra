@@ -1378,6 +1378,7 @@ function bootstrap() {
           }
         };
         impl.__direct = true;
+        impl.__properties = [{ name: this.name }];
       },
     ]
   });
