@@ -17,12 +17,11 @@ export default await async function (_, $, $base, $html, $live, $service) {
       $base.Method.new({
         name: 'connect',
         async do() {
-          const client = $live.NodeClient.new({ uid: `DummyClient_${this._domain}` });
-          this._client = client;
+          this._client = $live.NodeClient.new({ uid: `DummyClient_${this._domain}` });
           await __.sleep(100);
 
-          await client.connect();
-          this._service = await client.serviceProxy($service.DummyService);
+          await this._client.connect();
+          this._service = await this._client.serviceProxy($service.DummyService);
           this._connected = true;
         }
       }),

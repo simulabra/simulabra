@@ -92,8 +92,6 @@ export default await async function (_, $, $base, $live) {
           this.handlers({});
           const handlers = [
             $.HandshakeHandler.new(),
-            $.RPCHandler.new(),
-            $.ResponseHandler.new()
           ];
           handlers.forEach(h => this.registerHandler(h));
         }
@@ -119,60 +117,6 @@ export default await async function (_, $, $base, $live) {
           node.uid(from);
           node.connected(true);
           master.nodes()[from] = node;
-        }
-      })
-    ]
-  });
-
-  $base.Class.new({
-    name: 'RPCHandler',
-    slots: [
-      $live.MessageHandler,
-      $base.Constant.new({
-        name: 'topic',
-        value: 'rpc'
-      }),
-      $base.Method.new({
-        name: 'handle',
-        do({ master, message }) {
-          const { id, to, from, data } = message;
-          data.id = id;
-          data.from = from;
-          const node = master.nodes()[to];
-          if (!node) {
-            throw new Error(`couldn't find node ${to}`);
-          }
-          node.send($live.LiveMessage.new({
-            topic: 'rpc',
-            to,
-            data
-          }))
-        }
-      })
-    ]
-  });
-
-  $base.Class.new({
-    name: 'ResponseHandler',
-    slots: [
-      $live.MessageHandler,
-      $base.Constant.new({
-        name: 'topic',
-        value: 'response'
-      }),
-      $base.Method.new({
-        name: 'handle',
-        do({ master, message }) {
-          const { id, to, from, data } = message;
-          const node = master.nodes()[to];
-          if (!node) {
-            throw new Error(`couldn't find node ${to}`);
-          }
-          node.send($live.LiveMessage.new({
-            topic: 'response',
-            to,
-            data
-          }))
         }
       })
     ]
