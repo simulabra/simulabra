@@ -150,7 +150,7 @@ function bootstrap() {
           } catch (e) {
             if (!e._logged && self.__debug) {
               e._logged = true;
-              debug('failed message: call', self.__name, 'on', this.__class.name);
+              debug('failed message: call', self.__name, 'on', this.__class.description());
               //__.__stack.trace();
             }
             throw e;
@@ -491,8 +491,16 @@ function bootstrap() {
         }
       }
     },
+    function modref() {
+      const modname = this.mod()?.name;
+      if (modname === undefined || modname === 'base') {
+        return '$';
+      } else {
+        return modname;
+      }
+    },
     function description() {
-      return `$${this.mod()?.name ?? '$'}.${this.name}`;
+      return `$${this.modref()}.${this.name}`;
     },
     function toString() {
       return this.description();

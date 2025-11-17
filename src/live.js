@@ -1,30 +1,30 @@
 import { __, base } from './base.js';
 
-export default await function (_, $, $base) {
-  $base.Class.new({
+export default await async function (_, $, $$) {
+  $$.Class.new({
     name: 'MessageHandler',
     slots: [
-      $base.Virtual.new({ name: 'topic' }),
-      $base.Virtual.new({ name: 'handle' })
+      $$.Virtual.new({ name: 'topic' }),
+      $$.Virtual.new({ name: 'handle' })
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'RpcMethod',
     slots: [
-      $base.Method
+      $$.Method
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'RPCHandler',
     slots: [
       $.MessageHandler,
-      $base.Constant.new({
+      $$.Constant.new({
         name: 'topic',
         value: 'rpc'
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'handle',
         async do({ client, message }) {
           const data = message.data();
@@ -46,15 +46,15 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'ResponseHandler',
     slots: [
       $.MessageHandler,
-      $base.Constant.new({
+      $$.Constant.new({
         name: 'topic',
         value: 'response'
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'handle',
         do({ client, message }) {
           const data = message.data();
@@ -65,15 +65,15 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'ErrorHandler',
     slots: [
       $.MessageHandler,
-      $base.Constant.new({
+      $$.Constant.new({
         name: 'topic',
         value: 'error'
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'handle',
         do({ client, message }) {
           const data = message.data();
@@ -84,13 +84,13 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'ReifiedPromise',
     slots: [
-      $base.Var.new({ name: 'promise' }),
-      $base.Var.new({ name: 'resolveFn' }),
-      $base.Var.new({ name: 'rejectFn' }),
-      $base.After.new({
+      $$.Var.new({ name: 'promise' }),
+      $$.Var.new({ name: 'resolveFn' }),
+      $$.Var.new({ name: 'rejectFn' }),
+      $$.After.new({
         name: 'init',
         do() {
           return this.promise(new Promise((resolve, reject) => {
@@ -99,13 +99,13 @@ export default await function (_, $, $base) {
           }));
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'resolve',
         do(value) {
           this.resolveFn()(value);
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'reject',
         do(value) {
           this.rejectFn()(value);
@@ -114,23 +114,23 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'MessageDispatcher',
     slots: [
-      $base.Var.new({ name: 'handlers' }),
-      $base.After.new({
+      $$.Var.new({ name: 'handlers' }),
+      $$.After.new({
         name: 'init',
         do() {
           this.handlers({});
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'registerHandler',
         do(handler) {
           this.handlers()[handler.topic()] = handler;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'handle',
         do(socket, message) {
           const handler = this.handlers()[message.topic()];
@@ -148,46 +148,46 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'LiveMessage',
     slots: [
-      $base.Clone,
-      $base.JSON,
-      $base.Var.new({
+      $$.Clone,
+      $$.JSON,
+      $$.Var.new({
         name: 'mid',
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'sent'
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'from'
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'to'
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'topic'
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'data'
       }),
     ]
   })
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'LiveNode',
     slots: [
-      $base.Var.new({ name: 'uid' }),
-      $base.Var.new({ name: 'socket' }),
-      $base.Var.new({
+      $$.Var.new({ name: 'uid' }),
+      $$.Var.new({ name: 'socket' }),
+      $$.Var.new({
         name: 'connected',
         default: false
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'messageIdCounter',
         default: 1
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'genMessageId',
         do() {
           const id = this.messageIdCounter();
@@ -195,7 +195,7 @@ export default await function (_, $, $base) {
           return id;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'send',
         do(message) {
           if (!this.connected()) {
@@ -215,27 +215,27 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'NodeClient',
     slots: [
       $.LiveNode,
       $.MessageDispatcher,
-      $base.Var.new({
+      $$.Var.new({
         name: 'responseMap',
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'base',
         do() {
           return this.class().name;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'checkResponse',
         do(id) {
           return this._responseMap[id];
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'waitForResponse',
         do(id, timeout=5) {
           if (this._responseMap[id] === undefined) {
@@ -247,7 +247,7 @@ export default await function (_, $, $base) {
           return this._responseMap[id].promise();
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'connect',
         do() {
           return new Promise((resolve, reject) => {
@@ -284,7 +284,7 @@ export default await function (_, $, $base) {
           })
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'register',
         doc: 'makes the object available to other clients at the address',
         do(handle, object) {
@@ -295,7 +295,7 @@ export default await function (_, $, $base) {
           }));
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'serviceProxy',
         async do(c) {
           const handle = c.name;

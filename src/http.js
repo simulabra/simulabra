@@ -210,6 +210,6 @@ export default await function (_, $, $base) {
    ]
  });
 }.module({
- name: 'HTTP',
+ name: 'http',
  imports: [base],
 }).load();
