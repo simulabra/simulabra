@@ -150,7 +150,7 @@ function bootstrap() {
           } catch (e) {
             if (!e._logged && self.__debug) {
               e._logged = true;
-              debug('failed message: call', self.__name, 'on', this.__class._name);
+              debug('failed message: call', self.__name, 'on', this.__class.name);
               //__.__stack.trace();
             }
             throw e;
@@ -418,7 +418,11 @@ function bootstrap() {
       return this.name ?? this.id();
     },
     function title() {
-      return `${this.class().description()}.${this.uid()}`;
+      if (this.uid() === this.class().name) {
+        return `${this.class().description()}/`
+      } else {
+        return `${this.class().description()}/${this.uid()}`;
+      }
     },
     function ident() {
       return `${this.id()}${this.name ? `(${this.name})` : ''}`;
@@ -467,6 +471,7 @@ function bootstrap() {
       $BaseSlots.load(this.proto());
       this.__proto.__class = this;
       this.load(this.proto());
+      this.mod(__.mod());
       this.proto()._reify();
       $$().mod()?.def(this.name, this)
     },
@@ -487,7 +492,7 @@ function bootstrap() {
       }
     },
     function description() {
-      return `$.${this.name}`;
+      return `$${this.mod()?.name ?? '$'}.${this.name}`;
     },
     function toString() {
       return this.description();
@@ -579,7 +584,7 @@ function bootstrap() {
         $class: this.name,
       };
 
-      const module = __.mod();
+      const module = this.mod();
       if (module && module.name) {
         json.$module = module.name;
       }
@@ -614,6 +619,7 @@ function bootstrap() {
       return null;
     },
     BProperty.new({ name: 'name' }),
+    BVar.new({ name: 'mod' }),
     BVar.new({ name: 'fullSlot', default: false }),
     BVar.new({ name: 'proto' }),
     BVar.new({ name: 'id_ctr' }),
