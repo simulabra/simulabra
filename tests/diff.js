@@ -4,39 +4,33 @@ import diff from '../src/diff.js';
 
 export default await async function (_, $, $base, $test, $diff) {
   $test.Case.new({
-    name: 'DiffOpRetain',
+    name: 'RetainOp',
     do() {
-      const op = $diff.DiffOp.new({
-        kind: 'retain',
+      const op = $diff.RetainOp.new({
         count: 5
       });
-      this.assertEq(op.kind(), 'retain');
       this.assertEq(op.count(), 5);
       this.assertEq(op.lengthDelta(), 0);
     }
   });
 
   $test.Case.new({
-    name: 'DiffOpInsert',
+    name: 'InsertOp',
     do() {
-      const op = $diff.DiffOp.new({
-        kind: 'insert',
+      const op = $diff.InsertOp.new({
         text: 'hello'
       });
-      this.assertEq(op.kind(), 'insert');
       this.assertEq(op.text(), 'hello');
       this.assertEq(op.lengthDelta(), 5);
     }
   });
 
   $test.Case.new({
-    name: 'DiffOpDelete',
+    name: 'DeleteOp',
     do() {
-      const op = $diff.DiffOp.new({
-        kind: 'delete',
+      const op = $diff.DeleteOp.new({
         count: 3
       });
-      this.assertEq(op.kind(), 'delete');
       this.assertEq(op.count(), 3);
       this.assertEq(op.lengthDelta(), -3);
     }
@@ -48,7 +42,7 @@ export default await async function (_, $, $base, $test, $diff) {
       const text = 'hello world';
       const patch = $diff.Patch.new({
         ops: [
-          $diff.DiffOp.new({ kind: 'retain', count: text.length })
+          $diff.RetainOp.new({ count: text.length })
         ],
         sourceLength: text.length,
         targetLength: text.length
@@ -64,8 +58,8 @@ export default await async function (_, $, $base, $test, $diff) {
       const text = 'hello';
       const patch = $diff.Patch.new({
         ops: [
-          $diff.DiffOp.new({ kind: 'retain', count: 5 }),
-          $diff.DiffOp.new({ kind: 'insert', text: ' world' })
+          $diff.RetainOp.new({ count: 5 }),
+          $diff.InsertOp.new({ text: ' world' })
         ],
         sourceLength: 5,
         targetLength: 11
@@ -81,8 +75,8 @@ export default await async function (_, $, $base, $test, $diff) {
       const text = 'hello world';
       const patch = $diff.Patch.new({
         ops: [
-          $diff.DiffOp.new({ kind: 'retain', count: 5 }),
-          $diff.DiffOp.new({ kind: 'delete', count: 6 })
+          $diff.RetainOp.new({ count: 5 }),
+          $diff.DeleteOp.new({ count: 6 })
         ],
         sourceLength: 11,
         targetLength: 5
@@ -98,9 +92,9 @@ export default await async function (_, $, $base, $test, $diff) {
       const text = 'hello world';
       const patch = $diff.Patch.new({
         ops: [
-          $diff.DiffOp.new({ kind: 'retain', count: 6 }),
-          $diff.DiffOp.new({ kind: 'delete', count: 5 }),
-          $diff.DiffOp.new({ kind: 'insert', text: 'there' })
+          $diff.RetainOp.new({ count: 6 }),
+          $diff.DeleteOp.new({ count: 5 }),
+          $diff.InsertOp.new({ text: 'there' })
         ],
         sourceLength: 11,
         targetLength: 11

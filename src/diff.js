@@ -1,110 +1,163 @@
 import { __, base } from './base.js';
 
-export default await function (_, $, $base) {
-  $base.Class.new({
+export default await function (_, $, $$) {
+  $$.Class.new({
     name: 'DiffOp',
     slots: [
-      $base.EnumVar.new({
-        name: 'kind',
-        choices: ['retain', 'insert', 'delete'],
-        required: true
-      }),
-      $base.Var.new({ name: 'count', default: 0 }),
-      $base.Var.new({ name: 'text', default: '' }),
-      $base.Method.new({
+      $$.Virtual.new({ name: 'lengthDelta' }),
+      $$.Virtual.new({ name: 'apply' }),
+      $$.Virtual.new({ name: 'inverse' }),
+      $$.Virtual.new({ name: 'addToSummary' })
+    ]
+  });
+
+  $$.Class.new({
+    name: 'RetainOp',
+    slots: [
+      $.DiffOp,
+      $$.Var.new({ name: 'count', required: true }),
+      $$.Method.new({
         name: 'lengthDelta',
         do() {
-          if (this.kind() === 'insert') {
-            return this.text().length;
-          } else if (this.kind() === 'delete') {
-            return -this.count();
-          } else {
-            return 0;
-          }
+          return 0;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
+        name: 'apply',
+        do(text, idx) {
+          return {
+            result: text.slice(idx, idx + this.count()),
+            newIdx: idx + this.count()
+          };
+        }
+      }),
+      $$.Method.new({
         name: 'inverse',
-        do() {
-          if (this.kind() === 'insert') {
-            return $.DiffOp.new({
-              kind: 'delete',
-              count: this.text().length
-            });
-          } else if (this.kind() === 'delete') {
-            throw new Error('Cannot invert delete without original text');
-          } else {
-            return $.DiffOp.new({
-              kind: 'retain',
-              count: this.count()
-            });
-          }
+        do(text, idx) {
+          return $.RetainOp.new({ count: this.count() });
+        }
+      }),
+      $$.Method.new({
+        name: 'addToSummary',
+        do(summary) {
+          summary.retains += this.count();
         }
       })
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
+    name: 'InsertOp',
+    slots: [
+      $.DiffOp,
+      $$.Var.new({ name: 'text', required: true }),
+      $$.Method.new({
+        name: 'lengthDelta',
+        do() {
+          return this.text().length;
+        }
+      }),
+      $$.Method.new({
+        name: 'apply',
+        do(text, idx) {
+          return {
+            result: this.text(),
+            newIdx: idx
+          };
+        }
+      }),
+      $$.Method.new({
+        name: 'inverse',
+        do(text, idx) {
+          return $.DeleteOp.new({ count: this.text().length });
+        }
+      }),
+      $$.Method.new({
+        name: 'addToSummary',
+        do(summary) {
+          summary.insertions += this.text().length;
+        }
+      })
+    ]
+  });
+
+  $$.Class.new({
+    name: 'DeleteOp',
+    slots: [
+      $.DiffOp,
+      $$.Var.new({ name: 'count', required: true }),
+      $$.Method.new({
+        name: 'lengthDelta',
+        do() {
+          return -this.count();
+        }
+      }),
+      $$.Method.new({
+        name: 'apply',
+        do(text, idx) {
+          return {
+            result: '',
+            newIdx: idx + this.count()
+          };
+        }
+      }),
+      $$.Method.new({
+        name: 'inverse',
+        do(text, idx) {
+          const deletedText = text.slice(idx, idx + this.count());
+          return $.InsertOp.new({ text: deletedText });
+        }
+      }),
+      $$.Method.new({
+        name: 'addToSummary',
+        do(summary) {
+          summary.deletions += this.count();
+        }
+      })
+    ]
+  });
+
+  $$.Class.new({
     name: 'Patch',
     slots: [
-      $base.Var.new({
+      $$.Var.new({
         name: 'ops',
         default: () => []
       }),
-      $base.Var.new({ name: 'sourceLength', default: 0 }),
-      $base.Var.new({ name: 'targetLength', default: 0 }),
-      $base.Method.new({
+      $$.Var.new({ name: 'sourceLength', default: 0 }),
+      $$.Var.new({ name: 'targetLength', default: 0 }),
+      $$.Method.new({
         name: 'apply',
         do(text) {
           let result = '';
           let idx = 0;
 
           for (const op of this.ops()) {
-            if (op.kind() === 'retain') {
-              result += text.slice(idx, idx + op.count());
-              idx += op.count();
-            } else if (op.kind() === 'delete') {
-              idx += op.count();
-            } else if (op.kind() === 'insert') {
-              result += op.text();
-            }
+            const { result: opResult, newIdx } = op.apply(text, idx);
+            result += opResult;
+            idx = newIdx;
           }
 
           return result;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'isEmpty',
         do() {
-          return this.ops().every(op => op.kind() === 'retain');
+          return this.ops().every(op => op.class().name === 'RetainOp');
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'inverse',
         do(sourceText) {
           const inverseOps = [];
           let idx = 0;
 
           for (const op of this.ops()) {
-            if (op.kind() === 'retain') {
-              inverseOps.push($.DiffOp.new({
-                kind: 'retain',
-                count: op.count()
-              }));
-              idx += op.count();
-            } else if (op.kind() === 'delete') {
-              const deletedText = sourceText.slice(idx, idx + op.count());
-              inverseOps.push($.DiffOp.new({
-                kind: 'insert',
-                text: deletedText
-              }));
-              idx += op.count();
-            } else if (op.kind() === 'insert') {
-              inverseOps.push($.DiffOp.new({
-                kind: 'delete',
-                count: op.text().length
-              }));
-            }
+            const inverseOp = op.inverse(sourceText, idx);
+            inverseOps.push(inverseOp);
+            const { newIdx } = op.apply(sourceText, idx);
+            idx = newIdx;
           }
 
           return $.Patch.new({
@@ -114,38 +167,30 @@ export default await function (_, $, $base) {
           });
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'summary',
         do() {
-          let insertions = 0;
-          let deletions = 0;
-          let retains = 0;
-
-          for (const op of this.ops()) {
-            if (op.kind() === 'insert') {
-              insertions += op.text().length;
-            } else if (op.kind() === 'delete') {
-              deletions += op.count();
-            } else if (op.kind() === 'retain') {
-              retains += op.count();
-            }
-          }
-
-          return {
-            insertions,
-            deletions,
-            retains,
+          const summary = {
+            insertions: 0,
+            deletions: 0,
+            retains: 0,
             opCount: this.ops().length
           };
+
+          for (const op of this.ops()) {
+            op.addToSummary(summary);
+          }
+
+          return summary;
         }
       })
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'DiffEngine',
     slots: [
-      $base.Static.new({
+      $$.Static.new({
         name: 'computePatch',
         do(oldText, newText) {
           const ops = [];
@@ -171,8 +216,7 @@ export default await function (_, $, $base) {
                 j++;
                 lcsIdx++;
               }
-              ops.push($.DiffOp.new({
-                kind: 'retain',
+              ops.push($.RetainOp.new({
                 count: i - retainStart
               }));
             } else if (lcsIdx < lcs.length) {
@@ -183,31 +227,27 @@ export default await function (_, $, $base) {
               const insertText = newText.slice(j, nextLcsJ);
 
               if (deleteCount > 0) {
-                ops.push($.DiffOp.new({
-                  kind: 'delete',
+                ops.push($.DeleteOp.new({
                   count: deleteCount
                 }));
                 i = nextLcsI;
               }
 
               if (insertText.length > 0) {
-                ops.push($.DiffOp.new({
-                  kind: 'insert',
+                ops.push($.InsertOp.new({
                   text: insertText
                 }));
                 j = nextLcsJ;
               }
             } else {
               if (i < m) {
-                ops.push($.DiffOp.new({
-                  kind: 'delete',
+                ops.push($.DeleteOp.new({
                   count: m - i
                 }));
                 i = m;
               }
               if (j < n) {
-                ops.push($.DiffOp.new({
-                  kind: 'insert',
+                ops.push($.InsertOp.new({
                   text: newText.slice(j)
                 }));
                 j = n;
@@ -222,7 +262,7 @@ export default await function (_, $, $base) {
           });
         }
       }),
-      $base.Static.new({
+      $$.Static.new({
         name: 'longestCommonSubsequence',
         do(str1, str2) {
           const m = str1.length;
@@ -262,35 +302,35 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'Revision',
     slots: [
-      $base.Var.new({ name: 'revisionId' }),
-      $base.Var.new({ name: 'repo' }),
-      $base.Var.new({ name: 'parentIds', default: () => [] }),
-      $base.Var.new({ name: 'patchFromParent', default: null }),
-      $base.Var.new({ name: 'snapshot', default: '' }),
-      $base.Var.new({ name: 'message', default: '' }),
-      $base.Var.new({ name: 'createdAt', default: () => Date.now() }),
-      $base.Method.new({
+      $$.Var.new({ name: 'revisionId' }),
+      $$.Var.new({ name: 'repo' }),
+      $$.Var.new({ name: 'parentIds', default: () => [] }),
+      $$.Var.new({ name: 'patchFromParent', default: null }),
+      $$.Var.new({ name: 'snapshot', default: '' }),
+      $$.Var.new({ name: 'message', default: '' }),
+      $$.Var.new({ name: 'createdAt', default: () => Date.now() }),
+      $$.Method.new({
         name: 'text',
         do() {
           return this.snapshot();
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'parents',
         do() {
           return this.parentIds().map(pid => this.repo().getRevision(pid));
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'children',
         do() {
           return this.repo().getChildren(this.revisionId());
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'summary',
         do() {
           if (!this.patchFromParent()) {
@@ -306,19 +346,19 @@ export default await function (_, $, $base) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'TextRepo',
     slots: [
-      $base.Var.new({ name: 'root', default: null }),
-      $base.Var.new({
+      $$.Var.new({ name: 'root', default: null }),
+      $$.Var.new({
         name: 'revisions',
         default: () => new Map()
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'heads',
         default: () => new Map()
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'initSeed',
         do(text = '') {
           const root = $.Revision.new({
@@ -333,7 +373,7 @@ export default await function (_, $, $base) {
           return root;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'commit',
         do(currentRevision, newText, message = '') {
           const oldText = currentRevision ? currentRevision.snapshot() : '';
@@ -356,13 +396,13 @@ export default await function (_, $, $base) {
           return revision;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'getRevision',
         do(id) {
           return this.revisions().get(id);
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'getChildren',
         do(parentId) {
           const children = [];
@@ -374,7 +414,7 @@ export default await function (_, $, $base) {
           return children;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'pathTo',
         do(revision) {
           const path = [];
@@ -389,7 +429,7 @@ export default await function (_, $, $base) {
           return path;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'diffBetween',
         do(revA, revB) {
           return $.DiffEngine.computePatch(revA.snapshot(), revB.snapshot());
