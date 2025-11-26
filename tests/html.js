@@ -142,14 +142,14 @@ import test from '../src/test.js';
 
 const htmlModule = (await import('../src/html.js')).default;
 
-export default await function (_, $, $base, $test, $html) {
+export default await async function (_, $, $$, $test, $html) {
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'TestCounter',
     slots: [
-      $base.Signal.new({ name:'count', default: 0 }),
-      $base.Method.new({ name:'inc', do(){this.count(this.count()+1)} }),
-      $base.Method.new({
+      $$.Signal.new({ name:'count', default: 0 }),
+      $$.Method.new({ name:'inc', do(){this.count(this.count()+1)} }),
+      $$.Method.new({
         name:'render',
         do(){
           return $html.HTML.t`

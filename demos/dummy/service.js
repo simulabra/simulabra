@@ -1,12 +1,12 @@
 import { __, base } from '../../src/base.js';
 import live from '../../src/live.js';
 
-export default await async function (_, $, $base, $live) {
-  $base.Class.new({
+export default await async function (_, $, $$, $live) {
+  $$.Class.new({
     name: 'DummyService',
     slots: [
       $live.NodeClient,
-      $base.Var.new({
+      $$.Var.new({
         name: 'bonks',
         default: 0
       }),

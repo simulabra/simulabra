@@ -1,46 +1,46 @@
 import { __, base } from '../src/base.js';
 import test from '../src/test.js';
 
-export default await function (_, $, $base, $test) {
-    $base.Class.new({
+export default await async function (_, $, $$, $test) {
+    $$.Class.new({
       name: 'BrainfuckInterpreter',
       slots: [
-        $base.Var.new({ name: 'code', default: '' }),
-        $base.Var.new({ name: 'input', default: '' }),
-        $base.Var.new({ name: 'output', default: '' }),
-        $base.Var.new({ name: 'data', default: () => Array(30000).fill(0) }),
-        $base.Var.new({ name: 'dataPtr', default: 0 }),
-        $base.Var.new({ name: 'codePtr', default: 0 }),
-        $base.Var.new({ name: 'inputPtr', default: 0 }),
+        $$.Var.new({ name: 'code', default: '' }),
+        $$.Var.new({ name: 'input', default: '' }),
+        $$.Var.new({ name: 'output', default: '' }),
+        $$.Var.new({ name: 'data', default: () => Array(30000).fill(0) }),
+        $$.Var.new({ name: 'dataPtr', default: 0 }),
+        $$.Var.new({ name: 'codePtr', default: 0 }),
+        $$.Var.new({ name: 'inputPtr', default: 0 }),
 
-        $base.Method.new({
+        $$.Method.new({
           name: 'handleGreaterThan',
           do() { this.dataPtr(this.dataPtr() + 1); }
         }),
-        $base.Method.new({
+        $$.Method.new({
           name: 'handleLessThan',
           do() { this.dataPtr(this.dataPtr() - 1); }
         }),
-        $base.Method.new({
+        $$.Method.new({
           name: 'handlePlus',
           do() { this.data()[this.dataPtr()]++; }
         }),
-        $base.Method.new({
+        $$.Method.new({
           name: 'handleMinus',
           do() { this.data()[this.dataPtr()]--; }
         }),
-        $base.Method.new({
+        $$.Method.new({
           name: 'handleDot',
           do() { this.output(this.output() + String.fromCharCode(this.data()[this.dataPtr()])); }
         }),
-        $base.Method.new({
+        $$.Method.new({
           name: 'handleComma',
           do() {
             this.data()[this.dataPtr()] = this.input().charCodeAt(this.inputPtr());
             this.inputPtr(this.inputPtr() + 1);
           }
         }),
-        $base.Method.new({
+        $$.Method.new({
           name: 'handleOpenBracket',
           do() {
             if (this.data()[this.dataPtr()] === 0) {
@@ -55,7 +55,7 @@ export default await function (_, $, $base, $test) {
             }
           }
         }),
-        $base.Method.new({
+        $$.Method.new({
           name: 'handleCloseBracket',
           do() {
             if (this.data()[this.dataPtr()] !== 0) {
@@ -71,7 +71,7 @@ export default await function (_, $, $base, $test) {
           }
         }),
 
-        $base.Method.new({
+        $$.Method.new({
           name: 'execute',
           do() {
             const handlers = {

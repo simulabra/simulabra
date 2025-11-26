@@ -1,37 +1,37 @@
 import { __, base } from '../src/base.js';
 import live from '../src/live.js';
 
-export default await async function (_, $, $base, $live) {
-  $base.Class.new({
+export default await async function (_, $, $$, $live) {
+  $$.Class.new({
     name: 'WebsocketServer',
     slots: [
-      $base.Var.new({ name: 'nodes' }),
-      $base.Var.new({ name: 'handlers' }),
-      $base.Method.new({
+      $$.Var.new({ name: 'nodes' }),
+      $$.Var.new({ name: 'handlers' }),
+      $$.Method.new({
         name: 'registerHandler',
         do(handler) {
           this.handlers()[handler.topic()] = handler;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'node',
         do(name) {
           return this.nodes()[name];
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'to',
         do(message) {
           return this.node(message._to);
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'from',
         do(message) {
           return this.node(message._from);
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'routeMessage',
         do(message, socket) {
           const node = this.to(message);
@@ -51,7 +51,7 @@ export default await async function (_, $, $base, $live) {
           }
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'serve',
         do() {
           const self = this;
@@ -85,7 +85,7 @@ export default await async function (_, $, $base, $live) {
           });
         }
       }),
-      $base.After.new({
+      $$.After.new({
         name: 'init',
         do() {
           this.nodes({});
@@ -99,15 +99,15 @@ export default await async function (_, $, $base, $live) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'HandshakeHandler',
     slots: [
       $live.MessageHandler,
-      $base.Constant.new({
+      $$.Constant.new({
         name: 'topic',
         value: 'handshake'
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'handle',
         do({ master, message, socket }) {
           const from = message.from();

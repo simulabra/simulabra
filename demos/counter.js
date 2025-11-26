@@ -1,13 +1,13 @@
 import htmlModule from '../src/html.js';   // loads the classes
 import { __, base } from '../src/base.js';
 
-export default await function (_, $, $base, $html) {
-  $base.Class.new({
+export default await async function (_, $, $$, $html) {
+  $$.Class.new({
     name: 'Counter',
     slots: [
-      $base.Signal.new({ name: 'count', default: 0 }),
-      $base.Method.new({ name: 'inc', do() { this.count(this.count() + 1); } }),
-      $base.Method.new({
+      $$.Signal.new({ name: 'count', default: 0 }),
+      $$.Method.new({ name: 'inc', do() { this.count(this.count() + 1); } }),
+      $$.Method.new({
         name: 'render',
         do() { 
           return $html.HTML.t`
@@ -20,11 +20,11 @@ export default await function (_, $, $base, $html) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'CounterList',
     slots: [
-      $base.Var.new({ name: 'counter' }),
-      $base.Method.new({
+      $$.Var.new({ name: 'counter' }),
+      $$.Method.new({
         name: 'render',
         do() { 
           return Array.from(
@@ -36,11 +36,11 @@ export default await function (_, $, $base, $html) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'App',
     slots: [
       $html.Component,
-      $base.Method.new({
+      $$.Method.new({
         name: 'render',
         do() { 
           const counter = $.Counter.new();
@@ -53,7 +53,7 @@ export default await function (_, $, $base, $html) {
           `; 
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'css',
         do() {
           return `

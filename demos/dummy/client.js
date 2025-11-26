@@ -3,18 +3,18 @@ import html from '../../src/html.js';
 import live from '../../src/live.js';
 import service from './service.js';
 
-export default await async function (_, $, $base, $html, $live, $service) {
-  $base.Class.new({
+export default await async function (_, $, $$, $html, $live, $service) {
+  $$.Class.new({
     name: 'DummyClient',
     slots: [
       $html.Component,
-      $base.Signal.new({ name: 'response', default: '' }),
-      $base.Signal.new({ name: 'connected', default: false }),
-      $base.Signal.new({ name: 'loading', default: false }),
-      $base.Var.new({ name: 'domain' }),
-      $base.Var.new({ name: 'service' }),
-      $base.Var.new({ name: 'client' }),
-      $base.Method.new({
+      $$.Signal.new({ name: 'response', default: '' }),
+      $$.Signal.new({ name: 'connected', default: false }),
+      $$.Signal.new({ name: 'loading', default: false }),
+      $$.Var.new({ name: 'domain' }),
+      $$.Var.new({ name: 'service' }),
+      $$.Var.new({ name: 'client' }),
+      $$.Method.new({
         name: 'connect',
         async do() {
           this._client = $live.NodeClient.new({ uid: `DummyClient_${this._domain}` });
@@ -25,13 +25,13 @@ export default await async function (_, $, $base, $html, $live, $service) {
           this._connected = true;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'bonk',
         async do() {
           this._response = await this._service.bonk();
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'render',
         do() {
           return $html.HTML.t`

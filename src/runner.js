@@ -3,18 +3,18 @@ import { join, dirname, relative } from 'path';
 import { __, base } from './base.js';
 import test from './test.js';
 
-await async function (_, $, $base, $test) {
-  $base.Class.new({
+await async function (_, $, $$, $test) {
+  $$.Class.new({
     name: 'TestTimer',
     slots: [
-      $base.Var.new({ name: 'start' }),
-      $base.After.new({
+      $$.Var.new({ name: 'start' }),
+      $$.After.new({
         name: 'init',
         do() {
           this.start(+new Date());
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'mark',
         do() {
           return `[${+new Date() - this.start()}ms]`;
@@ -23,19 +23,19 @@ await async function (_, $, $base, $test) {
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'TestRunner',
     slots: [
-      $base.Var.new({
+      $$.Var.new({
         name: 'timer',
       }),
-      $base.After.new({
+      $$.After.new({
         name: 'init',
         do() {
           this.timer($.TestTimer.new({ name: 'runnerTimer' }));
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'runMod',
         async: true,
         async do(mod) {
@@ -54,7 +54,7 @@ await async function (_, $, $base, $test) {
           __.mod(baseMod);
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'loadFile',
         async: true,
         async do(filePath) {
@@ -62,7 +62,7 @@ await async function (_, $, $base, $test) {
           return esm.default;
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'run',
         async: true,
         async do(path, testName) {
@@ -88,7 +88,7 @@ await async function (_, $, $base, $test) {
           this.log('done running');
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'log',
         override: true,
         do(...args) {

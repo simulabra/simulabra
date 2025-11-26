@@ -1,11 +1,11 @@
 import { Database } from 'bun:sqlite';
 import { __, base } from './base.js';
 
-export default await function (_, $, $base) {
-  $base.Class.new({
+export default await async function (_, $, $$) {
+  $$.Class.new({
     name: 'SQLite',
     slots: [
-      $base.Static.new({
+      $$.Static.new({
         name: 'createDatabase',
         do: function createDatabase(dbName) {
           return new Database(dbName);
@@ -13,34 +13,34 @@ export default await function (_, $, $base) {
       }),
     ]
   });
-  $base.Class.new({
+  $$.Class.new({
     name: 'DBVar',
     slots: [
-      $base.Var,
-      $base.Var.new({
+      $$.Var,
+      $$.Var.new({
         name: 'mutable',
         default: false,
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'primary',
         default: false,
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'createText',
         default: 'TEXT',
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'toSQL',
         default: () => function() { return this; },
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'fromSQL',
         default: () => function() { return this; },
       }),
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'Persisted',
     slots: [
       $.DBVar.new({
@@ -58,32 +58,32 @@ export default await function (_, $, $base) {
           return this ? new Date(this) : null;
         },
       }),
-      $base.Static.new({
+      $$.Static.new({
         name: 'columns',
         do: function columns() {
           return this.allSlots().filter(slot => slot.class().descended($.DBVar));
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'columnReplacements',
         do: function columnReplacements(columns) {
             return Object.fromEntries(columns.map(col => (['$' + col.name, col.toSQL().apply(this[col.name]())])));
         }
       }),
-      $base.Static.new({
+      $$.Static.new({
         name: 'table',
         do: function table() {
           return this.name;
         }
       }),
-      $base.Static.new({
+      $$.Static.new({
         name: 'initDB',
         do: function initDB(db) {
           const createQuery = `CREATE TABLE IF NOT EXISTS ${this.table()} (${this.columns().map(col => col.name + ' ' + col.createText()).join(', ')})`;
           db.query(createQuery).run();
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'save',
         do: function save(db) {
           const columns = this.class().columns();
@@ -104,7 +104,7 @@ export default await function (_, $, $base) {
           return this;
         }
       }),
-      $base.Static.new({
+      $$.Static.new({
         name: 'loadAll',
         do: function loadAll(db) {
           const elems = db.query(`SELECT * FROM ${this.name}`).all();

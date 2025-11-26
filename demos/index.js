@@ -1,18 +1,18 @@
 import html from '../src/html.js';
 import { __, base } from '../src/base.js';
 
-export default await function (_, $, $base, $html) {
-  $base.Class.new({
+export default await async function (_, $, $$, $html) {
+  $$.Class.new({
     name: 'SimulabraInfo',
     slots: [
       $html.Component,
-      $base.Signal.new({ name: 'text' }),
-      $base.After.new({
+      $$.Signal.new({ name: 'text' }),
+      $$.After.new({
         name: 'init',
         do() {
         }
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'render',
         do() {
           return $html.HTML.t`

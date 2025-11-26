@@ -3,23 +3,23 @@ import { createServer } from 'http';
 import fetch from 'node-fetch';
 import { readFileSync } from 'fs';
 
-export default await function (_, $, $base) {
- $base.Class.new({
+export default await async function (_, $, $$) {
+ $$.Class.new({
    name: 'HTTPRequest',
    slots: [
-     $base.Var.new({
+     $$.Var.new({
        name: 'inner'
      }),
-     $base.Var.new({
+     $$.Var.new({
        name: 'start'
      }),
-     $base.Method.new({
+     $$.Method.new({
        name: 'elapsed',
        do() {
          return +new Date() - +this.start();
        }
      }),
-     $base.Method.new({
+     $$.Method.new({
        name: 'drain',
        do: function drain() {
          const req = this.inner();
@@ -44,13 +44,13 @@ export default await function (_, $, $base) {
      }),
    ]
  });
- $base.Class.new({
+ $$.Class.new({
    name: 'HTTPResponse',
    slots: [
-     $base.Var.new({
+     $$.Var.new({
        name: 'inner'
      }),
-     $base.Method.new({
+     $$.Method.new({
        name: 'ok',
        do(message, ct = 'text/html') {
          this.inner().writeHead(200, { 'Content-type': ct });
@@ -59,19 +59,19 @@ export default await function (_, $, $base) {
      }),
    ]
  });
- $base.Class.new({
+ $$.Class.new({
    name: 'HTTPServer',
    slots: [
-     $base.Var.new({ name: 'nodeServer' }),
-     $base.Var.new({
+     $$.Var.new({ name: 'nodeServer' }),
+     $$.Var.new({
        name: 'port',
        default: '3034',
      }),
-     $base.Var.new({
+     $$.Var.new({
        name: 'slots',
        default: [],
      }),
-     $base.After.new({
+     $$.After.new({
        name: 'init',
        do() {
          this.nodeServer(createServer((req, res) => {
@@ -88,22 +88,22 @@ export default await function (_, $, $base) {
      }),
    ]
  });
- $base.Class.new({
+ $$.Class.new({
    name: 'RequestHandler',
    slots: [
-     $base.Virtual.new({
+     $$.Virtual.new({
        name: 'match'
      }),
-     $base.Virtual.new({
+     $$.Virtual.new({
        name: 'handle',
      }),
    ]
  });
 
- $base.Class.new({
+ $$.Class.new({
    name: 'HandlerLogger',
    slots: [
-     $base.After.new({
+     $$.After.new({
        name: 'handle',
        do(app, req, res) {
          this.log(`handle ${req.inner().url} in ${req.elapsed()} ms`);
@@ -111,13 +111,13 @@ export default await function (_, $, $base) {
      })
    ]
  })
- $base.Class.new({
+ $$.Class.new({
    name: 'VarHandler',
    slots: [
-     $base.Var.new({
+     $$.Var.new({
        name: 'handler',
      }),
-     $base.Method.new({
+     $$.Method.new({
        name: 'handle',
        do(...args) {
          this.handler().apply(this, args)
@@ -125,16 +125,16 @@ export default await function (_, $, $base) {
      }),
    ]
  });
- $base.Class.new({
+ $$.Class.new({
    name: 'PathRequestHandler',
    slots: [
      $.RequestHandler,
      $.VarHandler,
      $.HandlerLogger,
-     $base.Var.new({
+     $$.Var.new({
        name: 'path',
      }),
-     $base.Method.new({
+     $$.Method.new({
        name: 'match',
        do(url) {
          return this.path() === url;
@@ -142,14 +142,14 @@ export default await function (_, $, $base) {
      }),
    ]
  });
- $base.Class.new({
+ $$.Class.new({
    name: 'FiletypeRequestHandler',
    slots: [
      $.RequestHandler,
      $.HandlerLogger,
-     $base.Var.new({ name: 'filetypes' }),
-     $base.Var.new({ name: 'mimeType' }),
-     $base.Method.new({
+     $$.Var.new({ name: 'filetypes' }),
+     $$.Var.new({ name: 'mimeType' }),
+     $$.Method.new({
        name: 'match',
        do(url) {
          const filetype = /\.([^\.]+)$/.exec(url)[1];
@@ -157,7 +157,7 @@ export default await function (_, $, $base) {
          return this.filetypes().includes(filetype);
        }
      }),
-     $base.Method.new({
+     $$.Method.new({
        name: 'handle',
        do: function handle(app, req, res) {
          const path = req.inner().url;
@@ -168,15 +168,15 @@ export default await function (_, $, $base) {
    ]
  });
 
- $base.Class.new({
+ $$.Class.new({
    name: 'HTTPRequestCommand',
    slots: [
-     $base.Command,
-     $base.Var.new({ name: 'url' }),
-     $base.Var.new({ name: 'Method' }),
-     $base.Var.new({ name: 'responseType' }),
-     $base.Var.new({ name: 'data' }),
-     $base.Method.new({
+     $$.Command,
+     $$.Var.new({ name: 'url' }),
+     $$.Var.new({ name: 'Method' }),
+     $$.Var.new({ name: 'responseType' }),
+     $$.Var.new({ name: 'data' }),
+     $$.Method.new({
        name: 'run',
        async: true,
        do: async function run() {

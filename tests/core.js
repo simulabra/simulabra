@@ -1,30 +1,30 @@
 import { __, base } from '../src/base.js';
 import test from '../src/test.js';
 
-export default await async function (_, $, $base, $test) {
-  $base.Class.new({
+export default await async function (_, $, $$, $test) {
+  $$.Class.new({
     name: 'BasicTestClass',
     slots: []
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'Point',
     slots: [
-      $base.Var.new({ name: 'x', default: 0 }),
-      $base.Var.new({ name: 'y', default: 0 }),
-      $base.Method.new({
+      $$.Var.new({ name: 'x', default: 0 }),
+      $$.Var.new({ name: 'y', default: 0 }),
+      $$.Method.new({
         name: 'dist',
         do() { return Math.sqrt(this.x() ** 2 + this.y() ** 2); }
       })
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'Color',
     slots: [
-      $base.Var.new({ name: 'r', default: 0 }),
-      $base.Var.new({ name: 'g', default: 0 }),
-      $base.Var.new({ name: 'b', default: 0 }),
+      $$.Var.new({ name: 'r', default: 0 }),
+      $$.Var.new({ name: 'g', default: 0 }),
+      $$.Var.new({ name: 'b', default: 0 }),
     ]
   });
 
@@ -71,12 +71,12 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'PointExtended',
     slots: [
       $.Point,
-      $base.Var.new({ name: 'phi', default: 0 }),
-      $base.Method.new({
+      $$.Var.new({ name: 'phi', default: 0 }),
+      $$.Method.new({
         name: 'phiShift',
         do() { return this.dist() * this.phi() / Math.PI; }
       })
@@ -103,12 +103,12 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'ColorPoint',
     slots: [
       $.Color,
       $.Point,
-      $base.Method.new({
+      $$.Method.new({
         name: 'g',
         override: true,
         do() { return this.dist(); }
@@ -128,12 +128,12 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'BeforeBasic',
     slots: [
-      $base.Var.new({ name: 'x', default: 0 }),
-      $base.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
-      $base.Before.new({ name: 'bump', do() { this.x(this.x() + 1); } }) // Runs before primary
+      $$.Var.new({ name: 'x', default: 0 }),
+      $$.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
+      $$.Before.new({ name: 'bump', do() { this.x(this.x() + 1); } }) // Runs before primary
     ]
   });
 
@@ -147,12 +147,12 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'AfterBasic',
     slots: [
-      $base.Var.new({ name: 'x', default: 0 }),
-      $base.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
-      $base.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
+      $$.Var.new({ name: 'x', default: 0 }),
+      $$.Method.new({ name: 'bump', do() { this.x(this.x() + 2); } }),
+      $$.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
     ]
   });
 
@@ -166,11 +166,11 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'AfterBeforeCombined',
     slots: [
       $.BeforeBasic,
-      $base.After.new({ name: 'bump', do() { this.x(this.x() * 2); } })
+      $$.After.new({ name: 'bump', do() { this.x(this.x() * 2); } })
     ]
   });
 
@@ -184,11 +184,11 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'AfterBeforeCombinedOverride',
     slots: [
       $.AfterBeforeCombined,
-      $base.Method.new({ name: 'bump', override: true, do() { this.x(this.x() + 3); } })
+      $$.Method.new({ name: 'bump', override: true, do() { this.x(this.x() + 3); } })
     ]
   });
 
@@ -202,11 +202,11 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'AfterMultiple',
     slots: [
       $.AfterBasic,
-      $base.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
+      $$.After.new({ name: 'bump', do() { this.x(this.x() + 1); } })
     ]
   });
 
@@ -220,23 +220,23 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'ModifierBase',
     slots: [
-      $base.Var.new({ name: 'journal', default: () => [] }),
-      $base.Method.new({ name: 'exec', do() { this.journal().push('Base Exec'); } }),
-      $base.Before.new({ name: 'exec', do() { this.journal().push('Base Before'); } }),
-      $base.After.new({ name: 'exec', do() { this.journal().push('Base After'); } }),
+      $$.Var.new({ name: 'journal', default: () => [] }),
+      $$.Method.new({ name: 'exec', do() { this.journal().push('Base Exec'); } }),
+      $$.Before.new({ name: 'exec', do() { this.journal().push('Base Before'); } }),
+      $$.After.new({ name: 'exec', do() { this.journal().push('Base After'); } }),
     ]
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'ModifierChildOverride',
     slots: [
       $.ModifierBase,
-      $base.Method.new({ name: 'exec', override: true, do() { this.journal().push('Child Override Exec'); } }),
-      $base.Before.new({ name: 'exec', do() { this.journal().push('Child Before'); } }),
-      $base.After.new({ name: 'exec', do() { this.journal().push('Child After'); } }),
+      $$.Method.new({ name: 'exec', override: true, do() { this.journal().push('Child Override Exec'); } }),
+      $$.Before.new({ name: 'exec', do() { this.journal().push('Child Before'); } }),
+      $$.After.new({ name: 'exec', do() { this.journal().push('Child After'); } }),
     ]
   });
 
@@ -257,11 +257,11 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'StaticTest',
     slots: [
-      $base.Static.new({ name: 'frob', do(n) { return n * 2; } }),
-      $base.Static.new({ name: 'combine', do(a, b) { return `${a}-${b}`; } })
+      $$.Static.new({ name: 'frob', do(n) { return n * 2; } }),
+      $$.Static.new({ name: 'combine', do(a, b) { return `${a}-${b}`; } })
     ]
   });
 
@@ -278,13 +278,13 @@ export default await async function (_, $, $base, $test) {
     name: 'ClassExtend',
     doc: 'Tests extending a class with new methods/modifiers after its initial definition.',
     do() {
-      $base.Class.new({
+      $$.Class.new({
         name: 'Extendable',
-        slots: [ $base.Method.new({ name: 'process', do(val) { return val; } }) ]
+        slots: [ $$.Method.new({ name: 'process', do(val) { return val; } }) ]
       });
 
       let sideEffect = 0;
-      $.Extendable.extend($base.After.new({
+      $.Extendable.extend($$.After.new({
         name: 'process',
         do() { sideEffect++; }
       }));
@@ -297,10 +297,10 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'Task',
     slots: [
-      $base.EnumVar.new({
+      $$.EnumVar.new({
         name: 'status',
         choices: ['pending', 'active', 'complete'],
         default: 'pending'
@@ -339,10 +339,10 @@ export default await async function (_, $, $base, $test) {
     doc: 'Tests that defining an EnumVar with an invalid default value throws an error during class definition.',
     do() {
       const errorMessage = this.assertThrows(() => {
-        $base.Class.new({
+        $$.Class.new({
           name: 'BadTask',
           slots: [
-            $base.EnumVar.new({
+            $$.EnumVar.new({
               name: 'status',
               choices: ['pending', 'active', 'complete'],
               default: 'invalid_default'
@@ -357,11 +357,11 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'VirtualBase',
     slots: [
-      $base.Virtual.new({ name: 'mustImplement' }),
-      $base.Method.new({ name: 'concreteMethod', do() { return 'Concrete'; } })
+      $$.Virtual.new({ name: 'mustImplement' }),
+      $$.Method.new({ name: 'concreteMethod', do() { return 'Concrete'; } })
     ]
   });
 
@@ -378,11 +378,11 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'VirtualImpl',
     slots: [
       $.VirtualBase,
-      $base.Method.new({ name: 'mustImplement', do() { return 'Implemented!'; } })
+      $$.Method.new({ name: 'mustImplement', do() { return 'Implemented!'; } })
     ]
   });
 
@@ -404,12 +404,12 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  const moduleA = await function (_, $, $base) {
-    $base.Class.new({
+  const moduleA = await function (_, $, $$) {
+    $$.Class.new({
       name: 'Widget',
       slots: [
-        $base.Var.new({ name: 'widgetProp', default: 'widget-abc' }),
-        $base.Method.new({ name: 'ping', do() { return 'pong from Widget ' + this.name; } })
+        $$.Var.new({ name: 'widgetProp', default: 'widget-abc' }),
+        $$.Method.new({ name: 'ping', do() { return 'pong from Widget ' + this.name; } })
       ]
     });
     $.Widget.new({ name: 'globalWidget' });
@@ -418,13 +418,13 @@ export default await async function (_, $, $base, $test) {
     imports: [base]
   }).load();
 
-  const moduleB = await function (_, $, $base, $moduleA) {
-    $base.Class.new({
+  const moduleB = await function (_, $, $$, $moduleA) {
+    $$.Class.new({
       name: 'Gadget',
       slots: [
         $moduleA.Widget,
-        $base.Var.new({ name: 'gadgetProp', default: 'gadget-xyz' }),
-        $base.Method.new({ name: 'ping', override: true, do() { return 'pong from Gadget ' + this.name; } })
+        $$.Var.new({ name: 'gadgetProp', default: 'gadget-xyz' }),
+        $$.Method.new({ name: 'ping', override: true, do() { return 'pong from Gadget ' + this.name; } })
       ]
     });
   }.module({
@@ -497,11 +497,11 @@ export default await async function (_, $, $base, $test) {
   $test.AsyncCase.new({
     name: 'Signal',
     async do() {
-      const Counter = $base.Class.new({
+      const Counter = $$.Class.new({
         name: 'Counter',
         slots: [
-          $base.Signal.new({ name: 'count', default: 0 }),
-          $base.Method.new({
+          $$.Signal.new({ name: 'count', default: 0 }),
+          $$.Method.new({
             name: 'inc',
             do() { this.count(this.count() + 1); }
           })
@@ -511,7 +511,7 @@ export default await async function (_, $, $base, $test) {
       const c = Counter.new();
       let init = true;
       let ran = 0;
-      const e = $base.Effect.create(() => {
+      const e = $$.Effect.create(() => {
         this.assertEq(c.count(), init ? 0 : 2);
         init = false;
         ran++;
@@ -523,14 +523,14 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'Message',
     slots: [
-      $base.Var.new({ name: 'text' }),
-      $base.Var.new({ name: 'count' }),
-      $base.Var.new({ name: 'tags' }),
-      $base.Var.new({ name: 'metadata' }),
-      $base.Var.new({ name: 'callback' }),
+      $$.Var.new({ name: 'text' }),
+      $$.Var.new({ name: 'count' }),
+      $$.Var.new({ name: 'tags' }),
+      $$.Var.new({ name: 'metadata' }),
+      $$.Var.new({ name: 'callback' }),
     ]
   });
 
@@ -580,11 +580,11 @@ export default await async function (_, $, $base, $test) {
     }
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'NestedMessage',
     slots: [
-      $base.Var.new({ name: 'inner' }),
-      $base.Var.new({ name: 'value' })
+      $$.Var.new({ name: 'inner' }),
+      $$.Var.new({ name: 'value' })
     ]
   });
 

@@ -4,7 +4,7 @@ import llm from './llm.js';
 
 const __ = globalThis.SIMULABRA;
 
-export default await function(_, $, $base, $html, $llm) {
+export default await async function(_, $, $$, $html, $llm) {
   const $el = $html.HTMLElement.proxy();
 
   // DEAR BOOTSTRAP WRITES THE REST OF YOUR CODE
@@ -12,28 +12,28 @@ export default await function(_, $, $base, $html, $llm) {
   // - input text
   // - streaming assistant response
   // - links to code locations
-  $base.Class.new({
+  $$.Class.new({
     name: 'ChatMessage',
     doc: 'a turn in a conversation between a user and an assistant',
     slots: [
       $html.Component,
-      $base.EnumVar.new({
+      $$.EnumVar.new({
         name: 'role',
         doc: 'who is talking',
         choices: ['user', 'assistant'],
         default: 'user',
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'content',
         doc: 'what is being said',
         type: 'string',
       }),
-      $base.Var.new({
+      $$.Var.new({
         name: 'streaming',
         doc: 'more to come',
         default: false,
       }),
-      $base.Command.new({
+      $$.Command.new({
         name: 'streamData',
         doc: 'add new tokens from the response',
         run(data) {
@@ -41,13 +41,13 @@ export default await function(_, $, $base, $html, $llm) {
           this.streaming(true);
         },
       }),
-      $base.Command.new({
+      $$.Command.new({
         name: 'streamEnd',
         run() {
           this.streaming(false);
         },
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'render',
         do: function render() {
           return `${this.role}: ${this.content}${this.streaming() ? '^' : ''}`;
@@ -56,7 +56,7 @@ export default await function(_, $, $base, $html, $llm) {
     ],
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'ChatList',
     doc: 'the back and forth conversation between a user and an llm assistant',
     slots: [
@@ -64,7 +64,7 @@ export default await function(_, $, $base, $html, $llm) {
       $html.ListElement.new({
         name: 'messages',
       }),
-      $base.Command.new({
+      $$.Command.new({
         name: 'streamBegin',
         doc: 'show loading indicator',
         run() {
@@ -73,14 +73,14 @@ export default await function(_, $, $base, $html, $llm) {
           return streamingMessage;
         },
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'conversation',
         doc: 'get the API-formatted conversation of a chat in a pojso',
         do: function conversation() {
           return this.messages().map(m => ({ role: m.role(), content: m.content() }));
         },
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'render',
         do: function render() {
           return this.messages().join('\n');
@@ -89,7 +89,7 @@ export default await function(_, $, $base, $html, $llm) {
     ],
   });
 
-  $base.Class.new({
+  $$.Class.new({
     name: 'Chat',
     slots: [
       $html.Component,
@@ -101,7 +101,7 @@ export default await function(_, $, $base, $html, $llm) {
         name: 'chatInput',
         placeholder: 'Message bootstrap...',
       }),
-      $base.Command.new({
+      $$.Command.new({
         name: 'ask',
         doc: 'submit a user message to a conversational agent',
         run(prompt) {
@@ -119,7 +119,7 @@ export default await function(_, $, $base, $html, $llm) {
           });
         },
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'chatRequest',
         do: async function chatRequest(conversation) {
           // send chat request
@@ -138,7 +138,7 @@ export default await function(_, $, $base, $html, $llm) {
           return $.PyserverCompletionResults.new(json);
         },
       }),
-      $base.Method.new({
+      $$.Method.new({
         name: 'render',
         do: function render() {
           return this.messages().render() + '\n\n' + this.chatInput().render();

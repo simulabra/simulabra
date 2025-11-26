@@ -1,6 +1,6 @@
 import { __, base } from './base.js';
 
-export default await function (_, $, $base) {
+export default await async function (_, $, $$) {
 }.module({
   name: 'llm',
   imports: [base],
