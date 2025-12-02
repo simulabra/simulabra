@@ -2,8 +2,6 @@ import { __, base } from './base.js';
 import html from './html.js';
 import llm from './llm.js';
 
-const __ = globalThis.SIMULABRA;
-
 export default await async function(_, $, $$, $html, $llm) {
   const $el = $html.HTMLElement.proxy();
 
@@ -163,7 +161,6 @@ export default await async function(_, $, $$, $html, $llm) {
   // - to disk
   // - file picker
 
-},
 }.module({
   name: 'Bootstrap',
   imports: [base, html, llm],
