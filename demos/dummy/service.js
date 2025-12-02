@@ -1,12 +1,12 @@
 import { __, base } from '../../src/base.js';
 import live from '../../src/live.js';
 
-export default await async function (_, $, $$, $live) {
-  $$.Class.new({
+export default await async function (_, $, $live) {
+  $.Class.new({
     name: 'DummyService',
     slots: [
       $live.NodeClient,
-      $$.Var.new({
+      $.Var.new({
         name: 'bonks',
         default: 0
       }),
@@ -22,7 +22,7 @@ export default await async function (_, $, $$, $live) {
 
   if (require.main === module) {
     await __.sleep(50);
-    const dummy = $.DummyService.new({ uid: 'DummyService' });
+    const dummy = _.DummyService.new({ uid: 'DummyService' });
     await dummy.connect();
   }
 }.module({

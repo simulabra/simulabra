@@ -1,11 +1,11 @@
 import { __, base } from '../src/base.js';
 import db from '../src/db.js';
 
-export default await async function (_, $, $$, $db) {
-  $$.Class.new({
+export default await async function (_, $, $db) {
+  $.Class.new({
     name: 'ActComponent',
     slots: [
-      $$.Method.new({
+      $.Method.new({
         name: "runcommand",
         do(cmd) {
           cmd.command().run().apply(cmd.parent(), [cmd, ...cmd.args()]);
@@ -14,10 +14,10 @@ export default await async function (_, $, $$, $db) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'Todo',
     slots: [
-      $.ActComponent,
+      _.ActComponent,
       $db.Persisted,
       $db.DBVar.new({
         name: 'content',
@@ -33,13 +33,13 @@ export default await async function (_, $, $$, $db) {
           return this ? new Date(this) : null;
         },
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'description',
         do: function description() {
           return `todo "${this.content()}"`;
         }
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'create',
         run(command, agenda) {
           agenda.todos().push(this);
@@ -47,7 +47,7 @@ export default await async function (_, $, $$, $db) {
           agenda.sysnote(`added ${this}`);
         }
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'finish',
         run(command, agenda) {
           this.finished(new Date());
@@ -59,10 +59,10 @@ export default await async function (_, $, $$, $db) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'Note',
     slots: [
-      $.ActComponent,
+      _.ActComponent,
       $db.Persisted,
       $db.DBVar.new({
         name: 'source',
@@ -71,19 +71,19 @@ export default await async function (_, $, $$, $db) {
       $db.DBVar.new({
         name: 'message',
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'logline',
         do() {
           return `${this.title()} [${this.created().toISOString()}] <${this.source()}> ${this.message()}`;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'description',
         do() {
           return `[${this.source()}] ${this.message()}`;
         }
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'create',
         run(command, agenda, stdout = true) {
           if (!this.created()) {
@@ -99,31 +99,31 @@ export default await async function (_, $, $$, $db) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'Journal',
     slots: [
-      $.ActComponent,
+      _.ActComponent,
       $db.Persisted,
-      $$.Var.new({
+      $.Var.new({
         name: 'notes',
         default: () => [],
       }),
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'ScheduleMemo',
     slots: [
-      $.ActComponent,
-      $$.Var.new({
+      _.ActComponent,
+      $.Var.new({
         name: 'memo',
         type: 'string',
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'eventDate',
         type: 'date',
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'create',
         run(command, agenda) {
           agenda.schedule(this);
@@ -132,53 +132,53 @@ export default await async function (_, $, $$, $db) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'Agenda',
     slots: [
-      $.ActComponent,
-      $$.Var.new({
+      _.ActComponent,
+      $.Var.new({
         name: 'dbName',
         doc: 'name of db file or :memory:',
         default: ':memory:',
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'db',
         doc: 'bun sqlite instance',
       }),
-      $$.After.new({
+      $.After.new({
         name: 'init',
         do() {
           this.db($db.SQLite.createDatabase(this.dbName()));
 
-          $.Note.initDB(this.db());
-          $.Todo.initDB(this.db());
-          this.notes($.Note.loadAll(this.db()));
-          this.todos($.Todo.loadAll(this.db()).filter(t => !t.finished));
+          _.Note.initDB(this.db());
+          _.Todo.initDB(this.db());
+          this.notes(_.Note.loadAll(this.db()));
+          this.todos(_.Todo.loadAll(this.db()).filter(t => !t.finished));
         }
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'history',
         doc: 'history of commands',
         default: () => [],
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'notes',
         default: () => [],
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'todos',
         default: () => [],
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'sysnote',
         do(message) {
-          $.Note.new({
+          _.Note.new({
             source: 'system',
             message
           }).create(this);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'receive',
         do(cmd) {
           cmd.run(this);

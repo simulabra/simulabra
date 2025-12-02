@@ -3,60 +3,60 @@
 import html from "../src/html.js";
 import { __, base } from "../src/base.js";
 
-export default await async function (_, $, $$, $html) {
-  $$.Class.new({ // declarative class definitions
+export default await async function (_, $, $html) {
+  $.Class.new({ // declarative class definitions
     name: "OpenAIAPIClient",
     doc: "consume and configure an openai-compatible api",
     slots: [ // slot-based system like CLOS
       $html.Component, // slot-based inheritance
-      $$.Signal.new({ // reactive signal slot
+      $.Signal.new({ // reactive signal slot
         name: "showSettings",
         doc: "show api settings",
         default: true, // default value
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: "apiKey",
         doc: "api credential (100% not leaked)"
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: "baseURL",
         doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
         default: "https://api.openai.com"
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: "model",
         doc: "which model to use with the completions endpoint",
         default: "davinci-002"
       }),
-      $$.Constant.new({ // constant slot, same across all instances of class
+      $.Constant.new({ // constant slot, same across all instances of class
         name: "display",
         value: "generic openai-compatible api",
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: "store",
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: "sequential",
         doc: "run threads sequentially instead of in parallel",
         default: false,
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "toggleSettings",
         do() {
           this.showSettings(!this.showSettings()); // variable assignment as method call; triggers effect
         }
       }),
-      $$.After.new({ // CLOS-style method combination
+      $.After.new({ // CLOS-style method combination
         name: "init",
         do() {
-          this.store($.ConfigStore.new());
+          this.store(_.ConfigStore.new());
           const lastId = localStorage.getItem("loom-config-selected");
           if (lastId) {
             this.loadId(lastId);
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "loadId",
         do(id) {
           const config = this.store().get(id);
@@ -70,7 +70,7 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "completion",
         async: true,
         do: async function completion(prompt, config = {}) {
@@ -97,13 +97,13 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'id',
         do() {
           return `${this.baseURL()}(${this.model()})`;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "renderInput",
         do(id, placeholder, label) {
           const htmlId = id + "input";
@@ -115,7 +115,7 @@ export default await async function (_, $, $$, $html) {
             value=${() => this[id]()} /></div>`;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "renderCheckbox",
         do(id, label) {
           const htmlId = id + "checkbox";
@@ -126,7 +126,7 @@ export default await async function (_, $, $$, $html) {
             checked=${() => this[id]()} /></label></div>`;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`<span>
@@ -142,7 +142,7 @@ export default await async function (_, $, $$, $html) {
           </span>`;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "logprobs",
         do(res) {
           const lp = res.choices[0].logprobs;
@@ -164,7 +164,7 @@ export default await async function (_, $, $$, $html) {
           return null;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "transformRequest",
         do(body, headers) {
           if (this.model()) {
@@ -178,33 +178,33 @@ export default await async function (_, $, $$, $html) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: "ConfigStore",
     doc: "manages saved configs in localStorage",
     slots: [
       $html.Component,
-      $$.After.new({
+      $.After.new({
         name: 'init',
         do() {
           this.configIDs(Object.keys(this.fetchStore()));
         }
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: 'id',
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "fetchStore",
         do() {
           return JSON.parse(localStorage.getItem("loom-config-store") || "{}");
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "get",
         do(id) {
           return this.fetchStore()[id];
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "delete",
         do(id) {
           let store = this.fetchStore();
@@ -212,7 +212,7 @@ export default await async function (_, $, $$, $html) {
           this.updateStore(store);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "save",
         do(client) {
           let store = this.fetchStore();
@@ -226,19 +226,19 @@ export default await async function (_, $, $$, $html) {
           this.updateStore(store);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'updateStore',
         do(store) {
           localStorage.setItem("loom-config-store", JSON.stringify(store));
           this.configIDs(Object.keys(store));
         }
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: "configIDs",
         doc: "list of config ids that can be loaded",
         default: [],
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "render",
         do(parent) {
           const configRow = id => $html.HTML.t`<div class="loom-row">
@@ -255,22 +255,22 @@ export default await async function (_, $, $$, $html) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: "ThreadConfig",
     slots: [
       $html.Component,
-      $$.Clone,
-      $$.Signal.new({
+      $.Clone,
+      $.Signal.new({
         name: "max_tokens",
         doc: "length of thread in tokens",
         default: 10,
       }),
-      $$.Signal.new({
+      $.Signal.new({
         name: "temperature",
         doc: "generation temperature",
         default: 0.6,
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "json",
         do() {
           return {
@@ -280,13 +280,13 @@ export default await async function (_, $, $$, $html) {
           };
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "configline",
         do(c, step=1) {
           return $html.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min="0" value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "render",
         do() {
           return [
@@ -297,13 +297,13 @@ export default await async function (_, $, $$, $html) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: "TextCompletion",
     slots: [
       $html.Component,
-      $$.Clone,
-      $$.Signal.new({ name: "text", default: " " }),
-      $$.Method.new({
+      $.Clone,
+      $.Signal.new({ name: "text", default: " " }),
+      $.Method.new({
         name: "spanify",
         do() {
           const processed = this.text().replace(/\n/g, "|||\\n|||");
@@ -319,20 +319,20 @@ export default await async function (_, $, $$, $html) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: "Thread",
     slots: [
-      $.TextCompletion,
-      $$.Signal.new({ name: "showConfig", default: false }),
-      $$.Var.new({ name: "config" }),
-      $$.Var.new({ name: "loom" }),
-      $$.Method.new({
+      _.TextCompletion,
+      $.Signal.new({ name: "showConfig", default: false }),
+      $.Var.new({ name: "config" }),
+      $.Var.new({ name: "loom" }),
+      $.Method.new({
         name: "runcommand",
         do(cmd) {
           return this.loom().runcommand(cmd);
         }
       }),
-      $$.Command.new({
+      $.Command.new({
         name: "clear",
         run() {
           const oldtext = this.text();
@@ -340,25 +340,25 @@ export default await async function (_, $, $$, $html) {
           return () => this.text(oldtext);
         }
       }),
-      $$.Command.new({
+      $.Command.new({
         name: "weave",
         run() {
           return this.loom().weave(this.text());
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "spawn",
         do() {
           this.loom().threads([...this.loom().threads(), this.clone()]);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "die",
         do() {
           this.loom().threads(this.loom().threads().filter(t => t !== this));
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "normaliseLogprobs",
         do(logprobs) {
           let lptot = 0;
@@ -369,7 +369,7 @@ export default await async function (_, $, $$, $html) {
           for (const lp of logprobs) {
             lp.logprob = lp.logprob / lptot;
           }
-          logprobs = logprobs.map(l => $.Logprob.new({
+          logprobs = logprobs.map(l => _.Logprob.new({
             text: l.token.replace(/Ġ/g, " "),
             logprob: l.logprob,
             loom: this.loom(),
@@ -378,7 +378,7 @@ export default await async function (_, $, $$, $html) {
           return logprobs;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "spin",
         doc: "generate a possible thread from the model",
         async: true,
@@ -401,7 +401,7 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "up",
         do() {
           const threads = this.loom().threads();
@@ -413,7 +413,7 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "down",
         do() {
           const threads = this.loom().threads();
@@ -425,7 +425,7 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "render",
         do() {
           const threadNumber = () => this.loom().threads().indexOf(this) + 1;
@@ -452,19 +452,19 @@ export default await async function (_, $, $$, $html) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: "Logprob",
     slots: [
-      $.TextCompletion,
-      $$.Var.new({ name: "logprob" }),
-      $$.Var.new({ name: "loom" }),
-      $$.Method.new({
+      _.TextCompletion,
+      $.Var.new({ name: "logprob" }),
+      $.Var.new({ name: "loom" }),
+      $.Method.new({
         name: "weave",
         do() {
           this.loom().weave(this.text());
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "render",
         do() {
           // const opacity = Math.tanh(this.logprob()) + 0.5;
@@ -480,32 +480,32 @@ export default await async function (_, $, $$, $html) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: "Loom",
     slots: [
       $html.Component,
-      $$.Signal.new({ name: "text" }),
-      $$.Signal.new({ name: "savedText", default: "" }),
-      $$.Signal.new({ name: "history" }),
-      $$.Signal.new({ name: "choices" }),
-      $$.Signal.new({ name: "logprobs" }),
-      $$.Signal.new({ name: "errorMsg", default: "" }),
-      $$.Signal.new({ name: "threads" }),
-      $$.Signal.new({ name: "loading", default: false }),
-      $$.Signal.new({ name: "cursor", default: { x: 0, y: 0 } }),
-      $$.Var.new({ name: "client" }),
-      $$.Var.new({ name: "localStorageKey", default: "LOOM_TEXT" }),
-      $$.After.new({
+      $.Signal.new({ name: "text" }),
+      $.Signal.new({ name: "savedText", default: "" }),
+      $.Signal.new({ name: "history" }),
+      $.Signal.new({ name: "choices" }),
+      $.Signal.new({ name: "logprobs" }),
+      $.Signal.new({ name: "errorMsg", default: "" }),
+      $.Signal.new({ name: "threads" }),
+      $.Signal.new({ name: "loading", default: false }),
+      $.Signal.new({ name: "cursor", default: { x: 0, y: 0 } }),
+      $.Var.new({ name: "client" }),
+      $.Var.new({ name: "localStorageKey", default: "LOOM_TEXT" }),
+      $.After.new({
         name: "init",
         do() {
-          const client = $.OpenAIAPIClient.new();
+          const client = _.OpenAIAPIClient.new();
           client.loom = this;
           this.client(client);
           this.text(localStorage.getItem(this.localStorageKey()) || "Once upon a time");
           this.savedText(this.text());
           const storedThreads = localStorage.getItem("LOOM_THREADS");
           if (storedThreads) {
-            this.threads(JSON.parse(storedThreads).map(t => $.Thread.new({ loom: this, ...t })));
+            this.threads(JSON.parse(storedThreads).map(t => _.Thread.new({ loom: this, ...t })));
           } else {
             this.threads([
               this.thread({ max_tokens: 6, temperature: 1.0 }),
@@ -549,13 +549,13 @@ export default await async function (_, $, $$, $html) {
           });
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "thread",
         do(config) {
-          return $.Thread.new({ loom: this, config: $.ThreadConfig.new(config) });
+          return _.Thread.new({ loom: this, config: _.ThreadConfig.new(config) });
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "clearThreads",
         do() {
           for (const thread of this.threads()) {
@@ -563,7 +563,7 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "spinThreads",
         async: true,
         do: async function() {
@@ -576,7 +576,7 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Command.new({
+      $.Command.new({
         name: "seek",
         doc: "make new threads to search",
         run() {
@@ -594,7 +594,7 @@ export default await async function (_, $, $$, $html) {
             });
         },
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "updateTextarea",
         do() {
           const textarea = document.querySelector(".loom-textarea");
@@ -603,7 +603,7 @@ export default await async function (_, $, $$, $html) {
           textarea.scrollTop = textarea.scrollHeight;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "updateCursorPosition",
         do() {
           const textarea = document.querySelector(".loom-textarea");
@@ -622,7 +622,7 @@ export default await async function (_, $, $$, $html) {
           document.body.removeChild(span);
         }
       }),
-      $$.Command.new({
+      $.Command.new({
         name: "weave",
         run: function(ctx, text) {
           const oldtext = this.text();
@@ -638,11 +638,11 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Var.new({
+      $.Var.new({
         name: "undostack",
         default: () => [],
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "runcommand",
         do(cmd) {
           const undo = cmd.command().run().apply(cmd.parent(), [cmd, ...cmd.args()]);
@@ -652,7 +652,7 @@ export default await async function (_, $, $$, $html) {
           this.history([...this.history(), cmd]);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "undo",
         async do() {
           const undo = this.undostack().pop();
@@ -661,7 +661,7 @@ export default await async function (_, $, $$, $html) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: "render",
         do() {
           let debounceTimer;
@@ -723,5 +723,5 @@ export default await async function (_, $, $$, $html) {
     ]
   });
 
-  $.Loom.new().mount();
+  _.Loom.new().mount();
 }.module({ name: "demo.loom", imports: [base, html] }).load();

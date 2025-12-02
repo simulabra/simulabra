@@ -1028,7 +1028,14 @@ function bootstrap() {
           this.loaded(true);
           const om = $$().mod();
           $$().mod(this);
-            await this.mod().apply(this, [this, this.proxy('Class'), ...this.imports().map(i => i.proxy('Class'))]);
+          // _ = local classes, $ = base classes, then other imports (excluding base)
+          const baseModule = $$().base();
+          const otherImports = this.imports().filter(i => i !== baseModule);
+          await this.mod().apply(this, [
+            this.proxy('Class'),           // _ (local classes)
+            baseModule.$(),                // $ (base classes)
+            ...otherImports.map(i => i.proxy('Class'))
+          ]);
           $$().mod(om);
         }
         return this;

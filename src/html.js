@@ -3,19 +3,19 @@ import { __, base } from './base.js';
 const TEMPLATE_CACHE = new Map();
 let CURRENT_RENDERING_COMPONENT = null;
 
-export default await async function (_, $, $$) {
-  $$.Class.new({
+export default await async function (_, $) {
+  $.Class.new({
     name: 'AstNodeCompilerBase',
     slots: [
-      $$.Virtual.new({ name: 'compile' }), // (node, env, compileRecursiveFn, parentComponent) -> VNode | ComponentInstance | string | array | any
+      $.Virtual.new({ name: 'compile' }), // (node, env, compileRecursiveFn, parentComponent) -> VNode | ComponentInstance | string | array | any
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'ElementNodeCompiler',
     slots: [
-      $.AstNodeCompilerBase,
-      $$.Method.new({
+      _.AstNodeCompilerBase,
+      $.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           const props = {};
@@ -25,20 +25,20 @@ export default await async function (_, $, $$) {
           const kids = node.children.map(childNode => {
             return compileRecursiveFn(childNode, env, parentComponent);
           });
-          return $.VNode.h(node.tag, props, ...kids);
+          return _.VNode.h(node.tag, props, ...kids);
         },
       }),
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'ComponentNodeCompiler',
     slots: [
-      $.AstNodeCompilerBase,
-      $$.Method.new({
+      _.AstNodeCompilerBase,
+      $.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
-          const ComponentClass = $[node.tag.slice(1)];
+          const ComponentClass = _[node.tag.slice(1)];
           if (!ComponentClass) {
             throw new Error(`Component ${node.tag} not found.`);
           }
@@ -47,17 +47,17 @@ export default await async function (_, $, $$) {
             props[attr.name] = attr.kind === 'expr' ? env[attr.idx] : attr.value;
           });
           props.children = node.children.map(childNode => compileRecursiveFn(childNode, env, parentComponent));
-          return $.ComponentInstance.new({ comp: ComponentClass.new(props), parent: parentComponent });
+          return _.ComponentInstance.new({ comp: ComponentClass.new(props), parent: parentComponent });
         },
       }),
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'FragmentNodeCompiler',
     slots: [
-      $.AstNodeCompilerBase,
-      $$.Method.new({
+      _.AstNodeCompilerBase,
+      $.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           return node.children.map(childNode => {
@@ -68,11 +68,11 @@ export default await async function (_, $, $$) {
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'TextNodeCompiler',
     slots: [
-      $.AstNodeCompilerBase,
-      $$.Method.new({
+      _.AstNodeCompilerBase,
+      $.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           return node.value;
@@ -81,11 +81,11 @@ export default await async function (_, $, $$) {
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'ExprNodeCompiler',
     slots: [
-      $.AstNodeCompilerBase,
-      $$.Method.new({
+      _.AstNodeCompilerBase,
+      $.Method.new({
         name: 'compile',
         do(node, env, compileRecursiveFn, parentComponent) {
           return env[node.idx];
@@ -94,22 +94,22 @@ export default await async function (_, $, $$) {
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'VNode',
     slots: [
-      $$.Var.new({
+      $.Var.new({
         name: 'el',
         doc: 'Native DOM element or DocumentFragment',
       }),
 
-      $$.Method.new({
+      $.Method.new({
         name: 'mount',
         do(parentElement) {
           parentElement.appendChild(this.el());
         },
       }),
 
-      $$.Static.new({
+      $.Static.new({
         name: 'h',
         doc: 'html element template function',
         do(tag, props = {}, ...children) {
@@ -120,7 +120,7 @@ export default await async function (_, $, $$) {
               if (key.startsWith('on')) {
                 el.addEventListener(key.substring(2).toLowerCase(), value);
               } else {
-                $$.Effect.create(() => {
+                $.Effect.create(() => {
                   const attrValue = value();
                   if (attrValue === false || attrValue == null) {
                     el.removeAttribute(key);
@@ -144,7 +144,7 @@ export default await async function (_, $, $$) {
           });
 
           function domify(child) {
-            if (__.instanceOf(child, $.VNode) || __.instanceOf(child, $.ComponentInstance)) {
+            if (__.instanceOf(child, _.VNode) || __.instanceOf(child, _.ComponentInstance)) {
               return child.el();
             } else if (typeof child === 'function') {
               const startAnchor = document.createComment('$(');
@@ -153,7 +153,7 @@ export default await async function (_, $, $$) {
               fragment.appendChild(startAnchor);
               fragment.appendChild(endAnchor);
               let currentNodes = [];
-              $$.Effect.create(() => {
+              $.Effect.create(() => {
                 const newContent = child();
                 const newNodes = [];
                 const tempFragment = document.createDocumentFragment();
@@ -178,24 +178,24 @@ export default await async function (_, $, $$) {
                 node.appendChild(domify(it));
               }
               return node;
-            } else if (__.instanceOf(child, $.Component)) {
-              return domify(child.render($.Component.__current_rendering));
+            } else if (__.instanceOf(child, _.Component)) {
+              return domify(child.render(_.Component.__current_rendering));
             } else {
               return document.createTextNode(String(child));
             }
           }
           el.appendChild(domify(children));
-          return $.VNode.new({ el: el });
+          return _.VNode.new({ el: el });
         },
       }),
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'HTML',
     doc: 'HTML utilities for manipulating the DOM',
     slots: [
-      $$.Static.new({
+      $.Static.new({
         name: 'patch',
         doc: 'Naive DOM patch: replaces the old element with the new one if different.',
         do(oldEl, newEl) {
@@ -205,7 +205,7 @@ export default await async function (_, $, $$) {
         },
       }),
 
-      $$.Static.new({
+      $.Static.new({
         name: 't',
         doc: 'Tagged template literal entry point for creating HTML structures.',
         do(strings, ...expressions) {
@@ -213,15 +213,15 @@ export default await async function (_, $, $$) {
           let factory = TEMPLATE_CACHE.get(templateKey);
 
           if (!factory) {
-            const ast = $.HTML.parseTemplate(strings);
-            factory = $.HTML.compileAstToFactory(ast);
+            const ast = _.HTML.parseTemplate(strings);
+            factory = _.HTML.compileAstToFactory(ast);
             TEMPLATE_CACHE.set(templateKey, factory);
           }
           return factory(...expressions);
         },
       }),
 
-      $$.Static.new({
+      $.Static.new({
         name: 'parseTemplate',
         doc: 'Converts template literal strings and expressions into an AST.',
         do(strings) {
@@ -325,16 +325,16 @@ export default await async function (_, $, $$) {
         },
       }),
 
-      $$.Static.new({
+      $.Static.new({
         name: 'compileAstToFactory',
         doc: 'Compiles an AST into a factory function that generates VNodes or ComponentInstances.',
         do(ast) {
           const compilers = {
-            element: $.ElementNodeCompiler.new(),
-            component: $.ComponentNodeCompiler.new(),
-            fragment: $.FragmentNodeCompiler.new(),
-            text: $.TextNodeCompiler.new(),
-            expr: $.ExprNodeCompiler.new(),
+            element: _.ElementNodeCompiler.new(),
+            component: _.ComponentNodeCompiler.new(),
+            fragment: _.FragmentNodeCompiler.new(),
+            text: _.TextNodeCompiler.new(),
+            expr: _.ExprNodeCompiler.new(),
           };
 
           const compileRecursive = (node, env, parentComponent) => {
@@ -355,19 +355,19 @@ export default await async function (_, $, $$) {
                 if (child == null) {
                   return;
                 }
-                if (__.instanceOf(child, $.VNode) || __.instanceOf(child, $.ComponentInstance)) {
+                if (__.instanceOf(child, _.VNode) || __.instanceOf(child, _.ComponentInstance)) {
                   fragmentElement.appendChild(child.el());
                 } else if (typeof child === 'function') { // Reactive text from an expression
                   const textNode = document.createTextNode('');
                   fragmentElement.appendChild(textNode);
-                  $$.Effect.create(() => {
+                  $.Effect.create(() => {
                     textNode.nodeValue = String(child() ?? '');
                   });
                 } else {
                   fragmentElement.appendChild(document.createTextNode(String(child)));
                 }
               });
-              return $.VNode.new({ el: fragmentElement });
+              return _.VNode.new({ el: fragmentElement });
             }
 
             if (
@@ -376,7 +376,7 @@ export default await async function (_, $, $$) {
               typeof compiledRoot === 'boolean' ||
               compiledRoot == null
             ) {
-              return $.VNode.new({ el: document.createTextNode(String(compiledRoot ?? '')) });
+              return _.VNode.new({ el: document.createTextNode(String(compiledRoot ?? '')) });
             }
 
             if (typeof compiledRoot === 'function') { // Top-level reactive expression
@@ -384,10 +384,10 @@ export default await async function (_, $, $$) {
               // This VNode will manage the reactive text update.
               const fragmentParent = document.createDocumentFragment();
               fragmentParent.appendChild(textNode);
-              $$.Effect.create(() => {
+              $.Effect.create(() => {
                 textNode.nodeValue = String(compiledRoot() ?? '');
               });
-              return $.VNode.new({ el: fragmentParent });
+              return _.VNode.new({ el: fragmentParent });
             }
 
             // Should be a VNode or ComponentInstance
@@ -398,31 +398,31 @@ export default await async function (_, $, $$) {
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'ComponentInstance',
     doc: 'Wraps a Simulabra component instance, managing its rendering and reactivity.',
     slots: [
-      $$.Var.new({ name: 'comp' }),
-      $$.Var.new({ name: 'parent' }),
-      $$.Var.new({ name: 'vnode' }),
-      $$.Var.new({ name: 'effect' }),
+      $.Var.new({ name: 'comp' }),
+      $.Var.new({ name: 'parent' }),
+      $.Var.new({ name: 'vnode' }),
+      $.Var.new({ name: 'effect' }),
 
-      $$.After.new({
+      $.After.new({
         name: 'init',
         do() {
           const initialVNode = this.comp().render(this.parent());
           this.vnode(initialVNode);
-          this.effect($$.Effect.create(() => {
+          this.effect($.Effect.create(() => {
             const newVNode = this.comp().render(this.parent());
             if (this.vnode() && this.vnode().el() && newVNode && newVNode.el()) {
-              $.HTML.patch(this.vnode().el(), newVNode.el());
+              _.HTML.patch(this.vnode().el(), newVNode.el());
             }
             this.vnode(newVNode);
           }));
         },
       }),
 
-      $$.Method.new({
+      $.Method.new({
         name: 'el',
         doc: 'Returns the root DOM element of this component instance.',
         do() {
@@ -430,7 +430,7 @@ export default await async function (_, $, $$) {
         },
       }),
 
-      $$.Method.new({
+      $.Method.new({
         name: 'mount',
         doc: 'Appends this component instance to a parent DOM element.',
         do(parentElement) {
@@ -440,7 +440,7 @@ export default await async function (_, $, $$) {
         },
       }),
 
-      $$.Method.new({
+      $.Method.new({
         name: 'dispose',
         doc: 'Cleans up the component instance, removing its reactive effect.',
         do() {
@@ -453,35 +453,35 @@ export default await async function (_, $, $$) {
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'Component',
     slots: [
-      $$.Method.new({
+      $.Method.new({
         name: 'css',
         do() {
           return '';
         }
       }),
-      $$.Virtual.new({
+      $.Virtual.new({
         name: 'render',
       }),
-      $$.Before.new({
-        name: 'render',
-        do() {
-          this.__prevComponent = $.Component.__current_rendering;
-          $.Component.__current_rendering = this;
-        }
-      }),
-      $$.After.new({
+      $.Before.new({
         name: 'render',
         do() {
-          $.Component.__current_rendering = this.__prevComponent;
+          this.__prevComponent = _.Component.__current_rendering;
+          _.Component.__current_rendering = this;
         }
       }),
-      $$.Method.new({
+      $.After.new({
+        name: 'render',
+        do() {
+          _.Component.__current_rendering = this.__prevComponent;
+        }
+      }),
+      $.Method.new({
         name: 'mount',
         do(target = document.body) {
-          this.render($.Component.__current_rendering).mount(target);
+          this.render(_.Component.__current_rendering).mount(target);
           const style = document.createElement('style');
           style.textContent = this.css();
           target.appendChild(style);

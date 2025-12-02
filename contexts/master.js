@@ -1,37 +1,37 @@
 import { __, base } from '../src/base.js';
 import live from '../src/live.js';
 
-export default await async function (_, $, $$, $live) {
-  $$.Class.new({
+export default await async function (_, $, $live) {
+  $.Class.new({
     name: 'WebsocketServer',
     slots: [
-      $$.Var.new({ name: 'nodes' }),
-      $$.Var.new({ name: 'handlers' }),
-      $$.Method.new({
+      $.Var.new({ name: 'nodes' }),
+      $.Var.new({ name: 'handlers' }),
+      $.Method.new({
         name: 'registerHandler',
         do(handler) {
           this.handlers()[handler.topic()] = handler;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'node',
         do(name) {
           return this.nodes()[name];
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'to',
         do(message) {
           return this.node(message._to);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'from',
         do(message) {
           return this.node(message._from);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'routeMessage',
         do(message, socket) {
           const node = this.to(message);
@@ -51,7 +51,7 @@ export default await async function (_, $, $$, $live) {
           }
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'serve',
         do() {
           const self = this;
@@ -85,13 +85,13 @@ export default await async function (_, $, $$, $live) {
           });
         }
       }),
-      $$.After.new({
+      $.After.new({
         name: 'init',
         do() {
           this.nodes({});
           this.handlers({});
           const handlers = [
-            $.HandshakeHandler.new(),
+            _.HandshakeHandler.new(),
           ];
           handlers.forEach(h => this.registerHandler(h));
         }
@@ -99,15 +99,15 @@ export default await async function (_, $, $$, $live) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'HandshakeHandler',
     slots: [
       $live.MessageHandler,
-      $$.Constant.new({
+      $.Constant.new({
         name: 'topic',
         value: 'handshake'
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'handle',
         do({ master, message, socket }) {
           const from = message.from();
@@ -122,7 +122,7 @@ export default await async function (_, $, $$, $live) {
     ]
   });
 
-  const server = $.WebsocketServer.new();
+  const server = _.WebsocketServer.new();
   server.serve();
 }.module({
   name: 'leader',

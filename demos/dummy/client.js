@@ -3,18 +3,18 @@ import html from '../../src/html.js';
 import live from '../../src/live.js';
 import service from './service.js';
 
-export default await async function (_, $, $$, $html, $live, $service) {
-  $$.Class.new({
+export default await async function (_, $, $html, $live, $service) {
+  $.Class.new({
     name: 'DummyClient',
     slots: [
       $html.Component,
-      $$.Signal.new({ name: 'response', default: '' }),
-      $$.Signal.new({ name: 'connected', default: false }),
-      $$.Signal.new({ name: 'loading', default: false }),
-      $$.Var.new({ name: 'domain' }),
-      $$.Var.new({ name: 'service' }),
-      $$.Var.new({ name: 'client' }),
-      $$.Method.new({
+      $.Signal.new({ name: 'response', default: '' }),
+      $.Signal.new({ name: 'connected', default: false }),
+      $.Signal.new({ name: 'loading', default: false }),
+      $.Var.new({ name: 'domain' }),
+      $.Var.new({ name: 'service' }),
+      $.Var.new({ name: 'client' }),
+      $.Method.new({
         name: 'connect',
         async do() {
           this._client = $live.NodeClient.new({ uid: `DummyClient_${this._domain}` });
@@ -25,13 +25,13 @@ export default await async function (_, $, $$, $html, $live, $service) {
           this._connected = true;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'bonk',
         async do() {
           this._response = await this._service.bonk();
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'render',
         do() {
           return $html.HTML.t`
@@ -60,12 +60,12 @@ export default await async function (_, $, $$, $html, $live, $service) {
   });
 
   if (typeof require !== 'undefined' && require.main === module) {
-    const client = $.DummyClient.new({ domain: 'Bun' });
+    const client = _.DummyClient.new({ domain: 'Bun' });
     await client.connect();
     const response = await client._service.bonk();
     console.log(response);
   } else if (typeof window !== 'undefined') {
-    const client = $.DummyClient.new({ domain: 'Web' });
+    const client = _.DummyClient.new({ domain: 'Web' });
     await client.connect();
     client.mount();
   }

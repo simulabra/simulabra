@@ -142,14 +142,14 @@ import test from '../src/test.js';
 
 const htmlModule = (await import('../src/html.js')).default;
 
-export default await async function (_, $, $$, $test, $html) {
+export default await async function (_, $, $test, $html) {
 
-  $$.Class.new({
+  $.Class.new({
     name: 'TestCounter',
     slots: [
-      $$.Signal.new({ name:'count', default: 0 }),
-      $$.Method.new({ name:'inc', do(){this.count(this.count()+1)} }),
-      $$.Method.new({
+      $.Signal.new({ name:'count', default: 0 }),
+      $.Method.new({ name:'inc', do(){this.count(this.count()+1)} }),
+      $.Method.new({
         name:'render',
         do(){
           return $html.HTML.t`
@@ -174,7 +174,7 @@ export default await async function (_, $, $$, $test, $html) {
   $test.AsyncCase.new({
     name: 'ReactiveTextUpdates',
     async do(){
-      const counter = $.TestCounter.new();
+      const counter = _.TestCounter.new();
       const v = counter.render();
       const root = document.createElement('div');
       v.mount(root);
@@ -189,7 +189,7 @@ export default await async function (_, $, $$, $test, $html) {
   $test.AsyncCase.new({
     name: 'EventListenerWorks',
     async do() {
-      const counter = $.TestCounter.new();
+      const counter = _.TestCounter.new();
       const v = counter.render();
       const root = document.createElement('div');
       v.mount(root);

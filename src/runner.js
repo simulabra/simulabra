@@ -3,18 +3,18 @@ import { join, dirname, relative } from 'path';
 import { __, base } from './base.js';
 import test from './test.js';
 
-await async function (_, $, $$, $test) {
-  $$.Class.new({
+await async function (_, $, $test) {
+  $.Class.new({
     name: 'TestTimer',
     slots: [
-      $$.Var.new({ name: 'start' }),
-      $$.After.new({
+      $.Var.new({ name: 'start' }),
+      $.After.new({
         name: 'init',
         do() {
           this.start(+new Date());
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'mark',
         do() {
           return `[${+new Date() - this.start()}ms]`;
@@ -23,19 +23,19 @@ await async function (_, $, $$, $test) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'TestRunner',
     slots: [
-      $$.Var.new({
+      $.Var.new({
         name: 'timer',
       }),
-      $$.After.new({
+      $.After.new({
         name: 'init',
         do() {
-          this.timer($.TestTimer.new({ name: 'runnerTimer' }));
+          this.timer(_.TestTimer.new({ name: 'runnerTimer' }));
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'runMod',
         async: true,
         async do(mod) {
@@ -54,7 +54,7 @@ await async function (_, $, $$, $test) {
           __.mod(baseMod);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'loadFile',
         async: true,
         async do(filePath) {
@@ -62,7 +62,7 @@ await async function (_, $, $$, $test) {
           return esm.default;
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'run',
         async: true,
         async do(path, testName) {
@@ -88,7 +88,7 @@ await async function (_, $, $$, $test) {
           this.log('done running');
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'log',
         override: true,
         do(...args) {
@@ -99,7 +99,7 @@ await async function (_, $, $$, $test) {
   });
 
   if (require.main === module) {
-    const runner = $.TestRunner.new();
+    const runner = _.TestRunner.new();
     const testName = process.argv[2];
     await runner.run('tests', testName);
     process.exit(0);

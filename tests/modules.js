@@ -1,16 +1,16 @@
 import { __, base } from '../src/base.js';
 import test from '../src/test.js';
 
-export default await async function (_, $, $$, $test) {
-  const a = function (_, $, $$) {
-    $$.Class.new({
+export default await async function (_, $, $test) {
+  const a = function (_, $) {
+    $.Class.new({
       name: 'A',
       slots: [
-        $$.Var.new({
+        $.Var.new({
           name: 'x',
           default: 1,
         }),
-        $$.Method.new({
+        $.Method.new({
           name: 'frob',
           do() {
             this.x(this.x() * 3);
@@ -23,12 +23,12 @@ export default await async function (_, $, $$, $test) {
     imports: [base],
   });
   await a.load();
-  const b = function (_, $, $$, $a) {
-    $$.Class.new({
+  const b = function (_, $, $a) {
+    $.Class.new({
       name: 'B',
       slots: [
         $a.A,
-        $$.After.new({
+        $.After.new({
           name: 'frob',
           do() {
             this.x(this.x() - 1);

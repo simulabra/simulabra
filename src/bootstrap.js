@@ -2,7 +2,7 @@ import { __, base } from './base.js';
 import html from './html.js';
 import llm from './llm.js';
 
-export default await async function(_, $, $$, $html, $llm) {
+export default await async function(_, $, $html, $llm) {
   const $el = $html.HTMLElement.proxy();
 
   // DEAR BOOTSTRAP WRITES THE REST OF YOUR CODE
@@ -10,28 +10,28 @@ export default await async function(_, $, $$, $html, $llm) {
   // - input text
   // - streaming assistant response
   // - links to code locations
-  $$.Class.new({
+  $.Class.new({
     name: 'ChatMessage',
     doc: 'a turn in a conversation between a user and an assistant',
     slots: [
       $html.Component,
-      $$.EnumVar.new({
+      $.EnumVar.new({
         name: 'role',
         doc: 'who is talking',
         choices: ['user', 'assistant'],
         default: 'user',
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'content',
         doc: 'what is being said',
         type: 'string',
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'streaming',
         doc: 'more to come',
         default: false,
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'streamData',
         doc: 'add new tokens from the response',
         run(data) {
@@ -39,13 +39,13 @@ export default await async function(_, $, $$, $html, $llm) {
           this.streaming(true);
         },
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'streamEnd',
         run() {
           this.streaming(false);
         },
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'render',
         do: function render() {
           return `${this.role}: ${this.content}${this.streaming() ? '^' : ''}`;
@@ -54,7 +54,7 @@ export default await async function(_, $, $$, $html, $llm) {
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'ChatList',
     doc: 'the back and forth conversation between a user and an llm assistant',
     slots: [
@@ -62,23 +62,23 @@ export default await async function(_, $, $$, $html, $llm) {
       $html.ListElement.new({
         name: 'messages',
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'streamBegin',
         doc: 'show loading indicator',
         run() {
-          const streamingMessage = $.ChatMessage.new({ name: 'streamingMessage', role: 'assistant', content: '', streaming: true });
+          const streamingMessage = _.ChatMessage.new({ name: 'streamingMessage', role: 'assistant', content: '', streaming: true });
           this.messages().push(streamingMessage);
           return streamingMessage;
         },
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'conversation',
         doc: 'get the API-formatted conversation of a chat in a pojso',
         do: function conversation() {
           return this.messages().map(m => ({ role: m.role(), content: m.content() }));
         },
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'render',
         do: function render() {
           return this.messages().join('\n');
@@ -87,19 +87,19 @@ export default await async function(_, $, $$, $html, $llm) {
     ],
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'Chat',
     slots: [
       $html.Component,
       $html.Window,
-      $.ChatList.new({
+      _.ChatList.new({
         name: 'messages',
       }),
       $html.Input.new({
         name: 'chatInput',
         placeholder: 'Message bootstrap...',
       }),
-      $$.Command.new({
+      $.Command.new({
         name: 'ask',
         doc: 'submit a user message to a conversational agent',
         run(prompt) {
@@ -117,7 +117,7 @@ export default await async function(_, $, $$, $html, $llm) {
           });
         },
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'chatRequest',
         do: async function chatRequest(conversation) {
           // send chat request
@@ -133,10 +133,10 @@ export default await async function(_, $, $$, $html, $llm) {
             }),
           });
           const json = await res.json();
-          return $.PyserverCompletionResults.new(json);
+          return _.PyserverCompletionResults.new(json);
         },
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'render',
         do: function render() {
           return this.messages().render() + '\n\n' + this.chatInput().render();

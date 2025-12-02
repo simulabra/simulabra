@@ -3,23 +3,23 @@ import { createServer } from 'http';
 import fetch from 'node-fetch';
 import { readFileSync } from 'fs';
 
-export default await async function (_, $, $$) {
-  $$.Class.new({
+export default await async function (_, $) {
+  $.Class.new({
     name: 'HTTPRequest',
     slots: [
-      $$.Var.new({
+      $.Var.new({
         name: 'inner'
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'start'
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'elapsed',
         do() {
           return +new Date() - +this.start();
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'drain',
         do: function drain() {
           const req = this.inner();
@@ -44,13 +44,13 @@ export default await async function (_, $, $$) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: 'HTTPResponse',
     slots: [
-      $$.Var.new({
+      $.Var.new({
         name: 'inner'
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'ok',
         do(message, ct = 'text/html') {
           this.inner().writeHead(200, { 'Content-type': ct });
@@ -59,25 +59,25 @@ export default await async function (_, $, $$) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: 'HTTPServer',
     slots: [
-      $$.Var.new({ name: 'nodeServer' }),
-      $$.Var.new({
+      $.Var.new({ name: 'nodeServer' }),
+      $.Var.new({
         name: 'port',
         default: '3034',
       }),
-      $$.Var.new({
+      $.Var.new({
         name: 'slots',
         default: [],
       }),
-      $$.After.new({
+      $.After.new({
         name: 'init',
         do() {
           this.nodeServer(createServer((req, res) => {
             for (const handler of this.slots()) {
               if (handler.match(req.url)) {
-                return handler.handle(this, $.HTTPRequest.new({ inner: req, start: new Date() }), $.HTTPResponse.new({ inner: res }));
+                return handler.handle(this, _.HTTPRequest.new({ inner: req, start: new Date() }), _.HTTPResponse.new({ inner: res }));
               }
             }
             res.writeHead(404);
@@ -88,22 +88,22 @@ export default await async function (_, $, $$) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: 'RequestHandler',
     slots: [
-      $$.Virtual.new({
+      $.Virtual.new({
         name: 'match'
       }),
-      $$.Virtual.new({
+      $.Virtual.new({
         name: 'handle',
       }),
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'HandlerLogger',
     slots: [
-      $$.After.new({
+      $.After.new({
         name: 'handle',
         do(app, req, res) {
           this.log(`handle ${req.inner().url} in ${req.elapsed()} ms`);
@@ -111,13 +111,13 @@ export default await async function (_, $, $$) {
       })
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: 'VarHandler',
     slots: [
-      $$.Var.new({
+      $.Var.new({
         name: 'handler',
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'handle',
         do(...args) {
           this.handler().apply(this, args)
@@ -125,16 +125,16 @@ export default await async function (_, $, $$) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: 'PathRequestHandler',
     slots: [
-      $.RequestHandler,
-      $.VarHandler,
-      $.HandlerLogger,
-      $$.Var.new({
+      _.RequestHandler,
+      _.VarHandler,
+      _.HandlerLogger,
+      $.Var.new({
         name: 'path',
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'match',
         do(url) {
           return this.path() === url;
@@ -142,14 +142,14 @@ export default await async function (_, $, $$) {
       }),
     ]
   });
-  $$.Class.new({
+  $.Class.new({
     name: 'FiletypeRequestHandler',
     slots: [
-      $.RequestHandler,
-      $.HandlerLogger,
-      $$.Var.new({ name: 'filetypes' }),
-      $$.Var.new({ name: 'mimeType' }),
-      $$.Method.new({
+      _.RequestHandler,
+      _.HandlerLogger,
+      $.Var.new({ name: 'filetypes' }),
+      $.Var.new({ name: 'mimeType' }),
+      $.Method.new({
         name: 'match',
         do(url) {
           const filetype = /\.([^\.]+)$/.exec(url)[1];
@@ -157,7 +157,7 @@ export default await async function (_, $, $$) {
           return this.filetypes().includes(filetype);
         }
       }),
-      $$.Method.new({
+      $.Method.new({
         name: 'handle',
         do: function handle(app, req, res) {
           const path = req.inner().url;
@@ -168,15 +168,15 @@ export default await async function (_, $, $$) {
     ]
   });
 
-  $$.Class.new({
+  $.Class.new({
     name: 'HTTPRequestCommand',
     slots: [
-      $$.Command,
-      $$.Var.new({ name: 'url' }),
-      $$.Var.new({ name: 'Method' }),
-      $$.Var.new({ name: 'responseType' }),
-      $$.Var.new({ name: 'data' }),
-      $$.Method.new({
+      $.Command,
+      $.Var.new({ name: 'url' }),
+      $.Var.new({ name: 'Method' }),
+      $.Var.new({ name: 'responseType' }),
+      $.Var.new({ name: 'data' }),
+      $.Method.new({
         name: 'run',
         async: true,
         do: async function run() {
