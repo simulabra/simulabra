@@ -40,6 +40,11 @@ export default await async function (_, $, $html) {
         doc: "run threads sequentially instead of in parallel",
         default: false,
       }),
+      $.Signal.new({
+        name: "imageData",
+        doc: "base64-encoded image data for multimodal prompts",
+        default: null,
+      }),
       $.Method.new({
         name: "toggleSettings",
         do() {
@@ -74,21 +79,34 @@ export default await async function (_, $, $html) {
         name: "completion",
         async: true,
         do: async function completion(prompt, config = {}) {
-          const body = {
-            prompt,
-            ...config
-          };
           const headers = {
             "Content-Type": "application/json",
           };
-          this.transformRequest(body, headers);
-          const res = await fetch(`${this.baseURL()}/v1/completions`, {
+          let endpoint, body;
+          if (this.imageData()) {
+            endpoint = `${this.baseURL()}/completion`;
+            body = {
+              prompt: {
+                prompt_string: `<__media__>\n\n${prompt}`,
+                multimodal_data: [this.imageData()]
+              },
+              ...config
+            };
+          } else {
+            endpoint = `${this.baseURL()}/v1/completions`;
+            body = {
+              prompt,
+              ...config
+            };
+            this.transformRequest(body, headers);
+          }
+          const res = await fetch(endpoint, {
             method: "POST",
             body: JSON.stringify(body),
             headers,
           });
           const json = await res.json();
-          const text = json.choices[0].text;
+          const text = this.imageData() ? json.content : json.choices[0].text;
           if (json) {
             const logprobs = this.logprobs(json);
             return { text, logprobs };
@@ -127,6 +145,37 @@ export default await async function (_, $, $html) {
         }
       }),
       $.Method.new({
+        name: "handleImageSelect",
+        do(e) {
+          const file = e.target.files[0];
+          if (!file) {
+            this.imageData(null);
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            this.imageData(base64);
+          };
+          reader.readAsDataURL(file);
+        }
+      }),
+      $.Method.new({
+        name: "renderImagePicker",
+        do() {
+          return $html.HTML.t`<div class="loom-col">
+            <label>image <input
+              type="file"
+              accept="image/*"
+              onchange=${e => this.handleImageSelect(e)} /></label>
+            <div hidden=${() => !this.imageData()}>
+              <img class="image-preview" src=${() => this.imageData() ? 'data:image/jpeg;base64,' + this.imageData() : ''} />
+              <button onclick=${() => this.imageData(null)}>clear image</button>
+            </div>
+          </div>`;
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`<span>
@@ -137,6 +186,7 @@ export default await async function (_, $, $html) {
                 ${this.renderInput("apiKey", "secret!", "api key")}
                 ${this.renderInput("model", "eg davinci-002", "model")}
                 ${this.renderCheckbox("sequential", "run threads sequentially")}
+                ${this.renderImagePicker()}
                 ${() => this.store()}
               </div>
           </span>`;
@@ -145,6 +195,9 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "logprobs",
         do(res) {
+          if (!res.choices) {
+            return null;
+          }
           const lp = res.choices[0].logprobs;
           if (!lp) {
             this.log("no logprobs on completion response");
