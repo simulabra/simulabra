@@ -107,12 +107,8 @@ export default await async function (_, $, $html) {
           });
           const json = await res.json();
           const text = this.imageData() ? json.content : json.choices[0].text;
-          if (json) {
-            const logprobs = this.logprobs(json);
-            return { text, logprobs };
-          } else {
-            return { text };
-          }
+          const logprobs = this.logprobs(json);
+          return { text, logprobs };
         }
       }),
       $.Method.new({
@@ -164,9 +160,10 @@ export default await async function (_, $, $html) {
         name: "renderImagePicker",
         do() {
           return $html.HTML.t`<div class="loom-col">
-            <label>image <input
+            <label class="button">upload image<input
               type="file"
               accept="image/*"
+              hidden
               onchange=${e => this.handleImageSelect(e)} /></label>
             <div hidden=${() => !this.imageData()}>
               <img class="image-preview" src=${() => this.imageData() ? 'data:image/jpeg;base64,' + this.imageData() : ''} />
@@ -196,15 +193,11 @@ export default await async function (_, $, $html) {
         name: "logprobs",
         do(res) {
           if (!res.choices) {
-            return null;
+            return res.completion_probabilities[0].top_logprobs;
           }
+
           const lp = res.choices[0].logprobs;
-          if (!lp) {
-            this.log("no logprobs on completion response");
-            console.log(res);
-            return null;
-          }
-          if (/*llama.cpp server*/lp.content && Array.isArray(lp.content) && lp.content[0]?.top_logprobs) {
+          if (/*llama.cpp server - openai*/lp.content && Array.isArray(lp.content) && lp.content[0]?.top_logprobs) {
             return lp.content[0].top_logprobs;
           }
           const tl = lp.top_logprobs;
@@ -329,7 +322,7 @@ export default await async function (_, $, $html) {
           return {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
-            logprobs: 20
+            logprobs: 40
           };
         }
       }),
@@ -437,10 +430,10 @@ export default await async function (_, $, $html) {
         async: true,
         do: async function() {
           this.text("");
-          this.loom().logprobs(null);
           try {
             const { text, logprobs } = await this.loom().client().completion(this.loom().text(), this.config().json());
             this.text(text);
+            console.log(logprobs);
             if (logprobs) {
               this.loom().logprobs(this.normaliseLogprobs(logprobs));
             } else {
@@ -614,12 +607,14 @@ export default await async function (_, $, $html) {
           for (const thread of this.threads()) {
             thread.text("");
           }
+          this.logprobs(null);
         }
       }),
       $.Method.new({
         name: "spinThreads",
         async: true,
         do: async function() {
+          this.clearThreads();
           if (this.client().sequential()) {
             for (const thread of this.threads()) {
               await thread.spin();

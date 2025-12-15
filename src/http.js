@@ -1,6 +1,5 @@
 import { __, base } from './base.js';
 import { createServer } from 'http';
-import fetch from 'node-fetch';
 import { readFileSync } from 'fs';
 
 export default await async function (_, $) {

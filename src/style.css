@@ -111,6 +111,34 @@ button:active {
     background: var(--wood);
 }
 
+label.button {
+    background: var(--sand);
+    border: 0;
+    box-shadow: var(--box-shadow-args);
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--seaweed);
+    width: fit-content;
+    height: fit-content;
+}
+
+label.button:disabled {
+  background: var(--wood);
+}
+
+label.button:not(:disabled):hover {
+    box-shadow: var(--box-shadow-args),   /* outer frame */
+                var(--box-shadow-args-inset); /* inner glow */
+}
+
+label.button:active {
+    background: var(--wood);
+}
+
+.image-preview {
+    max-width: 480px;
+}
+
 select {
     background: var(--seashell);
     /*border: 1px solid var(--charcoal);*/

@@ -1,6 +1,6 @@
 {
   "name": "simulabra",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "repository": "simulabra/simulabra",
   "type": "module",
   "exports": {
@@ -13,13 +13,5 @@
     "test": "bun run src/runner.js",
     "agent": "watchexec -w . -e js -r -- bun run src/agent.js",
     "serve": "bun run src/agent.js"
-  },
-  "devDependencies": {
-    "bun-types": "^0.1.11",
-    "mitata": "^0.1.14",
-    "prettier": "^3.5.3"
-  },
-  "dependencies": {
-    "node-fetch": "^3.3.2"
   }
 }
