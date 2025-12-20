@@ -3,8 +3,8 @@ function bootstrap() {
   if (__?._bootstrapped) {
     return __.base();
   }
-  console.log(`STARTING SIMULABRA: INFINITE SOFTWARE
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%`);
+  console.error(`SIMULABRA: INFINITE SOFTWARE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%`);
   globalThis.SIMULABRA = {
     mod() {
       return this._mod;
@@ -677,6 +677,7 @@ function bootstrap() {
     name: 'Var',
     slots: [
       BProperty.new({ name: 'name', }),
+      BVar.new({ name: 'doc' }),
       BVar.new({ name: 'debug', default: true }),
       BVar.new({ name: 'trace', default: false }),
       BVar.new({ name: 'default', }),
@@ -718,6 +719,7 @@ function bootstrap() {
     name: 'Property',
     slots: [
       BProperty.new({ name: 'name', }),
+      BVar.new({ name: 'doc' }),
       BVar.new({ name: 'debug', default: true }),
       BVar.new({ name: 'trace', default: false }),
       BVar.new({ name: 'default', }),
@@ -767,6 +769,7 @@ function bootstrap() {
     name: 'Static',
     slots: [
       $Fn,
+      $Var.new({ name: 'doc' }),
       function load(proto) {
         let fn = this.do();
         if (typeof fn !== 'function') {
@@ -832,6 +835,7 @@ function bootstrap() {
     slots: [
       $Fn,
       $Property.new({ name: 'name' }),
+      $Var.new({ name: 'doc' }),
       $Var.new({ name: 'debug', default: true }),
       function combine(impl) {
         if (impl.__name !== this.name) {
@@ -855,6 +859,7 @@ function bootstrap() {
     slots: [
       $Fn,
       $Property.new({ name: 'name' }),
+      $Var.new({ name: 'doc' }),
       function combine(impl) {
         impl.__befores.push(this.do());
       }
@@ -866,6 +871,7 @@ function bootstrap() {
     slots: [
       $Fn,
       $Property.new({ name: 'name' }),
+      $Var.new({ name: 'doc' }),
       function combine(impl) {
         impl.__afters.unshift(this.do());
       }
@@ -876,6 +882,7 @@ function bootstrap() {
     name: 'Virtual',
     slots: [
       $Property.new({ name: 'name' }),
+      $Var.new({ name: 'doc' }),
       function load(parent) {
         self = this;
         parent._proto[this.name] = function () { throw new Error(`not implemented: ${self.name}`); };
@@ -1408,6 +1415,7 @@ function bootstrap() {
     name: 'Constant',
     slots: [
       $.Var.new({ name: 'value' }),
+      $.Var.new({ name: 'doc' }),
       function combine(impl) {
         const self = this;
         impl.__primary = function constantAccess() {
