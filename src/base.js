@@ -3,8 +3,8 @@ function bootstrap() {
   if (__?._bootstrapped) {
     return __.base();
   }
-  console.error(`SIMULABRA: INFINITE SOFTWARE
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%`);
+//   console.error(`SIMULABRA: INFINITE SOFTWARE
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%`);
   globalThis.SIMULABRA = {
     mod() {
       return this._mod;

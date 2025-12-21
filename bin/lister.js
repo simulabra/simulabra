@@ -101,17 +101,68 @@ export default await async function (_, $) {
         do(source) {
           const lineMap = {};
           const lines = source.split('\n');
+
           for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             // Look for $.Class.new({ or Class.new({ patterns
             if (/\.Class\.new\s*\(\s*\{/.test(line)) {
-              // Search nearby lines for name: 'ClassName' or name: "ClassName"
+              const startLine = i + 1; // 1-indexed
+              let className = null;
+
+              // Search nearby lines for name: 'ClassName'
               for (let j = i; j < Math.min(i + 5, lines.length); j++) {
                 const nameMatch = lines[j].match(/name:\s*['"]([^'"]+)['"]/);
                 if (nameMatch) {
-                  lineMap[nameMatch[1]] = i + 1; // 1-indexed line number
+                  className = nameMatch[1];
                   break;
                 }
+              }
+
+              if (className) {
+                // Find end by counting braces
+                let braceCount = 0;
+                let started = false;
+                let endLine = startLine;
+
+                for (let j = i; j < lines.length; j++) {
+                  const chars = lines[j];
+                  let inString = false;
+                  let stringChar = null;
+
+                  for (let k = 0; k < chars.length; k++) {
+                    const c = chars[k];
+                    const prev = k > 0 ? chars[k-1] : '';
+
+                    // Handle string boundaries (skip escaped quotes)
+                    if ((c === '"' || c === "'" || c === '`') && prev !== '\\') {
+                      if (!inString) {
+                        inString = true;
+                        stringChar = c;
+                      } else if (c === stringChar) {
+                        inString = false;
+                        stringChar = null;
+                      }
+                      continue;
+                    }
+
+                    if (inString) continue;
+
+                    if (c === '{') {
+                      braceCount++;
+                      started = true;
+                    } else if (c === '}') {
+                      braceCount--;
+                      if (started && braceCount === 0) {
+                        endLine = j + 1; // 1-indexed
+                        break;
+                      }
+                    }
+                  }
+
+                  if (started && braceCount === 0) break;
+                }
+
+                lineMap[className] = { start: startLine, end: endLine };
               }
             }
           }
@@ -159,8 +210,11 @@ export default await async function (_, $) {
       }),
       $.Method.new({
         name: 'formatClass',
-        do(cls, lineNum) {
-          const header = lineNum ? `${cls.name}:${lineNum}` : cls.name;
+        do(cls, lineInfo) {
+          let header = cls.name;
+          if (lineInfo) {
+            header = `${cls.name}:${lineInfo.start}-${lineInfo.end}`;
+          }
           const lines = [header];
           for (const slot of cls.slots()) {
             if (slot.class?.().name === 'Class') continue;
@@ -172,7 +226,7 @@ export default await async function (_, $) {
       }),
       $.Method.new({
         name: 'listClasses',
-        do(mod, lineMap = {}) {
+        do(mod, lineMap = {}, filter = null) {
           if (!mod || typeof mod.registry !== 'function') {
             return '(no classes found - module has no registry)';
           }
@@ -180,7 +234,15 @@ export default await async function (_, $) {
           if (!registry) {
             return '(no classes found - registry is null)';
           }
-          const classes = registry.instances($.Class);
+          let classes = registry.instances($.Class);
+          if (filter) {
+            classes = classes.filter(cls => cls.name === filter);
+          }
+          if (classes.length === 0) {
+            return filter
+              ? `(no classes matching '${filter}')`
+              : '(no classes found)';
+          }
           return classes
             .map(cls => this.formatClass(cls, lineMap[cls.name]))
             .join('\n\n');
@@ -189,12 +251,12 @@ export default await async function (_, $) {
       $.Method.new({
         name: 'run',
         async: true,
-        async do(filePath) {
+        async do(filePath, filter = null) {
           const absolutePath = resolve(filePath);
           const source = readFileSync(absolutePath, 'utf-8');
           const lineMap = this.extractClassLines(source);
           const mod = await this.loadFile(absolutePath);
-          const output = this.listClasses(mod, lineMap);
+          const output = this.listClasses(mod, lineMap, filter);
           console.log(output);
         }
       }),
@@ -203,12 +265,13 @@ export default await async function (_, $) {
 
   if (require.main === module) {
     const filePath = process.argv[2];
+    const filter = process.argv[3] || null;
     if (!filePath) {
-      console.error('Usage: bun run bin/lister.js <file.js>');
+      console.error('Usage: bun run bin/lister.js <file.js> [class-filter]');
       process.exit(1);
     }
     const lister = _.ModuleLister.new();
-    await lister.run(filePath);
+    await lister.run(filePath, filter);
     process.exit(0);
   }
 }.module({

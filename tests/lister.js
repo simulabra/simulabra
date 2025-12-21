@@ -27,7 +27,7 @@ export default await async function (_, $, $test) {
     doc: 'runs bin/lister.js on tests/core.js and validates output',
     async do() {
       const output = await bun.$`bun run bin/lister.js tests/lister.js`.text();
-      this.assert(output === `ThisIsATest:7
+      this.assert(output === `ThisIsATest:7-23
   $.Var#frob the frob thing
   $.Method#grobnicate what it says on the tin
 `)
@@ -45,6 +45,19 @@ export default await async function (_, $, $test) {
       this.assert(output.includes('$.Method#inc'), 'output should contain inc method');
       this.assert(output.includes('CounterList'), 'output should contain CounterList class');
       this.assert(output.includes('App'), 'output should contain App class');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ListerFilterTest',
+    doc: 'runs bin/lister.js with class filter and validates exact match',
+    async do() {
+      const output = await bun.$`bun run bin/lister.js tests/core.js Point`.text();
+      this.assert(output === `Point:10-20
+  $.Var#x
+  $.Var#y
+  $.Method#dist
+`, 'should return only the Point class');
     }
   });
 }.module({
