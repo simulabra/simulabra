@@ -45,6 +45,11 @@ export default await async function (_, $, $html) {
         doc: "base64-encoded image data for multimodal prompts",
         default: null,
       }),
+      $.Signal.new({
+        name: "logprobs",
+        doc: "number of log probabilities to return",
+        default: 20,
+      }),
       $.Method.new({
         name: "toggleSettings",
         do() {
@@ -67,11 +72,12 @@ export default await async function (_, $, $html) {
           const config = this.store().get(id);
           if (config) {
             localStorage.setItem("loom-config-selected", id);
-            const { baseURL, apiKey, model, sequential } = config;
+            const { baseURL, apiKey, model, sequential, logprobs } = config;
             this.baseURL(baseURL);
             this.apiKey(apiKey);
             this.model(model);
             this.sequential(sequential ?? false);
+            this.logprobs(logprobs ?? 20);
           }
         }
       }),
@@ -90,12 +96,14 @@ export default await async function (_, $, $html) {
                 prompt_string: `<__media__>\n\n${prompt}`,
                 multimodal_data: [this.imageData()]
               },
+              logprobs: this.logprobs(),
               ...config
             };
           } else {
             endpoint = `${this.baseURL()}/v1/completions`;
             body = {
               prompt,
+              logprobs: this.logprobs(),
               ...config
             };
             this.transformRequest(body, headers);
@@ -107,7 +115,7 @@ export default await async function (_, $, $html) {
           });
           const json = await res.json();
           const text = this.imageData() ? json.content : json.choices[0].text;
-          const logprobs = this.logprobs(json);
+          const logprobs = this.parseLogprobs(json);
           return { text, logprobs };
         }
       }),
@@ -138,6 +146,16 @@ export default await async function (_, $, $html) {
             type="checkbox"
             onchange=${e => this[id](document.getElementById(htmlId).checked)}
             checked=${() => this[id]()} /></label></div>`;
+        }
+      }),
+      $.Method.new({
+        name: "renderNumberInput",
+        do(id, label) {
+          return $html.HTML.t`<div>${label} <input
+            type="number"
+            min="0"
+            onchange=${e => this[id](+e.target.value)}
+            value=${() => this[id]()} /></div>`;
         }
       }),
       $.Method.new({
@@ -182,6 +200,7 @@ export default await async function (_, $, $html) {
                 ${this.renderInput("baseURL", "eg https://api.openai.com", "base url")}
                 ${this.renderInput("apiKey", "secret!", "api key")}
                 ${this.renderInput("model", "eg davinci-002", "model")}
+                ${this.renderNumberInput("logprobs", "logprobs")}
                 ${this.renderCheckbox("sequential", "run threads sequentially")}
                 ${this.renderImagePicker()}
                 ${() => this.store()}
@@ -190,7 +209,7 @@ export default await async function (_, $, $html) {
         }
       }),
       $.Method.new({
-        name: "logprobs",
+        name: "parseLogprobs",
         do(res) {
           if (!res.choices) {
             return res.completion_probabilities[0].top_logprobs;
@@ -267,6 +286,7 @@ export default await async function (_, $, $html) {
             apiKey: client.apiKey(),
             model: client.model(),
             sequential: client.sequential(),
+            logprobs: client.logprobs(),
           };
           localStorage.setItem("loom-config-selected", client.id());
           this.updateStore(store);
@@ -322,7 +342,6 @@ export default await async function (_, $, $html) {
           return {
             temperature: this.temperature(),
             max_tokens: this.max_tokens(),
-            logprobs: 40
           };
         }
       }),
@@ -574,6 +593,9 @@ export default await async function (_, $, $html) {
                 e.preventDefault();
                 textarea.blur();
               }
+              return;
+            }
+            if (document.activeElement?.tagName === 'INPUT') {
               return;
             }
             const key = e.key;

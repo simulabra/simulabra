@@ -1,6 +1,6 @@
 ---
-name: list
-description: List classes and slots in a Simulabra module file
+name: list-classes
+description: Examine the shape of Simulabra classes and locate them by line number
 allowed-tools: Bash
 ---
 
