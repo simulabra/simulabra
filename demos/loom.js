@@ -72,12 +72,11 @@ export default await async function (_, $, $html) {
           const config = this.store().get(id);
           if (config) {
             localStorage.setItem("loom-config-selected", id);
-            const { baseURL, apiKey, model, sequential, logprobs } = config;
-            this.baseURL(baseURL);
-            this.apiKey(apiKey);
-            this.model(model);
-            this.sequential(sequential ?? false);
-            this.logprobs(logprobs ?? 20);
+            this.baseURL(config._baseURL);
+            this.apiKey(config._apiKey);
+            this.model(config._model);
+            this.sequential(config._sequential ?? false);
+            this.logprobs(config._logprobs ?? 20);
           }
         }
       }),
@@ -244,6 +243,21 @@ export default await async function (_, $, $html) {
   });
 
   $.Class.new({
+    name: "ConfigValue",
+    doc: "stored API client configuration",
+    slots: [
+      $.Var.new({
+        name: "baseURL",
+        required: true
+      }),
+      $.Var.new({ name: "apiKey" }),
+      $.Var.new({ name: "model" }),
+      $.Var.new({ name: "sequential", default: false }),
+      $.Var.new({ name: "logprobs", default: 20 }),
+    ]
+  });
+
+  $.Class.new({
     name: "ConfigStore",
     doc: "manages saved configs in localStorage",
     slots: [
@@ -266,7 +280,7 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "get",
         do(id) {
-          return this.fetchStore()[id];
+          return _.ConfigValue.new(this.fetchStore()[id]);
         }
       }),
       $.Method.new({

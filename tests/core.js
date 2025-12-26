@@ -358,6 +358,48 @@ export default await async function (_, $, $test) {
   });
 
   $.Class.new({
+    name: 'RequiredVarTest',
+    slots: [
+      $.Var.new({ name: 'required_field', required: true }),
+      $.Var.new({ name: 'optional_field' }),
+    ]
+  });
+
+  $test.Case.new({
+    name: 'RequiredVarProvided',
+    doc: 'Tests that providing a required var allows object creation.',
+    do() {
+      const obj = _.RequiredVarTest.new({ required_field: 'value' });
+      this.assertEq(obj.required_field(), 'value', 'Required field should be set');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RequiredVarMissing',
+    doc: 'Tests that omitting a required var throws an error during object creation.',
+    do() {
+      const errorMessage = this.assertThrows(
+        () => { _.RequiredVarTest.new({ optional_field: 'optional' }); },
+        "Required var 'required_field' not provided",
+        'Should have thrown error for missing required var'
+      );
+      this.assertErrorMessageIncludes(errorMessage, 'RequiredVarTest');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RequiredVarNullValue',
+    doc: 'Tests that providing undefined for a required var throws an error.',
+    do() {
+      this.assertThrows(
+        () => { _.RequiredVarTest.new({ required_field: undefined }); },
+        "Required var 'required_field' not provided",
+        'Should have thrown error for undefined required var'
+      );
+    }
+  });
+
+  $.Class.new({
     name: 'VirtualBase',
     slots: [
       $.Virtual.new({ name: 'mustImplement' }),

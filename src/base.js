@@ -231,6 +231,12 @@ function bootstrap() {
         }
         return this[key];
       });
+      Object.defineProperty(proto._proto, '_' + self.name, {
+        get() { return this[self.name](); },
+        set(value) { return this[self.name](value); },
+        enumerable: true,
+        configurable: true
+      });
     }
     defval() {
       return typeof this.__desc.default === 'function' ? this.__desc.default.apply(this) : this.__desc.default;
@@ -246,6 +252,8 @@ function bootstrap() {
     }
     isa(it) {
       return it === BVar;
+    }
+    initInstance(inst) {
     }
   }
 
@@ -304,6 +312,8 @@ function bootstrap() {
     }
     isa(it) {
       return it === BProperty;
+    }
+    initInstance(inst) {
     }
   }
 
@@ -675,6 +685,7 @@ function bootstrap() {
   // a missing middle
   var $Var = $Class.new({
     name: 'Var',
+    fullSlot: true,
     slots: [
       BProperty.new({ name: 'name', }),
       BVar.new({ name: 'doc' }),
@@ -711,12 +722,19 @@ function bootstrap() {
         impl.__properties = [{ name: this.name }];
       },
       function initInstance(inst) {
+        if (this.required()) {
+          const key = '__' + this.name;
+          if (!(key in inst) || inst[key] === undefined) {
+            throw new Error(`Required var '${this.name}' not provided for ${inst.class().name}`);
+          }
+        }
       }
     ]
   });
 
   const $Property = $Class.new({
     name: 'Property',
+    fullSlot: true,
     slots: [
       BProperty.new({ name: 'name', }),
       BVar.new({ name: 'doc' }),
@@ -754,6 +772,12 @@ function bootstrap() {
         });
       },
       function initInstance(inst) {
+        if (this.required()) {
+          const key = '__' + this.name;
+          if (!(key in inst) || inst[key] === undefined) {
+            throw new Error(`Required property '${this.name}' not provided for ${inst.class().name}`);
+          }
+        }
       }
     ]
   });
