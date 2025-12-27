@@ -359,6 +359,7 @@ export default await async function (_, $, $html) {
       }),
     ]
   });
+
   $.Class.new({
     name: "TextCompletion",
     slots: [
@@ -381,6 +382,7 @@ export default await async function (_, $, $html) {
       }),
     ]
   });
+
   $.Class.new({
     name: "Thread",
     slots: [
