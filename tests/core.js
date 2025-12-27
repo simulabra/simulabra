@@ -658,6 +658,49 @@ export default await async function (_, $, $test) {
       this.assert(!json.hasOwnProperty('tags'), 'jsonify should not include unset values');
     }
   });
+
+  $.Class.new({
+    name: 'ServerConfig',
+    slots: [
+      $.Configurable,
+      $.ConfigSignal.new({ name: 'host', default: 'localhost' }),
+      $.ConfigSignal.new({ name: 'port', default: 8080 }),
+      $.Signal.new({ name: 'connected', default: false }),
+    ]
+  });
+
+  $test.Case.new({
+    name: 'ConfigSignalBasic',
+    doc: 'Tests that ConfigSignal slots are collected and serialized via Configurable mixin.',
+    do() {
+      const cfg = _.ServerConfig.new({ host: 'example.com', port: 3000 });
+      cfg.connected(true);
+
+      const slots = cfg.configSlots();
+      this.assertEq(slots.length, 2, 'Should find exactly 2 ConfigSignal slots');
+      this.assert(slots.some(s => s.name === 'host'), 'Should include host slot');
+      this.assert(slots.some(s => s.name === 'port'), 'Should include port slot');
+
+      const json = cfg.configJSON();
+      this.assertEq(json.host, 'example.com', 'configJSON should include host');
+      this.assertEq(json.port, 3000, 'configJSON should include port');
+      this.assert(!json.hasOwnProperty('connected'), 'configJSON should exclude regular Signal');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ConfigLoadRestoresValues',
+    doc: 'Tests that configLoad restores ConfigSignal values from JSON.',
+    do() {
+      const cfg = _.ServerConfig.new();
+      this.assertEq(cfg.host(), 'localhost', 'Should have default host');
+      this.assertEq(cfg.port(), 8080, 'Should have default port');
+
+      cfg.configLoad({ host: 'prod.server.com', port: 443 });
+      this.assertEq(cfg.host(), 'prod.server.com', 'configLoad should update host');
+      this.assertEq(cfg.port(), 443, 'configLoad should update port');
+    }
+  });
 }.module({
   name: 'test.core',
   imports: [base, test],

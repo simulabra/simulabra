@@ -4,31 +4,42 @@ import html from "../src/html.js";
 import { __, base } from "../src/base.js";
 
 export default await async function (_, $, $html) {
-  $.Class.new({ // declarative class definitions
+  $.Class.new({
     name: "OpenAIAPIClient",
     doc: "consume and configure an openai-compatible api",
-    slots: [ // slot-based system like CLOS
-      $html.Component, // slot-based inheritance
-      $.Signal.new({ // reactive signal slot
+    slots: [
+      $html.Component,
+      $.Configurable,
+      $.Signal.new({
         name: "showSettings",
         doc: "show api settings",
-        default: true, // default value
+        default: true,
       }),
-      $.Signal.new({
+      $.ConfigSignal.new({
         name: "apiKey",
         doc: "api credential (100% not leaked)"
       }),
-      $.Signal.new({
+      $.ConfigSignal.new({
         name: "baseURL",
         doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
         default: "https://api.openai.com"
       }),
-      $.Signal.new({
+      $.ConfigSignal.new({
         name: "model",
         doc: "which model to use with the completions endpoint",
         default: "davinci-002"
       }),
-      $.Constant.new({ // constant slot, same across all instances of class
+      $.ConfigSignal.new({
+        name: "sequential",
+        doc: "run threads sequentially instead of in parallel",
+        default: false,
+      }),
+      $.ConfigSignal.new({
+        name: "logprobs",
+        doc: "number of log probabilities to return",
+        default: 20,
+      }),
+      $.Constant.new({
         name: "display",
         value: "generic openai-compatible api",
       }),
@@ -36,19 +47,9 @@ export default await async function (_, $, $html) {
         name: "store",
       }),
       $.Signal.new({
-        name: "sequential",
-        doc: "run threads sequentially instead of in parallel",
-        default: false,
-      }),
-      $.Signal.new({
         name: "imageData",
         doc: "base64-encoded image data for multimodal prompts",
         default: null,
-      }),
-      $.Signal.new({
-        name: "logprobs",
-        doc: "number of log probabilities to return",
-        default: 20,
       }),
       $.Method.new({
         name: "toggleSettings",
@@ -69,14 +70,10 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "loadId",
         do(id) {
-          const config = this.store().get(id);
-          if (config) {
+          const data = this.store().get(id);
+          if (data) {
             localStorage.setItem("loom-config-selected", id);
-            this.baseURL(config._baseURL);
-            this.apiKey(config._apiKey);
-            this.model(config._model);
-            this.sequential(config._sequential ?? false);
-            this.logprobs(config._logprobs ?? 20);
+            this.configLoad(data);
           }
         }
       }),
@@ -243,21 +240,6 @@ export default await async function (_, $, $html) {
   });
 
   $.Class.new({
-    name: "ConfigValue",
-    doc: "stored API client configuration",
-    slots: [
-      $.Var.new({
-        name: "baseURL",
-        required: true
-      }),
-      $.Var.new({ name: "apiKey" }),
-      $.Var.new({ name: "model" }),
-      $.Var.new({ name: "sequential", default: false }),
-      $.Var.new({ name: "logprobs", default: 20 }),
-    ]
-  });
-
-  $.Class.new({
     name: "ConfigStore",
     doc: "manages saved configs in localStorage",
     slots: [
@@ -280,7 +262,7 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "get",
         do(id) {
-          return _.ConfigValue.new(this.fetchStore()[id]);
+          return this.fetchStore()[id];
         }
       }),
       $.Method.new({
@@ -295,13 +277,7 @@ export default await async function (_, $, $html) {
         name: "save",
         do(client) {
           let store = this.fetchStore();
-          store[client.id()] = {
-            baseURL: client.baseURL(),
-            apiKey: client.apiKey(),
-            model: client.model(),
-            sequential: client.sequential(),
-            logprobs: client.logprobs(),
-          };
+          store[client.id()] = client.configJSON();
           localStorage.setItem("loom-config-selected", client.id());
           this.updateStore(store);
         }

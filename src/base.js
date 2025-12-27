@@ -1436,6 +1436,45 @@ function bootstrap() {
   });
 
   $.Class.new({
+    name: 'ConfigSignal',
+    doc: 'a signal that participates in serialization via Configurable mixin',
+    slots: [$.Signal]
+  });
+
+  $.Class.new({
+    name: 'Configurable',
+    doc: 'mixin providing configJSON()/configLoad() for ConfigSignal slots',
+    slots: [
+      $.Method.new({
+        name: 'configSlots',
+        do() {
+          return this.class().allSlots().filter(s => s.isa?.($.ConfigSignal));
+        }
+      }),
+      $.Method.new({
+        name: 'configJSON',
+        do() {
+          const result = {};
+          for (const slot of this.configSlots()) {
+            result[slot.name] = this[slot.name]();
+          }
+          return result;
+        }
+      }),
+      $.Method.new({
+        name: 'configLoad',
+        do(data) {
+          for (const slot of this.configSlots()) {
+            if (slot.name in data) {
+              this[slot.name](data[slot.name]);
+            }
+          }
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
     name: 'Constant',
     slots: [
       $.Var.new({ name: 'value' }),
