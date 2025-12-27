@@ -39,6 +39,11 @@ export default await async function (_, $, $html) {
         doc: "number of log probabilities to return",
         default: 20,
       }),
+      $.ConfigSignal.new({
+        name: "baseTemperature",
+        doc: "base temperature for generation, threads add an offset",
+        default: 0.8,
+      }),
       $.Constant.new({
         name: "display",
         value: "generic openai-compatible api",
@@ -146,10 +151,11 @@ export default await async function (_, $, $html) {
       }),
       $.Method.new({
         name: "renderNumberInput",
-        do(id, label) {
+        do(id, label, step=1) {
           return $html.HTML.t`<div>${label} <input
             type="number"
             min="0"
+            step=${step}
             onchange=${e => this[id](+e.target.value)}
             value=${() => this[id]()} /></div>`;
         }
@@ -197,6 +203,7 @@ export default await async function (_, $, $html) {
                 ${this.renderInput("apiKey", "secret!", "api key")}
                 ${this.renderInput("model", "eg davinci-002", "model")}
                 ${this.renderNumberInput("logprobs", "logprobs")}
+                ${this.renderNumberInput("baseTemperature", "base temp", 0.1)}
                 ${this.renderCheckbox("sequential", "run threads sequentially")}
                 ${this.renderImagePicker()}
                 ${() => this.store()}
@@ -322,23 +329,23 @@ export default await async function (_, $, $html) {
         default: 10,
       }),
       $.Signal.new({
-        name: "temperature",
-        doc: "generation temperature",
-        default: 0.6,
+        name: "delta_temp",
+        doc: "offset from base temperature (-0.3 to +0.3 typical)",
+        default: 0,
       }),
       $.Method.new({
         name: "json",
-        do() {
+        do(baseTemp) {
           return {
-            temperature: this.temperature(),
+            temperature: baseTemp + this.delta_temp(),
             max_tokens: this.max_tokens(),
           };
         }
       }),
       $.Method.new({
         name: "configline",
-        do(c, step=1) {
-          return $html.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min="0" value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
+        do(c, step=1, min=0) {
+          return $html.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min=${min} value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
         }
       }),
       $.Method.new({
@@ -346,7 +353,7 @@ export default await async function (_, $, $html) {
         do() {
           return [
             this.configline("max_tokens"),
-            this.configline("temperature", 0.1),
+            this.configline("delta_temp", 0.1, -1),
           ];
         }
       }),
@@ -440,7 +447,8 @@ export default await async function (_, $, $html) {
         do: async function() {
           this.text("");
           try {
-            const { text, logprobs } = await this.loom().client().completion(this.loom().text(), this.config().json());
+            const baseTemp = this.loom().client().baseTemperature();
+            const { text, logprobs } = await this.loom().client().completion(this.loom().text(), this.config().json(baseTemp));
             this.text(text);
             console.log(logprobs);
             if (logprobs) {
@@ -563,14 +571,14 @@ export default await async function (_, $, $html) {
             this.threads(JSON.parse(storedThreads).map(t => _.Thread.new({ loom: this, ...t })));
           } else {
             this.threads([
-              this.thread({ max_tokens: 6, temperature: 1.0 }),
-              this.thread({ max_tokens: 7, temperature: 1.0 }),
-              this.thread({ max_tokens: 8, temperature: 0.9 }),
-              this.thread({ max_tokens: 9, temperature: 0.8 }),
-              this.thread({ max_tokens: 10, temperature: 0.7 }),
-              this.thread({ max_tokens: 11, temperature: 0.6 }),
-              this.thread({ max_tokens: 12, temperature: 0.6 }),
-              this.thread({ max_tokens: 13, temperature: 0.6 }),
+              this.thread({ max_tokens: 6, delta_temp: 0.2 }),
+              this.thread({ max_tokens: 7, delta_temp: 0.2 }),
+              this.thread({ max_tokens: 8, delta_temp: 0.1 }),
+              this.thread({ max_tokens: 9, delta_temp: 0 }),
+              this.thread({ max_tokens: 10, delta_temp: -0.1 }),
+              this.thread({ max_tokens: 11, delta_temp: -0.2 }),
+              this.thread({ max_tokens: 12, delta_temp: -0.2 }),
+              this.thread({ max_tokens: 13, delta_temp: -0.2 }),
             ]);
           }
           this.choices([]);

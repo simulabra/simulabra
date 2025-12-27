@@ -663,7 +663,7 @@ export default await async function (_, $, $test) {
     name: 'ServerConfig',
     slots: [
       $.Configurable,
-      $.ConfigSignal.new({ name: 'host', default: 'localhost' }),
+      $.ConfigVar.new({ name: 'host', default: 'localhost' }),
       $.ConfigSignal.new({ name: 'port', default: 8080 }),
       $.Signal.new({ name: 'connected', default: false }),
     ]
