@@ -120,6 +120,7 @@ label.button {
     color: var(--seaweed);
     width: fit-content;
     height: fit-content;
+    padding: 1px 6px;
 }
 
 label.button:disabled {

@@ -44,6 +44,11 @@ export default await async function (_, $, $html) {
         doc: "base temperature for generation, threads add an offset",
         default: 0.8,
       }),
+      $.Signal.new({
+        name: "showApiKey",
+        doc: "toggle api key visibility",
+        default: false,
+      }),
       $.Constant.new({
         name: "display",
         value: "generic openai-compatible api",
@@ -114,6 +119,17 @@ export default await async function (_, $, $html) {
             body: JSON.stringify(body),
             headers,
           });
+          if (!res.ok) {
+            const errorBody = await res.text();
+            let errorMsg;
+            try {
+              const errorJson = JSON.parse(errorBody);
+              errorMsg = errorJson.error?.message || errorJson.message || errorBody;
+            } catch {
+              errorMsg = errorBody;
+            }
+            throw new Error(`API ${res.status}: ${errorMsg}`);
+          }
           const json = await res.json();
           const text = this.imageData() ? json.content : json.choices[0].text;
           const logprobs = this.parseLogprobs(json);
@@ -130,12 +146,24 @@ export default await async function (_, $, $html) {
         name: "renderInput",
         do(id, placeholder, label) {
           const htmlId = id + "input";
-          return $html.HTML.t`<div>${label} <input 
+          return $html.HTML.t`<div>${label} <input
             id=${htmlId}
             type="text"
             placeholder=${placeholder}
             onchange=${e => this[id](document.getElementById(htmlId).value)}
             value=${() => this[id]()} /></div>`;
+        }
+      }),
+      $.Method.new({
+        name: "renderPasswordInput",
+        do(id, placeholder, label) {
+          const htmlId = id + "input";
+          return $html.HTML.t`<div class="loom-row">${label} <input
+            id=${htmlId}
+            type=${() => this.showApiKey() ? "text" : "password"}
+            placeholder=${placeholder}
+            onchange=${e => this[id](document.getElementById(htmlId).value)}
+            value=${() => this[id]()} /><button onclick=${() => this.showApiKey(!this.showApiKey())}>${() => this.showApiKey() ? "hide" : "show"}</button></div>`;
         }
       }),
       $.Method.new({
@@ -200,7 +228,7 @@ export default await async function (_, $, $html) {
               <div class="loom-col" hidden=${() => !this.showSettings()}>
                 <div>${this.display()}</div>
                 ${this.renderInput("baseURL", "eg https://api.openai.com", "base url")}
-                ${this.renderInput("apiKey", "secret!", "api key")}
+                ${this.renderPasswordInput("apiKey", "secret!", "api key")}
                 ${this.renderInput("model", "eg davinci-002", "model")}
                 ${this.renderNumberInput("logprobs", "logprobs")}
                 ${this.renderNumberInput("baseTemperature", "base temp", 0.1)}
