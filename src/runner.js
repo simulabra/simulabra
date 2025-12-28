@@ -71,7 +71,7 @@ await async function (_, $, $test) {
             const testFile = `${testName}.js`;
             files = [testFile];
           } else {
-            files = await readdir(path);
+            files = (await readdir(path)).filter(f => f.endsWith('.js'));
           }
 
           for (const file of files) {
@@ -100,8 +100,10 @@ await async function (_, $, $test) {
 
   if (require.main === module) {
     const runner = _.TestRunner.new();
-    const testName = process.argv[2];
-    await runner.run('tests', testName);
+    const arg = process.argv[2];
+    const path = arg?.includes('/') ? arg : 'tests';
+    const testName = arg?.includes('/') ? undefined : arg;
+    await runner.run(path, testName);
     process.exit(0);
   }
 }.module({

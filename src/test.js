@@ -84,6 +84,48 @@ export default await async function (_, $) {
       }),
     ]
   });
+
+  $.Class.new({
+    name: 'BrowserCase',
+    doc: 'Test case with Playwright browser automation',
+    slots: [
+      _.AsyncCase,
+      $.Var.new({ name: 'browser' }),
+      $.Var.new({ name: 'page' }),
+
+      $.AsyncBefore.new({
+        name: 'run',
+        async do() {
+          const { chromium } = await import('playwright');
+          this.browser(await chromium.launch());
+          this.page(await this.browser().newPage());
+        }
+      }),
+
+      $.AsyncAfter.new({
+        name: 'run',
+        async do() {
+          await this.browser()?.close();
+        }
+      }),
+
+      $.Method.new({
+        name: 'assertVisible',
+        async do(selector, msg = '') {
+          const visible = await this.page().isVisible(selector);
+          this.assert(visible, msg || `Expected ${selector} to be visible`);
+        }
+      }),
+
+      $.Method.new({
+        name: 'assertText',
+        async do(selector, expected, msg = '') {
+          const text = await this.page().textContent(selector);
+          this.assertEq(text?.trim(), expected, msg);
+        }
+      })
+    ]
+  });
 }.module({
   name: 'test',
   imports: [base],

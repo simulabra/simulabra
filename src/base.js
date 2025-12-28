@@ -114,6 +114,8 @@ function bootstrap() {
         __primary: null,
         __befores: [],
         __afters: [],
+        __asyncBefores: [],
+        __asyncAfters: [],
         __properties: [],
         __debug: true,
         __next: null,
@@ -127,8 +129,41 @@ function bootstrap() {
       }
       const self = this;
       const key = this.__name;
-      if (!$$().__debug && this.__befores.length === 0 && this.__afters.length === 0) {
+      const hasAsyncModifiers = this.__asyncBefores.length > 0 || this.__asyncAfters.length > 0;
+      if (!$$().__debug && this.__befores.length === 0 && this.__afters.length === 0 && !hasAsyncModifiers) {
         proto[key] = this.__primary;
+      } else if (hasAsyncModifiers) {
+        proto[key] = async function (...args) {
+          const __ = $$();
+          if (self.__debug) {
+            const frame = new Frame(this, self, args);
+            __.stack().push(frame);
+            if (__.__trace) {
+              console.log('call', frame.description());
+            }
+          }
+          try {
+            self.__befores.forEach(b => b.apply(this, args));
+            for (const b of self.__asyncBefores) {
+              await b.apply(this, args);
+            }
+            let res = await self.__primary.apply(this, args);
+            for (const a of self.__asyncAfters) {
+              await a.apply(this, args);
+            }
+            self.__afters.forEach(a => a.apply(this, args));
+            if (self.__debug) {
+              __.__stack.pop();
+            }
+            return res;
+          } catch (e) {
+            if (!e._logged && self.__debug) {
+              e._logged = true;
+              debug('failed message: call', self.__name, 'on', this.__class.description());
+            }
+            throw e;
+          }
+        };
       } else {
         proto[key] = function (...args) {
           const __ = $$();
@@ -902,6 +937,30 @@ function bootstrap() {
     ]
   });
 
+  const $AsyncBefore = $Class.new({
+    name: 'AsyncBefore',
+    slots: [
+      $Fn,
+      $Property.new({ name: 'name' }),
+      $Var.new({ name: 'doc' }),
+      function combine(impl) {
+        impl.__asyncBefores.push(this.do());
+      }
+    ]
+  });
+
+  const $AsyncAfter = $Class.new({
+    name: 'AsyncAfter',
+    slots: [
+      $Fn,
+      $Property.new({ name: 'name' }),
+      $Var.new({ name: 'doc' }),
+      function combine(impl) {
+        impl.__asyncAfters.unshift(this.do());
+      }
+    ]
+  });
+
   const $Virtual = $Class.new({
     name: 'Virtual',
     slots: [
@@ -1096,6 +1155,8 @@ function bootstrap() {
     $Virtual,
     $Before,
     $After,
+    $AsyncBefore,
+    $AsyncAfter,
     $ObjectRegistry,
     $module,
     $Deffed,
