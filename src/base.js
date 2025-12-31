@@ -1247,7 +1247,7 @@ function bootstrap() {
     mod: _,
     baseMod: _,
     bootstrapped: true,
-    registry: $.ObjectRegistry.new(),
+    registry: _.registry(),
   });
 
   $.Class.new({

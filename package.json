@@ -12,6 +12,7 @@
     "watchtest": "watchexec -w . -e js -r -- bun run src/runner.js",
     "test": "bun run src/runner.js",
     "test-ui": "bun run src/runner.js tests/ui",
+    "test-bin": "bun run src/runner.js tests/bin",
     "agent": "watchexec -w . -e js -r -- bun run src/agent.js",
     "serve": "bun run src/agent.js"
   },

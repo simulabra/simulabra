@@ -1,76 +1,6 @@
+import './domshim.js';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
-
-if (typeof document === 'undefined') {
-  const createNode = (tag) => ({
-    tagName: tag,
-    children: [],
-    attributes: {},
-    style: {},
-    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
-    appendChild(child) { this.children.push(child); return child; },
-    removeChild(child) { return child; },
-    insertBefore(node, ref) { return node; },
-    replaceChild(newNode, oldNode) { return oldNode; },
-    setAttribute(k, v) { this.attributes[k] = v; },
-    getAttribute(k) { return this.attributes[k]; },
-    removeAttribute(k) { delete this.attributes[k]; },
-    hasAttribute(k) { return k in this.attributes; },
-    addEventListener() {},
-    removeEventListener() {},
-    querySelector() { return null; },
-    querySelectorAll() { return []; },
-    replaceWith() {},
-    remove() {},
-    focus() {},
-    blur() {},
-    click() {},
-    get textContent() { return ''; },
-    set textContent(v) {},
-    get innerHTML() { return ''; },
-    set innerHTML(v) {},
-    get value() { return ''; },
-    set value(v) {},
-  });
-
-  globalThis.document = {
-    createElement: createNode,
-    createTextNode: (text) => ({ nodeType: 3, textContent: text }),
-    createComment: (text) => ({ nodeType: 8, textContent: text }),
-    createDocumentFragment: () => ({
-      children: [],
-      appendChild(child) { this.children.push(child); return child; },
-      querySelectorAll() { return []; },
-    }),
-    body: createNode('body'),
-    head: createNode('head'),
-    querySelector() { return null; },
-    querySelectorAll() { return []; },
-    addEventListener() {},
-    removeEventListener() {},
-    activeElement: null,
-  };
-
-  globalThis.window = globalThis;
-  globalThis.HTMLElement = class HTMLElement {};
-  globalThis.customElements = { define() {}, get() {} };
-
-  // Mock localStorage/sessionStorage for browser-dependent modules
-  const createStorage = () => {
-    const store = {};
-    return {
-      getItem(key) { return store[key] ?? null; },
-      setItem(key, value) { store[key] = String(value); },
-      removeItem(key) { delete store[key]; },
-      clear() { for (const k in store) delete store[k]; },
-      get length() { return Object.keys(store).length; },
-      key(i) { return Object.keys(store)[i] ?? null; }
-    };
-  };
-  globalThis.localStorage = createStorage();
-  globalThis.sessionStorage = createStorage();
-}
-
 import { __, base } from '../src/base.js';
 
 export default await async function (_, $) {
@@ -82,16 +12,10 @@ export default await async function (_, $) {
         async: true,
         async do(filePath) {
           const esm = await import(filePath);
-          // Handle default export
-          if (esm.default) {
-            return esm.default;
-          }
-          // Handle named exports - look for a Module instance
+          if (esm.default) return esm.default;
           for (const key of Object.keys(esm)) {
             const val = esm[key];
-            if (val && typeof val.registry === 'function') {
-              return val;
-            }
+            if (val && typeof val.registry === 'function') return val;
           }
           return null;
         }
@@ -101,70 +25,53 @@ export default await async function (_, $) {
         do(source) {
           const lineMap = {};
           const lines = source.split('\n');
-
           for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            // Look for $.Class.new({ or Class.new({ patterns
-            if (/\.Class\.new\s*\(\s*\{/.test(line)) {
-              const startLine = i + 1; // 1-indexed
-              let className = null;
-
-              // Search nearby lines for name: 'ClassName'
-              for (let j = i; j < Math.min(i + 5, lines.length); j++) {
-                const nameMatch = lines[j].match(/name:\s*['"]([^'"]+)['"]/);
-                if (nameMatch) {
-                  className = nameMatch[1];
-                  break;
-                }
-              }
-
-              if (className) {
-                // Find end by counting braces
-                let braceCount = 0;
-                let started = false;
-                let endLine = startLine;
-
-                for (let j = i; j < lines.length; j++) {
-                  const chars = lines[j];
-                  let inString = false;
-                  let stringChar = null;
-
-                  for (let k = 0; k < chars.length; k++) {
-                    const c = chars[k];
-                    const prev = k > 0 ? chars[k-1] : '';
-
-                    // Handle string boundaries (skip escaped quotes)
-                    if ((c === '"' || c === "'" || c === '`') && prev !== '\\') {
-                      if (!inString) {
-                        inString = true;
-                        stringChar = c;
-                      } else if (c === stringChar) {
-                        inString = false;
-                        stringChar = null;
-                      }
-                      continue;
-                    }
-
-                    if (inString) continue;
-
-                    if (c === '{') {
-                      braceCount++;
-                      started = true;
-                    } else if (c === '}') {
-                      braceCount--;
-                      if (started && braceCount === 0) {
-                        endLine = j + 1; // 1-indexed
-                        break;
-                      }
-                    }
-                  }
-
-                  if (started && braceCount === 0) break;
-                }
-
-                lineMap[className] = { start: startLine, end: endLine };
+            if (!/\.Class\.new\s*\(\s*\{/.test(lines[i])) continue;
+            const startLine = i + 1;
+            let className = null;
+            for (let j = i; j < Math.min(i + 5, lines.length); j++) {
+              const nameMatch = lines[j].match(/name:\s*['"]([^'"]+)['"]/);
+              if (nameMatch) {
+                className = nameMatch[1];
+                break;
               }
             }
+            if (!className) continue;
+            let braceCount = 0;
+            let started = false;
+            let endLine = startLine;
+            for (let j = i; j < lines.length; j++) {
+              const chars = lines[j];
+              let inString = false;
+              let stringChar = null;
+              for (let k = 0; k < chars.length; k++) {
+                const c = chars[k];
+                const prev = k > 0 ? chars[k-1] : '';
+                if ((c === '"' || c === "'" || c === '`') && prev !== '\\') {
+                  if (!inString) {
+                    inString = true;
+                    stringChar = c;
+                  } else if (c === stringChar) {
+                    inString = false;
+                    stringChar = null;
+                  }
+                  continue;
+                }
+                if (inString) continue;
+                if (c === '{') {
+                  braceCount++;
+                  started = true;
+                } else if (c === '}') {
+                  braceCount--;
+                  if (started && braceCount === 0) {
+                    endLine = j + 1;
+                    break;
+                  }
+                }
+              }
+              if (started && braceCount === 0) break;
+            }
+            lineMap[className] = { start: startLine, end: endLine };
           }
           return lineMap;
         }
@@ -175,46 +82,33 @@ export default await async function (_, $) {
           if (!fn) return '';
           const str = fn.toString();
           const match = str.match(/^(?:async\s+)?(?:function\s*)?\w*\s*\(([^)]*)\)/);
-          if (match && match[1].trim()) {
-            return `(${match[1].trim()})`;
-          }
-          return '';
+          return (match && match[1].trim()) ? `(${match[1].trim()})` : '';
         }
       }),
       $.Method.new({
         name: 'formatSlot',
         do(slot) {
           if (typeof slot === 'function') {
-            const params = this.extractParams(slot);
-            return `  $.Method#${slot.name}${params}`;
+            return `  $.Method#${slot.name}${this.extractParams(slot)}`;
           }
           if (!slot.class) return null;
-
           const typeName = slot.class().name;
           const slotName = slot.name;
           const doc = slot.doc?.() || '';
-
           let signature = `  $.${typeName}#${slotName}`;
-
           if (['Method', 'Before', 'After', 'Static'].includes(typeName)) {
-            const fn = slot.do?.();
-            signature += this.extractParams(fn);
+            signature += this.extractParams(slot.do?.());
           }
-
-          if (doc) {
-            signature += ` ${doc}`;
-          }
-
+          if (doc) signature += ` ${doc}`;
           return signature;
         }
       }),
       $.Method.new({
         name: 'formatClass',
         do(cls, lineInfo) {
-          let header = cls.name;
-          if (lineInfo) {
-            header = `${cls.name}:${lineInfo.start}-${lineInfo.end}`;
-          }
+          const header = lineInfo
+            ? `${cls.name}:${lineInfo.start}-${lineInfo.end}`
+            : cls.name;
           const lines = [header];
           for (const slot of cls.slots()) {
             if (slot.class?.().name === 'Class') continue;
@@ -231,17 +125,11 @@ export default await async function (_, $) {
             return '(no classes found - module has no registry)';
           }
           const registry = mod.registry();
-          if (!registry) {
-            return '(no classes found - registry is null)';
-          }
+          if (!registry) return '(no classes found - registry is null)';
           let classes = registry.instances($.Class);
-          if (filter) {
-            classes = classes.filter(cls => cls.name === filter);
-          }
+          if (filter) classes = classes.filter(cls => cls.name === filter);
           if (classes.length === 0) {
-            return filter
-              ? `(no classes matching '${filter}')`
-              : '(no classes found)';
+            return filter ? `(no classes matching '${filter}')` : '(no classes found)';
           }
           return classes
             .map(cls => this.formatClass(cls, lineMap[cls.name]))
@@ -256,8 +144,7 @@ export default await async function (_, $) {
           const source = readFileSync(absolutePath, 'utf-8');
           const lineMap = this.extractClassLines(source);
           const mod = await this.loadFile(absolutePath);
-          const output = this.listClasses(mod, lineMap, filter);
-          console.log(output);
+          console.log(this.listClasses(mod, lineMap, filter));
         }
       }),
     ]

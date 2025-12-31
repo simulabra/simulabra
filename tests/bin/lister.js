@@ -1,7 +1,6 @@
 import * as bun from 'bun';
-import { __, base } from '../src/base.js';
-import test from '../src/test.js';
-import { join, dirname } from 'path';
+import { __, base } from '../../src/base.js';
+import test from '../../src/test.js';
 
 export default await async function (_, $, $test) {
   $.Class.new({
@@ -15,19 +14,17 @@ export default await async function (_, $, $test) {
       $.Method.new({
         name: 'grobnicate',
         doc: 'what it says on the tin',
-        do() {
-          // nada
-        }
+        do() {}
       })
     ]
   });
 
   $test.AsyncCase.new({
     name: 'ListerCoreTest',
-    doc: 'runs bin/lister.js on tests/core.js and validates output',
+    doc: 'runs bin/lister.js on tests/bin/lister.js and validates output',
     async do() {
-      const output = await bun.$`bun run bin/lister.js tests/lister.js`.text();
-      this.assert(output === `ThisIsATest:7-23
+      const output = await bun.$`bun run bin/lister.js tests/bin/lister.js`.text();
+      this.assert(output === `ThisIsATest:6-20
   $.Var#frob the frob thing
   $.Method#grobnicate what it says on the tin
 `)
@@ -39,7 +36,6 @@ export default await async function (_, $, $test) {
     doc: 'runs bin/lister.js on demos/counter.js and validates browser module loading',
     async do() {
       const output = await bun.$`bun run bin/lister.js demos/counter.js`.text();
-
       this.assert(output.includes('Counter'), 'output should contain Counter class');
       this.assert(output.includes('$.Signal#count'), 'output should contain count signal');
       this.assert(output.includes('$.Method#inc'), 'output should contain inc method');
@@ -61,6 +57,6 @@ export default await async function (_, $, $test) {
     }
   });
 }.module({
-  name: 'test.lister',
+  name: 'test.bin.lister',
   imports: [base, test],
 }).load();
