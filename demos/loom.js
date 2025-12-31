@@ -70,7 +70,11 @@ export default await async function (_, $, $html) {
       $.After.new({ // CLOS-style method combination
         name: "init",
         do() {
-          this.store(_.ConfigStore.new());
+          this.store(_.ConfigStore.new({ client: this }));
+          $.Effect.create(() => {
+            const id = this.store().restoreRequest();
+            if (id) this.loadId(id);
+          });
           const lastId = localStorage.getItem("loom-config-selected");
           if (lastId) {
             this.loadId(lastId);
@@ -288,6 +292,15 @@ export default await async function (_, $, $html) {
       $.Signal.new({
         name: 'id',
       }),
+      $.Signal.new({
+        name: 'restoreRequest',
+        doc: 'emits config id when user requests restore',
+        default: null,
+      }),
+      $.Var.new({
+        name: 'client',
+        doc: 'reference to the client for saving configs',
+      }),
       $.Method.new({
         name: "fetchStore",
         do() {
@@ -331,14 +344,14 @@ export default await async function (_, $, $html) {
       }),
       $.Method.new({
         name: "render",
-        do(parent) {
+        do() {
           const configRow = id => $html.HTML.t`<div class="loom-row">
             ${id}
             <button onclick=${() => this.delete(id)}>delete</button>
-            <button onclick=${() => parent.loadId(id)}>restore</button>
+            <button onclick=${() => this.restoreRequest(id)}>restore</button>
           </div>`;
           return $html.HTML.t`<div>
-            <button onclick=${() => this.save(parent)}>save settings</button>
+            <button onclick=${() => this.save(this.client())}>save settings</button>
             ${() => this.configIDs().map(id => configRow(id))}
           </div>`;
         }

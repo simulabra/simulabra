@@ -1,6 +1,6 @@
 ---
 name: find-slot-impls 
-description: If you are looking for the implementations of a slot with a given name
+description: Use find-slot-impls if you are looking for the implementations of a slot with a given name. Do it instead of grepping or exploring with text based tools.
 allowed-tools: Bash
 ---
 
