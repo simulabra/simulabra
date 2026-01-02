@@ -64,7 +64,7 @@ export default await async function (_, $, $html, $live, $service) {
     await client.connect();
     const response = await client._service.bonk();
     console.log(response);
-  } else if (typeof window !== 'undefined') {
+  } else if (typeof window !== 'undefined' && require.main === module) {
     const client = _.DummyClient.new({ domain: 'Web' });
     await client.connect();
     client.mount();
