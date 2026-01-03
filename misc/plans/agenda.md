@@ -127,34 +127,34 @@ UI components and their conceptual purpose:
 
 <Commands>
 <Log>
-<SMSFormat>`log something to say` or `/log something to say`</SMSFormat>
+<ExampleMessage>`log something to say`</ExampleMessage>
 <Description>saves the argument to a searchable journal, with a timestamp</Description>
 </Log>
 
 <Task>
-<SMSFormat>`task buy groceries P2` or `todo fix the bug by friday`</SMSFormat>
+<ExampleMessage>`task buy groceries p2` or `todo fix the bug by friday`</ExampleMessage>
 <Description>creates a task with optional priority and due date</Description>
 </Task>
 
 <Done>
-<SMSFormat>`done buy groceries` or `complete 3`</SMSFormat>
+<ExampleMessage>`bought groceries` or `completed task 3`</ExampleMessage>
 <Description>marks a task as completed by title match or number</Description>
 </Done>
 
 <RemindMe>
-<SMSFormat>`remind me to check for 4b history llm upload in a week`</SMSFormat>
-<SMSFormat>`remind me every monday at 9am to review the week`</SMSFormat>
+<ExampleMessage>`remind me to check for 4b history llm upload in a week`</ExampleMessage>
+<ExampleMessage>`every monday at 8am lets review the week`</ExampleMessage>
 <Description>instruct the system to remind you of something at a later date, supports one-time and recurring</Description>
 </RemindMe>
 
 <Search>
-<SMSFormat>`search groceries` or `find meetings from last week`</SMSFormat>
-<SMSFormat>`recollect what i was thinking about claude`</SMSFormat>
+<ExampleMessage>`search groceries` or `find meetings from last week`</ExampleMessage>
+<ExampleMessage>`recollect what i was thinking about claude`</ExampleMessage>
 <Description>full-text search across all items, looks through the journal for entries related to the query</Description>
 </Search>
 
 <List>
-<SMSFormat>`list tasks` or `show P1 tasks` or `reminders`</SMSFormat>
+<ExampleMessage>`list tasks` or `show P1 tasks` or `reminders`</ExampleMessage>
 <Description>lists items with optional filters</Description>
 </List>
 </Commands>

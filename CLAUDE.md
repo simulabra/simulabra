@@ -14,7 +14,8 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
 </CodingStandards>
  
 <Testing>
- - for core framework functionality, write tests using the built-in testing framework
+ - test ALL permanent code using the built-in testing framework
+ - read `./tests/simple.js` for a contrived example of the testing framework
  - run `bun run test` after each change in src/
  - run `bun run test-ui` after html changes (like loom.js)
  - run `bun run test-bin` after bin/ changes (like lister.js)
