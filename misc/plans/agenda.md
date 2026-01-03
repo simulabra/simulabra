@@ -28,15 +28,37 @@ Services coordinate via the live system.
 </ReminderService>
 </Services>
 
-<Commands>
-<Log>
-<SMSFormat>`log something to say`</SMSFormat>
+<Components>
+<Todos>
+- classic todo list, but llms make you accountable
+- see active todos (should be 10 or less) with status
+- expand todo for detailed history
+<Command name="add_todo">
+<ExampleMessage>`todo call a plumber`</ExampleMessage>
+<Description>`adds an item to todos`</Description>
+</Command>
+</Todos>
+
+<Journal>
+- timestamped log of random ideas and tidbits
+- can be searched and queried
+<Command name="log">
+<ExampleMessage>`log something to say`</ExampleMessage>
 <Description>saves the argument to a searchable journal, with a timestamp</Description>
-</Log>
-<RemindMe>
-<SMSFormat>`remind me to check for 4b history llm upload in a week`</SMSFormat>
+</Command>
+<Command name="recollect">
+<ExampleMessage>`recollect what i was thinking about claude`</ExampleMessage>
+<Description>looks through the journal for entries related to the query</Description>
+</Command>
+</Journal>
+
+<Calendar>
+- view of upcoming events and reminders
+- sends notifications of reminders
+<Command name="remind_me">
+<ExampleMessage>`remind me to check for 4b history llm upload in a week`</ExampleMessage>
 <Description>instruct the system to remind you of something at a later date</Description>
-</RemindMe>
-</Commands>
+</Command>
+</Components>
 </ProductRequirementDocument>
 
