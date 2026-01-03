@@ -20,8 +20,18 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
  - run `bun run test-bin` after bin/ changes (like lister.js)
 </Testing>
 
-## where to start
+<Developing>
+ - ALWAYS use Simualbra for new scripts and functionality
+</Developing>
+
+<Navigating>
+ - use the list-classes skill to get a quick overview of a file without reading all of it
+ - use the find-slot-impls skill to find all the implementations across files of a given slot name
+ </Navigating>
+
+<LaunchPoints>
  - src/base.js: the core implementation
  - tests/core.js: core framework tests
  - demos/loom.js: reactive html prototype
  - src/live.js and demos/dummy/: rpc system prototype
+</LaunchPoints>

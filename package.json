@@ -3,9 +3,15 @@
   "version": "0.0.5",
   "repository": "simulabra/simulabra",
   "type": "module",
+  "workspaces": ["apps/*"],
   "exports": {
     ".": "./src/base.js",
-    "./html": "./src/html.js"
+    "./html": "./src/html.js",
+    "./test": "./src/test.js",
+    "./llm": "./src/llm.js",
+    "./db": "./src/db.js",
+    "./live": "./src/live.js",
+    "./http": "./src/http.js"
   },
   "module": "./src/base.js",
   "scripts": {
@@ -14,7 +20,8 @@
     "test-ui": "bun run src/runner.js tests/ui",
     "test-bin": "bun run src/runner.js tests/bin",
     "agent": "watchexec -w . -e js -r -- bun run src/agent.js",
-    "serve": "bun run src/agent.js"
+    "serve": "bun run src/agent.js",
+    "gen-exports": "bun run bin/gen-exports.js"
   },
   "devDependencies": {
     "playwright": "latest"
