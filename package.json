@@ -3,7 +3,9 @@
   "version": "0.0.5",
   "repository": "simulabra/simulabra",
   "type": "module",
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "exports": {
     ".": "./src/base.js",
     "./html": "./src/html.js",
