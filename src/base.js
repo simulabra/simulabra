@@ -401,7 +401,7 @@ function bootstrap() {
     return this.toString();
   };
   Array.prototype.description = function (seen = {}) {
-    return `[${this.map(e => e.description(seen)).join(' ')}]`;
+    return `[${this.map(e => __.stringify(e, seen)).join(' ')}]`;
   }
 
   function parametize(props, obj) {

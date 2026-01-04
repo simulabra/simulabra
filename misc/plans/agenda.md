@@ -261,4 +261,10 @@ Environment-based configuration:
 - AGENDA_HTTP_PORT: HTTP server port (default 3031)
 </Configuration>
 </Deployment>
+
+<ImplementationGuidelines>
+- use test-driven development
+- start with supervisor and database service
+- try to keep things simple with the right abstractions
+</ImplementationGuidelines>
 </ProductRequirementDocument>

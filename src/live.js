@@ -299,6 +299,7 @@ export default await async function (_, $) {
         name: 'serviceProxy',
         async do(c) {
           const handle = c.name;
+          const timeout = c.timeout || 30;
           const self = this;
           return new Proxy({}, {
             get(target, p, receiver) {
@@ -316,7 +317,7 @@ export default await async function (_, $) {
                   }
                 }));
                 self.tlog("waitForResponse", rpcMessage.mid())
-                return await self.waitForResponse(rpcMessage.mid());
+                return await self.waitForResponse(rpcMessage.mid(), timeout);
               };
             }
           });
