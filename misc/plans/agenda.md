@@ -1,6 +1,7 @@
 <ProductRequirementDocument>
 Simulabra Agenda is the personal productivity system that I have been wanting to build for a while, after finding the alternatives wanting.
-It is accessed either as a typical web application or via sms, which interprets messages into the same commands used in the application, either directly via forms like `/log remember this` or indirectly from the context.
+
+root: apps/agenda/
 
 <DataModel>
 <ItemTypes>
@@ -17,7 +18,7 @@ Three core item types, all stored in Redis with full-text search capability:
 - id: uuid
 - title: string
 - done: boolean
-- priority: enum (P1, P2, P3) - high, medium, low
+- priority: integer
 - due_date: datetime (optional)
 - created_at: datetime
 - completed_at: datetime (optional)
@@ -59,14 +60,14 @@ Three core item types, all stored in Redis with full-text search capability:
 
 <SMSClient>
 - Twilio integration for sending/receiving SMS
-- text an agent with commands like `/log remember this`
+- text an agent with commands like `log remember this`
 - natural language messages are interpreted by the geist
 - receives reminders and follow-ups via SMS
 </SMSClient>
 
 <CLIClient>
-- one-shot mode: `bun run agenda-cli log 'remember this'`
-- interactive REPL mode: `bun run agenda-cli` or `bun run agenda-cli --interactive`
+- one-shot mode: `bunx agenda 'log remember this'`
+- interactive REPL mode: `bunx agenda` or `bunx agenda --interactive`
 - same command parsing as SMS client
 </CLIClient>
 </Clients>
