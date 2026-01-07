@@ -42,8 +42,8 @@ SIMULABRA SWYPERLOOM is a mobile loom - a branching text completion interface fo
 - future version may have hosted model with custom features but keep it simple for now
 </LLMs>
 <Swyping>
-- starts when press begins in the thumb target
-- if release in thumb target: do nothing
+- starts when press begins in swyper area
+- if release in epsilon radius target: do nothing
 - if outside target, inside swyper area: insert appropriate text and respin
 - if pointer goes outside swyper area: cancel swipe entirely (no action, return to neutral)
 </Swyping>

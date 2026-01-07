@@ -5,3 +5,4 @@ pyserver/venv/
 out/
 .env
 logs/
+dist/

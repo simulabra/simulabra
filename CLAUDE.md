@@ -26,6 +26,13 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
  - when refactoring, form an understanding of the component parts of a problem and properly rearrange them using inheritance and composition
 </Developing>
 
+<HTML>
+ - in $html.HTML.t templates, reactive attribute values MUST be functions
+ - WRONG: class=${"base " + (this.active() ? "active" : "")} - concatenates string with function object
+ - RIGHT: class=${() => "base " + (this.active() ? "active" : "")} - function returns computed string
+ - the template system calls functions to get reactive values; non-functions are treated as static
+</HTML>
+
 <Navigating>
  - use the list-classes skill to get a quick overview of a file without reading all of it
  - use the find-slot-impls skill to find all the implementations across files of a given slot name
