@@ -1,48 +1,20 @@
 // SIMULABRA HYPERLOOM
 
 import html from "../src/html.js";
+import llm from "../src/llm.js";
 import { __, base } from "../src/base.js";
 
-export default await async function (_, $, $html) {
+export default await async function (_, $, $html, $llm) {
   $.Class.new({
     name: "OpenAIAPIClient",
-    doc: "consume and configure an openai-compatible api",
+    doc: "LLMClient with UI for config management",
     slots: [
+      $llm.LLMClient,
       $html.Component,
-      $.Configurable,
       $.Signal.new({
         name: "showSettings",
         doc: "show api settings",
         default: true,
-      }),
-      $.ConfigSignal.new({
-        name: "apiKey",
-        doc: "api credential (100% not leaked)"
-      }),
-      $.ConfigSignal.new({
-        name: "baseURL",
-        doc: "the base of the openai-compatible api; hits ${this.baseURL()}/v1/completions",
-        default: "https://api.openai.com"
-      }),
-      $.ConfigSignal.new({
-        name: "model",
-        doc: "which model to use with the completions endpoint",
-        default: "davinci-002"
-      }),
-      $.ConfigSignal.new({
-        name: "sequential",
-        doc: "run threads sequentially instead of in parallel",
-        default: false,
-      }),
-      $.ConfigSignal.new({
-        name: "logprobs",
-        doc: "number of log probabilities to return",
-        default: 20,
-      }),
-      $.ConfigSignal.new({
-        name: "baseTemperature",
-        doc: "base temperature for generation, threads add an offset",
-        default: 0.8,
       }),
       $.Signal.new({
         name: "showApiKey",
@@ -56,18 +28,13 @@ export default await async function (_, $, $html) {
       $.Signal.new({
         name: "store",
       }),
-      $.Signal.new({
-        name: "imageData",
-        doc: "base64-encoded image data for multimodal prompts",
-        default: null,
-      }),
       $.Method.new({
         name: "toggleSettings",
         do() {
-          this.showSettings(!this.showSettings()); // variable assignment as method call; triggers effect
+          this.showSettings(!this.showSettings());
         }
       }),
-      $.After.new({ // CLOS-style method combination
+      $.After.new({
         name: "init",
         do() {
           this.store(_.ConfigStore.new({ client: this }));
@@ -89,61 +56,6 @@ export default await async function (_, $, $html) {
             localStorage.setItem("loom-config-selected", id);
             this.configLoad(data);
           }
-        }
-      }),
-      $.Method.new({
-        name: "completion",
-        async: true,
-        do: async function completion(prompt, config = {}) {
-          const headers = {
-            "Content-Type": "application/json",
-          };
-          let endpoint, body;
-          if (this.imageData()) {
-            endpoint = `${this.baseURL()}/completion`;
-            body = {
-              prompt: {
-                prompt_string: `<__media__>\n\n${prompt}`,
-                multimodal_data: [this.imageData()]
-              },
-              logprobs: this.logprobs(),
-              ...config
-            };
-          } else {
-            endpoint = `${this.baseURL()}/v1/completions`;
-            body = {
-              prompt,
-              logprobs: this.logprobs(),
-              ...config
-            };
-            this.transformRequest(body, headers);
-          }
-          const res = await fetch(endpoint, {
-            method: "POST",
-            body: JSON.stringify(body),
-            headers,
-          });
-          if (!res.ok) {
-            const errorBody = await res.text();
-            let errorMsg;
-            try {
-              const errorJson = JSON.parse(errorBody);
-              errorMsg = errorJson.error?.message || errorJson.message || errorBody;
-            } catch {
-              errorMsg = errorBody;
-            }
-            throw new Error(`API ${res.status}: ${errorMsg}`);
-          }
-          const json = await res.json();
-          const text = this.imageData() ? json.content : json.choices[0].text;
-          const logprobs = this.parseLogprobs(json);
-          return { text, logprobs };
-        }
-      }),
-      $.Method.new({
-        name: 'id',
-        do() {
-          return `${this.baseURL()}(${this.model()})`;
         }
       }),
       $.Method.new({
@@ -197,13 +109,13 @@ export default await async function (_, $, $html) {
         do(e) {
           const file = e.target.files[0];
           if (!file) {
-            this.imageData(null);
+            this.clearImageData();
             return;
           }
           const reader = new FileReader();
           reader.onload = () => {
             const base64 = reader.result.split(',')[1];
-            this.imageData(base64);
+            this.setImageData(base64);
           };
           reader.readAsDataURL(file);
         }
@@ -212,14 +124,17 @@ export default await async function (_, $, $html) {
         name: "renderImagePicker",
         do() {
           return $html.HTML.t`<div class="loom-col">
-            <label class="button">upload image<input
-              type="file"
-              accept="image/*"
-              hidden
-              onchange=${e => this.handleImageSelect(e)} /></label>
-            <div hidden=${() => !this.imageData()}>
-              <img class="image-preview" src=${() => this.imageData() ? 'data:image/jpeg;base64,' + this.imageData() : ''} />
-              <button onclick=${() => this.imageData(null)}>clear image</button>
+            ${this.renderCheckbox("imageMode", "image mode")}
+            <div hidden=${() => !this.imageMode()}>
+              <label class="button">upload image<input
+                type="file"
+                accept="image/*"
+                hidden
+                onchange=${e => this.handleImageSelect(e)} /></label>
+              <div hidden=${() => !this.imageData()}>
+                <img class="image-preview" src=${() => this.imageData() ? 'data:image/jpeg;base64,' + this.imageData() : ''} />
+                <button onclick=${() => this.clearImageData()}>clear image</button>
+              </div>
             </div>
           </div>`;
         }
@@ -241,38 +156,6 @@ export default await async function (_, $, $html) {
                 ${() => this.store()}
               </div>
           </span>`;
-        }
-      }),
-      $.Method.new({
-        name: "parseLogprobs",
-        do(res) {
-          if (!res.choices) {
-            return res.completion_probabilities[0].top_logprobs;
-          }
-
-          const lp = res.choices[0].logprobs;
-          if (/*llama.cpp server - openai*/lp.content && Array.isArray(lp.content) && lp.content[0]?.top_logprobs) {
-            return lp.content[0].top_logprobs;
-          }
-          const tl = lp.top_logprobs;
-          if (/*openai-compatible*/Array.isArray(tl) && tl.length && tl[0] && typeof tl[0] === "object" && !Array.isArray(tl[0])) {
-            return Object.entries(tl[0]).map(([token, logprob]) => ({ token, logprob }));
-          }
-          if (/*openrouter?*/Array.isArray(lp) && lp.length && lp[0].token && typeof lp[0].logprob === "number") {
-            return lp;
-          }
-          return null;
-        }
-      }),
-      $.Method.new({
-        name: "transformRequest",
-        do(body, headers) {
-          if (this.model()) {
-            body.model = this.model();
-          }
-          if (this.apiKey()) {
-            headers.Authorization = `Bearer ${this.apiKey()}`;
-          }
         }
       }),
     ]
@@ -361,28 +244,10 @@ export default await async function (_, $, $html) {
 
   $.Class.new({
     name: "ThreadConfig",
+    doc: "UI wrapper for CompletionConfig",
     slots: [
+      $llm.CompletionConfig,
       $html.Component,
-      $.Clone,
-      $.Signal.new({
-        name: "max_tokens",
-        doc: "length of thread in tokens",
-        default: 10,
-      }),
-      $.Signal.new({
-        name: "delta_temp",
-        doc: "offset from base temperature (-0.3 to +0.3 typical)",
-        default: 0,
-      }),
-      $.Method.new({
-        name: "json",
-        do(baseTemp) {
-          return {
-            temperature: baseTemp + this.delta_temp(),
-            max_tokens: this.max_tokens(),
-          };
-        }
-      }),
       $.Method.new({
         name: "configline",
         do(c, step=1, min=0) {
@@ -466,21 +331,12 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "normaliseLogprobs",
         do(logprobs) {
-          let lptot = 0;
-          for (const lp of logprobs) {
-            lp.logprob = Math.exp(lp.logprob);
-            lptot += lp.logprob;
-          }
-          for (const lp of logprobs) {
-            lp.logprob = lp.logprob / lptot;
-          }
-          logprobs = logprobs.map(l => _.Logprob.new({
-            text: l.token.replace(/Ġ/g, " "),
-            logprob: l.logprob,
+          const normalized = $llm.LogprobParser.normalize(logprobs);
+          return normalized.map(entry => _.Logprob.new({
+            text: entry.token(),
+            logprob: entry.probability(),
             loom: this.loom(),
           }));
-          logprobs.sort((a, b) => b.logprob() - a.logprob());
-          return logprobs;
         }
       }),
       $.Method.new({
@@ -835,4 +691,4 @@ export default await async function (_, $, $html) {
   });
 
   _.Loom.new().mount();
-}.module({ name: "demo.loom", imports: [base, html] }).load();
+}.module({ name: "demo.loom", imports: [base, html, llm] }).load();

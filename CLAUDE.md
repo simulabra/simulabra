@@ -23,6 +23,7 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
 
 <Developing>
  - ALWAYS use Simualbra for new scripts and functionality
+ - when refactoring, form an understanding of the component parts of a problem and properly rearrange them using inheritance and composition
 </Developing>
 
 <Navigating>
