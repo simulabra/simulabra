@@ -143,26 +143,25 @@ export default await async function (_, $, $html, $llm) {
       $.Signal.new({ name: "startX", default: 0 }),
       $.Signal.new({ name: "startY", default: 0 }),
       $.Method.new({
-        name: "handleTouchStart",
+        name: "handlePointerDown",
         do(e) {
           if (e.target.closest('.swype-choice')) return;
-          const touch = e.touches[0];
           const rect = e.currentTarget.getBoundingClientRect();
-          this.startX(touch.clientX - rect.left);
-          this.startY(touch.clientY - rect.top);
+          this.startX(e.clientX - rect.left);
+          this.startY(e.clientY - rect.top);
           this.swyping(true);
+          e.currentTarget.setPointerCapture(e.pointerId);
           e.preventDefault();
         }
       }),
       $.Method.new({
-        name: "handleTouchMove",
+        name: "handlePointerMove",
         do(e) {
           if (!this.swyping()) return;
           e.preventDefault();
-          const touch = e.touches[0];
           const rect = e.currentTarget.getBoundingClientRect();
-          const x = touch.clientX - rect.left;
-          const y = touch.clientY - rect.top;
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
 
           if (x < 0 || x > rect.width || y < 0 || y > rect.height) {
             this.activeCorner(null);
@@ -217,7 +216,7 @@ export default await async function (_, $, $html, $llm) {
         }
       }),
       $.Method.new({
-        name: "handleTouchEnd",
+        name: "handlePointerUp",
         do(e) {
           if (!this.swyping()) return;
           e.preventDefault();
@@ -238,10 +237,10 @@ export default await async function (_, $, $html, $llm) {
           const positions = ["top-left", "top-right", "bottom-left", "bottom-right"];
           return $html.HTML.t`
             <div class=${() => "swyper" + (this.swyping() ? " swyping" : "")}
-                 ontouchstart=${e => this.handleTouchStart(e)}
-                 ontouchmove=${e => this.handleTouchMove(e)}
-                 ontouchend=${e => this.handleTouchEnd(e)}
-                 ontouchcancel=${e => this.handleTouchEnd(e)}>
+                 onpointerdown=${e => this.handlePointerDown(e)}
+                 onpointermove=${e => this.handlePointerMove(e)}
+                 onpointerup=${e => this.handlePointerUp(e)}
+                 onpointercancel=${e => this.handlePointerUp(e)}>
               ${positions.map((pos, i) => _.SwypeChoice.new({ loom: this.loom(), swyper: this, position: pos, index: i }))}
               <div class="swyper-dial" style=${() => `left: ${this.startX() - 50}px; top: ${this.startY() - 50}px; transform: rotate(${this.dialAngle() + 90}deg); opacity: ${this.swyping() ? 1 : 0}`}>
                 <div class="dial-hand" style=${() => `opacity: ${this.outsideCenter() ? 1 : 0}`}></div>
@@ -422,8 +421,35 @@ export default await async function (_, $, $html, $llm) {
         }
       }),
       $.Method.new({
+        name: "snapshot",
+        do() {
+          return {
+            text: this.text(),
+            choices: this.choices().slice(),
+            logprobs: this.logprobs().slice()
+          };
+        }
+      }),
+      $.Method.new({
+        name: "restoreSnapshot",
+        do(snap) {
+          this.text(snap.text);
+          this.choices(snap.choices);
+          this.logprobs(snap.logprobs);
+          this.saveText();
+        }
+      }),
+      $.Method.new({
+        name: "pushUndo",
+        do() {
+          this.undoStack().push(this.snapshot());
+          this.redoStack().length = 0;
+        }
+      }),
+      $.Method.new({
         name: "respin",
         do() {
+          this.pushUndo();
           this.generateChoices();
         }
       }),
@@ -449,9 +475,7 @@ export default await async function (_, $, $html, $llm) {
         do(index) {
           const choice = this.choices()[index];
           if (!choice) return;
-
-          this.undoStack().push(this.text());
-          this.redoStack().length = 0;
+          this.pushUndo();
           this.text(this.text() + choice);
           this.saveText();
           this.generateChoices();
@@ -460,8 +484,7 @@ export default await async function (_, $, $html, $llm) {
       $.Method.new({
         name: "insertToken",
         do(token) {
-          this.undoStack().push(this.text());
-          this.redoStack().length = 0;
+          this.pushUndo();
           this.text(this.text() + token);
           this.saveText();
           this.generateChoices();
@@ -471,20 +494,16 @@ export default await async function (_, $, $html, $llm) {
         name: "undo",
         do() {
           if (!this.undoStack().length) return;
-          this.redoStack().push(this.text());
-          this.text(this.undoStack().pop());
-          this.saveText();
-          this.generateChoices();
+          this.redoStack().push(this.snapshot());
+          this.restoreSnapshot(this.undoStack().pop());
         }
       }),
       $.Method.new({
         name: "redo",
         do() {
           if (!this.redoStack().length) return;
-          this.undoStack().push(this.text());
-          this.text(this.redoStack().pop());
-          this.saveText();
-          this.generateChoices();
+          this.undoStack().push(this.snapshot());
+          this.restoreSnapshot(this.redoStack().pop());
         }
       }),
       $.Method.new({
@@ -497,6 +516,7 @@ export default await async function (_, $, $html, $llm) {
         name: "stopEditing",
         do() {
           this.editing(false);
+          this.pushUndo();
           this.saveText();
           this.generateChoices();
         }
