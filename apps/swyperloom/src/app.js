@@ -82,7 +82,7 @@ export default await async function (_, $, $html, $llm) {
               <div class="logprobs-scroll">
                 ${() => {
                   const lps = this.loom().logprobs();
-                  if (!lps || !lps.length) return $html.HTML.t`<span class="logprobs-empty">tap a corner to generate</span>`;
+                  if (!lps || !lps.length) return $html.HTML.t`<span class="logprobs-empty">start swyping!</span>`;
                   return lps.map(entry => _.LogprobButton.new({ entry, loom: this.loom() }));
                 }}
               </div>
@@ -99,6 +99,7 @@ export default await async function (_, $, $html, $llm) {
     slots: [
       $html.Component,
       $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "swyper" }),
       $.Var.new({ name: "position" }),
       $.Var.new({ name: "index" }),
       $.Method.new({
@@ -109,11 +110,17 @@ export default await async function (_, $, $html, $llm) {
         }
       }),
       $.Method.new({
+        name: "isActive",
+        do() {
+          return this.swyper().swyping() && this.swyper().activeCorner() === this.index();
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           const pos = this.position();
           return $html.HTML.t`
-            <div class=${"swype-choice " + pos}
+            <div class=${() => "swype-choice " + pos + (this.isActive() ? " active" : "")}
                  onclick=${() => this.loom().selectChoice(this.index())}>
               <div class="choice-text">${() => this.text() || "..."}</div>
             </div>
@@ -132,8 +139,8 @@ export default await async function (_, $, $html, $llm) {
       $.Signal.new({ name: "swyping", default: false }),
       $.Signal.new({ name: "activeCorner", default: null }),
       $.Signal.new({ name: "dialAngle", default: 0 }),
-      $.Var.new({ name: "startX", default: 0 }),
-      $.Var.new({ name: "startY", default: 0 }),
+      $.Signal.new({ name: "startX", default: 0 }),
+      $.Signal.new({ name: "startY", default: 0 }),
       $.Method.new({
         name: "handleTouchStart",
         do(e) {
@@ -164,7 +171,7 @@ export default await async function (_, $, $html, $llm) {
 
           const dx = x - this.startX();
           const dy = y - this.startY();
-          const threshold = 20;
+          const threshold = 50;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance >= threshold) {
@@ -172,14 +179,32 @@ export default await async function (_, $, $html, $llm) {
             this.dialAngle(angle);
           }
 
-          if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
+          if (distance < threshold) {
             this.activeCorner(null);
             this.loom().clearPreview();
             return;
           }
 
-          const isUp = dy < 0;
-          const isLeft = dx < 0;
+          // Raycast from start point in swipe direction to find which corner
+          const width = rect.width;
+          const height = rect.height;
+          const sx = this.startX();
+          const sy = this.startY();
+
+          // Find t where ray hits each edge
+          let tMin = Infinity;
+          if (dx > 0) tMin = Math.min(tMin, (width - sx) / dx);
+          if (dx < 0) tMin = Math.min(tMin, -sx / dx);
+          if (dy > 0) tMin = Math.min(tMin, (height - sy) / dy);
+          if (dy < 0) tMin = Math.min(tMin, -sy / dy);
+
+          // Calculate intersection point
+          const hitX = sx + tMin * dx;
+          const hitY = sy + tMin * dy;
+
+          // Determine corner based on which quadrant the hit point is in
+          const isLeft = hitX < width / 2;
+          const isUp = hitY < height / 2;
           let corner;
           if (isUp && isLeft) corner = 0;
           else if (isUp && !isLeft) corner = 1;
@@ -215,9 +240,9 @@ export default await async function (_, $, $html, $llm) {
                  ontouchmove=${e => this.handleTouchMove(e)}
                  ontouchend=${e => this.handleTouchEnd(e)}
                  ontouchcancel=${e => this.handleTouchEnd(e)}>
-              ${positions.map((pos, i) => _.SwypeChoice.new({ loom: this.loom(), position: pos, index: i }))}
+              ${positions.map((pos, i) => _.SwypeChoice.new({ loom: this.loom(), swyper: this, position: pos, index: i }))}
               <div class="swype-anchor" style=${() => `left: ${this.startX()}px; top: ${this.startY()}px; opacity: ${this.swyping() ? 1 : 0}`}>✕</div>
-              <div class="swyper-dial" style=${() => `transform: rotate(${this.dialAngle() + 90}deg); opacity: ${this.swyping() ? 1 : 0}`}>
+              <div class="swyper-dial" style=${() => `left: ${this.startX() - 50}px; top: ${this.startY() - 50}px; transform: rotate(${this.dialAngle() + 90}deg); opacity: ${this.swyping() ? 1 : 0}`}>
                 <div class="dial-hand"></div>
               </div>
               <div class="swyper-status">
@@ -355,6 +380,7 @@ export default await async function (_, $, $html, $llm) {
           if (saved) this.text(saved);
 
           this.textDisplay(_.TextDisplay.new({ loom: this }));
+          this.generateChoices();
         }
       }),
       $.Method.new({
@@ -673,44 +699,42 @@ export default await async function (_, $, $html, $llm) {
             .swyper {
               flex: 1;
               position: relative;
-              padding: 4px;
-              background: var(--sand);
+              padding: 8px;
+              background: var(--light-sand);
+              box-shadow: var(--box-shadow-args);
               touch-action: none;
               min-height: 200px;
             }
 
-            .swyper.swyping {
-              background: var(--wood);
-            }
-
             .swype-choice {
               position: absolute;
-              width: 48%;
+              width: 45%;
               display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 8px;
-              min-height: 60px;
-              background: var(--light-sand);
-              box-shadow: var(--box-shadow-args);
+              align-items: flex-start;
+              justify-content: flex-start;
+              padding: 4px;
               cursor: pointer;
             }
 
-            .swype-choice.top-left { top: 4px; left: 4px; }
-            .swype-choice.top-right { top: 4px; right: 4px; }
-            .swype-choice.bottom-left { bottom: 4px; left: 4px; }
-            .swype-choice.bottom-right { bottom: 4px; right: 4px; }
-
-            .swype-choice:active {
-              background: var(--sky);
-            }
+            .swype-choice.top-left { top: 8px; left: 8px; }
+            .swype-choice.top-right { top: 8px; right: 8px; text-align: right; justify-content: flex-end; }
+            .swype-choice.bottom-left { bottom: 8px; left: 8px; align-items: flex-end; }
+            .swype-choice.bottom-right { bottom: 8px; right: 8px; align-items: flex-end; text-align: right; justify-content: flex-end; }
 
             .choice-text {
-              font-size: 11px;
-              line-height: 1.3;
-              text-align: center;
-              color: var(--seaweed);
+              font-size: 13px;
+              line-height: 1.4;
+              color: var(--charcoal);
               word-break: break-word;
+              transition: opacity 0.1s ease-out;
+            }
+
+            .swyper.swyping .choice-text {
+              opacity: 0.4;
+            }
+
+            .swyper.swyping .swype-choice.active .choice-text {
+              opacity: 1;
             }
 
             .swype-anchor {
@@ -726,39 +750,25 @@ export default await async function (_, $, $html, $llm) {
 
             .swyper-dial {
               position: absolute;
-              top: 50%;
-              left: 50%;
-              width: 50px;
-              height: 50px;
-              margin-left: -25px;
-              margin-top: -25px;
+              width: 100px;
+              height: 100px;
               border-radius: 50%;
-              background: var(--light-sand);
-              box-shadow: var(--box-shadow-args);
+              background: var(--sand);
               pointer-events: none;
               transition: opacity 0.15s ease-out;
+              transform-origin: center center;
             }
 
             .dial-hand {
               position: absolute;
               left: 50%;
-              top: 4px;
-              width: 4px;
-              height: 20px;
-              margin-left: -2px;
-              background: var(--dusk);
-              border-radius: 2px;
-            }
-
-            .dial-hand::after {
-              content: '';
-              position: absolute;
-              top: -4px;
-              left: 50%;
-              transform: translateX(-50%);
-              border-left: 6px solid transparent;
-              border-right: 6px solid transparent;
-              border-bottom: 8px solid var(--dusk);
+              top: -100px;
+              width: 0;
+              height: 0;
+              margin-left: -12px;
+              border-left: 12px solid transparent;
+              border-right: 12px solid transparent;
+              border-bottom: 100px solid var(--sand);
             }
 
             .swyper-status {
