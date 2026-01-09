@@ -139,6 +139,7 @@ export default await async function (_, $, $html, $llm) {
       $.Signal.new({ name: "swyping", default: false }),
       $.Signal.new({ name: "activeCorner", default: null }),
       $.Signal.new({ name: "dialAngle", default: 0 }),
+      $.Signal.new({ name: "outsideCenter", default: false }),
       $.Signal.new({ name: "startX", default: 0 }),
       $.Signal.new({ name: "startY", default: 0 }),
       $.Method.new({
@@ -177,9 +178,9 @@ export default await async function (_, $, $html, $llm) {
           if (distance >= threshold) {
             const angle = Math.atan2(dy, dx) * (180 / Math.PI);
             this.dialAngle(angle);
-          }
-
-          if (distance < threshold) {
+            this.outsideCenter(true);
+          } else {
+            this.outsideCenter(false);
             this.activeCorner(null);
             this.loom().clearPreview();
             return;
@@ -223,6 +224,7 @@ export default await async function (_, $, $html, $llm) {
           const corner = this.activeCorner();
           this.swyping(false);
           this.activeCorner(null);
+          this.outsideCenter(false);
 
           if (corner !== null) {
             this.loom().selectChoice(corner);
@@ -241,9 +243,8 @@ export default await async function (_, $, $html, $llm) {
                  ontouchend=${e => this.handleTouchEnd(e)}
                  ontouchcancel=${e => this.handleTouchEnd(e)}>
               ${positions.map((pos, i) => _.SwypeChoice.new({ loom: this.loom(), swyper: this, position: pos, index: i }))}
-              <div class="swype-anchor" style=${() => `left: ${this.startX()}px; top: ${this.startY()}px; opacity: ${this.swyping() ? 1 : 0}`}>✕</div>
               <div class="swyper-dial" style=${() => `left: ${this.startX() - 50}px; top: ${this.startY() - 50}px; transform: rotate(${this.dialAngle() + 90}deg); opacity: ${this.swyping() ? 1 : 0}`}>
-                <div class="dial-hand"></div>
+                <div class="dial-hand" style=${() => `opacity: ${this.outsideCenter() ? 1 : 0}`}></div>
               </div>
               <div class="swyper-status">
                 ${() => this.loom().loading() ? "..." : ""}
@@ -369,7 +370,7 @@ export default await async function (_, $, $html, $llm) {
         name: "init",
         do() {
           const client = $llm.LLMClient.new({
-            baseURL: "http://localhost:3731",
+            baseURL: `http://${window.location.hostname}:3731`,
             model: "",
             logprobs: 20,
             baseTemperature: 0.8,
@@ -608,16 +609,17 @@ export default await async function (_, $, $html, $llm) {
 
             /* Text Display */
             .text-display {
-              flex: 0 0 200px;
+              flex: 1;
               display: flex;
               flex-direction: column;
+              min-height: 0;
             }
 
             .text-content {
               background: var(--light-sand);
               box-shadow: var(--box-shadow-args);
               padding: 8px;
-              height: 200px;
+              flex: 1;
               overflow-y: auto;
               font-size: 15px;
               line-height: 1.5;
@@ -697,13 +699,14 @@ export default await async function (_, $, $html, $llm) {
 
             /* Swyper */
             .swyper {
-              flex: 1;
+              flex: 0 0 auto;
               position: relative;
               padding: 8px;
               background: var(--light-sand);
               box-shadow: var(--box-shadow-args);
               touch-action: none;
-              min-height: 200px;
+              height: 45%;
+              min-height: 180px;
             }
 
             .swype-choice {
@@ -735,17 +738,6 @@ export default await async function (_, $, $html, $llm) {
 
             .swyper.swyping .swype-choice.active .choice-text {
               opacity: 1;
-            }
-
-            .swype-anchor {
-              position: absolute;
-              transform: translate(-50%, -50%);
-              font-size: 16px;
-              font-weight: bold;
-              color: var(--dusk);
-              pointer-events: none;
-              transition: opacity 0.1s ease-out;
-              z-index: 10;
             }
 
             .swyper-dial {
