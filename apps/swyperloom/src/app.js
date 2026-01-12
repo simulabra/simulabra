@@ -10,6 +10,7 @@ export default await async function (_, $, $html, $session) {
     slots: [
       $html.Component,
       $.Var.new({ name: "session" }),
+      $.Var.new({ name: "rootVNode" }),
       $.After.new({
         name: "init",
         do() {
@@ -23,7 +24,8 @@ export default await async function (_, $, $html, $session) {
         name: "scrollToBottom",
         do() {
           requestAnimationFrame(() => {
-            const el = document.querySelector('.text-content');
+            const root = this.rootVNode()?.el();
+            const el = root?.querySelector('.text-content');
             if (el) el.scrollTop = el.scrollHeight;
           });
         }
@@ -31,13 +33,15 @@ export default await async function (_, $, $html, $session) {
       $.Method.new({
         name: "render",
         do() {
-          return $html.HTML.t`
+          const vnode = $html.HTML.t`
             <div class="text-display">
               <div class="text-content" onclick=${() => this.session().startEditing()}>
                 <span class="main-text">${() => this.session().text()}</span><span class="preview-text">${() => this.session().preview()}</span>
               </div>
             </div>
           `;
+          this.rootVNode(vnode);
+          return vnode;
         }
       })
     ]
@@ -291,7 +295,7 @@ export default await async function (_, $, $html, $session) {
                 <span class="btn-label">redo</span>
               </button>
               <label class="bar-btn">
-                <span class="btn-icon">${() => this.session().hasImage() ? "🖼" : "📷"}</span>
+                <span class="btn-icon">${() => this.session().generator().hasImage() ? "🖼" : "📷"}</span>
                 <span class="btn-label">image</span>
                 <input type="file" accept="image/*" hidden onchange=${e => this.handleImageSelect(e)} />
               </label>
@@ -308,13 +312,12 @@ export default await async function (_, $, $html, $session) {
     slots: [
       $html.Component,
       $.Var.new({ name: "session" }),
-      $.Signal.new({ name: "menuOpen", default: false }),
       $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
             <div class="top-bar">
-              <button class="menu-btn" onclick=${() => this.menuOpen(!this.menuOpen())}>☰</button>
+              <button class="menu-btn">☰</button>
               <h1 class="title">SWYPERLOOM</h1>
               <div class="spacer"></div>
             </div>

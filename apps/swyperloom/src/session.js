@@ -4,116 +4,155 @@ import llm from "simulabra/llm";
 export default await async function (_, $, $llm) {
 
   $.Class.new({
-    name: "SwypeSession",
-    doc: "Pure model class for swyperloom session state and logic",
+    name: "LoomStorage",
+    doc: "Abstraction for persisting loom session data",
     slots: [
-      $.Signal.new({ name: "text", default: "" }),
-      $.Signal.new({ name: "choices", default: [] }),
-      $.Signal.new({ name: "logprobs", default: [] }),
-      $.Signal.new({ name: "loading", default: false }),
-      $.Signal.new({ name: "editing", default: false }),
-      $.Signal.new({ name: "preview", default: "" }),
-      $.Signal.new({ name: "hasImage", default: false }),
+      $.Var.new({ name: "key", default: "SWYPELOOM_TEXT" }),
 
+      $.Method.new({
+        name: "save",
+        do(text) {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(this.key(), text);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "load",
+        do() {
+          if (typeof localStorage !== "undefined") {
+            return localStorage.getItem(this.key()) || "";
+          }
+          return "";
+        }
+      }),
+
+      $.Method.new({
+        name: "clear",
+        do() {
+          if (typeof localStorage !== "undefined") {
+            localStorage.removeItem(this.key());
+          }
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: "ChoiceGenerator",
+    doc: "Encapsulates LLM client and choice generation logic",
+    slots: [
       $.Var.new({ name: "client" }),
-      $.Var.new({ name: "undoStack", default: () => [] }),
-      $.Var.new({ name: "redoStack", default: () => [] }),
-      $.Var.new({ name: "storageKey", default: "SWYPELOOM_TEXT" }),
-      $.Var.new({ name: "clientConfig" }),
+      $.Var.new({ name: "configs", default: () => [] }),
+      $.Signal.new({ name: "hasImage", default: false }),
 
       $.After.new({
         name: "init",
         do() {
-          const config = this.clientConfig() || {
+          this.configs([
+            $llm.CompletionConfig.new({ max_tokens: 15, delta_temp: 0.1 }),
+            $llm.CompletionConfig.new({ max_tokens: 15, delta_temp: 0 }),
+            $llm.CompletionConfig.new({ max_tokens: 15, delta_temp: -0.1 }),
+            $llm.CompletionConfig.new({ max_tokens: 15, delta_temp: -0.2 }),
+          ]);
+        }
+      }),
+
+      $.Method.new({
+        name: "generate",
+        async: true,
+        doc: "Generate 4 choices for the given prompt",
+        do: async function(prompt) {
+          const baseTemp = this.client().baseTemperature();
+          const results = await Promise.all(
+            this.configs().map(cfg =>
+              this.client().completion(prompt, cfg.json(baseTemp))
+            )
+          );
+
+          const choices = results.map(r => r.text);
+          const logprobs = results[0].logprobs
+            ? $llm.LogprobParser.normalize(results[0].logprobs)
+            : [];
+
+          return { choices, logprobs };
+        }
+      }),
+
+      $.Method.new({
+        name: "attachImage",
+        do(base64) {
+          this.client().setImageData(base64);
+          this.client().imageMode(true);
+          this.hasImage(true);
+        }
+      }),
+
+      $.Method.new({
+        name: "clearImage",
+        do() {
+          this.client().clearImageData();
+          this.client().imageMode(false);
+          this.hasImage(false);
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: "SwypeSession",
+    doc: "Pure model class for swyperloom session state and logic",
+    slots: [
+      $.History,
+      $.HistorySignal.new({ name: "text", default: "" }),
+      $.HistorySignal.new({ name: "choices", default: [] }),
+      $.HistorySignal.new({ name: "logprobs", default: [] }),
+      $.Signal.new({ name: "loading", default: false }),
+      $.Signal.new({ name: "editing", default: false }),
+      $.Signal.new({ name: "preview", default: "" }),
+
+      $.Var.new({ name: "generator" }),
+      $.Var.new({ name: "storage" }),
+      $.Var.new({ name: "generatorConfig" }),
+
+      $.After.new({
+        name: "init",
+        do() {
+          const config = this.generatorConfig() || {
             baseURL: "http://localhost:3731",
             model: "",
             logprobs: 20,
             baseTemperature: 0.8,
           };
-          this.client($llm.LLMClient.new(config));
+          const client = $llm.LLMClient.new(config);
+          this.generator(_.ChoiceGenerator.new({ client }));
+          if (!this.storage()) {
+            this.storage(_.LoomStorage.new());
+          }
           this.loadFromStorage();
+        }
+      }),
+
+      $.After.new({
+        name: "restoreSnapshot",
+        do() {
+          this.saveToStorage();
         }
       }),
 
       $.Method.new({
         name: "saveToStorage",
         do() {
-          if (typeof localStorage !== "undefined") {
-            localStorage.setItem(this.storageKey(), this.text());
-          }
+          this.storage().save(this.text());
         }
       }),
 
       $.Method.new({
         name: "loadFromStorage",
         do() {
-          if (typeof localStorage !== "undefined") {
-            const saved = localStorage.getItem(this.storageKey());
-            if (saved) this.text(saved);
-          }
-        }
-      }),
-
-      $.Method.new({
-        name: "snapshot",
-        do() {
-          return {
-            text: this.text(),
-            choices: this.choices().slice(),
-            logprobs: this.logprobs().slice()
-          };
-        }
-      }),
-
-      $.Method.new({
-        name: "restoreSnapshot",
-        do(snap) {
-          this.text(snap.text);
-          this.choices(snap.choices);
-          this.logprobs(snap.logprobs);
-          this.saveToStorage();
-        }
-      }),
-
-      $.Method.new({
-        name: "pushUndo",
-        do() {
-          this.undoStack().push(this.snapshot());
-          this.redoStack().length = 0;
-        }
-      }),
-
-      $.Method.new({
-        name: "undo",
-        do() {
-          if (!this.undoStack().length) return false;
-          this.redoStack().push(this.snapshot());
-          this.restoreSnapshot(this.undoStack().pop());
-          return true;
-        }
-      }),
-
-      $.Method.new({
-        name: "redo",
-        do() {
-          if (!this.redoStack().length) return false;
-          this.undoStack().push(this.snapshot());
-          this.restoreSnapshot(this.redoStack().pop());
-          return true;
-        }
-      }),
-
-      $.Method.new({
-        name: "canUndo",
-        do() {
-          return this.undoStack().length > 0;
-        }
-      }),
-
-      $.Method.new({
-        name: "canRedo",
-        do() {
-          return this.redoStack().length > 0;
+          const saved = this.storage().load();
+          if (saved) this.text(saved);
         }
       }),
 
@@ -124,23 +163,10 @@ export default await async function (_, $, $llm) {
           this.loading(true);
           this.choices([]);
 
-          const configs = [
-            { max_tokens: 15, temperature: 0.9 },
-            { max_tokens: 15, temperature: 0.8 },
-            { max_tokens: 15, temperature: 0.7 },
-            { max_tokens: 15, temperature: 0.6 },
-          ];
-
           try {
-            const results = await Promise.all(
-              configs.map(cfg => this.client().completion(this.text(), cfg))
-            );
-
-            this.choices(results.map(r => r.text));
-
-            if (results[0].logprobs) {
-              this.logprobs($llm.LogprobParser.normalize(results[0].logprobs));
-            }
+            const { choices, logprobs } = await this.generator().generate(this.text());
+            this.choices(choices);
+            this.logprobs(logprobs);
           } catch (e) {
             console.error("Generation error:", e);
           } finally {
@@ -225,18 +251,14 @@ export default await async function (_, $, $llm) {
         name: "attachImage",
         doc: "Attach base64 image data and enable image mode",
         do(base64) {
-          this.client().setImageData(base64);
-          this.client().imageMode(true);
-          this.hasImage(true);
+          this.generator().attachImage(base64);
         }
       }),
 
       $.Method.new({
         name: "clearImage",
         do() {
-          this.client().clearImageData();
-          this.client().imageMode(false);
-          this.hasImage(false);
+          this.generator().clearImage();
         }
       })
     ]

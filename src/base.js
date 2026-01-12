@@ -1551,6 +1551,106 @@ function bootstrap() {
   });
 
   $.Class.new({
+    name: 'HistorySlot',
+    doc: 'marker for slots that participate in history snapshots'
+  });
+
+  $.Class.new({
+    name: 'HistorySignal',
+    slots: [
+      $.HistorySlot,
+      $.Signal
+    ]
+  });
+
+  $.Class.new({
+    name: 'History',
+    doc: 'mixin for undo/redo with automatic snapshot of HistorySlot slots',
+    slots: [
+      $.Var.new({ name: 'undoStack', default: () => [] }),
+      $.Var.new({ name: 'redoStack', default: () => [] }),
+
+      $.Method.new({
+        name: 'historySlots',
+        do() {
+          return this.class().allSlots().filter(s => s.isa?.($.HistorySlot));
+        }
+      }),
+
+      $.Method.new({
+        name: 'snapshot',
+        do() {
+          const snap = {};
+          for (const slot of this.historySlots()) {
+            const value = this[slot.name]();
+            snap[slot.name] = Array.isArray(value) ? value.slice() : value;
+          }
+          return snap;
+        }
+      }),
+
+      $.Method.new({
+        name: 'restoreSnapshot',
+        do(snap) {
+          for (const key in snap) {
+            this[key](snap[key]);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: 'pushUndo',
+        do() {
+          this.undoStack().push(this.snapshot());
+          this.redoStack().length = 0;
+        }
+      }),
+
+      $.Method.new({
+        name: 'undo',
+        do() {
+          if (!this.undoStack().length) return false;
+          this.redoStack().push(this.snapshot());
+          this.restoreSnapshot(this.undoStack().pop());
+          return true;
+        }
+      }),
+
+      $.Method.new({
+        name: 'redo',
+        do() {
+          if (!this.redoStack().length) return false;
+          this.undoStack().push(this.snapshot());
+          this.restoreSnapshot(this.redoStack().pop());
+          return true;
+        }
+      }),
+
+      $.Method.new({
+        name: 'canUndo',
+        do() {
+          return this.undoStack().length > 0;
+        }
+      }),
+
+      $.Method.new({
+        name: 'canRedo',
+        do() {
+          return this.redoStack().length > 0;
+        }
+      }),
+
+      $.Method.new({
+        name: 'clearHistory',
+        do() {
+          this.undoStack().length = 0;
+          this.redoStack().length = 0;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
     name: 'Constant',
     slots: [
       $.Var.new({ name: 'value' }),

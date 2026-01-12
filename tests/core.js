@@ -701,6 +701,115 @@ export default await async function (_, $, $test) {
       this.assertEq(cfg.port(), 443, 'configLoad should update port');
     }
   });
+
+  $.Class.new({
+    name: 'DocumentEditor',
+    doc: 'Test class for History mixin',
+    slots: [
+      $.History,
+      $.HistorySignal.new({ name: 'content', default: '' }),
+      $.HistorySignal.new({ name: 'cursor', default: 0 }),
+      $.HistorySignal.new({ name: 'selections', default: [] }),
+      $.Signal.new({ name: 'saved', default: true }),
+    ]
+  });
+
+  $test.Case.new({
+    name: 'HistorySnapshotOnlyMarkedFields',
+    doc: 'Tests that snapshot only includes HistorySignal slots.',
+    do() {
+      const doc = _.DocumentEditor.new();
+      doc.content('hello');
+      doc.cursor(5);
+      doc.saved(false);
+
+      const snap = doc.snapshot();
+      this.assertEq(snap.content, 'hello', 'Snapshot should include content');
+      this.assertEq(snap.cursor, 5, 'Snapshot should include cursor');
+      this.assert(!('saved' in snap), 'Snapshot should exclude regular Signal');
+    }
+  });
+
+  $test.Case.new({
+    name: 'HistoryUndoRedo',
+    doc: 'Tests basic undo/redo functionality.',
+    do() {
+      const doc = _.DocumentEditor.new();
+      doc.content('initial');
+
+      doc.pushUndo();
+      doc.content('changed');
+
+      this.assert(doc.canUndo(), 'Should be able to undo');
+      this.assert(!doc.canRedo(), 'Should not be able to redo yet');
+
+      doc.undo();
+      this.assertEq(doc.content(), 'initial', 'Undo should restore initial content');
+      this.assert(!doc.canUndo(), 'Should not be able to undo after undoing');
+      this.assert(doc.canRedo(), 'Should be able to redo');
+
+      doc.redo();
+      this.assertEq(doc.content(), 'changed', 'Redo should restore changed content');
+    }
+  });
+
+  $test.Case.new({
+    name: 'HistoryRedoClearedOnNewChange',
+    doc: 'Tests that redo stack is cleared when new changes are made.',
+    do() {
+      const doc = _.DocumentEditor.new();
+      doc.content('v1');
+      doc.pushUndo();
+      doc.content('v2');
+      doc.undo();
+
+      this.assert(doc.canRedo(), 'Should be able to redo');
+
+      doc.pushUndo();
+      doc.content('v3');
+
+      this.assert(!doc.canRedo(), 'Redo should be cleared after new change');
+    }
+  });
+
+  $test.Case.new({
+    name: 'HistoryArrayCopy',
+    doc: 'Tests that arrays are copied in snapshots to avoid mutation.',
+    do() {
+      const doc = _.DocumentEditor.new();
+      doc.selections([1, 2, 3]);
+
+      doc.pushUndo();
+      doc.selections().push(4);
+
+      this.assertEq(doc.selections().length, 4, 'Current selections should have 4 items');
+
+      doc.undo();
+      this.assertEq(doc.selections().length, 3, 'Restored selections should have 3 items');
+    }
+  });
+
+  $test.Case.new({
+    name: 'HistoryClearHistory',
+    doc: 'Tests that clearHistory empties both stacks.',
+    do() {
+      const doc = _.DocumentEditor.new();
+      doc.content('v1');
+      doc.pushUndo();
+      doc.content('v2');
+      doc.pushUndo();
+      doc.content('v3');
+      doc.undo();
+
+      this.assert(doc.canUndo(), 'Should have undo history');
+      this.assert(doc.canRedo(), 'Should have redo history');
+
+      doc.clearHistory();
+
+      this.assert(!doc.canUndo(), 'Undo should be cleared');
+      this.assert(!doc.canRedo(), 'Redo should be cleared');
+    }
+  });
 }.module({
   name: 'test.core',
   imports: [base, test],
