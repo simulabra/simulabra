@@ -60,9 +60,22 @@ if (typeof document === 'undefined') {
     activeElement: null,
   };
 
+  globalThis.location = {
+    hostname: 'localhost',
+    host: 'localhost',
+    href: 'http://localhost/',
+    origin: 'http://localhost',
+    pathname: '/',
+    port: '',
+    protocol: 'http:',
+    search: '',
+    hash: '',
+  };
   globalThis.window = globalThis;
   globalThis.HTMLElement = class HTMLElement {};
   globalThis.customElements = { define() {}, get() {} };
   globalThis.localStorage = createStorage();
   globalThis.sessionStorage = createStorage();
+  globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+  globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
 }

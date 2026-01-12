@@ -41,6 +41,8 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
 <LaunchPoints>
  - src/base.js: the core implementation
  - tests/core.js: core framework tests
- - demos/loom.js: reactive html prototype
+ - demos/loom.js: reactive html prototype of a branching interface for llms
  - src/live.js and demos/dummy/: rpc system prototype
+ - apps/agenda/ - personal productivity system with html/sms/cli clients
+ - app/swyperloom/ - loom variant tailored for mobile
 </LaunchPoints>

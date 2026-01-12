@@ -1,21 +1,20 @@
 import html from "simulabra/html";
-import llm from "simulabra/llm";
 import { __, base } from "simulabra";
+import session from "./session.js";
 
-export default await async function (_, $, $html, $llm) {
+export default await async function (_, $, $html, $session) {
 
   $.Class.new({
     name: "TextDisplay",
     doc: "Ornate framed text display area for completions",
     slots: [
       $html.Component,
-      $.Var.new({ name: "loom" }),
-      $.Signal.new({ name: "preview", default: "" }),
+      $.Var.new({ name: "session" }),
       $.After.new({
         name: "init",
         do() {
           $.Effect.create(() => {
-            this.loom().text();
+            this.session().text();
             this.scrollToBottom();
           });
         }
@@ -34,8 +33,8 @@ export default await async function (_, $, $html, $llm) {
         do() {
           return $html.HTML.t`
             <div class="text-display">
-              <div class="text-content" onclick=${() => this.loom().startEditing()}>
-                <span class="main-text">${() => this.loom().text()}</span><span class="preview-text">${() => this.preview()}</span>
+              <div class="text-content" onclick=${() => this.session().startEditing()}>
+                <span class="main-text">${() => this.session().text()}</span><span class="preview-text">${() => this.session().preview()}</span>
               </div>
             </div>
           `;
@@ -50,7 +49,7 @@ export default await async function (_, $, $html, $llm) {
     slots: [
       $html.Component,
       $.Var.new({ name: "entry" }),
-      $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "session" }),
       $.Method.new({
         name: "render",
         do() {
@@ -58,7 +57,7 @@ export default await async function (_, $, $html, $llm) {
           let display = prob.toPrecision(2);
           if (display.length > 5) display = "<.01";
           return $html.HTML.t`
-            <button class="logprob-btn" onclick=${() => this.loom().insertToken(this.entry().token())}>
+            <button class="logprob-btn" onclick=${() => this.session().insertToken(this.entry().token())}>
               <span class="token">${this.entry().token()}</span>
               <span class="prob">${display}</span>
             </button>
@@ -73,7 +72,7 @@ export default await async function (_, $, $html, $llm) {
     doc: "Horizontally scrollable bar of logprob tokens",
     slots: [
       $html.Component,
-      $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "session" }),
       $.Method.new({
         name: "render",
         do() {
@@ -81,9 +80,9 @@ export default await async function (_, $, $html, $llm) {
             <div class="logprobs-bar">
               <div class="logprobs-scroll">
                 ${() => {
-                  const lps = this.loom().logprobs();
+                  const lps = this.session().logprobs();
                   if (!lps || !lps.length) return $html.HTML.t`<span class="logprobs-empty">start swyping!</span>`;
-                  return lps.map(entry => _.LogprobButton.new({ entry, loom: this.loom() }));
+                  return lps.map(entry => _.LogprobButton.new({ entry, session: this.session() }));
                 }}
               </div>
             </div>
@@ -98,14 +97,14 @@ export default await async function (_, $, $html, $llm) {
     doc: "Corner choice in the swyper",
     slots: [
       $html.Component,
-      $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "session" }),
       $.Var.new({ name: "swyper" }),
       $.Var.new({ name: "position" }),
       $.Var.new({ name: "index" }),
       $.Method.new({
         name: "text",
         do() {
-          const choices = this.loom().choices();
+          const choices = this.session().choices();
           return choices[this.index()] || "";
         }
       }),
@@ -121,7 +120,7 @@ export default await async function (_, $, $html, $llm) {
           const pos = this.position();
           return $html.HTML.t`
             <div class=${() => "swype-choice " + pos + (this.isActive() ? " active" : "")}
-                 onclick=${() => this.loom().selectChoice(this.index())}>
+                 onclick=${() => this.session().selectChoice(this.index())}>
               <div class="choice-text">${() => this.text() || "..."}</div>
             </div>
           `;
@@ -135,7 +134,7 @@ export default await async function (_, $, $html, $llm) {
     doc: "Pie menu interface with 4 corner choices",
     slots: [
       $html.Component,
-      $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "session" }),
       $.Signal.new({ name: "swyping", default: false }),
       $.Signal.new({ name: "activeCorner", default: null }),
       $.Signal.new({ name: "dialAngle", default: 0 }),
@@ -165,7 +164,7 @@ export default await async function (_, $, $html, $llm) {
 
           if (x < 0 || x > rect.width || y < 0 || y > rect.height) {
             this.activeCorner(null);
-            this.loom().clearPreview();
+            this.session().clearPreview();
             return;
           }
 
@@ -181,7 +180,7 @@ export default await async function (_, $, $html, $llm) {
           } else {
             this.outsideCenter(false);
             this.activeCorner(null);
-            this.loom().clearPreview();
+            this.session().clearPreview();
             return;
           }
 
@@ -212,7 +211,7 @@ export default await async function (_, $, $html, $llm) {
           else corner = 3;
 
           this.activeCorner(corner);
-          this.loom().previewChoice(corner);
+          this.session().previewChoice(corner);
         }
       }),
       $.Method.new({
@@ -226,9 +225,9 @@ export default await async function (_, $, $html, $llm) {
           this.outsideCenter(false);
 
           if (corner !== null) {
-            this.loom().selectChoice(corner);
+            this.session().selectChoice(corner);
           }
-          this.loom().clearPreview();
+          this.session().clearPreview();
         }
       }),
       $.Method.new({
@@ -241,12 +240,12 @@ export default await async function (_, $, $html, $llm) {
                  onpointermove=${e => this.handlePointerMove(e)}
                  onpointerup=${e => this.handlePointerUp(e)}
                  onpointercancel=${e => this.handlePointerUp(e)}>
-              ${positions.map((pos, i) => _.SwypeChoice.new({ loom: this.loom(), swyper: this, position: pos, index: i }))}
+              ${positions.map((pos, i) => _.SwypeChoice.new({ session: this.session(), swyper: this, position: pos, index: i }))}
               <div class="swyper-dial" style=${() => `left: ${this.startX() - 50}px; top: ${this.startY() - 50}px; transform: rotate(${this.dialAngle() + 90}deg); opacity: ${this.swyping() ? 1 : 0}`}>
                 <div class="dial-hand" style=${() => `opacity: ${this.outsideCenter() ? 1 : 0}`}></div>
               </div>
               <div class="swyper-status">
-                ${() => this.loom().loading() ? "..." : ""}
+                ${() => this.session().loading() ? "..." : ""}
               </div>
             </div>
           `;
@@ -260,7 +259,7 @@ export default await async function (_, $, $html, $llm) {
     doc: "Control bar with respin, undo/redo, image upload",
     slots: [
       $html.Component,
-      $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "session" }),
       $.Method.new({
         name: "handleImageSelect",
         do(e) {
@@ -269,8 +268,7 @@ export default await async function (_, $, $html, $llm) {
           const reader = new FileReader();
           reader.onload = () => {
             const base64 = reader.result.split(',')[1];
-            this.loom().client().setImageData(base64);
-            this.loom().client().imageMode(true);
+            this.session().attachImage(base64);
           };
           reader.readAsDataURL(file);
         }
@@ -280,20 +278,20 @@ export default await async function (_, $, $html, $llm) {
         do() {
           return $html.HTML.t`
             <div class="bottom-bar">
-              <button class="bar-btn" onclick=${() => this.loom().respin()}>
+              <button class="bar-btn" onclick=${() => this.session().respin()}>
                 <span class="btn-icon">↻</span>
                 <span class="btn-label">respin</span>
               </button>
-              <button class="bar-btn" onclick=${() => this.loom().undo()}>
+              <button class="bar-btn" onclick=${() => this.session().undo()}>
                 <span class="btn-icon">↩</span>
                 <span class="btn-label">undo</span>
               </button>
-              <button class="bar-btn" onclick=${() => this.loom().redo()}>
+              <button class="bar-btn" onclick=${() => this.session().redo()}>
                 <span class="btn-icon">↪</span>
                 <span class="btn-label">redo</span>
               </button>
               <label class="bar-btn">
-                <span class="btn-icon">${() => this.loom().client().imageData() ? "🖼" : "📷"}</span>
+                <span class="btn-icon">${() => this.session().hasImage() ? "🖼" : "📷"}</span>
                 <span class="btn-label">image</span>
                 <input type="file" accept="image/*" hidden onchange=${e => this.handleImageSelect(e)} />
               </label>
@@ -309,7 +307,7 @@ export default await async function (_, $, $html, $llm) {
     doc: "Header bar with title and menu",
     slots: [
       $html.Component,
-      $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "session" }),
       $.Signal.new({ name: "menuOpen", default: false }),
       $.Method.new({
         name: "render",
@@ -331,17 +329,17 @@ export default await async function (_, $, $html, $llm) {
     doc: "Modal for editing text",
     slots: [
       $html.Component,
-      $.Var.new({ name: "loom" }),
+      $.Var.new({ name: "session" }),
       $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
-            <div class="edit-modal" hidden=${() => !this.loom().editing()}
-                 onclick=${e => { if (e.target.classList.contains('edit-modal')) this.loom().stopEditing(); }}>
+            <div class="edit-modal" hidden=${() => !this.session().editing()}
+                 onclick=${e => { if (e.target.classList.contains('edit-modal')) this.session().stopEditing(); }}>
               <div class="edit-container">
                 <textarea class="edit-textarea"
-                          oninput=${e => this.loom().editText(e.target.value)}>${() => this.loom().text()}</textarea>
-                <button class="edit-done" onclick=${() => this.loom().stopEditing()}>Done</button>
+                          oninput=${e => this.session().editText(e.target.value)}>${() => this.session().text()}</textarea>
+                <button class="edit-done" onclick=${() => this.session().stopEditing()}>Done</button>
               </div>
             </div>
           `;
@@ -355,176 +353,22 @@ export default await async function (_, $, $html, $llm) {
     doc: "Main mobile loom application",
     slots: [
       $html.Component,
-      $.Signal.new({ name: "text", default: "Once upon a time" }),
-      $.Signal.new({ name: "choices", default: [] }),
-      $.Signal.new({ name: "logprobs", default: [] }),
-      $.Signal.new({ name: "loading", default: false }),
-      $.Signal.new({ name: "editing", default: false }),
-      $.Signal.new({ name: "preview", default: "" }),
-      $.Var.new({ name: "client" }),
-      $.Var.new({ name: "undoStack", default: () => [] }),
-      $.Var.new({ name: "redoStack", default: () => [] }),
+      $.Var.new({ name: "session" }),
       $.Var.new({ name: "textDisplay" }),
       $.After.new({
         name: "init",
         do() {
-          const client = $llm.LLMClient.new({
-            baseURL: `http://${window.location.hostname}:3731`,
-            model: "",
-            logprobs: 20,
-            baseTemperature: 0.8,
-          });
-          this.client(client);
-
-          const saved = localStorage.getItem("SWYPELOOM_TEXT");
-          if (saved) this.text(saved);
-
-          this.textDisplay(_.TextDisplay.new({ loom: this }));
-          this.generateChoices();
-        }
-      }),
-      $.Method.new({
-        name: "saveText",
-        do() {
-          localStorage.setItem("SWYPELOOM_TEXT", this.text());
-        }
-      }),
-      $.Method.new({
-        name: "generateChoices",
-        async: true,
-        do: async function() {
-          this.loading(true);
-          this.choices([]);
-
-          const configs = [
-            { max_tokens: 15, temperature: 0.9 },
-            { max_tokens: 15, temperature: 0.8 },
-            { max_tokens: 15, temperature: 0.7 },
-            { max_tokens: 15, temperature: 0.6 },
-          ];
-
-          try {
-            const results = await Promise.all(
-              configs.map(cfg => this.client().completion(this.text(), cfg))
-            );
-
-            this.choices(results.map(r => r.text));
-
-            if (results[0].logprobs) {
-              this.logprobs($llm.LogprobParser.normalize(results[0].logprobs));
+          const session = $session.SwypeSession.new({
+            clientConfig: {
+              baseURL: `http://${window.location.hostname}:3731`,
+              model: "",
+              logprobs: 20,
+              baseTemperature: 0.8,
             }
-          } catch (e) {
-            console.error("Generation error:", e);
-          } finally {
-            this.loading(false);
-          }
-        }
-      }),
-      $.Method.new({
-        name: "snapshot",
-        do() {
-          return {
-            text: this.text(),
-            choices: this.choices().slice(),
-            logprobs: this.logprobs().slice()
-          };
-        }
-      }),
-      $.Method.new({
-        name: "restoreSnapshot",
-        do(snap) {
-          this.text(snap.text);
-          this.choices(snap.choices);
-          this.logprobs(snap.logprobs);
-          this.saveText();
-        }
-      }),
-      $.Method.new({
-        name: "pushUndo",
-        do() {
-          this.undoStack().push(this.snapshot());
-          this.redoStack().length = 0;
-        }
-      }),
-      $.Method.new({
-        name: "respin",
-        do() {
-          this.pushUndo();
-          this.generateChoices();
-        }
-      }),
-      $.Method.new({
-        name: "previewChoice",
-        do(index) {
-          const choice = this.choices()[index];
-          if (choice) {
-            this.preview(choice);
-            this.textDisplay().preview(choice);
-          }
-        }
-      }),
-      $.Method.new({
-        name: "clearPreview",
-        do() {
-          this.preview("");
-          this.textDisplay().preview("");
-        }
-      }),
-      $.Method.new({
-        name: "selectChoice",
-        do(index) {
-          const choice = this.choices()[index];
-          if (!choice) return;
-          this.pushUndo();
-          this.text(this.text() + choice);
-          this.saveText();
-          this.generateChoices();
-        }
-      }),
-      $.Method.new({
-        name: "insertToken",
-        do(token) {
-          this.pushUndo();
-          this.text(this.text() + token);
-          this.saveText();
-          this.generateChoices();
-        }
-      }),
-      $.Method.new({
-        name: "undo",
-        do() {
-          if (!this.undoStack().length) return;
-          this.redoStack().push(this.snapshot());
-          this.restoreSnapshot(this.undoStack().pop());
-        }
-      }),
-      $.Method.new({
-        name: "redo",
-        do() {
-          if (!this.redoStack().length) return;
-          this.undoStack().push(this.snapshot());
-          this.restoreSnapshot(this.redoStack().pop());
-        }
-      }),
-      $.Method.new({
-        name: "startEditing",
-        do() {
-          this.editing(true);
-        }
-      }),
-      $.Method.new({
-        name: "stopEditing",
-        do() {
-          this.editing(false);
-          this.pushUndo();
-          this.saveText();
-          this.generateChoices();
-        }
-      }),
-      $.Method.new({
-        name: "editText",
-        do(newText) {
-          this.text(newText);
+          });
+          this.session(session);
+          this.textDisplay(_.TextDisplay.new({ session }));
+          session.generateChoices();
         }
       }),
       $.Method.new({
@@ -901,12 +745,12 @@ export default await async function (_, $, $html, $llm) {
         do() {
           return $html.HTML.t`
             <div class="swypeloom">
-              ${_.TopBar.new({ loom: this })}
+              ${_.TopBar.new({ session: this.session() })}
               ${this.textDisplay()}
-              ${_.LogprobsBar.new({ loom: this })}
-              ${_.Swyper.new({ loom: this })}
-              ${_.BottomBar.new({ loom: this })}
-              ${_.EditModal.new({ loom: this })}
+              ${_.LogprobsBar.new({ session: this.session() })}
+              ${_.Swyper.new({ session: this.session() })}
+              ${_.BottomBar.new({ session: this.session() })}
+              ${_.EditModal.new({ session: this.session() })}
             </div>
           `;
         }
@@ -916,4 +760,4 @@ export default await async function (_, $, $html, $llm) {
 
   _.SwypeLoom.new().mount();
 
-}.module({ name: "swyperloom", imports: [base, html, llm] }).load();
+}.module({ name: "swyperloom", imports: [base, html, session] }).load();
