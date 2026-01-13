@@ -6,3 +6,9 @@ out/
 .env
 logs/
 dist/
+.chatconfig.json
+jsconfig.json
+*.db
+tmp/
+bun.lockb
+devlog.txt

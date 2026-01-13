@@ -92,13 +92,17 @@ export default await async function (_, $) {
       _.AsyncCase,
       $.Var.new({ name: 'browser' }),
       $.Var.new({ name: 'page' }),
+      $.Var.new({ name: 'isMobile', default: false }),
 
       $.AsyncBefore.new({
         name: 'run',
         async do() {
           const { chromium } = await import('playwright');
           this.browser(await chromium.launch());
-          this.page(await this.browser().newPage());
+          const pageOptions = this.isMobile()
+            ? { viewport: { width: 390, height: 844 } }
+            : {};
+          this.page(await this.browser().newPage(pageOptions));
         }
       }),
 

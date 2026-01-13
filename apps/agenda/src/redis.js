@@ -36,6 +36,11 @@ export default await async function (_, $) {
       $.Var.new({ name: 'url', default: 'redis://localhost:6379' }),
       $.Var.new({ name: 'client' }),
       $.Var.new({ name: 'connected', default: false }),
+      $.Var.new({
+        name: 'keyPrefix',
+        doc: 'prefix for all keys (for test isolation or namespacing)',
+        default: '',
+      }),
       $.Method.new({
         name: 'connect',
         async do() {
@@ -86,9 +91,31 @@ export default await async function (_, $) {
         }
       }),
       $.Method.new({
+        name: 'hDel',
+        doc: 'delete fields from a hash',
+        async do(key, fields) {
+          if (fields.length === 0) return 0;
+          return await this.client().hDel(key, fields);
+        }
+      }),
+      $.Method.new({
         name: 'keys',
         async do(pattern) {
           return await this.client().keys(pattern);
+        }
+      }),
+      $.Method.new({
+        name: 'scan',
+        doc: 'iterate keys matching pattern using cursor (scalable alternative to KEYS)',
+        async do(pattern, count = 100) {
+          const results = [];
+          let cursor = 0;
+          do {
+            const reply = await this.client().scan(cursor, { MATCH: pattern, COUNT: count });
+            cursor = reply.cursor;
+            results.push(...reply.keys);
+          } while (cursor !== 0);
+          return results;
         }
       }),
       $.Method.new({
@@ -143,17 +170,6 @@ export default await async function (_, $) {
     ]
   });
 
-  // Global prefix for test isolation - set to 'test:' before running tests
-  let globalKeyPrefix = '';
-
-  _.setKeyPrefix = function(prefix) {
-    globalKeyPrefix = prefix;
-  };
-
-  _.getKeyPrefix = function() {
-    return globalKeyPrefix;
-  };
-
   $.Class.new({
     name: 'RedisPersisted',
     doc: 'Mixin for Redis-persisted objects',
@@ -176,16 +192,17 @@ export default await async function (_, $) {
       }),
       $.Static.new({
         name: 'keyPrefix',
-        doc: 'prefix for Redis keys',
-        do() {
-          return globalKeyPrefix + 'agenda:' + this.name.toLowerCase();
+        doc: 'prefix for Redis keys (takes redis client for its keyPrefix)',
+        do(redis) {
+          const clientPrefix = redis?.keyPrefix?.() || '';
+          return clientPrefix + 'agenda:' + this.name.toLowerCase();
         }
       }),
       $.Static.new({
         name: 'indexKey',
         doc: 'key for the set of all ids',
-        do() {
-          return this.keyPrefix() + ':ids';
+        do(redis) {
+          return this.keyPrefix(redis) + ':ids';
         }
       }),
       $.Static.new({
@@ -198,25 +215,28 @@ export default await async function (_, $) {
       $.Method.new({
         name: 'redisKey',
         doc: 'get the Redis key for this object',
-        do() {
-          return this.class().keyPrefix() + ':' + this.rid();
+        do(redis) {
+          return this.class().keyPrefix(redis) + ':' + this.rid();
         }
       }),
       $.Method.new({
         name: 'toRedisHash',
-        doc: 'serialize to Redis hash fields',
+        doc: 'serialize to Redis hash fields, returns { hash, nullFields }',
         do() {
           const hash = {};
+          const nullFields = [];
           for (const varSlot of this.class().redisVars()) {
             const value = this[varSlot.name]();
-            if (value !== undefined && value !== null) {
+            if (value === undefined || value === null) {
+              nullFields.push(varSlot.name);
+            } else {
               const transformed = varSlot.toRedis().apply(value);
               hash[varSlot.name] = typeof transformed === 'string'
                 ? transformed
                 : JSON.stringify(transformed);
             }
           }
-          return hash;
+          return { hash, nullFields };
         }
       }),
       $.Static.new({
@@ -235,7 +255,7 @@ export default await async function (_, $) {
       }),
       $.Method.new({
         name: 'save',
-        doc: 'save object to Redis',
+        doc: 'save object to Redis (properly handles null field clearing)',
         async do(redis) {
           const now = new Date();
           if (!this.rid()) {
@@ -244,9 +264,15 @@ export default await async function (_, $) {
           }
           this.updatedAt(now);
 
-          const hash = this.toRedisHash();
-          await redis.hSet(this.redisKey(), hash);
-          await redis.sAdd(this.class().indexKey(), this.rid());
+          const { hash, nullFields } = this.toRedisHash();
+          const key = this.redisKey(redis);
+          if (Object.keys(hash).length > 0) {
+            await redis.hSet(key, hash);
+          }
+          if (nullFields.length > 0) {
+            await redis.hDel(key, nullFields);
+          }
+          await redis.sAdd(this.class().indexKey(redis), this.rid());
           return this;
         }
       }),
@@ -254,8 +280,8 @@ export default await async function (_, $) {
         name: 'delete',
         doc: 'delete object from Redis',
         async do(redis) {
-          await redis.del(this.redisKey());
-          await redis.sRem(this.class().indexKey(), this.rid());
+          await redis.del(this.redisKey(redis));
+          await redis.sRem(this.class().indexKey(redis), this.rid());
           return this;
         }
       }),
@@ -263,7 +289,7 @@ export default await async function (_, $) {
         name: 'findById',
         doc: 'find object by id',
         async do(redis, id) {
-          const key = this.keyPrefix() + ':' + id;
+          const key = this.keyPrefix(redis) + ':' + id;
           const hash = await redis.hGetAll(key);
           if (!hash || Object.keys(hash).length === 0) {
             return null;
@@ -275,7 +301,7 @@ export default await async function (_, $) {
         name: 'findAll',
         doc: 'find all objects of this type',
         async do(redis) {
-          const ids = await redis.sMembers(this.indexKey());
+          const ids = await redis.sMembers(this.indexKey(redis));
           const results = [];
           for (const id of ids) {
             const obj = await this.findById(redis, id);

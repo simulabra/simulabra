@@ -1,8 +1,9 @@
 import { __, base } from 'simulabra';
 import live from 'simulabra/live';
+import tools from '../tools.js';
 import Anthropic from '@anthropic-ai/sdk';
 
-export default await async function (_, $, $live) {
+export default await async function (_, $, $live, $tools) {
   $.Class.new({
     name: 'GeistService',
     doc: 'Claude API integration for natural language understanding',
@@ -11,6 +12,11 @@ export default await async function (_, $, $live) {
       $.Var.new({ name: 'dbService' }),
       $.Var.new({ name: 'client' }),
       $.Var.new({ name: 'model', default: 'claude-sonnet-4-20250514' }),
+      $.Var.new({
+        name: 'toolRegistry',
+        doc: 'registry of available tools',
+        default: () => $tools.AgendaToolRegistry.new(),
+      }),
       $.Var.new({
         name: 'systemPrompt',
         default: `You are Agenda, a personal productivity assistant. You help users manage their logs (journal entries), tasks (todo items), and reminders.
@@ -36,144 +42,6 @@ For tasks:
 - Default to priority 3 if not specified
 - Parse due dates from natural language`
       }),
-      $.Var.new({
-        name: 'tools',
-        default: () => [
-          {
-            name: 'create_log',
-            description: 'Create a journal/log entry to record thoughts, notes, or events',
-            input_schema: {
-              type: 'object',
-              properties: {
-                content: {
-                  type: 'string',
-                  description: 'The content of the log entry'
-                },
-                tags: {
-                  type: 'array',
-                  items: { type: 'string' },
-                  description: 'Optional tags for categorization'
-                }
-              },
-              required: ['content']
-            }
-          },
-          {
-            name: 'create_task',
-            description: 'Create a new task/todo item',
-            input_schema: {
-              type: 'object',
-              properties: {
-                title: {
-                  type: 'string',
-                  description: 'The task description'
-                },
-                priority: {
-                  type: 'integer',
-                  minimum: 1,
-                  maximum: 5,
-                  description: 'Priority level (1=highest, 5=lowest). Default is 3'
-                },
-                dueDate: {
-                  type: 'string',
-                  description: 'Optional due date in ISO 8601 format'
-                }
-              },
-              required: ['title']
-            }
-          },
-          {
-            name: 'complete_task',
-            description: 'Mark a task as completed',
-            input_schema: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'The task ID to complete'
-                }
-              },
-              required: ['id']
-            }
-          },
-          {
-            name: 'create_reminder',
-            description: 'Create a reminder for a specific time',
-            input_schema: {
-              type: 'object',
-              properties: {
-                message: {
-                  type: 'string',
-                  description: 'What to remind about'
-                },
-                when: {
-                  type: 'string',
-                  description: 'When to trigger the reminder (ISO 8601 format)'
-                },
-                recurrence: {
-                  type: 'object',
-                  description: 'Optional recurrence rule',
-                  properties: {
-                    pattern: {
-                      type: 'string',
-                      enum: ['daily', 'weekly', 'monthly']
-                    },
-                    interval: {
-                      type: 'integer',
-                      description: 'Repeat every N units'
-                    }
-                  }
-                }
-              },
-              required: ['message', 'when']
-            }
-          },
-          {
-            name: 'search',
-            description: 'Search across all logs, tasks, and reminders',
-            input_schema: {
-              type: 'object',
-              properties: {
-                query: {
-                  type: 'string',
-                  description: 'Search query'
-                }
-              },
-              required: ['query']
-            }
-          },
-          {
-            name: 'list_tasks',
-            description: 'List tasks with optional filtering',
-            input_schema: {
-              type: 'object',
-              properties: {
-                done: {
-                  type: 'boolean',
-                  description: 'Filter by completion status'
-                },
-                priority: {
-                  type: 'integer',
-                  description: 'Filter by priority level'
-                }
-              }
-            }
-          },
-          {
-            name: 'list_logs',
-            description: 'List recent log/journal entries',
-            input_schema: {
-              type: 'object',
-              properties: {
-                limit: {
-                  type: 'integer',
-                  description: 'Maximum number of entries to return (default 50)'
-                }
-              }
-            }
-          }
-        ]
-      }),
 
       $.After.new({
         name: 'init',
@@ -185,7 +53,14 @@ For tasks:
         }
       }),
 
-      // Health check
+      $.Method.new({
+        name: 'tools',
+        doc: 'returns tool definitions for Claude API (compatibility method)',
+        do() {
+          return this.toolRegistry().definitions();
+        }
+      }),
+
       $live.RpcMethod.new({
         name: 'health',
         do() {
@@ -206,6 +81,16 @@ For tasks:
       }),
 
       $.Method.new({
+        name: 'services',
+        doc: 'build services context for tool execution',
+        do() {
+          return {
+            db: this.dbService(),
+          };
+        }
+      }),
+
+      $.Method.new({
         name: 'executeTool',
         doc: 'execute a tool by name with given arguments',
         async do(toolName, args) {
@@ -213,38 +98,7 @@ For tasks:
           if (!db) {
             return { success: false, error: 'No database service connected' };
           }
-
-          try {
-            let result;
-            switch (toolName) {
-              case 'create_log':
-                result = await db.createLog(args.content, args.tags || []);
-                break;
-              case 'create_task':
-                result = await db.createTask(args.title, args.priority || 3, args.dueDate || null);
-                break;
-              case 'complete_task':
-                result = await db.completeTask(args.id);
-                break;
-              case 'create_reminder':
-                result = await db.createReminder(args.message, args.when, args.recurrence || null);
-                break;
-              case 'search':
-                result = await db.search(args.query);
-                break;
-              case 'list_tasks':
-                result = await db.listTasks(args || {});
-                break;
-              case 'list_logs':
-                result = await db.listLogs(args.limit || 50);
-                break;
-              default:
-                return { success: false, error: `Unknown tool: ${toolName}` };
-            }
-            return { success: true, data: result };
-          } catch (e) {
-            return { success: false, error: e.message };
-          }
+          return await this.toolRegistry().execute(toolName, args, this.services());
         }
       }),
 
@@ -292,16 +146,13 @@ For tasks:
               }
             }
 
-            // If Claude wants to use tools and expects a response, continue the conversation
             if (response.stop_reason === 'tool_use' && results.length > 0) {
-              // Build tool results for Claude
               const toolResults = results.map((r, i) => ({
                 type: 'tool_result',
                 tool_use_id: response.content.filter(b => b.type === 'tool_use')[i].id,
                 content: JSON.stringify(r.result)
               }));
 
-              // Continue conversation with tool results
               const followUp = await this.client().messages.create({
                 model: this.model(),
                 max_tokens: 1024,
@@ -314,7 +165,6 @@ For tasks:
                 ],
               });
 
-              // Extract final text response
               for (const block of followUp.content) {
                 if (block.type === 'text') {
                   textResponse += block.text;
@@ -358,5 +208,5 @@ For tasks:
   }
 }.module({
   name: 'services.geist',
-  imports: [base, live],
+  imports: [base, live, tools],
 }).load();

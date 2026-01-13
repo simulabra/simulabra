@@ -8,9 +8,6 @@ import geist from '../src/services/geist.js';
 export default await async function (_, $, $test, $redis, $models, $db, $geist) {
   const TEST_PREFIX = 'test:integration:';
 
-  // Access module-level functions from the raw redis module
-  const { setKeyPrefix } = await redisModule;
-
   // Mock Anthropic client for testing tool calls without actual API
   class MockAnthropicClient {
     constructor() {
@@ -40,11 +37,9 @@ export default await async function (_, $, $test, $redis, $models, $db, $geist) 
 
   // Helper to create isolated test services
   const createTestServices = async () => {
-    // Set test prefix for isolation
-    setKeyPrefix(TEST_PREFIX);
-
     const dbService = $db.DatabaseService.new({ uid: 'TestDatabaseService' });
     await dbService.connectRedis();
+    dbService.redis().keyPrefix(TEST_PREFIX);
 
     const geistService = $geist.GeistService.new({ uid: 'TestGeistService' });
     geistService.dbService(dbService);
@@ -56,7 +51,6 @@ export default await async function (_, $, $test, $redis, $models, $db, $geist) 
   // Cleanup helper
   const cleanup = async (redis) => {
     await redis.deleteByPattern(TEST_PREFIX + '*');
-    setKeyPrefix('');
     await redis.disconnect();
   };
 
