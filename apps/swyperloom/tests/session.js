@@ -557,6 +557,120 @@ export default await async function (_, $, $test, $session) {
     }
   });
 
+  $test.Case.new({
+    name: "SettingsOpenClose",
+    doc: "Settings modal open/close state transitions",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://test:3731" }
+      });
+
+      this.assertEq(session.settingsOpen(), false);
+
+      session.openSettings();
+      this.assertEq(session.settingsOpen(), true);
+
+      session.closeSettings();
+      this.assertEq(session.settingsOpen(), false);
+    }
+  });
+
+  $test.Case.new({
+    name: "ServerURLDefaultsToConfig",
+    doc: "Server URL defaults to generatorConfig baseURL",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://custom:9999" }
+      });
+
+      this.assertEq(session.serverURL(), "http://custom:9999");
+    }
+  });
+
+  $test.Case.new({
+    name: "ServerURLLoadsFromStorage",
+    doc: "Server URL loads from localStorage on init",
+    do() {
+      const mockLS = createMockStorage();
+      const originalLS = globalThis.localStorage;
+      globalThis.localStorage = mockLS;
+
+      try {
+        mockLS.setItem("SWYPELOOM_SERVER_URL", "http://saved:8888");
+
+        const session = $session.SwypeSession.new({
+          generatorConfig: { baseURL: "http://default:3731" }
+        });
+
+        this.assertEq(session.serverURL(), "http://saved:8888");
+      } finally {
+        globalThis.localStorage = originalLS;
+      }
+    }
+  });
+
+  $test.Case.new({
+    name: "ServerURLSavesToStorage",
+    doc: "Updating server URL saves to localStorage",
+    do() {
+      const mockLS = createMockStorage();
+      const originalLS = globalThis.localStorage;
+      globalThis.localStorage = mockLS;
+
+      try {
+        const session = $session.SwypeSession.new({
+          generatorConfig: { baseURL: "http://default:3731" }
+        });
+
+        session.updateServerURL("http://newserver:5000");
+
+        this.assertEq(session.serverURL(), "http://newserver:5000");
+        this.assertEq(mockLS._store["SWYPELOOM_SERVER_URL"], "http://newserver:5000");
+      } finally {
+        globalThis.localStorage = originalLS;
+      }
+    }
+  });
+
+  $test.Case.new({
+    name: "ServerURLUpdatesClient",
+    doc: "Updating server URL also updates the LLM client",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://original:3731" }
+      });
+
+      this.assertEq(session.generator().client().baseURL(), "http://original:3731");
+
+      session.updateServerURL("http://updated:4000");
+
+      this.assertEq(session.generator().client().baseURL(), "http://updated:4000");
+    }
+  });
+
+  $test.Case.new({
+    name: "ServerURLCustomStorageKey",
+    doc: "Server URL storage key can be customized",
+    do() {
+      const mockLS = createMockStorage();
+      const originalLS = globalThis.localStorage;
+      globalThis.localStorage = mockLS;
+
+      try {
+        mockLS.setItem("MY_URL_KEY", "http://custom:7777");
+
+        const session = $session.SwypeSession.new({
+          generatorConfig: { baseURL: "http://default:3731" },
+          urlStorageKey: "MY_URL_KEY"
+        });
+
+        this.assertEq(session.serverURL(), "http://custom:7777");
+      } finally {
+        globalThis.localStorage = originalLS;
+      }
+    }
+  });
+
 }.module({
   name: "test.swyperloom.session",
   imports: [base, test, session],

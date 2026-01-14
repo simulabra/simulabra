@@ -343,7 +343,7 @@ export default await async function (_, $, $html, $session) {
         do() {
           return $html.HTML.t`
             <div class="top-bar">
-              <button class="menu-btn">☰</button>
+              <button class="menu-btn" onclick=${() => this.session().openSettings()}>☰</button>
               <h1 class="title">SWYPERLOOM</h1>
               <div class="spacer"></div>
             </div>
@@ -369,6 +369,36 @@ export default await async function (_, $, $html, $session) {
                 <textarea class="edit-textarea"
                           oninput=${e => this.session().editText(e.target.value)}>${() => this.session().text()}</textarea>
                 <button class="edit-done" onclick=${() => this.session().stopEditing()}>Done</button>
+              </div>
+            </div>
+          `;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: "SettingsModal",
+    doc: "Modal for app settings",
+    slots: [
+      $html.Component,
+      $.Var.new({ name: "session" }),
+      $.Method.new({
+        name: "render",
+        do() {
+          return $html.HTML.t`
+            <div class="settings-modal" hidden=${() => !this.session().settingsOpen()}
+                 onclick=${e => { if (e.target.classList.contains('settings-modal')) this.session().closeSettings(); }}>
+              <div class="settings-container">
+                <h2 class="settings-title">Settings</h2>
+                <div class="settings-field">
+                  <label class="settings-label">LLM Server URL</label>
+                  <input type="text" class="settings-input"
+                         value=${() => this.session().serverURL()}
+                         oninput=${e => this.session().updateServerURL(e.target.value)}
+                         placeholder="http://localhost:3731" />
+                </div>
+                <button class="settings-done" onclick=${() => this.session().closeSettings()}>Done</button>
               </div>
             </div>
           `;
@@ -763,6 +793,90 @@ export default await async function (_, $, $html, $session) {
               background: var(--seaweed);
             }
 
+            /* Settings Modal */
+            .settings-modal {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.6);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 16px;
+              z-index: 100;
+            }
+
+            .settings-modal[hidden] { display: none; }
+
+            .settings-container {
+              width: 100%;
+              max-width: 400px;
+              background: var(--sand);
+              box-shadow: var(--box-shadow-args);
+              padding: 12px;
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            }
+
+            .settings-title {
+              font-size: 16px;
+              font-weight: normal;
+              font-style: italic;
+              color: var(--charcoal);
+              margin: 0;
+            }
+
+            .settings-field {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+            }
+
+            .settings-label {
+              font-size: 12px;
+              font-style: italic;
+              color: var(--charcoal);
+            }
+
+            .settings-input {
+              width: 100%;
+              background: var(--light-sand);
+              border: 0;
+              box-shadow: var(--box-shadow-args);
+              padding: 8px;
+              font-family: monospace;
+              font-size: 13px;
+              color: var(--charcoal);
+            }
+
+            .settings-input:focus {
+              outline: none;
+              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
+            }
+
+            .settings-input::placeholder {
+              color: var(--charcoal);
+              opacity: 0.5;
+            }
+
+            .settings-done {
+              background: var(--grass);
+              border: 0;
+              box-shadow: var(--box-shadow-args);
+              padding: 8px;
+              color: var(--seashell);
+              font-size: 14px;
+              font-style: italic;
+              cursor: pointer;
+            }
+
+            .settings-done:active {
+              background: var(--seaweed);
+            }
+
             [hidden] {
               display: none !important;
             }
@@ -780,6 +894,7 @@ export default await async function (_, $, $html, $session) {
               ${_.Swyper.new({ session: this.session(), textDisplay: this.textDisplay() })}
               ${_.BottomBar.new({ session: this.session() })}
               ${_.EditModal.new({ session: this.session() })}
+              ${_.SettingsModal.new({ session: this.session() })}
             </div>
           `;
         }

@@ -111,19 +111,27 @@ export default await async function (_, $, $llm) {
       $.Signal.new({ name: "loading", default: false }),
       $.Signal.new({ name: "editing", default: false }),
       $.Signal.new({ name: "preview", default: "" }),
+      $.Signal.new({ name: "settingsOpen", default: false }),
+      $.Signal.new({ name: "serverURL", default: "" }),
 
       $.Var.new({ name: "generator" }),
       $.Var.new({ name: "storage" }),
       $.Var.new({ name: "generatorConfig" }),
+      $.Var.new({ name: "urlStorageKey", default: "SWYPELOOM_SERVER_URL" }),
 
       $.After.new({
         name: "init",
         do() {
-          const config = this.generatorConfig() || {
-            baseURL: "http://localhost:3731",
-            model: "",
-            logprobs: 20,
-            baseTemperature: 0.8,
+          const savedURL = this.loadServerURL();
+          const defaultURL = this.generatorConfig()?.baseURL || "http://localhost:3731";
+          const baseURL = savedURL || defaultURL;
+          this.serverURL(baseURL);
+
+          const config = {
+            baseURL,
+            model: this.generatorConfig()?.model || "",
+            logprobs: this.generatorConfig()?.logprobs || 20,
+            baseTemperature: this.generatorConfig()?.baseTemperature || 0.8,
           };
           const client = $llm.LLMClient.new(config);
           this.generator(_.ChoiceGenerator.new({ client }));
@@ -308,6 +316,48 @@ export default await async function (_, $, $llm) {
         name: "clearImage",
         do() {
           this.generator().clearImage();
+        }
+      }),
+
+      $.Method.new({
+        name: "loadServerURL",
+        do() {
+          if (typeof localStorage !== "undefined") {
+            return localStorage.getItem(this.urlStorageKey()) || "";
+          }
+          return "";
+        }
+      }),
+
+      $.Method.new({
+        name: "saveServerURL",
+        do(url) {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(this.urlStorageKey(), url);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "updateServerURL",
+        do(url) {
+          this.serverURL(url);
+          this.saveServerURL(url);
+          this.generator().client().baseURL(url);
+        }
+      }),
+
+      $.Method.new({
+        name: "openSettings",
+        do() {
+          this.settingsOpen(true);
+        }
+      }),
+
+      $.Method.new({
+        name: "closeSettings",
+        do() {
+          this.settingsOpen(false);
         }
       })
     ]
