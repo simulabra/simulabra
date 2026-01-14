@@ -31,6 +31,8 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
  - WRONG: class=${"base " + (this.active() ? "active" : "")} - concatenates string with function object
  - RIGHT: class=${() => "base " + (this.active() ? "active" : "")} - function returns computed string
  - the template system calls functions to get reactive values; non-functions are treated as static
+ - run `bash build.sh` to bundle HTML apps for production (outputs to out/)
+ - HTML entry points should use relative paths to source files (e.g. ./src/app.js), not dist/
 </HTML>
 
 <Navigating>
