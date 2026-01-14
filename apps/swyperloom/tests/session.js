@@ -413,6 +413,150 @@ export default await async function (_, $, $test, $session) {
     }
   });
 
+  $test.Case.new({
+    name: "TokenizePreservesWhitespace",
+    doc: "Tokenization preserves leading whitespace for each token",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://test:3731" }
+      });
+
+      const tokens = session.tokenize(" alpha  beta\tgamma");
+
+      this.assertEq(tokens.length, 3);
+      this.assertEq(tokens[0], " alpha");
+      this.assertEq(tokens[1], "  beta");
+      this.assertEq(tokens[2], "\tgamma");
+      this.assertEq(tokens.join(""), " alpha  beta\tgamma");
+    }
+  });
+
+  $test.Case.new({
+    name: "TokenizeEmptyString",
+    doc: "Tokenization handles empty and whitespace-only strings",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://test:3731" }
+      });
+
+      this.assertEq(session.tokenize("").length, 0);
+      this.assertEq(session.tokenize(null).length, 0);
+      this.assertEq(session.tokenize(undefined).length, 0);
+      this.assertEq(session.tokenize("   ").length, 0);
+    }
+  });
+
+  $test.Case.new({
+    name: "ChoicePrefixReturnsPartialTokens",
+    doc: "choicePrefix returns correct prefix for given token count",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://test:3731" }
+      });
+      session.choices([" alpha  beta gamma", " one two", "", " single"]);
+
+      this.assertEq(session.choicePrefix(0, 1), " alpha");
+      this.assertEq(session.choicePrefix(0, 2), " alpha  beta");
+      this.assertEq(session.choicePrefix(0, 3), " alpha  beta gamma");
+      this.assertEq(session.choicePrefix(0, 10), " alpha  beta gamma");
+
+      this.assertEq(session.choicePrefix(1, 1), " one");
+      this.assertEq(session.choicePrefix(1, 2), " one two");
+
+      this.assertEq(session.choicePrefix(2, 1), "");
+      this.assertEq(session.choicePrefix(3, 1), " single");
+    }
+  });
+
+  $test.Case.new({
+    name: "ChoicePrefixEdgeCases",
+    doc: "choicePrefix handles edge cases correctly",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://test:3731" }
+      });
+      session.choices([" alpha beta"]);
+
+      this.assertEq(session.choicePrefix(0, 0), "");
+      this.assertEq(session.choicePrefix(0, -1), "");
+      this.assertEq(session.choicePrefix(5, 1), "");
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: "SelectChoicePrefixCommitsPartial",
+    doc: "selectChoicePrefix commits only the specified number of tokens",
+    async do() {
+      setupMockFetch({
+        choices: [{ text: " next", logprobs: null }]
+      });
+
+      try {
+        const session = $session.SwypeSession.new({
+          generatorConfig: { baseURL: "http://test:3731" }
+        });
+        session.text("Start");
+        session.choices([" alpha beta gamma", " one two three", " x", " y"]);
+
+        session.selectChoicePrefix(0, 1);
+        this.assertEq(session.text(), "Start alpha");
+        this.assert(session.canUndo());
+
+        session.undo();
+        session.selectChoicePrefix(0, 2);
+        this.assertEq(session.text(), "Start alpha beta");
+      } finally {
+        restoreFetch();
+      }
+    }
+  });
+
+  $test.Case.new({
+    name: "SelectChoicePrefixReturnsFalseForEmpty",
+    doc: "selectChoicePrefix returns false when prefix would be empty",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://test:3731" }
+      });
+      session.text("Start");
+      session.choices([" alpha", "", " gamma", " delta"]);
+
+      const result1 = session.selectChoicePrefix(0, 0);
+      this.assertEq(result1, false);
+      this.assertEq(session.text(), "Start");
+
+      const result2 = session.selectChoicePrefix(1, 1);
+      this.assertEq(result2, false);
+      this.assertEq(session.text(), "Start");
+
+      const result3 = session.selectChoicePrefix(5, 1);
+      this.assertEq(result3, false);
+    }
+  });
+
+  $test.Case.new({
+    name: "PreviewChoicePrefixSetsPreview",
+    doc: "previewChoicePrefix sets preview to the partial text",
+    do() {
+      const session = $session.SwypeSession.new({
+        generatorConfig: { baseURL: "http://test:3731" }
+      });
+      session.choices([" alpha beta gamma", " one two"]);
+
+      session.previewChoicePrefix(0, 1);
+      this.assertEq(session.preview(), " alpha");
+
+      session.previewChoicePrefix(0, 2);
+      this.assertEq(session.preview(), " alpha beta");
+
+      session.previewChoicePrefix(1, 1);
+      this.assertEq(session.preview(), " one");
+
+      session.clearPreview();
+      this.assertEq(session.preview(), "");
+    }
+  });
+
 }.module({
   name: "test.swyperloom.session",
   imports: [base, test, session],

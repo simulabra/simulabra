@@ -18,14 +18,19 @@ export default await async function (_, $, $html, $session) {
             this.session().text();
             this.scrollToBottom();
           });
+          $.Effect.create(() => {
+            this.session().preview();
+            if ('vibrate' in navigator) {
+              navigator.vibrate(25);
+            }
+          })
         }
       }),
       $.Method.new({
         name: "scrollToBottom",
         do() {
           requestAnimationFrame(() => {
-            const root = this.rootVNode()?.el();
-            const el = root?.querySelector('.text-content');
+            const el = document.querySelector('.text-content');
             if (el) el.scrollTop = el.scrollHeight;
           });
         }
@@ -139,12 +144,25 @@ export default await async function (_, $, $html, $session) {
     slots: [
       $html.Component,
       $.Var.new({ name: "session" }),
+      $.Var.new({ name: "textDisplay" }),
       $.Signal.new({ name: "swyping", default: false }),
       $.Signal.new({ name: "activeCorner", default: null }),
       $.Signal.new({ name: "dialAngle", default: 0 }),
       $.Signal.new({ name: "outsideCenter", default: false }),
       $.Signal.new({ name: "startX", default: 0 }),
       $.Signal.new({ name: "startY", default: 0 }),
+      $.Signal.new({ name: "tokenCount", default: 0 }),
+      $.Method.new({
+        name: "distanceToTokenCount",
+        doc: "Map swipe distance to number of tokens to commit",
+        do(distance, maxTokens, rect) {
+          const threshold = 50;
+          if (distance < threshold || maxTokens === 0) return 0;
+          const span = Math.min(rect.width, rect.height) * 0.6;
+          const t = Math.min(1, (distance - threshold) / span);
+          return Math.max(1, Math.min(maxTokens, Math.round(1 + (maxTokens - 1) * t)));
+        }
+      }),
       $.Method.new({
         name: "handlePointerDown",
         do(e) {
@@ -168,6 +186,7 @@ export default await async function (_, $, $html, $session) {
 
           if (x < 0 || x > rect.width || y < 0 || y > rect.height) {
             this.activeCorner(null);
+            this.tokenCount(0);
             this.session().clearPreview();
             return;
           }
@@ -184,6 +203,7 @@ export default await async function (_, $, $html, $session) {
           } else {
             this.outsideCenter(false);
             this.activeCorner(null);
+            this.tokenCount(0);
             this.session().clearPreview();
             return;
           }
@@ -215,7 +235,11 @@ export default await async function (_, $, $html, $session) {
           else corner = 3;
 
           this.activeCorner(corner);
-          this.session().previewChoice(corner);
+          const tokens = this.session().choiceTokens(corner);
+          const count = this.distanceToTokenCount(distance, tokens.length, rect);
+          this.tokenCount(count);
+          this.session().previewChoicePrefix(corner, count);
+          this.textDisplay()?.scrollToBottom();
         }
       }),
       $.Method.new({
@@ -224,12 +248,14 @@ export default await async function (_, $, $html, $session) {
           if (!this.swyping()) return;
           e.preventDefault();
           const corner = this.activeCorner();
+          const count = this.tokenCount();
           this.swyping(false);
+          this.tokenCount(0);
           this.activeCorner(null);
           this.outsideCenter(false);
 
-          if (corner !== null) {
-            this.session().selectChoice(corner);
+          if (corner !== null && count > 0) {
+            this.session().selectChoicePrefix(corner, count);
           }
           this.session().clearPreview();
         }
@@ -751,7 +777,7 @@ export default await async function (_, $, $html, $session) {
               ${_.TopBar.new({ session: this.session() })}
               ${this.textDisplay()}
               ${_.LogprobsBar.new({ session: this.session() })}
-              ${_.Swyper.new({ session: this.session() })}
+              ${_.Swyper.new({ session: this.session(), textDisplay: this.textDisplay() })}
               ${_.BottomBar.new({ session: this.session() })}
               ${_.EditModal.new({ session: this.session() })}
             </div>

@@ -201,6 +201,55 @@ export default await async function (_, $, $llm) {
       }),
 
       $.Method.new({
+        name: "tokenize",
+        doc: "Split text into whitespace-preserving tokens",
+        do(text) {
+          if (!text) return [];
+          const matches = text.match(/\s*\S+/g);
+          return matches || [];
+        }
+      }),
+
+      $.Method.new({
+        name: "choiceTokens",
+        do(index) {
+          const choice = this.choices()[index];
+          return this.tokenize(choice);
+        }
+      }),
+
+      $.Method.new({
+        name: "choicePrefix",
+        do(index, tokenCount) {
+          const tokens = this.choiceTokens(index);
+          if (tokenCount <= 0 || tokens.length === 0) return "";
+          const n = Math.min(tokenCount, tokens.length);
+          return tokens.slice(0, n).join("");
+        }
+      }),
+
+      $.Method.new({
+        name: "previewChoicePrefix",
+        do(index, tokenCount) {
+          const prefix = this.choicePrefix(index, tokenCount);
+          this.preview(prefix);
+        }
+      }),
+
+      $.Method.new({
+        name: "selectChoicePrefix",
+        do(index, tokenCount) {
+          const prefix = this.choicePrefix(index, tokenCount);
+          if (!prefix) return false;
+          this.pushUndo();
+          this.text(this.text() + prefix);
+          this.saveToStorage();
+          this.generateChoices();
+          return true;
+        }
+      }),
+
+      $.Method.new({
         name: "selectChoice",
         do(index) {
           const choice = this.choices()[index];

@@ -128,7 +128,7 @@ export default await async function (_, $, $test, $llm) {
   });
 
   function createMockServer(mockChoices = [' alpha', ' beta', ' gamma', ' delta']) {
-    return Bun.serve({
+    const server = Bun.serve({
       port: 0,
       async fetch(req) {
         const url = new URL(req.url);
@@ -155,6 +155,32 @@ export default await async function (_, $, $test, $llm) {
         return new Response('Not found', { status: 404 });
       }
     });
+    return server;
+  }
+
+  async function setupApiIntercept(page, mockChoices = [' alpha', ' beta', ' gamma', ' delta']) {
+    await page.route('**/localhost:3731/v1/completions', async route => {
+      const body = JSON.parse(route.request().postData());
+      const idx = Math.min(3, Math.floor((1 - body.temperature) * 10));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          choices: [{
+            text: mockChoices[idx % mockChoices.length],
+            logprobs: {
+              content: [{
+                top_logprobs: [
+                  { token: ' the', logprob: -0.3 },
+                  { token: ' a', logprob: -0.8 },
+                  { token: ' an', logprob: -1.2 }
+                ]
+              }]
+            }
+          }]
+        })
+      });
+    });
   }
 
   $test.BrowserCase.new({
@@ -164,6 +190,7 @@ export default await async function (_, $, $test, $llm) {
     async do() {
       const server = createMockServer();
       try {
+        await setupApiIntercept(this.page());
         await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`, { waitUntil: 'networkidle' });
         await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
 
@@ -188,6 +215,7 @@ export default await async function (_, $, $test, $llm) {
     async do() {
       const server = createMockServer();
       try {
+        await setupApiIntercept(this.page());
         const savedText = 'Previously saved story text';
         await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`);
         await this.page().evaluate((text) => {
@@ -212,6 +240,7 @@ export default await async function (_, $, $test, $llm) {
     async do() {
       const server = createMockServer();
       try {
+        await setupApiIntercept(this.page());
         await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`, { waitUntil: 'networkidle' });
         await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
 
@@ -248,6 +277,7 @@ export default await async function (_, $, $test, $llm) {
     async do() {
       const server = createMockServer();
       try {
+        await setupApiIntercept(this.page());
         await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`, { waitUntil: 'networkidle' });
         await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
 
@@ -276,6 +306,7 @@ export default await async function (_, $, $test, $llm) {
     async do() {
       const server = createMockServer();
       try {
+        await setupApiIntercept(this.page());
         await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`, { waitUntil: 'networkidle' });
         await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
 
@@ -311,6 +342,7 @@ export default await async function (_, $, $test, $llm) {
     async do() {
       const server = createMockServer();
       try {
+        await setupApiIntercept(this.page());
         await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`, { waitUntil: 'networkidle' });
         await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
 
@@ -334,6 +366,204 @@ export default await async function (_, $, $test, $llm) {
 
         const afterRedoText = await this.page().$eval('.main-text', el => el.textContent);
         this.assertEq(afterRedoText, afterSelectText, 'Redo should restore the undone text');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'PreviewScrollsToBottom',
+    doc: 'Text display scrolls to bottom when preview changes during swipe',
+    isMobile: true,
+    async do() {
+      const server = createMockServer();
+      try {
+        await setupApiIntercept(this.page());
+        await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`, { waitUntil: 'networkidle' });
+        await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
+
+        // Wait for choices to load (same as other tests)
+        await this.page().waitForFunction(() => {
+          const choice = document.querySelector('.swype-choice.top-right .choice-text');
+          return choice && choice.textContent && choice.textContent !== '...';
+        }, { timeout: 5000 });
+
+        // Programmatically add long text and set preview
+        await this.page().evaluate(() => {
+          const mainText = document.querySelector('.main-text');
+          const previewText = document.querySelector('.preview-text');
+          const textContent = document.querySelector('.text-content');
+          if (mainText) mainText.textContent = 'Line.\n'.repeat(100);
+          textContent.scrollTop = 0;
+        });
+        await __.sleep(50);
+
+        const scrollTopBefore = await this.page().$eval('.text-content', el => el.scrollTop);
+        this.assertEq(scrollTopBefore, 0, 'Should start scrolled to top');
+
+        // Capture console errors
+        const errors = [];
+        this.page().on('console', msg => {
+          if (msg.type() === 'error') errors.push(msg.text());
+        });
+
+        // Start swipe to trigger preview
+        const swyper = await this.page().$('.swyper');
+        const box = await swyper.boundingBox();
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+
+        await this.page().mouse.move(cx, cy);
+        await this.page().mouse.down();
+        await this.page().mouse.move(box.x + box.width - 20, box.y + 20, { steps: 10 });
+
+        // Wait for scroll
+        await __.sleep(200);
+
+        const state = await this.page().evaluate(() => {
+          const textContent = document.querySelector('.text-content');
+          const previewText = document.querySelector('.preview-text');
+          return {
+            scrollTop: textContent?.scrollTop || 0,
+            scrollHeight: textContent?.scrollHeight || 0,
+            clientHeight: textContent?.clientHeight || 0,
+            isAtBottom: textContent ? textContent.scrollTop >= textContent.scrollHeight - textContent.clientHeight - 5 : false,
+            previewContent: previewText?.textContent || 'NO_PREVIEW'
+          };
+        });
+
+        // Cancel swipe
+        await this.page().mouse.up();
+
+        this.assert(state.previewContent !== 'NO_PREVIEW' && state.previewContent !== '', `Preview should be set during swipe (preview="${state.previewContent}")`);
+        this.assert(state.isAtBottom, `Should scroll to bottom during swipe preview (scrollTop=${state.scrollTop}, scrollHeight=${state.scrollHeight}, clientHeight=${state.clientHeight}, errors=${errors.join('; ')})`);
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ShortSwipeCommitsFewer',
+    doc: 'A short swipe commits fewer tokens than a long swipe',
+    isMobile: true,
+    async do() {
+      const choices = [' alpha beta gamma delta', ' one two three four', ' x y z w', ' a b c d'];
+      const server = createMockServer(choices);
+      try {
+        await setupApiIntercept(this.page(), choices);
+        await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`);
+        await this.page().evaluate(() => localStorage.clear());
+        await this.page().reload({ waitUntil: 'networkidle' });
+        await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
+
+        await this.page().waitForFunction(() => {
+          const choice = document.querySelector('.swype-choice.top-right .choice-text');
+          return choice && choice.textContent && choice.textContent.trim().length > 0 && choice.textContent !== '...';
+        }, { timeout: 5000 });
+
+        const initialText = await this.page().$eval('.main-text', el => el.textContent);
+
+        const swyper = await this.page().$('.swyper');
+        const box = await swyper.boundingBox();
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+
+        await this.page().mouse.move(cx, cy);
+        await this.page().mouse.down();
+        await this.page().mouse.move(cx + 60, cy - 60, { steps: 10 });
+        await this.page().mouse.up();
+
+        await __.sleep(200);
+        const afterShortSwipe = await this.page().$eval('.main-text', el => el.textContent);
+        const shortAppended = afterShortSwipe.slice(initialText.length);
+        console.log(shortAppended);
+        const shortWordCount = shortAppended.trim().split(/\s+/).filter(w => w).length;
+
+        this.assert(shortWordCount >= 1, 'Short swipe should commit at least 1 word');
+        this.assert(shortWordCount < 4, 'Short swipe should commit fewer than all 4 words');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'LongSwipeCommitsMore',
+    doc: 'A long swipe commits more tokens',
+    isMobile: true,
+    async do() {
+      const choices = [' alpha beta gamma delta', ' one two three four', ' x y z w', ' a b c d'];
+      const server = createMockServer(choices);
+      try {
+        await setupApiIntercept(this.page(), choices);
+        await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`);
+        await this.page().evaluate(() => localStorage.clear());
+        await this.page().reload({ waitUntil: 'networkidle' });
+        await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
+
+        await this.page().waitForFunction(() => {
+          const choice = document.querySelector('.swype-choice.top-right .choice-text');
+          return choice && choice.textContent && choice.textContent.trim().length > 0 && choice.textContent !== '...';
+        }, { timeout: 5000 });
+
+        const initialText = await this.page().$eval('.main-text', el => el.textContent);
+
+        const swyper = await this.page().$('.swyper');
+        const box = await swyper.boundingBox();
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+
+        await this.page().mouse.move(cx, cy);
+        await this.page().mouse.down();
+        await this.page().mouse.move(box.x + box.width - 10, box.y + 10, { steps: 15 });
+        await this.page().mouse.up();
+
+        await __.sleep(200);
+        const afterLongSwipe = await this.page().$eval('.main-text', el => el.textContent);
+        const longAppended = afterLongSwipe.slice(initialText.length);
+        const longWordCount = longAppended.trim().split(/\s+/).filter(w => w).length;
+
+        this.assert(longWordCount >= 3, 'Long swipe should commit 3+ words');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ClickCornerCommitsFull',
+    doc: 'Clicking a corner directly commits the full choice',
+    isMobile: true,
+    async do() {
+      const choices = [' alpha beta gamma delta', ' one two three four', ' x y z w', ' a b c d'];
+      const server = createMockServer(choices);
+      try {
+        await setupApiIntercept(this.page(), choices);
+        await this.page().goto(`http://localhost:${server.port}/apps/swyperloom/index.html`);
+        await this.page().evaluate(() => localStorage.clear());
+        await this.page().reload({ waitUntil: 'networkidle' });
+        await this.page().waitForSelector('.swypeloom', { timeout: 5000 });
+
+        await this.page().waitForFunction(() => {
+          const choice = document.querySelector('.swype-choice.top-left .choice-text');
+          return choice && choice.textContent && choice.textContent.trim().length > 0 && choice.textContent !== '...';
+        }, { timeout: 5000 });
+
+        const initialText = await this.page().$eval('.main-text', el => el.textContent);
+
+        const choiceText = await this.page().$eval('.swype-choice.top-left .choice-text', el => el.textContent);
+        const expectedWordCount = choiceText.trim().split(/\s+/).filter(w => w).length;
+
+        await this.page().click('.swype-choice.top-left');
+        await __.sleep(100);
+
+        const afterClick = await this.page().$eval('.main-text', el => el.textContent);
+        const appended = afterClick.slice(initialText.length);
+        const wordCount = appended.trim().split(/\s+/).filter(w => w).length;
+
+        this.assertEq(wordCount, expectedWordCount, 'Click should commit all words from the choice');
       } finally {
         server.stop();
       }
