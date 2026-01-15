@@ -1,5 +1,5 @@
-import { __, base } from "simulabra";
-import test from "simulabra/test";
+import { __, base } from "../../../src/base.js";
+import test from "../../../src/test.js";
 import session from "../src/session.js";
 
 export default await async function (_, $, $test, $session) {

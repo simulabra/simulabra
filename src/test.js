@@ -93,6 +93,7 @@ export default await async function (_, $) {
       $.Var.new({ name: 'browser' }),
       $.Var.new({ name: 'page' }),
       $.Var.new({ name: 'isMobile', default: false }),
+      $.Var.new({ name: 'pageErrors', default: () => [] }),
 
       $.AsyncBefore.new({
         name: 'run',
@@ -103,12 +104,21 @@ export default await async function (_, $) {
             ? { viewport: { width: 390, height: 844 } }
             : {};
           this.page(await this.browser().newPage(pageOptions));
+          this.page().on('pageerror', err => this.pageErrors().push(`[pageerror] ${err.message}`));
+          this.page().on('console', msg => {
+            if (msg.type() === 'error') {
+              this.pageErrors().push(`[console.error] ${msg.text()}`);
+            }
+          });
         }
       }),
 
       $.AsyncAfter.new({
         name: 'run',
         async do() {
+          if (this.pageErrors().length > 0) {
+            console.log(`Page errors in ${this.title()}:\n  ${this.pageErrors().join('\n  ')}`);
+          }
           await this.browser()?.close();
         }
       }),

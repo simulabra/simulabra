@@ -21,6 +21,7 @@
     "test": "bun run src/runner.js",
     "test-ui": "bun run src/runner.js tests/ui",
     "test-bin": "bun run src/runner.js tests/bin",
+    "test-swyperloom": "bun run src/runner.js apps/swyperloom/tests",
     "agent": "watchexec -w . -e js -r -- bun run src/agent.js",
     "serve": "bun run src/agent.js",
     "gen-exports": "bun run bin/gen-exports.js"

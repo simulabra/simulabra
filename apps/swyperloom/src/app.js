@@ -1,5 +1,5 @@
-import html from "simulabra/html";
-import { __, base } from "simulabra";
+import html from "../../../src/html.js";
+import { __, base } from "../../../src/base.js";
 import session from "./session.js";
 
 export default await async function (_, $, $html, $session) {
@@ -18,12 +18,15 @@ export default await async function (_, $, $html, $session) {
             this.session().text();
             this.scrollToBottom();
           });
+          let started = false;
           $.Effect.create(() => {
             this.session().preview();
-            if ('vibrate' in navigator) {
-              navigator.vibrate(25);
+            if (started) {
+              try { navigator.vibrate?.(25); } catch {}
+            } else {
+              started = true;
             }
-          })
+          });
         }
       }),
       $.Method.new({
@@ -392,11 +395,18 @@ export default await async function (_, $, $html, $session) {
               <div class="settings-container">
                 <h2 class="settings-title">Settings</h2>
                 <div class="settings-field">
+                  <label class="settings-label">API Key</label>
+                  <input type="password" class="settings-input"
+                         value=${() => this.session().apiKey()}
+                         oninput=${e => this.session().updateApiKey(e.target.value)}
+                         placeholder="hyperbolic key" />
+                </div>
+                <div class="settings-field">
                   <label class="settings-label">LLM Server URL</label>
                   <input type="text" class="settings-input"
                          value=${() => this.session().serverURL()}
                          oninput=${e => this.session().updateServerURL(e.target.value)}
-                         placeholder="http://localhost:3731" />
+                         placeholder="https://api.hyperbolic.xyz" />
                 </div>
                 <button class="settings-done" onclick=${() => this.session().closeSettings()}>Done</button>
               </div>
@@ -419,8 +429,8 @@ export default await async function (_, $, $html, $session) {
         do() {
           const session = $session.SwypeSession.new({
             clientConfig: {
-              baseURL: `http://${window.location.hostname}:3731`,
-              model: "",
+              baseURL: "https://api.hyperbolic.xyz",
+              model: "meta-llama/Meta-Llama-3.1-405B",
               logprobs: 20,
               baseTemperature: 0.8,
             }

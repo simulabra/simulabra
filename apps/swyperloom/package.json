@@ -6,8 +6,8 @@
     "simulabra": "file:../.."
   },
   "scripts": {
-    "build": "bun build src/app.js --outdir dist",
-    "dev": "bun build src/app.js --outdir dist --watch",
+    "build": "bun build index.html --outdir ../../out/swyperloom",
+    "dev": "bun build index.html --outdir ../../out/swyperloom --watch",
     "test": "cd ../.. && bun run src/runner.js apps/swyperloom/tests/"
   }
 }

@@ -1,5 +1,5 @@
-import { __, base } from "simulabra";
-import llm from "simulabra/llm";
+import { __, base } from "../../../src/base.js";
+import llm from "../../../src/llm.js";
 
 export default await async function (_, $, $llm) {
 
@@ -113,23 +113,29 @@ export default await async function (_, $, $llm) {
       $.Signal.new({ name: "preview", default: "" }),
       $.Signal.new({ name: "settingsOpen", default: false }),
       $.Signal.new({ name: "serverURL", default: "" }),
+      $.Signal.new({ name: "apiKey", default: "" }),
 
       $.Var.new({ name: "generator" }),
       $.Var.new({ name: "storage" }),
       $.Var.new({ name: "generatorConfig" }),
       $.Var.new({ name: "urlStorageKey", default: "SWYPELOOM_SERVER_URL" }),
+      $.Var.new({ name: "apiKeyStorageKey", default: "SWYPELOOM_API_KEY" }),
 
       $.After.new({
         name: "init",
         do() {
           const savedURL = this.loadServerURL();
-          const defaultURL = this.generatorConfig()?.baseURL || "http://localhost:3731";
+          const defaultURL = this.generatorConfig()?.baseURL || "https://api.hyperbolic.xyz";
           const baseURL = savedURL || defaultURL;
           this.serverURL(baseURL);
 
+          const savedKey = this.loadApiKey();
+          this.apiKey(savedKey);
+
           const config = {
             baseURL,
-            model: this.generatorConfig()?.model || "",
+            apiKey: savedKey,
+            model: this.generatorConfig()?.model || "meta-llama/Meta-Llama-3.1-405B",
             logprobs: this.generatorConfig()?.logprobs || 20,
             baseTemperature: this.generatorConfig()?.baseTemperature || 0.8,
           };
@@ -344,6 +350,34 @@ export default await async function (_, $, $llm) {
           this.serverURL(url);
           this.saveServerURL(url);
           this.generator().client().baseURL(url);
+        }
+      }),
+
+      $.Method.new({
+        name: "loadApiKey",
+        do() {
+          if (typeof localStorage !== "undefined") {
+            return localStorage.getItem(this.apiKeyStorageKey()) || "";
+          }
+          return "";
+        }
+      }),
+
+      $.Method.new({
+        name: "saveApiKey",
+        do(key) {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(this.apiKeyStorageKey(), key);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "updateApiKey",
+        do(key) {
+          this.apiKey(key);
+          this.saveApiKey(key);
+          this.generator().client().apiKey(key);
         }
       }),
 
