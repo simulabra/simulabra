@@ -1,4 +1,2 @@
-rm -r ./out
-mkdir out
-bun x http-server ./out &
-bun build demos/*.html --outdir=out --sourcemap=linked --watch
+./build.sh
+bun x http-server ./out
