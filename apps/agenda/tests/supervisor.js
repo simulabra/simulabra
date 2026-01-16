@@ -329,6 +329,266 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
       this.assertEq(sup.handlers()['custom'], customHandler);
     }
   });
+
+  $test.Case.new({
+    name: 'NodeRegistryCreation',
+    doc: 'NodeRegistry should be created with empty nodes',
+    do() {
+      const registry = $supervisor.NodeRegistry.new();
+      this.assertEq(Object.keys(registry.nodes()).length, 0);
+    }
+  });
+
+  $test.Case.new({
+    name: 'NodeRegistryRegisterAndGet',
+    doc: 'NodeRegistry should register and retrieve nodes',
+    do() {
+      const registry = $supervisor.NodeRegistry.new();
+      const mockNode = { uid() { return 'test'; }, connected() { return true; } };
+
+      registry.register('test-service', mockNode);
+      this.assertEq(registry.get('test-service'), mockNode);
+      this.assert(registry.isConnected('test-service'), 'should be connected');
+    }
+  });
+
+  $test.Case.new({
+    name: 'NodeRegistryUnregister',
+    doc: 'NodeRegistry should unregister nodes',
+    do() {
+      const registry = $supervisor.NodeRegistry.new();
+      const mockNode = { uid() { return 'test'; } };
+
+      registry.register('test-service', mockNode);
+      const removed = registry.unregister('test-service');
+
+      this.assertEq(removed, mockNode);
+      this.assertEq(registry.get('test-service'), undefined);
+    }
+  });
+
+  $test.Case.new({
+    name: 'NodeRegistryFindBySocket',
+    doc: 'NodeRegistry should find nodes by socket',
+    do() {
+      const registry = $supervisor.NodeRegistry.new();
+      const mockSocket = { id: 'socket-1' };
+      const mockNode = { socket() { return mockSocket; } };
+
+      registry.register('test-service', mockNode);
+      const found = registry.findBySocket(mockSocket);
+
+      this.assertEq(found.name, 'test-service');
+      this.assertEq(found.node, mockNode);
+    }
+  });
+
+  $test.Case.new({
+    name: 'NodeRegistryAll',
+    doc: 'NodeRegistry.all should return all entries',
+    do() {
+      const registry = $supervisor.NodeRegistry.new();
+      const node1 = { uid() { return 'n1'; } };
+      const node2 = { uid() { return 'n2'; } };
+
+      registry.register('service1', node1);
+      registry.register('service2', node2);
+
+      const all = registry.all();
+      this.assertEq(all.length, 2);
+    }
+  });
+
+  $test.Case.new({
+    name: 'ServiceSpecHealthCheckEnabled',
+    doc: 'ServiceSpec should have healthCheckEnabled flag',
+    do() {
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'TestService',
+        command: ['echo'],
+      });
+      this.assertEq(spec.healthCheckEnabled(), true, 'default should be true');
+
+      const disabledSpec = $supervisor.ServiceSpec.new({
+        serviceName: 'NoHealthCheck',
+        command: ['echo'],
+        healthCheckEnabled: false,
+      });
+      this.assertEq(disabledSpec.healthCheckEnabled(), false);
+    }
+  });
+
+  $test.Case.new({
+    name: 'ManagedServiceHealthStateTracking',
+    doc: 'ManagedService should track health state',
+    do() {
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'TestService',
+        command: ['echo'],
+      });
+      const managed = $supervisor.ManagedService.new({ spec });
+
+      this.assertEq(managed.healthState(), 'unknown', 'initial state');
+      this.assertEq(managed.consecutiveFailures(), 0);
+    }
+  });
+
+  $test.Case.new({
+    name: 'ManagedServiceMarkHealthy',
+    doc: 'ManagedService.markHealthy should transition to healthy state',
+    do() {
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'TestService',
+        command: ['echo'],
+      });
+      const managed = $supervisor.ManagedService.new({ spec });
+      managed.backoffMs(8000);
+      managed.restartCount(3);
+
+      managed.markHealthy();
+
+      this.assertEq(managed.healthy(), true);
+      this.assertEq(managed.healthState(), 'healthy');
+      this.assertEq(managed.consecutiveFailures(), 0);
+      this.assertEq(managed.backoffMs(), 1000, 'should reset backoff');
+      this.assertEq(managed.restartCount(), 0, 'should reset restart count');
+      this.assert(managed.lastHealthCheck() instanceof Date);
+    }
+  });
+
+  $test.Case.new({
+    name: 'ManagedServiceMarkUnhealthy',
+    doc: 'ManagedService.markUnhealthy should transition to unhealthy state',
+    do() {
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'TestService',
+        command: ['echo'],
+      });
+      const managed = $supervisor.ManagedService.new({ spec });
+      managed.healthy(true);
+      managed.healthState('healthy');
+
+      managed.markUnhealthy('test failure');
+
+      this.assertEq(managed.healthy(), false);
+      this.assertEq(managed.healthState(), 'unhealthy');
+      this.assertEq(managed.consecutiveFailures(), 1);
+      this.assert(managed.lastHealthCheck() instanceof Date);
+    }
+  });
+
+  $test.Case.new({
+    name: 'ManagedServiceConsecutiveFailures',
+    doc: 'ManagedService should track consecutive failures',
+    do() {
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'TestService',
+        command: ['echo'],
+      });
+      const managed = $supervisor.ManagedService.new({ spec });
+
+      managed.markUnhealthy('failure 1');
+      this.assertEq(managed.consecutiveFailures(), 1);
+
+      managed.markUnhealthy('failure 2');
+      this.assertEq(managed.consecutiveFailures(), 2);
+
+      managed.markHealthy();
+      this.assertEq(managed.consecutiveFailures(), 0, 'should reset on healthy');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SupervisorHasNodeRegistry',
+    doc: 'Supervisor should have a NodeRegistry',
+    do() {
+      const sup = $supervisor.Supervisor.new();
+      this.assert(sup.nodeRegistry(), 'should have nodeRegistry');
+      this.assert(sup.nodeRegistry().nodes, 'should have nodes method');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SupervisorHasHealthChecker',
+    doc: 'Supervisor should have a HealthCheck instance',
+    do() {
+      const sup = $supervisor.Supervisor.new();
+      this.assert(sup.healthChecker(), 'should have healthChecker');
+      this.assertEq(sup.healthChecker().timeoutMs(), 5000);
+    }
+  });
+
+  $test.Case.new({
+    name: 'SupervisorNodesBackwardsCompatible',
+    doc: 'Supervisor.nodes() should return nodeRegistry nodes',
+    do() {
+      const sup = $supervisor.Supervisor.new();
+      const mockNode = { uid() { return 'test'; } };
+
+      sup.nodeRegistry().register('test-service', mockNode);
+
+      this.assertEq(sup.nodes()['test-service'], mockNode);
+      this.assertEq(sup.node('test-service'), mockNode);
+    }
+  });
+
+  $test.Case.new({
+    name: 'SupervisorStatusIncludesHealthState',
+    doc: 'Supervisor.status should include health state info',
+    do() {
+      const sup = $supervisor.Supervisor.new();
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'TestService',
+        command: ['echo'],
+      });
+      const managed = $supervisor.ManagedService.new({ spec });
+      managed.markHealthy();
+      sup.services()['TestService'] = managed;
+
+      const status = sup.status();
+      this.assertEq(status.TestService.healthState, 'healthy');
+      this.assertEq(status.TestService.consecutiveFailures, 0);
+      this.assert(status.TestService.lastHealthCheck, 'should have lastHealthCheck');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'HealthCheckSkipsDisabled',
+    doc: 'HealthCheck should skip services with healthCheckEnabled=false',
+    async do() {
+      const sup = $supervisor.Supervisor.new();
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'NoHealthCheck',
+        command: ['echo'],
+        healthCheckEnabled: false,
+      });
+      const managed = $supervisor.ManagedService.new({ spec, supervisor: sup });
+      managed.healthy(true);
+
+      const result = await sup.healthChecker().check(managed);
+
+      this.assertEq(result.skipped, true);
+      this.assertEq(result.healthy, true);
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'HealthCheckReturnsUnhealthyWhenDisconnected',
+    doc: 'HealthCheck should return unhealthy when node is not connected',
+    async do() {
+      const sup = $supervisor.Supervisor.new();
+      const spec = $supervisor.ServiceSpec.new({
+        serviceName: 'DisconnectedService',
+        command: ['echo'],
+      });
+      const managed = $supervisor.ManagedService.new({ spec, supervisor: sup });
+
+      const result = await sup.healthChecker().check(managed);
+
+      this.assertEq(result.healthy, false);
+      this.assertEq(result.reason, 'disconnected');
+    }
+  });
 }.module({
   name: 'test.supervisor',
   imports: [base, test, helpers, supervisor],

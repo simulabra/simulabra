@@ -573,7 +573,64 @@ Completed: 2026-01-16
 - RecurrenceRuleEndDateTimezoneConsistent, EndDateInclusiveAtEndOfDay
 </TestsCovering>
 </Phase3_StandardizeTimeSemantics>
-<Phase4_SupervisorAsACompositionOfLiveParts status="PENDING" />
+<Phase4_SupervisorAsACompositionOfLiveParts status="COMPLETE">
+Completed: 2026-01-15
+
+<FilesChanged>
+- Updated: `apps/agenda/src/supervisor.js` - Added NodeRegistry, HealthCheck, refactored Supervisor
+- Updated: `apps/agenda/tests/supervisor.js` - Added 18 new tests for new functionality
+</FilesChanged>
+
+<Implementation>
+1. **Created NodeRegistry class** (reifies node management):
+   - `register(name, node)` - add a node
+   - `unregister(name)` - remove a node
+   - `get(name)` - lookup by name
+   - `findBySocket(socket)` - find node by socket reference
+   - `isConnected(name)` - check if node exists and is connected
+   - `all()` - return all entries
+
+2. **Created HealthCheck class** (performs real RPC health checks):
+   - `check(managed)` - calls `serviceProxy()[healthCheckMethod]()` with timeout
+   - Returns `{ healthy, reason?, skipped? }` structured result
+   - Respects `ServiceSpec.healthCheckEnabled` flag
+
+3. **Updated ServiceSpec**:
+   - Added `healthCheckEnabled` Var (default: true) to allow disabling checks
+
+4. **Updated ManagedService** (explicit health state):
+   - Added `healthState` ('unknown', 'healthy', 'unhealthy')
+   - Added `lastHealthCheck` timestamp
+   - Added `consecutiveFailures` counter
+   - `markHealthy()` - transitions to healthy, resets backoff
+   - `markUnhealthy(reason)` - transitions to unhealthy, increments failures
+
+5. **Updated Supervisor**:
+   - Uses `NodeRegistry` instead of plain `nodes` object
+   - Has `healthChecker` instance for RPC health checks
+   - Added `serviceProxy({ name })` for making RPC calls to services
+   - `healthCheckLoop()` now performs real RPC health checks
+   - `status()` returns healthState, consecutiveFailures, lastHealthCheck
+   - `nodes()` method provides backwards compatibility
+</Implementation>
+
+<DesignNotes>
+- Did NOT compose `$live.MessageDispatcher` due to initialization order issues
+  - When composing, MessageDispatcher's After.init was resetting handlers after Supervisor's already registered the handshake handler
+  - Keeping handlers management local to Supervisor is cleaner
+- NodeRegistry is a first-class object with clean API for node lifecycle
+- HealthCheck is separate from Supervisor for testability and single responsibility
+- `healthCheckEnabled` allows services to opt-out of RPC health checks (useful for services without a health endpoint)
+</DesignNotes>
+
+<TestsCovering>
+- NodeRegistryCreation, RegisterAndGet, Unregister, FindBySocket, All
+- ServiceSpecHealthCheckEnabled
+- ManagedServiceHealthStateTracking, MarkHealthy, MarkUnhealthy, ConsecutiveFailures
+- SupervisorHasNodeRegistry, HasHealthChecker, NodesBackwardsCompatible, StatusIncludesHealthState
+- HealthCheckSkipsDisabled, ReturnsUnhealthyWhenDisconnected
+</TestsCovering>
+</Phase4_SupervisorAsACompositionOfLiveParts>
 <Phase5_ServiceIdentityAndBootstrapping status="PENDING" />
 <Phase6_ObjectifyTheScripts status="PENDING" />
 </RefactoringProgress>

@@ -34,6 +34,115 @@ export default await async function (_, $, $live) {
         doc: 'RPC method to call for health checks',
         default: 'health',
       }),
+      $.Var.new({
+        name: 'healthCheckEnabled',
+        doc: 'whether to perform RPC health checks',
+        default: true,
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'NodeRegistry',
+    doc: 'Registry for managing connected service nodes',
+    slots: [
+      $.Var.new({ name: 'nodes' }),
+      $.After.new({
+        name: 'init',
+        do() {
+          this.nodes({});
+        }
+      }),
+      $.Method.new({
+        name: 'register',
+        doc: 'register a node by name',
+        do(name, node) {
+          this.nodes()[name] = node;
+          return node;
+        }
+      }),
+      $.Method.new({
+        name: 'unregister',
+        doc: 'remove a node by name',
+        do(name) {
+          const node = this.nodes()[name];
+          delete this.nodes()[name];
+          return node;
+        }
+      }),
+      $.Method.new({
+        name: 'get',
+        doc: 'get a node by name',
+        do(name) {
+          return this.nodes()[name];
+        }
+      }),
+      $.Method.new({
+        name: 'findBySocket',
+        doc: 'find a node by its socket',
+        do(socket) {
+          for (const [name, node] of Object.entries(this.nodes())) {
+            if (node.socket() === socket) {
+              return { name, node };
+            }
+          }
+          return null;
+        }
+      }),
+      $.Method.new({
+        name: 'isConnected',
+        doc: 'check if a node is registered and connected',
+        do(name) {
+          const node = this.get(name);
+          return node && node.connected();
+        }
+      }),
+      $.Method.new({
+        name: 'all',
+        doc: 'return all registered nodes as entries',
+        do() {
+          return Object.entries(this.nodes());
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'HealthCheck',
+    doc: 'Performs RPC health checks on managed services',
+    slots: [
+      $.Var.new({ name: 'supervisor', required: true }),
+      $.Var.new({ name: 'timeoutMs', default: 5000 }),
+      $.Method.new({
+        name: 'check',
+        doc: 'perform health check on a managed service via RPC',
+        async do(managed) {
+          const spec = managed.spec();
+          const serviceName = spec.serviceName();
+
+          if (!spec.healthCheckEnabled()) {
+            return { healthy: managed.healthy(), skipped: true };
+          }
+
+          const node = this.supervisor().nodeRegistry().get(serviceName);
+          if (!node || !node.connected()) {
+            return { healthy: false, reason: 'disconnected' };
+          }
+
+          try {
+            const proxy = await this.supervisor().serviceProxy({ name: serviceName });
+            const method = spec.healthCheckMethod();
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('health check timeout')), this.timeoutMs());
+            });
+            const checkPromise = proxy[method]();
+            await Promise.race([checkPromise, timeoutPromise]);
+            return { healthy: true };
+          } catch (err) {
+            return { healthy: false, reason: err.message || String(err) };
+          }
+        }
+      }),
     ]
   });
 
@@ -47,6 +156,9 @@ export default await async function (_, $, $live) {
       $.Var.new({ name: 'lastStart' }),
       $.Var.new({ name: 'backoffMs', default: 1000 }),
       $.Var.new({ name: 'healthy', default: false }),
+      $.Var.new({ name: 'healthState', default: 'unknown' }),
+      $.Var.new({ name: 'lastHealthCheck' }),
+      $.Var.new({ name: 'consecutiveFailures', default: 0 }),
       $.Var.new({ name: 'supervisor' }),
       $.Var.new({ name: 'stopped', default: false }),
       $.Var.new({ name: 'logFile' }),
@@ -86,7 +198,7 @@ export default await async function (_, $, $live) {
       $.Method.new({
         name: 'onExit',
         do(exitCode, signalCode, error) {
-          this.healthy(false);
+          this.markUnhealthy(`exited with code=${exitCode}, signal=${signalCode}`);
           if (this.stopped()) {
             this.tlog(`service ${this.spec().serviceName()} stopped`);
             return;
@@ -141,6 +253,34 @@ export default await async function (_, $, $live) {
           this.restartCount(0);
         }
       }),
+      $.Method.new({
+        name: 'markHealthy',
+        doc: 'transition to healthy state',
+        do() {
+          const wasHealthy = this.healthy();
+          this.healthy(true);
+          this.healthState('healthy');
+          this.consecutiveFailures(0);
+          this.lastHealthCheck(new Date());
+          if (!wasHealthy) {
+            this.resetBackoff();
+          }
+        }
+      }),
+      $.Method.new({
+        name: 'markUnhealthy',
+        doc: 'transition to unhealthy state',
+        do(reason) {
+          const wasHealthy = this.healthy();
+          this.healthy(false);
+          this.healthState('unhealthy');
+          this.consecutiveFailures(this.consecutiveFailures() + 1);
+          this.lastHealthCheck(new Date());
+          if (wasHealthy) {
+            this.tlog(`${this.spec().serviceName()} became unhealthy: ${reason}`);
+          }
+        }
+      }),
     ]
   });
 
@@ -164,12 +304,11 @@ export default await async function (_, $, $live) {
           node.responseMap({});
           node.registerHandler($live.ResponseHandler.new());
           node.registerHandler($live.ErrorHandler.new());
-          master.nodes()[from] = node;
+          master.nodeRegistry().register(from, node);
 
           const managed = master.services()[from];
           if (managed) {
-            managed.healthy(true);
-            managed.resetBackoff();
+            managed.markHealthy();
           }
         }
       })
@@ -183,7 +322,8 @@ export default await async function (_, $, $live) {
       $.Var.new({ name: 'port', default: 3030 }),
       $.Var.new({ name: 'logsDir', default: 'logs' }),
       $.Var.new({ name: 'logFile' }),
-      $.Var.new({ name: 'nodes' }),
+      $.Var.new({ name: 'nodeRegistry' }),
+      $.Var.new({ name: 'healthChecker' }),
       $.Var.new({ name: 'handlers' }),
       $.Var.new({ name: 'services' }),
       $.Var.new({ name: 'specs', default: () => [] }),
@@ -193,7 +333,11 @@ export default await async function (_, $, $live) {
       $.After.new({
         name: 'init',
         do() {
-          this.nodes({});
+          this.nodeRegistry(_.NodeRegistry.new());
+          this.healthChecker(_.HealthCheck.new({
+            supervisor: this,
+            timeoutMs: this.healthCheckTimeoutMs(),
+          }));
           this.handlers({});
           this.services({});
           this.registerHandler(_.HandshakeHandler.new());
@@ -209,6 +353,13 @@ export default await async function (_, $, $live) {
         }
       }),
       $.Method.new({
+        name: 'registerHandler',
+        doc: 'register a message handler by topic',
+        do(handler) {
+          this.handlers()[handler.topic()] = handler;
+        }
+      }),
+      $.Method.new({
         name: 'writeLog',
         doc: 'write a line to the supervisor log',
         do(message) {
@@ -217,15 +368,29 @@ export default await async function (_, $, $live) {
         }
       }),
       $.Method.new({
-        name: 'registerHandler',
-        do(handler) {
-          this.handlers()[handler.topic()] = handler;
+        name: 'nodes',
+        doc: 'backwards-compatible access to node registry nodes',
+        do() {
+          return this.nodeRegistry().nodes();
         }
       }),
       $.Method.new({
         name: 'node',
         do(name) {
-          return this.nodes()[name];
+          return this.nodeRegistry().get(name);
+        }
+      }),
+      $.Method.new({
+        name: 'serviceProxy',
+        doc: 'create an RPC proxy for a service',
+        async do(c) {
+          const name = c.name;
+          const timeout = c.timeout || 30;
+          const node = this.nodeRegistry().get(name);
+          if (!node || !node.connected()) {
+            throw new Error(`service ${name} not connected`);
+          }
+          return node.serviceProxy({ name, timeout });
         }
       }),
       $.Method.new({
@@ -268,15 +433,14 @@ export default await async function (_, $, $live) {
                 }
               },
               close(socket) {
-                for (const [name, node] of Object.entries(self.nodes())) {
-                  if (node.socket() === socket) {
-                    self.tlog(`service disconnected: ${name}`);
-                    node.connected(false);
-                    const managed = self.services()[name];
-                    if (managed) {
-                      managed.healthy(false);
-                    }
-                    break;
+                const found = self.nodeRegistry().findBySocket(socket);
+                if (found) {
+                  const { name, node } = found;
+                  self.tlog(`service disconnected: ${name}`);
+                  node.connected(false);
+                  const managed = self.services()[name];
+                  if (managed) {
+                    managed.markUnhealthy('disconnected');
                   }
                 }
               }
@@ -288,10 +452,10 @@ export default await async function (_, $, $live) {
       $.Method.new({
         name: 'routeMessage',
         do(message, socket) {
-          const node = this.nodes()[message.to()];
+          const node = this.nodeRegistry().get(message.to());
           if (!node || !node.connected()) {
             this.tlog(`node not found or disconnected: ${message.to()}`);
-            const fromNode = this.nodes()[message.from()];
+            const fromNode = this.nodeRegistry().get(message.from());
             if (fromNode && fromNode.connected()) {
               fromNode.send($live.LiveMessage.new({
                 topic: 'error',
@@ -361,27 +525,22 @@ export default await async function (_, $, $live) {
       }),
       $.Method.new({
         name: 'healthCheckLoop',
-        doc: 'periodically check health of all services via connection status',
+        doc: 'periodically check health of all services via RPC',
         async do() {
           while (this.running()) {
             await __.sleep(this.healthCheckIntervalMs());
             if (!this.running()) break;
 
             for (const [name, managed] of Object.entries(this.services())) {
-              const node = this.nodes()[name];
-              const wasHealthy = managed.healthy();
+              if (managed.stopped()) continue;
 
-              if (!node || !node.connected()) {
-                if (wasHealthy) {
-                  this.tlog(`${name} disconnected`);
-                }
-                managed.healthy(false);
+              const result = await this.healthChecker().check(managed);
+              if (result.skipped) continue;
+
+              if (result.healthy) {
+                managed.markHealthy();
               } else {
-                if (!wasHealthy) {
-                  this.tlog(`${name} reconnected`);
-                  managed.resetBackoff();
-                }
-                managed.healthy(true);
+                managed.markUnhealthy(result.reason);
               }
             }
           }
@@ -395,8 +554,11 @@ export default await async function (_, $, $live) {
           for (const [name, managed] of Object.entries(this.services())) {
             result[name] = {
               healthy: managed.healthy(),
+              healthState: managed.healthState(),
+              consecutiveFailures: managed.consecutiveFailures(),
               restartCount: managed.restartCount(),
               lastStart: managed.lastStart()?.toISOString(),
+              lastHealthCheck: managed.lastHealthCheck()?.toISOString(),
             };
           }
           return result;
