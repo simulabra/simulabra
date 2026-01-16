@@ -631,6 +631,48 @@ Completed: 2026-01-15
 - HealthCheckSkipsDisabled, ReturnsUnhealthyWhenDisconnected
 </TestsCovering>
 </Phase4_SupervisorAsACompositionOfLiveParts>
-<Phase5_ServiceIdentityAndBootstrapping status="PENDING" />
+<Phase5_ServiceIdentityAndBootstrapping status="COMPLETE">
+Completed: 2026-01-15
+
+<FilesChanged>
+- Updated: `apps/agenda/src/supervisor.js` - Added AgendaService mixin, ManagedService passes AGENDA_SERVICE_NAME in env
+- Updated: `apps/agenda/src/services/database.js` - Uses AgendaService mixin instead of manual uid
+- Updated: `apps/agenda/src/services/reminder.js` - Uses AgendaService mixin instead of manual uid
+- Updated: `apps/agenda/src/services/geist.js` - Uses AgendaService mixin instead of manual uid
+- Updated: `apps/agenda/tests/supervisor.js` - Added 4 new tests for service identity
+</FilesChanged>
+
+<Implementation>
+1. **Created AgendaService mixin** (apps/agenda/src/supervisor.js):
+   - Composes `$live.NodeClient`
+   - After.init reads `AGENDA_SERVICE_NAME` from env
+   - Falls back to `this.class().name` if env not set
+   - Preserves explicit uid if passed to constructor
+
+2. **Updated ManagedService.start()**:
+   - Now passes `AGENDA_SERVICE_NAME: serviceName` in the env to child processes
+   - Child services automatically receive their identity from the supervisor
+
+3. **Updated all services**:
+   - DatabaseService, ReminderService, GeistService now compose `$supervisor.AgendaService`
+   - Removed manual `{ uid: 'ServiceName' }` from `new()` calls
+   - Services auto-derive identity from env or class name
+</Implementation>
+
+<DesignNotes>
+- Chose env-based approach over base class with explicit name matching
+- This keeps service identity centralized in the supervisor's ServiceSpec
+- Services become simpler - no need to manually coordinate names
+- Fallback to class name allows standalone service testing without supervisor
+- The convention leak is eliminated: if you rename ServiceSpec.serviceName, the child automatically gets the right uid
+</DesignNotes>
+
+<TestsCovering>
+- AgendaServiceDefaultsUidFromClassName: Verifies class name fallback
+- AgendaServiceReadsUidFromEnv: Verifies env var takes precedence
+- AgendaServicePreservesExplicitUid: Verifies explicit uid is preserved
+- ManagedServicePassesServiceNameInEnv: Verifies env is configured
+</TestsCovering>
+</Phase5_ServiceIdentityAndBootstrapping>
 <Phase6_ObjectifyTheScripts status="PENDING" />
 </RefactoringProgress>

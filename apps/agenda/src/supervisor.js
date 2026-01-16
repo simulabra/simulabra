@@ -5,6 +5,25 @@ import { join } from 'path';
 
 export default await async function (_, $, $live) {
   $.Class.new({
+    name: 'AgendaService',
+    doc: 'Base mixin for Agenda services - handles automatic uid from env',
+    slots: [
+      $live.NodeClient,
+      $.After.new({
+        name: 'init',
+        do() {
+          const envName = process.env.AGENDA_SERVICE_NAME;
+          if (envName) {
+            this.uid(envName);
+          } else if (!this.uid()) {
+            this.uid(this.class().name);
+          }
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
     name: 'ServiceSpec',
     doc: 'Specification for a managed service',
     slots: [
@@ -188,6 +207,7 @@ export default await async function (_, $, $live) {
             env: {
               ...process.env,
               SIMULABRA_PORT: this.supervisor()?.port() || 3030,
+              AGENDA_SERVICE_NAME: serviceName,
             },
             onExit(proc, exitCode, signalCode, error) {
               self.onExit(exitCode, signalCode, error);

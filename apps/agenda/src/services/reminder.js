@@ -1,12 +1,13 @@
 import { __, base } from 'simulabra';
 import live from 'simulabra/live';
+import supervisor from '../supervisor.js';
 
-export default await async function (_, $, $live) {
+export default await async function (_, $, $live, $supervisor) {
   $.Class.new({
     name: 'ReminderService',
     doc: 'Polls for due reminders and triggers notifications',
     slots: [
-      $live.NodeClient,
+      $supervisor.AgendaService,
       $.Var.new({ name: 'dbService' }),
       $.Var.new({ name: 'pollIntervalMs', default: 60000 }),
       $.Var.new({ name: 'running', default: false }),
@@ -159,7 +160,7 @@ export default await async function (_, $, $live) {
 
   if (import.meta.main) {
     await __.sleep(50);
-    const service = _.ReminderService.new({ uid: 'ReminderService' });
+    const service = _.ReminderService.new();
     await service.connect();
     await service.connectToDatabase();
     service.startPolling();
@@ -167,5 +168,5 @@ export default await async function (_, $, $live) {
   }
 }.module({
   name: 'services.reminder',
-  imports: [base, live],
+  imports: [base, live, supervisor],
 }).load();

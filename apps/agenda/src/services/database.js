@@ -1,14 +1,15 @@
 import { __, base } from 'simulabra';
 import live from 'simulabra/live';
+import supervisor from '../supervisor.js';
 import redis from '../redis.js';
 import models from '../models.js';
 
-export default await async function (_, $, $live, $redis, $models) {
+export default await async function (_, $, $live, $supervisor, $redis, $models) {
   $.Class.new({
     name: 'DatabaseService',
     doc: 'CRUD operations for all item types',
     slots: [
-      $live.NodeClient,
+      $supervisor.AgendaService,
       $.Var.new({ name: 'redis' }),
       $.Var.new({ name: 'eventStream', default: 'agenda:events' }),
       $.Method.new({
@@ -229,12 +230,12 @@ export default await async function (_, $, $live, $redis, $models) {
 
   if (import.meta.main) {
     await __.sleep(50);
-    const service = _.DatabaseService.new({ uid: 'DatabaseService' });
+    const service = _.DatabaseService.new();
     await service.connectRedis();
     await service.connect();
     __.tlog('DatabaseService connected and ready');
   }
 }.module({
   name: 'services.database',
-  imports: [base, live, redis, models],
+  imports: [base, live, supervisor, redis, models],
 }).load();

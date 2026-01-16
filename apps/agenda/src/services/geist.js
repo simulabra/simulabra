@@ -1,14 +1,15 @@
 import { __, base } from 'simulabra';
 import live from 'simulabra/live';
+import supervisor from '../supervisor.js';
 import tools from '../tools.js';
 import Anthropic from '@anthropic-ai/sdk';
 
-export default await async function (_, $, $live, $tools) {
+export default await async function (_, $, $live, $supervisor, $tools) {
   $.Class.new({
     name: 'GeistService',
     doc: 'Claude API integration for natural language understanding',
     slots: [
-      $live.NodeClient,
+      $supervisor.AgendaService,
       $.Var.new({ name: 'dbService' }),
       $.Var.new({ name: 'client' }),
       $.Var.new({ name: 'model', default: 'claude-sonnet-4-20250514' }),
@@ -221,12 +222,12 @@ For tasks:
 
   if (import.meta.main) {
     await __.sleep(50);
-    const service = _.GeistService.new({ uid: 'GeistService' });
+    const service = _.GeistService.new();
     await service.connect();
     await service.connectToDatabase();
     __.tlog('GeistService started');
   }
 }.module({
   name: 'services.geist',
-  imports: [base, live, tools],
+  imports: [base, live, supervisor, tools],
 }).load();
