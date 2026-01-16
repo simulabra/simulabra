@@ -98,7 +98,7 @@ export default await async function (_, $) {
       $.AsyncBefore.new({
         name: 'run',
         async do() {
-          const { chromium } = await import('playwright');
+          const { chromium, devices } = await import('playwright');
           this.browser(await chromium.launch());
           const pageOptions = this.isMobile()
             ? { viewport: { width: 390, height: 844 } }

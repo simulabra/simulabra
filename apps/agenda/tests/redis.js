@@ -281,6 +281,163 @@ export default await async function (_, $, $test, $redis) {
       await client.disconnect();
     }
   });
+
+  $test.AsyncCase.new({
+    name: 'RedisClientStreamReadWrite',
+    doc: 'RedisClient should write and read stream entries',
+    async do() {
+      const client = $redis.RedisClient.new({
+        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
+      });
+      await client.connect();
+
+      const stream = `test:stream:${crypto.randomUUID()}`;
+
+      await client.streamAdd(stream, { type: 'event1', data: 'first' });
+      await client.streamAdd(stream, { type: 'event2', data: 'second' });
+      await client.streamAdd(stream, { type: 'event3', data: 'third' });
+
+      const entries = await client.streamRead(stream, '0', 100);
+      this.assertEq(entries.length, 3, 'should have 3 entries');
+      this.assertEq(entries[0].message.type, 'event1');
+      this.assertEq(entries[1].message.type, 'event2');
+      this.assertEq(entries[2].message.data, 'third');
+
+      await client.del(stream);
+      await client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'RedisClientStreamReadWithLimit',
+    doc: 'streamRead should respect count limit',
+    async do() {
+      const client = $redis.RedisClient.new({
+        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
+      });
+      await client.connect();
+
+      const stream = `test:stream:${crypto.randomUUID()}`;
+
+      for (let i = 1; i <= 5; i++) {
+        await client.streamAdd(stream, { num: String(i) });
+      }
+
+      const entries = await client.streamRead(stream, '0', 2);
+      this.assertEq(entries.length, 2, 'should limit to 2 entries');
+      this.assertEq(entries[0].message.num, '1');
+      this.assertEq(entries[1].message.num, '2');
+
+      await client.del(stream);
+      await client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'RedisClientSetOperations',
+    doc: 'RedisClient should support set add/remove/members',
+    async do() {
+      const client = $redis.RedisClient.new({
+        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
+      });
+      await client.connect();
+
+      const setKey = `test:set:${crypto.randomUUID()}`;
+
+      await client.sAdd(setKey, 'member1');
+      await client.sAdd(setKey, 'member2');
+      await client.sAdd(setKey, 'member3');
+
+      const members = await client.sMembers(setKey);
+      this.assertEq(members.length, 3);
+      this.assert(members.includes('member1'));
+      this.assert(members.includes('member2'));
+      this.assert(members.includes('member3'));
+
+      await client.sRem(setKey, 'member2');
+      const remaining = await client.sMembers(setKey);
+      this.assertEq(remaining.length, 2);
+      this.assert(!remaining.includes('member2'));
+
+      await client.del(setKey);
+      await client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'RedisClientHashOperations',
+    doc: 'RedisClient should support hash set/getAll',
+    async do() {
+      const client = $redis.RedisClient.new({
+        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
+      });
+      await client.connect();
+
+      const hashKey = `test:hash:${crypto.randomUUID()}`;
+
+      await client.hSet(hashKey, {
+        name: 'Test Object',
+        count: '42',
+        active: 'true'
+      });
+
+      const hash = await client.hGetAll(hashKey);
+      this.assertEq(hash.name, 'Test Object');
+      this.assertEq(hash.count, '42');
+      this.assertEq(hash.active, 'true');
+
+      await client.del(hashKey);
+      await client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'RedisClientDeleteByPattern',
+    doc: 'deleteByPattern should remove matching keys',
+    async do() {
+      const client = $redis.RedisClient.new({
+        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
+      });
+      await client.connect();
+
+      const prefix = `test:pattern:${crypto.randomUUID()}`;
+
+      await client.set(`${prefix}:key1`, 'value1');
+      await client.set(`${prefix}:key2`, 'value2');
+      await client.set(`${prefix}:key3`, 'value3');
+
+      const deleted = await client.deleteByPattern(`${prefix}:*`);
+      this.assertEq(deleted, 3, 'should delete 3 keys');
+
+      const remaining = await client.keys(`${prefix}:*`);
+      this.assertEq(remaining.length, 0);
+
+      await client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'RedisClientKeysPattern',
+    doc: 'keys should find keys matching pattern',
+    async do() {
+      const client = $redis.RedisClient.new({
+        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
+      });
+      await client.connect();
+
+      const prefix = `test:keys:${crypto.randomUUID()}`;
+
+      await client.set(`${prefix}:a`, '1');
+      await client.set(`${prefix}:b`, '2');
+      await client.set(`${prefix}:c`, '3');
+
+      const keys = await client.keys(`${prefix}:*`);
+      this.assertEq(keys.length, 3);
+
+      await client.deleteByPattern(`${prefix}:*`);
+      await client.disconnect();
+    }
+  });
 }.module({
   name: 'test.redis',
   imports: [base, test, redis],

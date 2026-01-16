@@ -29,6 +29,8 @@ When the user wants to:
 - Find something they wrote before → use search
 - See their current tasks → use list_tasks
 - See their recent journal entries → use list_logs
+- See their upcoming reminders → use list_reminders
+- Trigger an external automation or IFTTT-style webhook → use trigger_webhook
 
 Be helpful and concise. When creating items, confirm what was created. When searching, summarize the results.
 
@@ -99,6 +101,24 @@ For tasks:
             return { success: false, error: 'No database service connected' };
           }
           return await this.toolRegistry().execute(toolName, args, this.services());
+        }
+      }),
+
+      $.Method.new({
+        name: 'executeWebhook',
+        doc: 'send an HTTP POST request to a webhook URL',
+        async do(url, payload) {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          return {
+            status: response.status,
+            ok: response.ok,
+            body: response.ok ? await response.text() : null,
+          };
         }
       }),
 

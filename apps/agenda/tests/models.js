@@ -285,6 +285,134 @@ export default await async function (_, $, $test, $redis, $models) {
     }
   });
 
+  $test.Case.new({
+    name: 'RecurrenceRuleWeeklyWithDays',
+    doc: 'Weekly recurrence with specific days should find next matching day',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'weekly',
+        interval: 1,
+        daysOfWeek: [1, 3, 5] // Mon, Wed, Fri
+      });
+      // January 15, 2025 is a Wednesday (day 3)
+      const from = new Date('2025-01-15T10:00:00Z');
+      const next = rule.nextOccurrence(from);
+      // Next should be Friday (day 5) Jan 17
+      this.assertEq(next.getDate(), 17);
+      this.assertEq(next.getDay(), 5); // Friday
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleWeeklyWrapAround',
+    doc: 'Weekly recurrence should wrap to next week when needed',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'weekly',
+        interval: 1,
+        daysOfWeek: [1] // Monday only
+      });
+      // January 17, 2025 is a Friday
+      const from = new Date('2025-01-17T10:00:00Z');
+      const next = rule.nextOccurrence(from);
+      // Next Monday is Jan 20
+      this.assertEq(next.getDate(), 20);
+      this.assertEq(next.getDay(), 1); // Monday
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleMonthlyOverflow',
+    doc: 'Monthly recurrence should handle month-end overflow',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'monthly',
+        interval: 1
+      });
+      // January 31 + 1 month should handle February correctly
+      const from = new Date('2025-01-31T10:00:00Z');
+      const next = rule.nextOccurrence(from);
+      // February 2025 has 28 days, so Feb 28 or Mar 3 depending on impl
+      this.assertEq(next.getMonth(), 2); // March (0-indexed)
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleLargeInterval',
+    doc: 'Recurrence should handle large intervals',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'daily',
+        interval: 30
+      });
+      const from = new Date('2025-01-01T10:00:00Z');
+      const next = rule.nextOccurrence(from);
+      this.assertEq(next.getDate(), 31);
+      this.assertEq(next.getMonth(), 0); // January
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleEndDateExact',
+    doc: 'Recurrence on end date should still return that occurrence',
+    do() {
+      const endDate = new Date('2025-01-16T00:00:00Z');
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'daily',
+        interval: 1,
+        endDate
+      });
+      // Starting from Jan 15, next is Jan 16 which equals endDate
+      const from = new Date('2025-01-15T10:00:00Z');
+      const next = rule.nextOccurrence(from);
+      this.assertEq(next.getDate(), 16);
+
+      // From Jan 16, next would be Jan 17 which is past endDate
+      const afterEnd = rule.nextOccurrence(next);
+      this.assert(!afterEnd, 'should return null after end date');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRulePreservesTime',
+    doc: 'Recurrence should preserve time of day',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'daily',
+        interval: 1
+      });
+      const from = new Date('2025-01-15T14:30:45Z');
+      const next = rule.nextOccurrence(from);
+      this.assertEq(next.getUTCHours(), 14);
+      this.assertEq(next.getUTCMinutes(), 30);
+      this.assertEq(next.getUTCSeconds(), 45);
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleJSONRoundTrip',
+    doc: 'RecurrenceRule should survive full JSON round-trip',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'weekly',
+        interval: 2,
+        daysOfWeek: [0, 6], // Weekend
+        endDate: new Date('2025-12-31')
+      });
+
+      const json = rule.toJSON();
+      const jsonStr = JSON.stringify(json);
+      const parsed = JSON.parse(jsonStr);
+      const restored = $models.RecurrenceRule.fromJSON(parsed);
+
+      this.assertEq(restored.pattern(), 'weekly');
+      this.assertEq(restored.interval(), 2);
+      this.assertEq(restored.daysOfWeek().length, 2);
+      this.assertEq(restored.daysOfWeek()[0], 0);
+      this.assertEq(restored.daysOfWeek()[1], 6);
+    }
+  });
+
   $test.AsyncCase.new({
     name: 'ReminderPersistence',
     doc: 'Reminder should save and load from Redis with recurrence',

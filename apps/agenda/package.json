@@ -12,6 +12,9 @@
     "start": "bun run run.js",
     "test": "cd ../.. && bun run src/runner.js apps/agenda/tests/ && bun run src/runner.js apps/agenda/tests/services/",
     "test:services": "cd ../.. && bun run src/runner.js apps/agenda/tests/services/",
+    "test:ui": "cd ../.. && bun run src/runner.js apps/agenda/tests/ui/",
+    "build": "bun build src/ui/app.js --outdir dist",
+    "dev": "bun build src/ui/app.js --outdir dist --watch",
     "cli": "bun run bin/agenda.js",
     "logs": "bun run bin/logs.js"
   }

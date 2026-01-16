@@ -180,6 +180,172 @@ export default await async function (_, $, $test, $redis, $models, $db, $reminde
       await dbService.redis().disconnect();
     }
   });
+
+  $test.AsyncCase.new({
+    name: 'ReminderServiceNotificationHandler',
+    doc: 'ReminderService should call registered notification handlers',
+    async do() {
+      const dbService = await createDbService();
+      const reminderService = createReminderService(dbService);
+
+      // Track which reminders the handler received
+      const receivedReminders = [];
+      reminderService.addNotificationHandler(async (reminder) => {
+        receivedReminders.push(reminder.message);
+      });
+
+      // Create a due reminder
+      await dbService.createReminder('handler test', '2020-01-01T00:00:00Z');
+
+      // Process reminders
+      await reminderService.checkDueReminders();
+
+      // Verify handler was called
+      this.assertEq(receivedReminders.length, 1);
+      this.assertEq(receivedReminders[0], 'handler test');
+
+      // Cleanup
+      const allReminders = await dbService.listReminders({});
+      for (const r of allReminders) {
+        const obj = await $models.Reminder.findById(dbService.redis(), r.rid);
+        if (obj) await obj.delete(dbService.redis());
+      }
+      await dbService.redis().disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ReminderServiceMultipleHandlers',
+    doc: 'ReminderService should call all registered handlers',
+    async do() {
+      const dbService = await createDbService();
+      const reminderService = createReminderService(dbService);
+
+      // Register multiple handlers
+      const calls1 = [];
+      const calls2 = [];
+      reminderService.addNotificationHandler(async (r) => calls1.push(r.message));
+      reminderService.addNotificationHandler(async (r) => calls2.push(r.message));
+
+      await dbService.createReminder('multi handler', '2020-01-01T00:00:00Z');
+      await reminderService.checkDueReminders();
+
+      // Both handlers should be called
+      this.assertEq(calls1.length, 1);
+      this.assertEq(calls2.length, 1);
+      this.assertEq(calls1[0], 'multi handler');
+      this.assertEq(calls2[0], 'multi handler');
+
+      // Cleanup
+      const allReminders = await dbService.listReminders({});
+      for (const r of allReminders) {
+        const obj = await $models.Reminder.findById(dbService.redis(), r.rid);
+        if (obj) await obj.delete(dbService.redis());
+      }
+      await dbService.redis().disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ReminderServiceHandlerError',
+    doc: 'ReminderService should continue if handler throws',
+    async do() {
+      const dbService = await createDbService();
+      const reminderService = createReminderService(dbService);
+
+      // First handler throws
+      reminderService.addNotificationHandler(async () => {
+        throw new Error('Handler failed');
+      });
+
+      // Second handler should still be called
+      const calls = [];
+      reminderService.addNotificationHandler(async (r) => calls.push(r.message));
+
+      await dbService.createReminder('error test', '2020-01-01T00:00:00Z');
+      await reminderService.checkDueReminders();
+
+      // Second handler should still have been called
+      this.assertEq(calls.length, 1);
+      this.assertEq(calls[0], 'error test');
+
+      // Cleanup
+      const allReminders = await dbService.listReminders({});
+      for (const r of allReminders) {
+        const obj = await $models.Reminder.findById(dbService.redis(), r.rid);
+        if (obj) await obj.delete(dbService.redis());
+      }
+      await dbService.redis().disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ReminderServiceTriggerNotification',
+    doc: 'triggerNotification should invoke all handlers for a reminder',
+    async do() {
+      const dbService = await createDbService();
+      const reminderService = createReminderService(dbService);
+
+      const received = [];
+      reminderService.addNotificationHandler(async (r) => {
+        received.push({ message: r.message, rid: r.rid });
+      });
+
+      // Create and trigger directly
+      const reminder = await dbService.createReminder('direct trigger', '2025-12-31T00:00:00Z');
+      await reminderService.triggerNotification(reminder);
+
+      this.assertEq(received.length, 1);
+      this.assertEq(received[0].message, 'direct trigger');
+      this.assertEq(received[0].rid, reminder.rid);
+
+      // Cleanup
+      const obj = await $models.Reminder.findById(dbService.redis(), reminder.rid);
+      if (obj) await obj.delete(dbService.redis());
+      await dbService.redis().disconnect();
+    }
+  });
+
+  $test.Case.new({
+    name: 'ReminderServiceNoDbConnection',
+    doc: 'ReminderService should handle missing database gracefully',
+    do() {
+      const reminderService = $reminder.ReminderService.new({ uid: 'NoDbService' });
+      // dbService is not set, should not throw
+      this.assertEq(reminderService.dbService(), undefined);
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ReminderServicePollExecutesCheck',
+    doc: 'poll should execute checkDueReminders',
+    async do() {
+      const dbService = await createDbService();
+      const reminderService = createReminderService(dbService);
+      reminderService.pollIntervalMs(50);
+
+      const processed = [];
+      reminderService.addNotificationHandler(async (r) => processed.push(r.message));
+
+      await dbService.createReminder('poll test', '2020-01-01T00:00:00Z');
+
+      // Start polling
+      reminderService.startPolling();
+      await __.sleep(80);
+      reminderService.stopPolling();
+
+      // Should have processed the reminder
+      this.assert(processed.includes('poll test'), 'should process during poll');
+
+      // Cleanup
+      const allReminders = await dbService.listReminders({});
+      for (const r of allReminders) {
+        const obj = await $models.Reminder.findById(dbService.redis(), r.rid);
+        if (obj) await obj.delete(dbService.redis());
+      }
+      await dbService.redis().disconnect();
+    }
+  });
 }.module({
   name: 'test.services.reminder',
   imports: [base, test, redis, models, database, reminder],

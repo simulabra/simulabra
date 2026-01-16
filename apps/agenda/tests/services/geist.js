@@ -55,6 +55,8 @@ export default await async function (_, $, $test, $redis, $models, $db, $geist) 
       this.assert(toolNames.includes('search'), 'should have search');
       this.assert(toolNames.includes('list_tasks'), 'should have list_tasks');
       this.assert(toolNames.includes('list_logs'), 'should have list_logs');
+      this.assert(toolNames.includes('list_reminders'), 'should have list_reminders');
+      this.assert(toolNames.includes('trigger_webhook'), 'should have trigger_webhook');
     }
   });
 
@@ -258,6 +260,96 @@ export default await async function (_, $, $test, $redis, $models, $db, $geist) 
       this.assertEq(messages.length, 1);
       this.assertEq(messages[0].role, 'user');
       this.assertEq(messages[0].content, 'remind me to call mom tomorrow');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteListReminders',
+    doc: 'GeistService should execute list_reminders tool',
+    async do() {
+      const dbService = await createDbService();
+      const geistService = createGeistService(dbService);
+
+      await dbService.createReminder('geist list reminder 1', new Date(Date.now() + 86400000).toISOString());
+      await dbService.createReminder('geist list reminder 2', new Date(Date.now() + 172800000).toISOString());
+
+      const result = await geistService.executeTool('list_reminders', {});
+
+      this.assert(result.success, 'should succeed');
+      this.assert(result.data.length >= 2, 'should have at least 2 reminders');
+
+      // Cleanup
+      for (const reminder of result.data) {
+        const obj = await $models.Reminder.findById(dbService.redis(), reminder.rid);
+        if (obj) await obj.delete(dbService.redis());
+      }
+      await dbService.redis().disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteListRemindersFiltered',
+    doc: 'GeistService should filter reminders by sent status',
+    async do() {
+      const dbService = await createDbService();
+      const geistService = createGeistService(dbService);
+
+      const reminder1 = await dbService.createReminder('unsent reminder', new Date(Date.now() + 86400000).toISOString());
+      const reminder2 = await dbService.createReminder('sent reminder', new Date(Date.now() - 86400000).toISOString());
+      await dbService.markReminderSent(reminder2.rid);
+
+      const unsentResult = await geistService.executeTool('list_reminders', { sent: false });
+      const sentResult = await geistService.executeTool('list_reminders', { sent: true });
+
+      this.assert(unsentResult.success, 'unsent query should succeed');
+      this.assert(sentResult.success, 'sent query should succeed');
+      this.assert(unsentResult.data.some(r => r.rid === reminder1.rid), 'should find unsent reminder');
+      this.assert(sentResult.data.some(r => r.rid === reminder2.rid), 'should find sent reminder');
+
+      // Cleanup
+      const obj1 = await $models.Reminder.findById(dbService.redis(), reminder1.rid);
+      const obj2 = await $models.Reminder.findById(dbService.redis(), reminder2.rid);
+      if (obj1) await obj1.delete(dbService.redis());
+      if (obj2) await obj2.delete(dbService.redis());
+      await dbService.redis().disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteTriggerWebhook',
+    doc: 'GeistService should execute trigger_webhook tool',
+    async do() {
+      const geistService = $geist.GeistService.new({ uid: 'TestGeistService' });
+
+      // Use httpbin as a test endpoint
+      const result = await geistService.executeWebhook(
+        'https://httpbin.org/post',
+        { test: 'data', from: 'agenda' }
+      );
+
+      this.assert(result.ok, 'webhook should succeed');
+      this.assertEq(result.status, 200);
+      this.assert(result.body !== null, 'should have response body');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceTriggerWebhookViaTool',
+    doc: 'GeistService should execute trigger_webhook via executeTool',
+    async do() {
+      const dbService = await createDbService();
+      const geistService = createGeistService(dbService);
+
+      const result = await geistService.executeTool('trigger_webhook', {
+        url: 'https://httpbin.org/post',
+        payload: { action: 'test', source: 'agenda' }
+      });
+
+      this.assert(result.success, 'should succeed');
+      this.assert(result.data.ok, 'webhook should return ok');
+      this.assertEq(result.data.status, 200);
+
+      await dbService.redis().disconnect();
     }
   });
 }.module({
