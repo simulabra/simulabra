@@ -56,7 +56,7 @@ export default await async function (_, $, $test, $tools) {
     do() {
       const registry = $tools.AgendaToolRegistry.new();
 
-      this.assertEq(registry.tools().length, 7, 'should have 7 tools');
+      this.assertEq(registry.tools().length, 9, 'should have 9 tools');
 
       const toolNames = registry.tools().map(t => t.toolName());
       this.assert(toolNames.includes('create_log'), 'should have create_log');
@@ -66,6 +66,8 @@ export default await async function (_, $, $test, $tools) {
       this.assert(toolNames.includes('search'), 'should have search');
       this.assert(toolNames.includes('list_tasks'), 'should have list_tasks');
       this.assert(toolNames.includes('list_logs'), 'should have list_logs');
+      this.assert(toolNames.includes('list_reminders'), 'should have list_reminders');
+      this.assert(toolNames.includes('trigger_webhook'), 'should have trigger_webhook');
     }
   });
 

@@ -202,7 +202,7 @@ export default await async function (_, $, $test, $redis) {
 
   $test.AsyncCase.new({
     name: 'RedisPersistedNullFieldClearing',
-    doc: 'RedisPersisted should clear fields when set to null',
+    doc: 'RedisPersisted should clear fields when set to null (reverts to default)',
     async do() {
       const client = $redis.RedisClient.new({
         url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
@@ -225,8 +225,10 @@ export default await async function (_, $, $test, $redis) {
       await model.save(client);
 
       const found2 = await _.TestModel.findById(client, model.rid());
-      this.assert(found2.count() === undefined || found2.count() === null, 'count should be cleared');
-      this.assert(found2.tags() === undefined || found2.tags() === null, 'tags should be cleared');
+      // count has no default, so cleared becomes undefined (fromRedis gets undefined)
+      this.assert(found2.count() === undefined, 'count should be cleared (undefined)');
+      // tags has default: () => [], so cleared reverts to empty array
+      this.assertEq(found2.tags().length, 0, 'tags should be empty array (default)');
 
       await client.del(model.redisKey(client));
       await client.disconnect();

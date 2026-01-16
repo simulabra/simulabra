@@ -517,11 +517,61 @@ Completed: 2026-01-13
 </TestsCovering>
 </Phase2_ReifyKeyspaceAndFixRedisPersistedSemantics>
 
-<Phase3_StandardizeTimeSemantics status="PENDING">
-Next phase. Will address:
-- Introduce explicit time policy object (UTC arithmetic or configured timezone)
-- Update `RecurrenceRule.nextOccurrence()` to use consistent date methods
-- Add tests for DST boundary behavior
+<Phase3_StandardizeTimeSemantics status="COMPLETE">
+Completed: 2026-01-16
+
+<FilesChanged>
+- Created: `apps/agenda/src/time.js` - TimePolicy class with UTC-based date arithmetic
+- Updated: `apps/agenda/src/models.js` - RecurrenceRule.nextOccurrence() now uses TimePolicy
+- Created: `apps/agenda/tests/time.js` - Unit tests for TimePolicy (19 tests)
+- Updated: `apps/agenda/tests/models.js` - DST boundary tests for recurrence (7 new tests)
+- Updated: `apps/agenda/src/tools.js` - Added ListRemindersTool and TriggerWebhookTool
+- Updated: `apps/agenda/tests/tools.js` - Updated tool count expectation
+- Updated: `apps/agenda/tests/redis.js` - Fixed null clearing test semantics
+</FilesChanged>
+
+<Implementation>
+1. **Created TimePolicy class** (apps/agenda/src/time.js):
+   - Static methods for UTC-consistent date arithmetic:
+     - `addDays(date, n)` - Add N days using UTC
+     - `addWeeks(date, n)` - Add N weeks using UTC
+     - `addMonths(date, n)` - Add N months using UTC
+     - `getDayOfWeek(date)` - Get UTC day of week
+     - `endOfDay(date)` - Get end of UTC day (23:59:59.999)
+     - `startOfDay(date)` - Get start of UTC day (00:00:00.000)
+     - `isSameDay(date1, date2)` - Compare UTC days
+     - `isAfterDay(date1, date2)` - Check if date1 is after date2's full day
+
+2. **Updated RecurrenceRule.nextOccurrence()**:
+   - Changed from mixed local/UTC methods to consistent UTC-only:
+     - `date.getDay()` → `TimePolicy.getDayOfWeek(date)`
+     - `date.setDate(date.getDate() + n)` → `TimePolicy.addDays(date, n)`
+     - `date.setMonth(date.getMonth() + n)` → `TimePolicy.addMonths(date, n)`
+   - End date comparison now uses `TimePolicy.endOfDay()`
+
+3. **Added comprehensive test coverage**:
+   - TimePolicy unit tests cover: basic arithmetic, negative values, boundary crossing, DST spring forward/fall back, leap years
+   - RecurrenceRule DST tests cover: daily/weekly/monthly patterns across DST transitions, end date semantics
+</Implementation>
+
+<DesignNotes>
+- Committed to UTC arithmetic everywhere (not timezone-aware local time)
+- This matches how dates are stored (ISO strings are UTC) and avoids DST ambiguity
+- UI layer can convert to local time for display if needed
+- The "clearing a field reverts to default" semantic was clarified in redis tests
+</DesignNotes>
+
+<TestsCovering>
+- TimePolicyAddDays, AddDaysNegative, AddDaysMonthBoundary
+- TimePolicyAddWeeks, AddMonths, AddMonthsYearBoundary, AddMonthsOverflow
+- TimePolicyGetDayOfWeek, GetDayOfWeekNearMidnight
+- TimePolicyEndOfDay, StartOfDay, IsSameDay, IsAfterDay
+- TimePolicyDSTSpringForward, DSTFallBack, WeeklyAcrossDSTBoundary
+- TimePolicyLeapYear, NonLeapYear, YearEnd
+- RecurrenceRuleDSTSpringForward, DSTFallBack
+- RecurrenceRuleWeeklyDSTBoundary, MonthlyDSTBoundary
+- RecurrenceRuleEndDateTimezoneConsistent, EndDateInclusiveAtEndOfDay
+</TestsCovering>
 </Phase3_StandardizeTimeSemantics>
 <Phase4_SupervisorAsACompositionOfLiveParts status="PENDING" />
 <Phase5_ServiceIdentityAndBootstrapping status="PENDING" />

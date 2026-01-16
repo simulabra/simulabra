@@ -442,6 +442,125 @@ export default await async function (_, $, $test, $redis, $models) {
       await client.disconnect();
     }
   });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleDSTSpringForward',
+    doc: 'Recurrence should be consistent across DST spring forward',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'daily',
+        interval: 1
+      });
+      // US DST 2025 starts March 9
+      const beforeDST = new Date('2025-03-08T14:00:00Z');
+      const next = rule.nextOccurrence(beforeDST);
+
+      // Time should be preserved in UTC
+      this.assertEq(next.getUTCDate(), 9);
+      this.assertEq(next.getUTCHours(), 14);
+      this.assertEq(next.getUTCMinutes(), 0);
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleDSTFallBack',
+    doc: 'Recurrence should be consistent across DST fall back',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'daily',
+        interval: 1
+      });
+      // US DST 2025 ends November 2
+      const beforeDSTEnd = new Date('2025-11-01T14:00:00Z');
+      const next = rule.nextOccurrence(beforeDSTEnd);
+
+      // Time should be preserved in UTC
+      this.assertEq(next.getUTCDate(), 2);
+      this.assertEq(next.getUTCHours(), 14);
+      this.assertEq(next.getUTCMinutes(), 0);
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleWeeklyDSTBoundary',
+    doc: 'Weekly recurrence with days should work across DST',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'weekly',
+        interval: 1,
+        daysOfWeek: [1, 3, 5] // Mon, Wed, Fri
+      });
+      // March 7, 2025 is a Friday (day 5)
+      const friday = new Date('2025-03-07T09:00:00Z');
+      const nextMonday = rule.nextOccurrence(friday);
+
+      // Next should be Monday March 10 (after DST change)
+      this.assertEq(nextMonday.getUTCDate(), 10);
+      this.assertEq(nextMonday.getUTCDay(), 1); // Monday
+      this.assertEq(nextMonday.getUTCHours(), 9); // Time preserved
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleMonthlyDSTBoundary',
+    doc: 'Monthly recurrence should work across DST',
+    do() {
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'monthly',
+        interval: 1
+      });
+      // February 15, crossing into March (after DST)
+      const feb15 = new Date('2025-02-15T08:30:00Z');
+      const next = rule.nextOccurrence(feb15);
+
+      this.assertEq(next.getUTCMonth(), 2); // March
+      this.assertEq(next.getUTCDate(), 15);
+      this.assertEq(next.getUTCHours(), 8);
+      this.assertEq(next.getUTCMinutes(), 30);
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleEndDateTimezoneConsistent',
+    doc: 'End date comparison should use consistent UTC semantics',
+    do() {
+      const endDate = new Date('2025-03-09T00:00:00Z');
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'daily',
+        interval: 1,
+        endDate
+      });
+      // March 9 at 14:00 UTC, but endDate is March 9 00:00 UTC
+      // endOfDay(endDate) is March 9 23:59:59.999 UTC
+      // Next occurrence would be March 10 at 14:00 UTC which is past end of March 9
+      const march9 = new Date('2025-03-09T14:00:00Z');
+      const next = rule.nextOccurrence(march9);
+
+      // March 10 at 14:00 is past end-of-day March 9, so null
+      this.assert(!next, 'should return null when next occurrence would be past end date');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RecurrenceRuleEndDateInclusiveAtEndOfDay',
+    doc: 'Occurrences on the end date (before 23:59:59.999) should be allowed',
+    do() {
+      const endDate = new Date('2025-03-10T00:00:00Z');
+      const rule = $models.RecurrenceRule.new({
+        pattern: 'daily',
+        interval: 1,
+        endDate
+      });
+      // March 9 at 08:00 UTC should produce March 10 at 08:00 UTC
+      // which is before end of day March 10
+      const march9 = new Date('2025-03-09T08:00:00Z');
+      const next = rule.nextOccurrence(march9);
+
+      this.assert(next, 'should return occurrence on end date');
+      this.assertEq(next.getUTCDate(), 10);
+      this.assertEq(next.getUTCHours(), 8);
+    }
+  });
 }.module({
   name: 'test.models',
   imports: [base, test, redis, models],

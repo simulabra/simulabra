@@ -1,7 +1,8 @@
 import { __, base } from 'simulabra';
 import redis from './redis.js';
+import time from './time.js';
 
-export default await async function (_, $, $redis) {
+export default await async function (_, $, $redis, $time) {
   $.Class.new({
     name: 'Log',
     doc: 'Journal entry with timestamp and optional tags',
@@ -133,45 +134,40 @@ export default await async function (_, $, $redis) {
       }),
       $.Method.new({
         name: 'nextOccurrence',
-        doc: 'calculate the next trigger time from a given date',
+        doc: 'calculate the next trigger time from a given date using UTC arithmetic',
         do(fromDate) {
-          const date = new Date(fromDate);
+          const TP = $time.TimePolicy;
+          let date = new Date(fromDate);
 
-          const endOfDay = (d) => {
-            const end = new Date(d);
-            end.setUTCHours(23, 59, 59, 999);
-            return end;
-          };
-
-          if (this.endDate() && date > endOfDay(this.endDate())) {
+          if (this.endDate() && date > TP.endOfDay(this.endDate())) {
             return null;
           }
 
           switch (this.pattern()) {
             case 'daily':
-              date.setDate(date.getDate() + this.interval());
+              date = TP.addDays(date, this.interval());
               break;
             case 'weekly':
               if (this.daysOfWeek().length > 0) {
-                const currentDay = date.getDay();
+                const currentDay = TP.getDayOfWeek(date);
                 const sortedDays = [...this.daysOfWeek()].sort((a, b) => a - b);
                 const nextDay = sortedDays.find(d => d > currentDay);
                 if (nextDay !== undefined) {
-                  date.setDate(date.getDate() + (nextDay - currentDay));
+                  date = TP.addDays(date, nextDay - currentDay);
                 } else {
                   const daysUntilFirst = 7 - currentDay + sortedDays[0];
-                  date.setDate(date.getDate() + daysUntilFirst + 7 * (this.interval() - 1));
+                  date = TP.addDays(date, daysUntilFirst + 7 * (this.interval() - 1));
                 }
               } else {
-                date.setDate(date.getDate() + 7 * this.interval());
+                date = TP.addWeeks(date, this.interval());
               }
               break;
             case 'monthly':
-              date.setMonth(date.getMonth() + this.interval());
+              date = TP.addMonths(date, this.interval());
               break;
           }
 
-          if (this.endDate() && date > endOfDay(this.endDate())) {
+          if (this.endDate() && date > TP.endOfDay(this.endDate())) {
             return null;
           }
 
@@ -281,5 +277,5 @@ export default await async function (_, $, $redis) {
   });
 }.module({
   name: 'models',
-  imports: [base, redis],
+  imports: [base, redis, time],
 }).load();

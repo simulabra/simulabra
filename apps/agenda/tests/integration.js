@@ -1,11 +1,12 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
+import helpers from './support/helpers.js';
 import redisModule from '../src/redis.js';
 import models from '../src/models.js';
 import database from '../src/services/database.js';
 import geist from '../src/services/geist.js';
 
-export default await async function (_, $, $test, $redis, $models, $db, $geist) {
+export default await async function (_, $, $test, $helpers, $redis, $models, $db, $geist) {
   const TEST_PREFIX = 'test:integration:';
 
   // Mock Anthropic client for testing tool calls without actual API
@@ -519,5 +520,5 @@ export default await async function (_, $, $test, $redis, $models, $db, $geist) 
   });
 }.module({
   name: 'test.integration',
-  imports: [base, test, redisModule, models, database, geist],
+  imports: [base, test, helpers, redisModule, models, database, geist],
 }).load();

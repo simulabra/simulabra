@@ -361,6 +361,82 @@ export default await async function (_, $) {
   });
 
   $.Class.new({
+    name: 'ListRemindersTool',
+    doc: 'Tool for listing reminders',
+    slots: [
+      _.Tool,
+      $.Var.new({ name: 'toolName', default: 'list_reminders' }),
+      $.Var.new({
+        name: 'doc',
+        default: 'List upcoming and past reminders',
+      }),
+      $.Var.new({
+        name: 'inputSchema',
+        default: () => ({
+          type: 'object',
+          properties: {
+            sent: {
+              type: 'boolean',
+              description: 'Filter by sent status (true=sent, false=pending)'
+            }
+          }
+        }),
+      }),
+      $.Method.new({
+        name: 'execute',
+        async do(args, services) {
+          return await services.db.listReminders(args || {});
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'TriggerWebhookTool',
+    doc: 'Tool for triggering external webhooks',
+    slots: [
+      _.Tool,
+      $.Var.new({ name: 'toolName', default: 'trigger_webhook' }),
+      $.Var.new({
+        name: 'doc',
+        default: 'Trigger an external webhook with custom payload',
+      }),
+      $.Var.new({
+        name: 'inputSchema',
+        default: () => ({
+          type: 'object',
+          properties: {
+            url: {
+              type: 'string',
+              description: 'The webhook URL to call'
+            },
+            payload: {
+              type: 'object',
+              description: 'The JSON payload to send'
+            }
+          },
+          required: ['url']
+        }),
+      }),
+      $.Method.new({
+        name: 'execute',
+        async do(args) {
+          const response = await fetch(args.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(args.payload || {}),
+          });
+          return {
+            ok: response.ok,
+            status: response.status,
+            statusText: response.statusText,
+          };
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
     name: 'AgendaToolRegistry',
     doc: 'Pre-configured registry with all Agenda tools',
     slots: [
@@ -375,6 +451,8 @@ export default await async function (_, $) {
           this.register(_.SearchTool.new());
           this.register(_.ListTasksTool.new());
           this.register(_.ListLogsTool.new());
+          this.register(_.ListRemindersTool.new());
+          this.register(_.TriggerWebhookTool.new());
         }
       }),
     ]

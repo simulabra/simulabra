@@ -1,8 +1,9 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
+import helpers from './support/helpers.js';
 import supervisor from '../src/supervisor.js';
 
-export default await async function (_, $, $test, $supervisor) {
+export default await async function (_, $, $test, $helpers, $supervisor) {
   $test.Case.new({
     name: 'ServiceSpecCreation',
     doc: 'ServiceSpec should be created with required fields',
@@ -330,5 +331,5 @@ export default await async function (_, $, $test, $supervisor) {
   });
 }.module({
   name: 'test.supervisor',
-  imports: [base, test, supervisor],
+  imports: [base, test, helpers, supervisor],
 }).load();

@@ -1,11 +1,12 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
+import helpers from '../support/helpers.js';
 import redis from '../../src/redis.js';
 import models from '../../src/models.js';
 import database from '../../src/services/database.js';
 import reminder from '../../src/services/reminder.js';
 
-export default await async function (_, $, $test, $redis, $models, $db, $reminder) {
+export default await async function (_, $, $test, $helpers, $redis, $models, $db, $reminder) {
   // Helper to create a test DatabaseService
   const createDbService = async () => {
     const service = $db.DatabaseService.new({ uid: 'TestDatabaseService' });
@@ -348,5 +349,5 @@ export default await async function (_, $, $test, $redis, $models, $db, $reminde
   });
 }.module({
   name: 'test.services.reminder',
-  imports: [base, test, redis, models, database, reminder],
+  imports: [base, test, helpers, redis, models, database, reminder],
 }).load();

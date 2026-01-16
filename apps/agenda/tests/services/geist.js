@@ -1,11 +1,12 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
+import helpers from '../support/helpers.js';
 import redis from '../../src/redis.js';
 import models from '../../src/models.js';
 import database from '../../src/services/database.js';
 import geist from '../../src/services/geist.js';
 
-export default await async function (_, $, $test, $redis, $models, $db, $geist) {
+export default await async function (_, $, $test, $helpers, $redis, $models, $db, $geist) {
   // Helper to create a test DatabaseService
   const createDbService = async () => {
     const service = $db.DatabaseService.new({ uid: 'TestDatabaseService' });
@@ -354,5 +355,5 @@ export default await async function (_, $, $test, $redis, $models, $db, $geist) 
   });
 }.module({
   name: 'test.services.geist',
-  imports: [base, test, redis, models, database, geist],
+  imports: [base, test, helpers, redis, models, database, geist],
 }).load();

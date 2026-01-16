@@ -1,10 +1,11 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
+import helpers from '../support/helpers.js';
 import redis from '../../src/redis.js';
 import models from '../../src/models.js';
 import database from '../../src/services/database.js';
 
-export default await async function (_, $, $test, $redis, $models, $db) {
+export default await async function (_, $, $test, $helpers, $redis, $models, $db) {
   // Create a test instance without connecting to supervisor
   const createTestService = async () => {
     const service = $db.DatabaseService.new({ uid: 'TestDatabaseService' });
@@ -271,5 +272,5 @@ export default await async function (_, $, $test, $redis, $models, $db) {
   });
 }.module({
   name: 'test.services.database',
-  imports: [base, test, redis, models, database],
+  imports: [base, test, helpers, redis, models, database],
 }).load();
