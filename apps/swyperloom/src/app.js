@@ -43,9 +43,7 @@ export default await async function (_, $, $html, $session) {
         do() {
           const vnode = $html.HTML.t`
             <div class="text-display">
-              <div class="text-content" onclick=${() => this.session().startEditing()}>
-                <span class="main-text">${() => this.session().text()}</span><span class="preview-text">${() => this.session().preview()}</span>
-              </div>
+              <div class="text-content" onclick=${() => this.session().startEditing()}><span class="main-text">${() => this.session().text()}</span><span class="preview-text">${() => this.session().preview()}</span></div>
             </div>
           `;
           this.rootVNode(vnode);
@@ -526,7 +524,7 @@ export default await async function (_, $, $html, $session) {
             .text-content {
               background: var(--light-sand);
               box-shadow: var(--box-shadow-args);
-              padding: 4px;
+              padding: 2px;
               flex: 1;
               overflow-y: auto;
               font-size: 15px;
