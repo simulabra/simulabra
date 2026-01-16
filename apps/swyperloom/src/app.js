@@ -289,23 +289,10 @@ export default await async function (_, $, $html, $session) {
 
   $.Class.new({
     name: "BottomBar",
-    doc: "Control bar with respin, undo/redo, image upload",
+    doc: "Control bar with respin and undo/redo",
     slots: [
       $html.Component,
       $.Var.new({ name: "session" }),
-      $.Method.new({
-        name: "handleImageSelect",
-        do(e) {
-          const file = e.target.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            this.session().attachImage(base64);
-          };
-          reader.readAsDataURL(file);
-        }
-      }),
       $.Method.new({
         name: "render",
         do() {
@@ -323,11 +310,6 @@ export default await async function (_, $, $html, $session) {
                 <span class="btn-icon">↪</span>
                 <span class="btn-label">redo</span>
               </button>
-              <label class="bar-btn">
-                <span class="btn-icon">${() => this.session().generator().hasImage() ? "🖼" : "📷"}</span>
-                <span class="btn-label">image</span>
-                <input type="file" accept="image/*" hidden onchange=${e => this.handleImageSelect(e)} />
-              </label>
             </div>
           `;
         }
@@ -400,13 +382,6 @@ export default await async function (_, $, $html, $session) {
                          value=${() => this.session().apiKey()}
                          oninput=${e => this.session().updateApiKey(e.target.value)}
                          placeholder="hyperbolic key" />
-                </div>
-                <div class="settings-field">
-                  <label class="settings-label">LLM Server URL</label>
-                  <input type="text" class="settings-input"
-                         value=${() => this.session().serverURL()}
-                         oninput=${e => this.session().updateServerURL(e.target.value)}
-                         placeholder="https://api.hyperbolic.xyz" />
                 </div>
                 <button class="settings-done" onclick=${() => this.session().closeSettings()}>Done</button>
               </div>
@@ -551,7 +526,7 @@ export default await async function (_, $, $html, $session) {
             .text-content {
               background: var(--light-sand);
               box-shadow: var(--box-shadow-args);
-              padding: 8px;
+              padding: 4px;
               flex: 1;
               overflow-y: auto;
               font-size: 15px;
