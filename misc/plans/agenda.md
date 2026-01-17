@@ -675,56 +675,64 @@ Completed: 2026-01-15
 </TestsCovering>
 </Phase5_ServiceIdentityAndBootstrapping>
 <Phase6_ObjectifyTheScripts status="COMPLETE">
-Completed: 2026-01-15
+Completed: 2026-01-16
 
 <FilesChanged>
-- Created: `apps/agenda/src/logstreamer.js` - ServiceColorizer, FileTail, LogStreamer classes
-- Updated: `apps/agenda/bin/logs.js` - Minimal entrypoint (7 lines)
-- Created: `apps/agenda/tests/logstreamer.js` - 16 unit tests
+- Created: `apps/agenda/src/logs.js` - FileTail, LogFormatter, LogStreamer classes
+- Updated: `apps/agenda/bin/logs.js` - Minimal entry point using the new module
+- Created: `apps/agenda/tests/logs.js` - 16 unit tests for the logs module
 </FilesChanged>
 
 <Implementation>
-1. **Created ServiceColorizer class**:
-   - `colorMap` Var for service name to ANSI color mapping
-   - `colorFor(serviceName)` returns color code or default
-   - `formatLine(serviceName, line)` formats with colored prefix
+1. **Created FileTail class** (reifies file tailing):
+   - `filepath` - absolute path to the file
+   - `position` - current read position in bytes
+   - `exists()` - check if file exists
+   - `size()` - get current file size
+   - `readNew()` - read new content since last read, returns array of lines
+   - `tail(n)` - get last N lines from file, updates position
 
-2. **Created FileTail class** (reifies file tailing behavior):
-   - `filepath` and `serviceName` Vars (serviceName auto-derived from filepath)
-   - `position` tracks current read position in file
-   - `exists()`, `size()` for file status
-   - `readNew()` reads content since last position
-   - `readLastLines(n)` reads last N lines and sets position
-   - `newLines()` convenience method returning new non-empty lines
+2. **Created LogFormatter class** (formats log output):
+   - `colors` - service name to ANSI color mapping
+   - `colorFor(serviceName)` - get color for a service
+   - `format(serviceName, line)` - format line with colored prefix
+   - `formatHeader(serviceName, text)` - format section headers
 
-3. **Created LogStreamer class** (orchestrates multi-file streaming):
-   - `logsDir` directory to watch
-   - `tails` map caches FileTail instances by filepath
-   - `colorizer` for output formatting
-   - `output` function slot (defaults to console.log, can be customized)
-   - `logFiles()` discovers .log files in directory
-   - `getTail(filename)` gets or creates FileTail
-   - `showInitial()` displays last N lines from each file
-   - `startWatching()` uses fs.watch for change events
-   - `startPolling()` backup poll for missed events
-   - `run()` starts full streaming (initial + watch + poll)
-   - `stop()` cleans up watcher and timer
+3. **Created LogStreamer class** (orchestrates log streaming):
+   - `logsDir` - directory containing log files
+   - `tails` - filepath to FileTail mapping (lazy cache)
+   - `formatter` - LogFormatter instance
+   - `output` - function to call with formatted lines (injectable for testing)
+   - `logFiles()` - list .log files in directory
+   - `getTail(filename)` - get or create FileTail
+   - `tailFile(filename)` - read and output new content
+   - `scan()` - scan all log files for new content
+   - `showInitial()` - show last N lines from each file
+   - `startWatching()` - start fs.watch on logs directory
+   - `startPolling()` - start periodic scan interval
+   - `stop()` - clean up watcher and interval
+   - `run()` - main entry point: show initial + watch + poll
+
+4. **Updated bin/logs.js**:
+   - Minimal 13-line entry point
+   - Loads module, creates LogStreamer, calls run()
 </Implementation>
 
 <DesignNotes>
-- FileTail encapsulates file reading state, making tailing testable and reusable
-- ServiceColorizer is separate from LogStreamer for single responsibility
-- Output function is injectable for testing (capture lines instead of console.log)
-- The bin script is now 7 lines: import, path calc, instantiate, run
-- This follows the guideline: "ALWAYS use Simulabra for new scripts and functionality"
+- `output` slot allows injecting a custom output function for testing (default: console.log)
+- FileTail is independent and testable without LogStreamer
+- LogFormatter is customizable - colors can be overridden
+- Each class follows single responsibility principle
+- The original script's behavior is preserved while gaining composability
 </DesignNotes>
 
 <TestsCovering>
-- ServiceColorizerColorFor, DefaultColor, FormatLine, CustomColorMap
-- FileTailDerivesServiceName, PreservesExplicitServiceName
-- FileTailReadLastLines, NewLines, NoNewContent, NonexistentFile
-- LogStreamerLogFiles, GetTailCaching, CollectsOutput, ScanAll
-- LogStreamerStopCleansUp, NonexistentDir
+- FileTailExists, FileTailExistsTrue, FileTailSize
+- FileTailReadNew, FileTailTail, FileTailTailUpdatesPosition
+- LogFormatterColorFor, LogFormatterFormat, LogFormatterFormatHeader
+- LogStreamerServiceNameFromFile, LogStreamerLogFiles
+- LogStreamerGetTailCreatesFileTail, LogStreamerScan
+- LogStreamerShowInitial, LogStreamerStop, LogStreamerCustomFormatter
 </TestsCovering>
 </Phase6_ObjectifyTheScripts>
 <Phase7_ServiceStartupOrdering status="COMPLETE">

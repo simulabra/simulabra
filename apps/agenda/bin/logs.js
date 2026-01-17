@@ -1,7 +1,13 @@
 #!/usr/bin/env bun
+import { __, base } from 'simulabra';
+import logs from '../src/logs.js';
 import { join } from 'path';
-import logstreamer from '../src/logstreamer.js';
 
-const logsDir = join(import.meta.dir, '../logs');
-const streamer = logstreamer.LogStreamer.new({ logsDir });
-streamer.run();
+await async function (_, $, $logs) {
+  const logsDir = join(import.meta.dir, '../logs');
+  const streamer = $logs.LogStreamer.new({ logsDir });
+  streamer.run();
+}.module({
+  name: 'agenda.logs-cli',
+  imports: [base, logs],
+}).load();
