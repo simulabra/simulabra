@@ -490,6 +490,146 @@ export default await async function (_, $) {
     ]
   })
 
+  $.Class.new({
+    name: 'LiveBrowserClient',
+    doc: 'Browser-side WebSocket RPC client for connecting to a Supervisor',
+    slots: [
+      $.Signal.new({ name: 'connected', default: false }),
+      $.Var.new({ name: 'socket' }),
+      $.Var.new({ name: 'pendingCalls', default: () => new Map() }),
+      $.Var.new({ name: 'callIdCounter', default: 0 }),
+      $.Var.new({ name: 'host' }),
+      $.Var.new({ name: 'port', default: 3030 }),
+      $.Var.new({ name: 'reconnectDelayMs', default: 1000 }),
+      $.Var.new({ name: 'maxReconnectDelayMs', default: 30000 }),
+      $.Var.new({ name: 'autoReconnect', default: true }),
+      $.Var.new({ name: 'reconnectAttempts', default: 0 }),
+      $.Var.new({ name: 'reconnectTimer' }),
+      $.Var.new({ name: 'onConnect' }),
+      $.Var.new({ name: 'onDisconnect' }),
+      $.Var.new({ name: 'onError' }),
+      $.Method.new({
+        name: 'connect',
+        doc: 'establish WebSocket connection to the supervisor',
+        do() {
+          return new Promise((resolve, reject) => {
+            const host = this.host() || (typeof window !== 'undefined' ? window.location.hostname : 'localhost');
+            const port = this.port();
+            const wsUrl = `ws://${host}:${port}`;
+            try {
+              const socket = new WebSocket(wsUrl);
+              this.socket(socket);
+
+              socket.onopen = () => {
+                this.connected(true);
+                this.reconnectAttempts(0);
+                if (this.onConnect()) this.onConnect()();
+                resolve();
+              };
+
+              socket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.callId && this.pendingCalls().has(msg.callId)) {
+                  const { resolve, reject } = this.pendingCalls().get(msg.callId);
+                  this.pendingCalls().delete(msg.callId);
+                  if (msg.error) reject(new Error(msg.error));
+                  else resolve(msg.result);
+                }
+              };
+
+              socket.onclose = () => {
+                this.connected(false);
+                if (this.onDisconnect()) this.onDisconnect()();
+                if (this.autoReconnect()) this.scheduleReconnect();
+              };
+
+              socket.onerror = (err) => {
+                if (this.onError()) this.onError()(err);
+                if (!this.connected()) {
+                  reject(err);
+                }
+              };
+            } catch (e) {
+              reject(e);
+            }
+          });
+        }
+      }),
+      $.Method.new({
+        name: 'scheduleReconnect',
+        doc: 'schedule a reconnection attempt with exponential backoff',
+        do() {
+          if (this.reconnectTimer()) return;
+          const attempts = this.reconnectAttempts();
+          const delay = Math.min(
+            this.reconnectDelayMs() * Math.pow(2, attempts),
+            this.maxReconnectDelayMs()
+          );
+          this.reconnectAttempts(attempts + 1);
+          this.reconnectTimer(setTimeout(() => {
+            this.reconnectTimer(null);
+            this.connect().catch(() => {});
+          }, delay));
+        }
+      }),
+      $.Method.new({
+        name: 'disconnect',
+        doc: 'close the WebSocket connection',
+        do() {
+          this.autoReconnect(false);
+          if (this.reconnectTimer()) {
+            clearTimeout(this.reconnectTimer());
+            this.reconnectTimer(null);
+          }
+          if (this.socket()) {
+            this.socket().close();
+            this.socket(null);
+          }
+          this.connected(false);
+        }
+      }),
+      $.Method.new({
+        name: 'rpcCall',
+        doc: 'make an RPC call to a service via the supervisor',
+        async do(service, method, args = []) {
+          if (!this.socket() || this.socket().readyState !== WebSocket.OPEN) {
+            throw new Error('not connected');
+          }
+          const callId = this.callIdCounter() + 1;
+          this.callIdCounter(callId);
+          return new Promise((resolve, reject) => {
+            this.pendingCalls().set(callId, { resolve, reject });
+            this.socket().send(JSON.stringify({
+              type: 'rpc',
+              callId,
+              service,
+              method,
+              args
+            }));
+          });
+        }
+      }),
+      $.Method.new({
+        name: 'serviceProxy',
+        doc: 'create a proxy object for calling service methods',
+        do(c) {
+          const name = typeof c === 'string' ? c : c.name;
+          const self = this;
+          return new Proxy({}, {
+            get(target, prop) {
+              if (['then', 'catch', 'finally'].includes(prop)) {
+                return target[prop];
+              }
+              return async function (...args) {
+                return self.rpcCall(name, prop, args);
+              };
+            }
+          });
+        }
+      })
+    ]
+  });
+
 }.module({
   name: 'HTML',
   doc: 'Simulabra HTML rendering utilities, including VDOM, components, and reactive updates.',

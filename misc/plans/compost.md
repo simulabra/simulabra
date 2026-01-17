@@ -1,20 +1,102 @@
 # Agenda Compost Report
 
-## Candidates to extract into the base library
-- `apps/agenda/src/redis.js`: `RedisVar`, `RedisClient`, and `RedisPersisted` are a general Redis persistence adapter with slot-level transforms, indexing flags, and CRUD helpers. This fits as a base persistence module (for example `simulabra/redis` or a generic storage adapter alongside `src/db.js`).
-- `apps/agenda/src/time.js`: `TimePolicy` provides UTC-safe date arithmetic and day boundary helpers that are broadly useful for scheduling and recurrence logic.
-- `apps/agenda/src/models.js`: `RecurrenceRule` is a reusable recurrence/scheduling model that could live in a base `time` or `schedule` module.
-- `apps/agenda/src/tools.js`: `Tool` and `ToolRegistry` are general LLM tool definitions + dispatch that could belong in `simulabra/llm` or a shared tooling module, with Agenda-specific tools layered on top.
-- `apps/agenda/src/logs.js`: `FileTail`, `LogFormatter`, and `LogStreamer` form a reusable log tailing/streaming utility that could be a base devtools module.
-- `apps/agenda/src/supervisor.js`: `ServiceSpec`, `ManagedService`, `HealthCheck`, `NodeRegistry`, `HandshakeHandler`, and `Supervisor` implement a general service supervisor on top of `simulabra/live`. This looks suitable for a core `simulabra/supervisor` module, with `AgendaService` as a generic `EnvUidService` mixin.
-- `apps/agenda/src/ui/app.js`: the browser-side RPC wrapper (WebSocket, request/response map) is reusable as a base `LiveBrowserClient` or `LiveRPCClient` so other web apps do not reimplement it.
+## Overview
+Extract reusable modules from `apps/agenda/` into the core Simulabra library by extending existing files where possible. This includes implementing missing Redis search/indexing functionality.
 
-## Existing base classes that already cover similar problems
-- `src/db.js`: `DBVar` and `Persisted` already implement slot-based persistence and CRUD semantics similar to `RedisVar`/`RedisPersisted`. If Redis is optional, the Agenda models could use the base DB module instead.
-- `src/live.js`: `NodeClient`, `RPCHandler`, `MessageDispatcher`, and `LiveMessage` solve the RPC and routing pieces that Agenda re-implements on the server side. Extending `live` with a supervisor/server component would reduce duplication.
-- `src/http.js`: `HTTPRequestCommand` provides a reusable HTTP client command that can replace the raw `fetch` in `TriggerWebhookTool` if you want consistent transport and logging.
-- `src/llm.js`: `LLMClient` is a base client for OpenAI-compatible APIs; if Geist migrates to that style of API, it can reuse the base client and keep the tool registry as the extension point.
+## Extraction Phases
 
-## Notes on consolidation opportunities
-- `RedisVar.searchable` and `indexed` are defined but not implemented in Agenda. If moved into base, they could pair with a Redis Search or secondary index helper so the flags are functional.
-- `AgendaService` is a thin mixin that maps env to `uid`. This can be generalized for any service that needs stable process naming via environment.
+### Phase 1: Leaf Modules (no internal dependencies)
+
+#### 1.1 Redis Persistence → extend `src/db.js` ✓
+**Source**: `apps/agenda/src/redis.js`
+**Extract**: `RedisVar`, `RedisClient`, `RedisPersisted`
+**Target**: Add to `src/db.js` alongside the existing SQLite/`DBVar`/`Persisted` classes
+**Consolidation**: Mirrors the SQLite pattern - `RedisVar` parallels `DBVar`, `RedisPersisted` parallels `Persisted`
+**Status**: Complete - `RedisVar`, `RedisClient`, `RedisPersisted` in `src/db.js`, tests in `tests/db.js`, agenda re-exports with `agenda:` keyPrefix
+**Implemented**:
+  - `RedisVar.searchable` - full-text search via Redis Search (`FT.CREATE`/`FT.SEARCH`)
+  - `RedisVar.indexed` - secondary indexes using Redis SETs with `findByIndex()` lookups
+  - `RedisPersisted.search(query)` and `RedisPersisted.findByIndex(field, value)` methods
+  - Sorted set operations (`zAdd`, `zRem`, `zRangeByScore`) for range queries
+
+#### 1.2 Time Utilities → new `src/time.js` ✓
+**Source**: `apps/agenda/src/time.js`
+**Extract**: `TimePolicy`
+**Target**: New file `src/time.js` (no existing time module to extend)
+**Consolidation**: None needed, standalone utility
+**Status**: Complete - `src/time.js` created, tests in `tests/time.js`, agenda re-exports from core
+
+#### 1.3 LLM Tools → new `src/tools.js` ✓
+**Source**: `apps/agenda/src/tools.js`
+**Extract**: `Tool`, `ToolRegistry` (base classes only, not Agenda-specific tools)
+**Target**: New file `src/tools.js`
+**Consolidation**: None needed, clean abstraction layer for LLM function calling
+**Status**: Complete - `Tool`, `ToolRegistry` in `src/tools.js`, tests in `tests/tools.js`, agenda re-exports from core
+
+#### 1.4 Log Streaming → new `src/logs.js` ✓
+**Source**: `apps/agenda/src/logs.js`
+**Extract**: `FileTail`, `LogFormatter`, `LogStreamer`
+**Target**: New file `src/logs.js`
+**Consolidation**: None needed, standalone devtools utility
+**Status**: Complete - `FileTail`, `LogFormatter`, `LogStreamer` in `src/logs.js`, tests in `tests/logs.js`, agenda re-exports with `AgendaLogFormatter` and `AgendaLogStreamer`
+
+### Phase 2: Service Infrastructure (depends on live.js)
+
+#### 2.1 Supervisor → extend `src/live.js` ✓
+**Source**: `apps/agenda/src/supervisor.js`
+**Extract**: `ServiceSpec`, `ManagedService`, `HealthCheck`, `NodeRegistry`, `HandshakeHandler`, `Supervisor`
+**Target**: Add to `src/live.js` (completes the server side of the RPC system)
+**Consolidation**: Heavy - integrates with existing `NodeClient`, `RPCHandler`, `MessageDispatcher`, `LiveMessage`
+**Also extract**: `AgendaService` → generalize as `EnvService` (maps environment variables to uid)
+**Status**: Complete - `EnvService`, `ServiceSpec`, `NodeRegistry`, `HealthCheck`, `ManagedService`, `HandshakeHandler`, `Supervisor` in `src/live.js`, tests in `tests/live.js`, agenda uses `AGENDA_SERVICE_NAME` via `AgendaService`, `AgendaManagedService`, and `AgendaSupervisor`
+
+### Phase 3: Scheduling (depends on Phase 1)
+
+#### 3.1 Recurrence → extend `src/time.js` ✓
+**Source**: `apps/agenda/src/models.js`
+**Extract**: `RecurrenceRule` only (not the Agenda-specific `Log`, `Task`, `Reminder` models)
+**Target**: Add to `src/time.js` created in Phase 1.2
+**Consolidation**: Uses `TimePolicy` for date arithmetic
+**Status**: Complete - `RecurrenceRule` added to `src/time.js` with `nextOccurrence()`, `toJSON()`, `fromJSON()` methods; tests in `tests/time.js`; agenda `Reminder.recurrence` field updated to use `$time.RecurrenceRule`
+
+### Phase 4: Browser Client (depends on html.js)
+
+#### 4.1 Browser RPC Client → extend `src/html.js` ✓
+**Source**: `apps/agenda/src/ui/app.js` (extract only the WebSocket/RPC wrapper)
+**Extract**: Browser-side RPC client (WebSocket connect, request/response tracking, reconnection)
+**Target**: Add to `src/html.js` as `LiveBrowserClient` - keeps browser-specific code with the HTML/component system
+**Consolidation**: None needed, new capability for html.js
+**Status**: Complete - `LiveBrowserClient` in `src/html.js` with `connect()`, `disconnect()`, `rpcCall()`, `serviceProxy()`, auto-reconnect with exponential backoff; tests in `tests/html.js`; agenda `AgendaApp` composes `LiveBrowserClient` mixin
+
+## Dependency Graph
+```
+Phase 1 (parallel, no deps)     Phase 2          Phase 3          Phase 4
+┌─────────────────────────┐    ┌──────────┐    ┌─────────────┐   ┌─────────────┐
+│ 1.1 redis → db.js       │    │          │    │             │   │             │
+│ 1.2 time  → time.js     │───▶│ 2.1 sup  │───▶│ 3.1 recur   │   │ 4.1 browser │
+│ 1.3 tools → tools.js    │    │ → live.js│    │ → time.js   │   │ → html.js   │
+│ 1.4 logs  → logs.js     │    │          │    │             │   │             │
+└─────────────────────────┘    └──────────┘    └─────────────┘   └─────────────┘
+                                                                  (independent)
+```
+
+## Implementation Notes
+
+### Redis Search Integration (Phase 1.1)
+When extracting `RedisVar`, implement the `searchable` and `indexed` flags:
+- `searchable: true` → Create Redis Search index, enable FT.SEARCH queries
+- `indexed: true` → Create secondary index (Redis SET or ZSET) for fast lookups
+- Add `RedisPersisted.search(query)` and `RedisPersisted.findByIndex(field, value)` methods
+
+### Supervisor Consolidation (Phase 2.1)
+The supervisor currently re-implements some patterns from `live.js`:
+- `HandshakeHandler` extends `MessageHandler` from live.js ✓
+- `NodeRegistry` tracks connected clients (similar to potential live.js server component)
+- Consolidate by making `Supervisor` the canonical "server" counterpart to `NodeClient`
+
+## What Stays in Agenda
+- `Log`, `Task`, `Reminder` models (domain-specific)
+- All concrete tool implementations (`CreateLogTool`, `CreateTaskTool`, etc.)
+- UI components (`TaskItem`, `JournalView`, `ChatView`, etc.)
+- SMS/Twilio integration
+- Service startup scripts

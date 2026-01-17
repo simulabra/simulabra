@@ -109,97 +109,6 @@ export default await async function (_, $, $redis, $time) {
   });
 
   $.Class.new({
-    name: 'RecurrenceRule',
-    doc: 'Rule for recurring reminders',
-    slots: [
-      $.EnumVar.new({
-        name: 'pattern',
-        doc: 'recurrence pattern',
-        choices: ['daily', 'weekly', 'monthly'],
-        required: true,
-      }),
-      $.Var.new({
-        name: 'interval',
-        doc: 'repeat every N units',
-        default: 1,
-      }),
-      $.Var.new({
-        name: 'daysOfWeek',
-        doc: 'for weekly: which days (0=Sun, 6=Sat)',
-        default: () => [],
-      }),
-      $.Var.new({
-        name: 'endDate',
-        doc: 'optional end date for recurrence',
-      }),
-      $.Method.new({
-        name: 'nextOccurrence',
-        doc: 'calculate the next trigger time from a given date using UTC arithmetic',
-        do(fromDate) {
-          const TP = $time.TimePolicy;
-          let date = new Date(fromDate);
-
-          if (this.endDate() && date > TP.endOfDay(this.endDate())) {
-            return null;
-          }
-
-          switch (this.pattern()) {
-            case 'daily':
-              date = TP.addDays(date, this.interval());
-              break;
-            case 'weekly':
-              if (this.daysOfWeek().length > 0) {
-                const currentDay = TP.getDayOfWeek(date);
-                const sortedDays = [...this.daysOfWeek()].sort((a, b) => a - b);
-                const nextDay = sortedDays.find(d => d > currentDay);
-                if (nextDay !== undefined) {
-                  date = TP.addDays(date, nextDay - currentDay);
-                } else {
-                  const daysUntilFirst = 7 - currentDay + sortedDays[0];
-                  date = TP.addDays(date, daysUntilFirst + 7 * (this.interval() - 1));
-                }
-              } else {
-                date = TP.addWeeks(date, this.interval());
-              }
-              break;
-            case 'monthly':
-              date = TP.addMonths(date, this.interval());
-              break;
-          }
-
-          if (this.endDate() && date > TP.endOfDay(this.endDate())) {
-            return null;
-          }
-
-          return date;
-        }
-      }),
-      $.Method.new({
-        name: 'toJSON',
-        do() {
-          return {
-            pattern: this.pattern(),
-            interval: this.interval(),
-            daysOfWeek: this.daysOfWeek(),
-            endDate: this.endDate()?.toISOString(),
-          };
-        }
-      }),
-      $.Static.new({
-        name: 'fromJSON',
-        do(json) {
-          return _.RecurrenceRule.new({
-            pattern: json.pattern,
-            interval: json.interval || 1,
-            daysOfWeek: json.daysOfWeek || [],
-            endDate: json.endDate ? new Date(json.endDate) : undefined,
-          });
-        }
-      }),
-    ]
-  });
-
-  $.Class.new({
     name: 'Reminder',
     doc: 'Scheduled notification with optional recurrence',
     slots: [
@@ -222,7 +131,7 @@ export default await async function (_, $, $redis, $time) {
         name: 'recurrence',
         doc: 'optional recurrence rule (JSON)',
         toRedis() { return this ? JSON.stringify(this.toJSON()) : null; },
-        fromRedis() { return this ? _.RecurrenceRule.fromJSON(JSON.parse(this)) : null; },
+        fromRedis() { return this ? $time.RecurrenceRule.fromJSON(JSON.parse(this)) : null; },
       }),
       $redis.RedisVar.new({
         name: 'sent',

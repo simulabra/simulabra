@@ -13,7 +13,9 @@
     "./llm": "./src/llm.js",
     "./db": "./src/db.js",
     "./live": "./src/live.js",
-    "./http": "./src/http.js"
+    "./http": "./src/http.js",
+    "./time": "./src/time.js",
+    "./tools": "./src/tools.js"
   },
   "module": "./src/base.js",
   "scripts": {

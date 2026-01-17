@@ -18,8 +18,8 @@ await async function (_, $, $supervisor) {
     mkdirSync(logsDir, { recursive: true });
   }
 
-  // Create supervisor with logs directory
-  const sup = $supervisor.Supervisor.new({ port, logsDir });
+  // Create supervisor with logs directory (AgendaSupervisor uses AGENDA_SERVICE_NAME env)
+  const sup = $supervisor.AgendaSupervisor.new({ port, logsDir });
 
   // Helper to log to both console and file
   const log = (msg) => {

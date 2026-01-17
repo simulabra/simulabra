@@ -314,83 +314,25 @@ export default await async function (_, $, $html) {
     doc: "Main agenda web application",
     slots: [
       $html.Component,
+      $html.LiveBrowserClient,
       $.Signal.new({ name: "activeView", default: "chat" }),
       $.Signal.new({ name: "tasks", default: [] }),
       $.Signal.new({ name: "logs", default: [] }),
       $.Signal.new({ name: "reminders", default: [] }),
       $.Signal.new({ name: "messages", default: [] }),
       $.Signal.new({ name: "loading", default: false }),
-      $.Signal.new({ name: "connected", default: false }),
-      $.Var.new({ name: "socket" }),
-      $.Var.new({ name: "pendingCalls", default: () => new Map() }),
-      $.Var.new({ name: "callId", default: 0 }),
 
       $.After.new({
         name: "init",
         do() {
-          // Defer connection to avoid blocking render
-          setTimeout(() => this.connectToBackend(), 100);
-        }
-      }),
-
-      $.Method.new({
-        name: "connectToBackend",
-        do() {
-          const port = 3030;
-          const wsUrl = `ws://${window.location.hostname}:${port}`;
-          try {
-            const socket = new WebSocket(wsUrl);
-            this.socket(socket);
-
-            socket.onopen = () => {
-              this.connected(true);
-              this.addMessage({ role: "system", content: "Connected to Agenda" });
-              this.refreshData();
-            };
-
-            socket.onmessage = (event) => {
-              const msg = JSON.parse(event.data);
-              if (msg.callId && this.pendingCalls().has(msg.callId)) {
-                const { resolve, reject } = this.pendingCalls().get(msg.callId);
-                this.pendingCalls().delete(msg.callId);
-                if (msg.error) reject(new Error(msg.error));
-                else resolve(msg.result);
-              }
-            };
-
-            socket.onclose = () => {
-              this.connected(false);
-            };
-
-            socket.onerror = () => {
-              this.connected(false);
-              this.addMessage({ role: "system", content: "Offline mode" });
-            };
-          } catch (e) {
-            this.connected(false);
-            this.addMessage({ role: "system", content: `Offline mode` });
-          }
-        }
-      }),
-
-      $.Method.new({
-        name: "rpcCall",
-        async do(service, method, args) {
-          if (!this.socket() || this.socket().readyState !== WebSocket.OPEN) {
-            throw new Error("Not connected");
-          }
-          const callId = this.callId() + 1;
-          this.callId(callId);
-          return new Promise((resolve, reject) => {
-            this.pendingCalls().set(callId, { resolve, reject });
-            this.socket().send(JSON.stringify({
-              type: "rpc",
-              callId,
-              service,
-              method,
-              args
-            }));
+          this.onConnect(() => {
+            this.addMessage({ role: "system", content: "Connected to Agenda" });
+            this.refreshData();
           });
+          this.onError(() => {
+            this.addMessage({ role: "system", content: "Offline mode" });
+          });
+          setTimeout(() => this.connect().catch(() => {}), 100);
         }
       }),
 

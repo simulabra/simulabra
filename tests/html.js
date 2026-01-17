@@ -140,6 +140,55 @@ import test from '../src/test.js';
   };
 })();
 
+/* --- WebSocket mock for LiveBrowserClient tests -------------------------- */
+class MockWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  static instances = [];
+  static clear() { MockWebSocket.instances = []; }
+
+  constructor(url) {
+    this.url = url;
+    this.readyState = MockWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onclose = null;
+    this.onerror = null;
+    this.sentMessages = [];
+    MockWebSocket.instances.push(this);
+  }
+
+  send(data) {
+    this.sentMessages.push(JSON.parse(data));
+  }
+
+  close() {
+    this.readyState = MockWebSocket.CLOSED;
+    if (this.onclose) this.onclose({ code: 1000 });
+  }
+
+  simulateOpen() {
+    this.readyState = MockWebSocket.OPEN;
+    if (this.onopen) this.onopen({});
+  }
+
+  simulateMessage(data) {
+    if (this.onmessage) this.onmessage({ data: JSON.stringify(data) });
+  }
+
+  simulateError(err) {
+    if (this.onerror) this.onerror(err || new Error('mock error'));
+  }
+
+  simulateClose() {
+    this.readyState = MockWebSocket.CLOSED;
+    if (this.onclose) this.onclose({ code: 1000 });
+  }
+}
+globalThis.WebSocket = MockWebSocket;
+
 const htmlModule = (await import('../src/html.js')).default;
 
 export default await async function (_, $, $test, $html) {
@@ -197,6 +246,116 @@ export default await async function (_, $, $test, $html) {
       v.el().dispatchEvent({ type:'click' });
       await __.reactor().flush();
       this.assertEq(root.textContent.trim(), 'clicked 1 times');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'LiveBrowserClientConnects',
+    async do() {
+      MockWebSocket.clear();
+      const client = $html.LiveBrowserClient.new({ port: 3030, autoReconnect: false });
+      const connectPromise = client.connect();
+      this.assertEq(MockWebSocket.instances.length, 1);
+      const ws = MockWebSocket.instances[0];
+      this.assertEq(ws.url, 'ws://localhost:3030');
+      this.assertEq(client.connected(), false);
+      ws.simulateOpen();
+      await connectPromise;
+      this.assertEq(client.connected(), true);
+      client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'LiveBrowserClientRpcCall',
+    async do() {
+      MockWebSocket.clear();
+      const client = $html.LiveBrowserClient.new({ port: 3030, autoReconnect: false });
+      const connectPromise = client.connect();
+      const ws = MockWebSocket.instances[0];
+      ws.simulateOpen();
+      await connectPromise;
+      const rpcPromise = client.rpcCall('TestService', 'testMethod', ['arg1', 42]);
+      this.assertEq(ws.sentMessages.length, 1);
+      this.assertEq(ws.sentMessages[0].type, 'rpc');
+      this.assertEq(ws.sentMessages[0].service, 'TestService');
+      this.assertEq(ws.sentMessages[0].method, 'testMethod');
+      this.assertEq(ws.sentMessages[0].args[0], 'arg1');
+      this.assertEq(ws.sentMessages[0].args[1], 42);
+      ws.simulateMessage({ callId: ws.sentMessages[0].callId, result: 'success' });
+      const result = await rpcPromise;
+      this.assertEq(result, 'success');
+      client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'LiveBrowserClientRpcError',
+    async do() {
+      MockWebSocket.clear();
+      const client = $html.LiveBrowserClient.new({ port: 3030, autoReconnect: false });
+      const connectPromise = client.connect();
+      const ws = MockWebSocket.instances[0];
+      ws.simulateOpen();
+      await connectPromise;
+      const rpcPromise = client.rpcCall('TestService', 'failingMethod', []);
+      ws.simulateMessage({ callId: ws.sentMessages[0].callId, error: 'test error' });
+      let caughtError = null;
+      try {
+        await rpcPromise;
+      } catch (e) {
+        caughtError = e;
+      }
+      this.assert(caughtError !== null, 'expected error to be thrown');
+      this.assertEq(caughtError.message, 'test error');
+      client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'LiveBrowserClientServiceProxy',
+    async do() {
+      MockWebSocket.clear();
+      const client = $html.LiveBrowserClient.new({ port: 3030, autoReconnect: false });
+      const connectPromise = client.connect();
+      const ws = MockWebSocket.instances[0];
+      ws.simulateOpen();
+      await connectPromise;
+      const proxy = client.serviceProxy('DatabaseService');
+      const callPromise = proxy.listTasks({ active: true });
+      this.assertEq(ws.sentMessages.length, 1);
+      this.assertEq(ws.sentMessages[0].service, 'DatabaseService');
+      this.assertEq(ws.sentMessages[0].method, 'listTasks');
+      ws.simulateMessage({ callId: ws.sentMessages[0].callId, result: [{ id: 1, title: 'task1' }] });
+      const tasks = await callPromise;
+      this.assertEq(tasks.length, 1);
+      this.assertEq(tasks[0].title, 'task1');
+      client.disconnect();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'LiveBrowserClientDisconnectSignal',
+    async do() {
+      MockWebSocket.clear();
+      const client = $html.LiveBrowserClient.new({ port: 3030, autoReconnect: false });
+      const connectPromise = client.connect();
+      const ws = MockWebSocket.instances[0];
+      ws.simulateOpen();
+      await connectPromise;
+      this.assertEq(client.connected(), true);
+      ws.simulateClose();
+      this.assertEq(client.connected(), false);
+    }
+  });
+
+  $test.Case.new({
+    name: 'LiveBrowserClientServiceProxyStringArg',
+    do() {
+      MockWebSocket.clear();
+      const client = $html.LiveBrowserClient.new({ port: 3030, autoReconnect: false });
+      const proxy = client.serviceProxy('TestService');
+      this.assert(typeof proxy.anyMethod === 'function');
     }
   });
 

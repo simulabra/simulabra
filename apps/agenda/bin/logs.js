@@ -5,7 +5,7 @@ import { join } from 'path';
 
 await async function (_, $, $logs) {
   const logsDir = join(import.meta.dir, '../logs');
-  const streamer = $logs.LogStreamer.new({ logsDir });
+  const streamer = $logs.AgendaLogStreamer.new({ logsDir });
   streamer.run();
 }.module({
   name: 'agenda.logs-cli',
