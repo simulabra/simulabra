@@ -1,8 +1,9 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
+import coreTools from 'simulabra/tools';
 import tools from '../src/tools.js';
 
-export default await async function (_, $, $test, $tools) {
+export default await async function (_, $, $test, $coreTools, $tools) {
   $test.Case.new({
     name: 'ToolBaseClass',
     doc: 'Tool should have required slots and generate proper definition',
@@ -23,7 +24,7 @@ export default await async function (_, $, $test, $tools) {
     name: 'ToolRegistryRegister',
     doc: 'ToolRegistry should register and lookup tools',
     do() {
-      const registry = $tools.ToolRegistry.new();
+      const registry = $coreTools.ToolRegistry.new();
       const tool = $tools.CreateLogTool.new();
 
       registry.register(tool);
@@ -38,7 +39,7 @@ export default await async function (_, $, $test, $tools) {
     name: 'ToolRegistryDefinitions',
     doc: 'ToolRegistry should return all tool definitions',
     do() {
-      const registry = $tools.ToolRegistry.new();
+      const registry = $coreTools.ToolRegistry.new();
       registry.register($tools.CreateLogTool.new());
       registry.register($tools.CreateTaskTool.new());
 
@@ -167,5 +168,5 @@ export default await async function (_, $, $test, $tools) {
   });
 }.module({
   name: 'test.tools',
-  imports: [base, test, tools],
+  imports: [base, test, coreTools, tools],
 }).load();

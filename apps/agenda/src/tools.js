@@ -67,6 +67,11 @@ export default await async function (_, $, $tools) {
             dueDate: {
               type: 'string',
               description: 'Optional due date in ISO 8601 format'
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Optional tags for categorization'
             }
           },
           required: ['title']
@@ -75,7 +80,7 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.createTask(args.title, args.priority || 3, args.dueDate || null);
+          return await services.db.createTask(args.title, args.priority || 3, args.dueDate || null, args.tags || []);
         }
       }),
     ]
@@ -217,6 +222,10 @@ export default await async function (_, $, $tools) {
             priority: {
               type: 'integer',
               description: 'Filter by priority level'
+            },
+            tag: {
+              type: 'string',
+              description: 'Filter by tag'
             }
           }
         }),

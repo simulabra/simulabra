@@ -1,9 +1,10 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
 import redis from '../src/redis.js';
+import time from '../src/time.js';
 import models from '../src/models.js';
 
-export default await async function (_, $, $test, $redis, $models) {
+export default await async function (_, $, $test, $redis, $time, $models) {
   $test.Case.new({
     name: 'LogCreation',
     doc: 'Log should be created with content and timestamp',
@@ -99,6 +100,31 @@ export default await async function (_, $, $test, $redis, $models) {
     }
   });
 
+  $test.Case.new({
+    name: 'TaskWithTags',
+    doc: 'Task should support tags',
+    do() {
+      const task = $models.Task.new({
+        title: 'tagged task',
+        tags: ['work', 'urgent']
+      });
+      this.assertEq(task.tags().length, 2);
+      this.assertEq(task.tags()[0], 'work');
+      this.assert(task.description().includes('[work, urgent]'), 'description should show tags');
+    }
+  });
+
+  $test.Case.new({
+    name: 'TaskDefaultTags',
+    doc: 'Task should default to empty tags array',
+    do() {
+      const task = $models.Task.new({ title: 'no tags' });
+      this.assertEq(task.tags().length, 0);
+      const desc = task.description();
+      this.assert(desc.endsWith('no tags'), 'description should end with title when no tags');
+    }
+  });
+
   $test.AsyncCase.new({
     name: 'TaskPersistence',
     doc: 'Task should save and load from Redis',
@@ -112,7 +138,8 @@ export default await async function (_, $, $test, $redis, $models) {
       const task = $models.Task.new({
         title: 'persistent task',
         priority: 2,
-        dueDate
+        dueDate,
+        tags: ['project-x', 'backend']
       });
       await task.save(client);
 
@@ -121,6 +148,8 @@ export default await async function (_, $, $test, $redis, $models) {
       this.assertEq(found.priority(), 2);
       this.assertEq(found.dueDate().toISOString().split('T')[0], '2025-12-31');
       this.assertEq(found.done(), false);
+      this.assertEq(found.tags().length, 2);
+      this.assertEq(found.tags()[0], 'project-x');
 
       await task.delete(client);
       await client.disconnect();
@@ -131,7 +160,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleDaily',
     doc: 'Daily recurrence should advance by days',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 2
       });
@@ -145,7 +174,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleWeekly',
     doc: 'Weekly recurrence should advance by weeks',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
         interval: 1
       });
@@ -159,7 +188,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleMonthly',
     doc: 'Monthly recurrence should advance by months',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'monthly',
         interval: 1
       });
@@ -173,7 +202,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleEndDate',
     doc: 'Recurrence should stop at end date',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1,
         endDate: new Date('2025-01-16')
@@ -191,13 +220,13 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleJSON',
     doc: 'RecurrenceRule should serialize to/from JSON',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
         interval: 2,
         daysOfWeek: [1, 3, 5]
       });
       const json = rule.toJSON();
-      const restored = $models.RecurrenceRule.fromJSON(json);
+      const restored = $time.RecurrenceRule.fromJSON(json);
       this.assertEq(restored.pattern(), 'weekly');
       this.assertEq(restored.interval(), 2);
       this.assertEq(restored.daysOfWeek()[0], 1);
@@ -255,7 +284,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'ReminderRecurrence',
     doc: 'Reminder should create next occurrence for recurring reminders',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1
       });
@@ -289,7 +318,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleWeeklyWithDays',
     doc: 'Weekly recurrence with specific days should find next matching day',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
         interval: 1,
         daysOfWeek: [1, 3, 5] // Mon, Wed, Fri
@@ -307,7 +336,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleWeeklyWrapAround',
     doc: 'Weekly recurrence should wrap to next week when needed',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
         interval: 1,
         daysOfWeek: [1] // Monday only
@@ -325,7 +354,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleMonthlyOverflow',
     doc: 'Monthly recurrence should handle month-end overflow',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'monthly',
         interval: 1
       });
@@ -341,7 +370,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleLargeInterval',
     doc: 'Recurrence should handle large intervals',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 30
       });
@@ -357,7 +386,7 @@ export default await async function (_, $, $test, $redis, $models) {
     doc: 'Recurrence on end date should still return that occurrence',
     do() {
       const endDate = new Date('2025-01-16T00:00:00Z');
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1,
         endDate
@@ -377,7 +406,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRulePreservesTime',
     doc: 'Recurrence should preserve time of day',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1
       });
@@ -393,7 +422,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleJSONRoundTrip',
     doc: 'RecurrenceRule should survive full JSON round-trip',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
         interval: 2,
         daysOfWeek: [0, 6], // Weekend
@@ -403,7 +432,7 @@ export default await async function (_, $, $test, $redis, $models) {
       const json = rule.toJSON();
       const jsonStr = JSON.stringify(json);
       const parsed = JSON.parse(jsonStr);
-      const restored = $models.RecurrenceRule.fromJSON(parsed);
+      const restored = $time.RecurrenceRule.fromJSON(parsed);
 
       this.assertEq(restored.pattern(), 'weekly');
       this.assertEq(restored.interval(), 2);
@@ -422,7 +451,7 @@ export default await async function (_, $, $test, $redis, $models) {
       });
       await client.connect();
 
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
         interval: 1
       });
@@ -447,7 +476,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleDSTSpringForward',
     doc: 'Recurrence should be consistent across DST spring forward',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1
       });
@@ -466,7 +495,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleDSTFallBack',
     doc: 'Recurrence should be consistent across DST fall back',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1
       });
@@ -485,7 +514,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleWeeklyDSTBoundary',
     doc: 'Weekly recurrence with days should work across DST',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
         interval: 1,
         daysOfWeek: [1, 3, 5] // Mon, Wed, Fri
@@ -505,7 +534,7 @@ export default await async function (_, $, $test, $redis, $models) {
     name: 'RecurrenceRuleMonthlyDSTBoundary',
     doc: 'Monthly recurrence should work across DST',
     do() {
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'monthly',
         interval: 1
       });
@@ -525,7 +554,7 @@ export default await async function (_, $, $test, $redis, $models) {
     doc: 'End date comparison should use consistent UTC semantics',
     do() {
       const endDate = new Date('2025-03-09T00:00:00Z');
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1,
         endDate
@@ -546,7 +575,7 @@ export default await async function (_, $, $test, $redis, $models) {
     doc: 'Occurrences on the end date (before 23:59:59.999) should be allowed',
     do() {
       const endDate = new Date('2025-03-10T00:00:00Z');
-      const rule = $models.RecurrenceRule.new({
+      const rule = $time.RecurrenceRule.new({
         pattern: 'daily',
         interval: 1,
         endDate
@@ -563,5 +592,5 @@ export default await async function (_, $, $test, $redis, $models) {
   });
 }.module({
   name: 'test.models',
-  imports: [base, test, redis, models],
+  imports: [base, test, redis, time, models],
 }).load();

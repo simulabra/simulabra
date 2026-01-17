@@ -59,8 +59,9 @@ export default await async function (_, $, $live) {
     doc: 'Agenda-specific ManagedService that uses AGENDA_SERVICE_NAME env',
     slots: [
       $live.ManagedService,
-      $.Override.new({
+      $.Method.new({
         name: 'start',
+        override: true,
         async do() {
           if (this.stopped()) {
             return;
@@ -100,8 +101,9 @@ export default await async function (_, $, $live) {
     doc: 'Agenda-specific Supervisor that uses AgendaManagedService',
     slots: [
       $live.Supervisor,
-      $.Override.new({
+      $.Method.new({
         name: 'startAll',
+        override: true,
         doc: 'start all registered services using AgendaManagedService',
         async do() {
           for (const spec of this.specs()) {
@@ -128,5 +130,8 @@ export default await async function (_, $, $live) {
     '$live.ManagedService',
     '$live.HandshakeHandler',
     '$live.Supervisor',
+    'AgendaService',
+    'AgendaManagedService',
+    'AgendaSupervisor',
   ],
 }).load();

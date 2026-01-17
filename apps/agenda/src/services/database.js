@@ -76,11 +76,12 @@ export default await async function (_, $, $live, $supervisor, $redis, $models) 
       // Task operations
       $live.RpcMethod.new({
         name: 'createTask',
-        async do(title, priority = 3, dueDate = null) {
+        async do(title, priority = 3, dueDate = null, tags = []) {
           const task = $models.Task.new({
             title,
             priority,
-            dueDate: dueDate ? new Date(dueDate) : null
+            dueDate: dueDate ? new Date(dueDate) : null,
+            tags
           });
           await task.save(this.redis());
           await this.publishEvent('task.created', { id: task.rid() });
@@ -118,6 +119,9 @@ export default await async function (_, $, $live, $supervisor, $redis, $models) 
           }
           if (filter.priority !== undefined) {
             filtered = filtered.filter(t => t.priority() === filter.priority);
+          }
+          if (filter.tag !== undefined) {
+            filtered = filtered.filter(t => t.tags().includes(filter.tag));
           }
 
           return filtered
@@ -210,7 +214,8 @@ export default await async function (_, $, $live, $supervisor, $redis, $models) 
 
           const tasks = await $models.Task.findAll(this.redis());
           const matchingTasks = matchAll ? tasks : tasks.filter(t =>
-            t.title().toLowerCase().includes(q)
+            t.title().toLowerCase().includes(q) ||
+            t.tags().some(tag => tag.toLowerCase().includes(q))
           );
 
           const reminders = await $models.Reminder.findAll(this.redis());

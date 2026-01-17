@@ -1,14 +1,15 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
+import live from 'simulabra/live';
 import helpers from './support/helpers.js';
 import supervisor from '../src/supervisor.js';
 
-export default await async function (_, $, $test, $helpers, $supervisor) {
+export default await async function (_, $, $test, $live, $helpers, $supervisor) {
   $test.Case.new({
     name: 'ServiceSpecCreation',
     doc: 'ServiceSpec should be created with required fields',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo', 'hello'],
       });
@@ -23,7 +24,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ServiceSpecWithOptions',
     doc: 'ServiceSpec should accept custom options',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'CustomService',
         command: ['node', 'service.js'],
         restartPolicy: 'always',
@@ -40,11 +41,11 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceCreation',
     doc: 'ManagedService should be created with a spec',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo', 'test'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
       this.assertEq(managed.spec().serviceName(), 'TestService');
       this.assertEq(managed.restartCount(), 0);
       this.assertEq(managed.backoffMs(), 1000);
@@ -56,30 +57,30 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceShouldRestart',
     doc: 'ManagedService should determine if restart is needed',
     do() {
-      const neverSpec = $supervisor.ServiceSpec.new({
+      const neverSpec = $live.ServiceSpec.new({
         serviceName: 'NeverRestart',
         command: ['echo'],
         restartPolicy: 'never',
       });
-      const neverManaged = $supervisor.ManagedService.new({ spec: neverSpec });
+      const neverManaged = $live.ManagedService.new({ spec: neverSpec });
       this.assertEq(neverManaged.shouldRestart(0), false);
       this.assertEq(neverManaged.shouldRestart(1), false);
 
-      const alwaysSpec = $supervisor.ServiceSpec.new({
+      const alwaysSpec = $live.ServiceSpec.new({
         serviceName: 'AlwaysRestart',
         command: ['echo'],
         restartPolicy: 'always',
       });
-      const alwaysManaged = $supervisor.ManagedService.new({ spec: alwaysSpec });
+      const alwaysManaged = $live.ManagedService.new({ spec: alwaysSpec });
       this.assertEq(alwaysManaged.shouldRestart(0), true);
       this.assertEq(alwaysManaged.shouldRestart(1), true);
 
-      const onFailureSpec = $supervisor.ServiceSpec.new({
+      const onFailureSpec = $live.ServiceSpec.new({
         serviceName: 'OnFailureRestart',
         command: ['echo'],
         restartPolicy: 'on_failure',
       });
-      const onFailureManaged = $supervisor.ManagedService.new({ spec: onFailureSpec });
+      const onFailureManaged = $live.ManagedService.new({ spec: onFailureSpec });
       this.assertEq(onFailureManaged.shouldRestart(0), false);
       this.assertEq(onFailureManaged.shouldRestart(1), true);
     }
@@ -89,11 +90,11 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceBackoffReset',
     doc: 'ManagedService should reset backoff on success',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
       managed.backoffMs(8000);
       managed.restartCount(3);
 
@@ -108,7 +109,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorCreation',
     doc: 'Supervisor should be created with defaults',
     do() {
-      const sup = $supervisor.Supervisor.new();
+      const sup = $live.Supervisor.new();
       this.assertEq(sup.port(), 3030);
       this.assertEq(sup.healthCheckIntervalMs(), 10000);
       this.assert(sup.specs().length === 0, 'should have empty specs');
@@ -119,8 +120,8 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorRegisterService',
     doc: 'Supervisor should register services',
     do() {
-      const sup = $supervisor.Supervisor.new();
-      const spec = $supervisor.ServiceSpec.new({
+      const sup = $live.Supervisor.new();
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
@@ -136,13 +137,13 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorStatus',
     doc: 'Supervisor should report service status',
     do() {
-      const sup = $supervisor.Supervisor.new();
-      const spec = $supervisor.ServiceSpec.new({
+      const sup = $live.Supervisor.new();
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
 
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
       managed.healthy(true);
       managed.lastStart(new Date());
       sup.services()['TestService'] = managed;
@@ -158,12 +159,12 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceStartStop',
     doc: 'ManagedService should start and stop processes',
     async do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'QuickProcess',
         command: ['sleep', '10'],
         restartPolicy: 'never',
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
 
       await managed.start();
       this.assert(managed.process(), 'should have process');
@@ -180,7 +181,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorServeAndStop',
     doc: 'Supervisor should start and stop the WebSocket server',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13030 });
+      const sup = $live.Supervisor.new({ port: 13030 });
 
       sup.serve();
       this.assertEq(sup.running(), true);
@@ -196,7 +197,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorRouteMessageUnknownNode',
     doc: 'routeMessage should handle unknown destination nodes',
     do() {
-      const sup = $supervisor.Supervisor.new();
+      const sup = $live.Supervisor.new();
       // Create a mock message targeting unknown node
       const message = {
         to() { return 'unknown-service'; },
@@ -214,15 +215,15 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorStartAllServices',
     doc: 'startAll should start all registered services',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13031 });
+      const sup = $live.Supervisor.new({ port: 13031 });
 
       // Register two quick-exit services
-      const spec1 = $supervisor.ServiceSpec.new({
+      const spec1 = $live.ServiceSpec.new({
         serviceName: 'Service1',
         command: ['echo', 'hello1'],
         restartPolicy: 'never',
       });
-      const spec2 = $supervisor.ServiceSpec.new({
+      const spec2 = $live.ServiceSpec.new({
         serviceName: 'Service2',
         command: ['echo', 'hello2'],
         restartPolicy: 'never',
@@ -246,9 +247,9 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorWaitForExit',
     doc: 'waitForExit should wait for processes to terminate',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13032 });
+      const sup = $live.Supervisor.new({ port: 13032 });
 
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'QuickExit',
         command: ['echo', 'done'],
         restartPolicy: 'never',
@@ -269,13 +270,13 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceMaxRestarts',
     doc: 'ManagedService should respect maxRestarts limit',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'LimitedRestarts',
         command: ['false'],
         restartPolicy: 'on_failure',
         maxRestarts: 3,
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
 
       // Simulate reaching max restarts
       managed.restartCount(3);
@@ -291,11 +292,11 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceBackoffDoubling',
     doc: 'ManagedService backoff should double up to max',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'BackoffTest',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
 
       this.assertEq(managed.backoffMs(), 1000, 'initial backoff');
 
@@ -315,7 +316,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorHandlerRegistration',
     doc: 'Supervisor should register and retrieve handlers',
     do() {
-      const sup = $supervisor.Supervisor.new();
+      const sup = $live.Supervisor.new();
 
       // Default handler should be registered
       this.assert(sup.handlers()['handshake'], 'should have handshake handler');
@@ -334,7 +335,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'NodeRegistryCreation',
     doc: 'NodeRegistry should be created with empty nodes',
     do() {
-      const registry = $supervisor.NodeRegistry.new();
+      const registry = $live.NodeRegistry.new();
       this.assertEq(Object.keys(registry.nodes()).length, 0);
     }
   });
@@ -343,7 +344,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'NodeRegistryRegisterAndGet',
     doc: 'NodeRegistry should register and retrieve nodes',
     do() {
-      const registry = $supervisor.NodeRegistry.new();
+      const registry = $live.NodeRegistry.new();
       const mockNode = { uid() { return 'test'; }, connected() { return true; } };
 
       registry.register('test-service', mockNode);
@@ -356,7 +357,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'NodeRegistryUnregister',
     doc: 'NodeRegistry should unregister nodes',
     do() {
-      const registry = $supervisor.NodeRegistry.new();
+      const registry = $live.NodeRegistry.new();
       const mockNode = { uid() { return 'test'; } };
 
       registry.register('test-service', mockNode);
@@ -371,7 +372,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'NodeRegistryFindBySocket',
     doc: 'NodeRegistry should find nodes by socket',
     do() {
-      const registry = $supervisor.NodeRegistry.new();
+      const registry = $live.NodeRegistry.new();
       const mockSocket = { id: 'socket-1' };
       const mockNode = { socket() { return mockSocket; } };
 
@@ -387,7 +388,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'NodeRegistryAll',
     doc: 'NodeRegistry.all should return all entries',
     do() {
-      const registry = $supervisor.NodeRegistry.new();
+      const registry = $live.NodeRegistry.new();
       const node1 = { uid() { return 'n1'; } };
       const node2 = { uid() { return 'n2'; } };
 
@@ -403,13 +404,13 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ServiceSpecHealthCheckEnabled',
     doc: 'ServiceSpec should have healthCheckEnabled flag',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
       this.assertEq(spec.healthCheckEnabled(), true, 'default should be true');
 
-      const disabledSpec = $supervisor.ServiceSpec.new({
+      const disabledSpec = $live.ServiceSpec.new({
         serviceName: 'NoHealthCheck',
         command: ['echo'],
         healthCheckEnabled: false,
@@ -422,11 +423,11 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceHealthStateTracking',
     doc: 'ManagedService should track health state',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
 
       this.assertEq(managed.healthState(), 'unknown', 'initial state');
       this.assertEq(managed.consecutiveFailures(), 0);
@@ -437,11 +438,11 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceMarkHealthy',
     doc: 'ManagedService.markHealthy should transition to healthy state',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
       managed.backoffMs(8000);
       managed.restartCount(3);
 
@@ -460,11 +461,11 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceMarkUnhealthy',
     doc: 'ManagedService.markUnhealthy should transition to unhealthy state',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
       managed.healthy(true);
       managed.healthState('healthy');
 
@@ -481,11 +482,11 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServiceConsecutiveFailures',
     doc: 'ManagedService should track consecutive failures',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
 
       managed.markUnhealthy('failure 1');
       this.assertEq(managed.consecutiveFailures(), 1);
@@ -502,7 +503,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorHasNodeRegistry',
     doc: 'Supervisor should have a NodeRegistry',
     do() {
-      const sup = $supervisor.Supervisor.new();
+      const sup = $live.Supervisor.new();
       this.assert(sup.nodeRegistry(), 'should have nodeRegistry');
       this.assert(sup.nodeRegistry().nodes, 'should have nodes method');
     }
@@ -512,7 +513,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorHasHealthChecker',
     doc: 'Supervisor should have a HealthCheck instance',
     do() {
-      const sup = $supervisor.Supervisor.new();
+      const sup = $live.Supervisor.new();
       this.assert(sup.healthChecker(), 'should have healthChecker');
       this.assertEq(sup.healthChecker().timeoutMs(), 5000);
     }
@@ -522,7 +523,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorNodesBackwardsCompatible',
     doc: 'Supervisor.nodes() should return nodeRegistry nodes',
     do() {
-      const sup = $supervisor.Supervisor.new();
+      const sup = $live.Supervisor.new();
       const mockNode = { uid() { return 'test'; } };
 
       sup.nodeRegistry().register('test-service', mockNode);
@@ -536,12 +537,12 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'SupervisorStatusIncludesHealthState',
     doc: 'Supervisor.status should include health state info',
     do() {
-      const sup = $supervisor.Supervisor.new();
-      const spec = $supervisor.ServiceSpec.new({
+      const sup = $live.Supervisor.new();
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestService',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec });
+      const managed = $live.ManagedService.new({ spec });
       managed.markHealthy();
       sup.services()['TestService'] = managed;
 
@@ -556,13 +557,13 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'HealthCheckSkipsDisabled',
     doc: 'HealthCheck should skip services with healthCheckEnabled=false',
     async do() {
-      const sup = $supervisor.Supervisor.new();
-      const spec = $supervisor.ServiceSpec.new({
+      const sup = $live.Supervisor.new();
+      const spec = $live.ServiceSpec.new({
         serviceName: 'NoHealthCheck',
         command: ['echo'],
         healthCheckEnabled: false,
       });
-      const managed = $supervisor.ManagedService.new({ spec, supervisor: sup });
+      const managed = $live.ManagedService.new({ spec, supervisor: sup });
       managed.healthy(true);
 
       const result = await sup.healthChecker().check(managed);
@@ -576,12 +577,12 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'HealthCheckReturnsUnhealthyWhenDisconnected',
     doc: 'HealthCheck should return unhealthy when node is not connected',
     async do() {
-      const sup = $supervisor.Supervisor.new();
-      const spec = $supervisor.ServiceSpec.new({
+      const sup = $live.Supervisor.new();
+      const spec = $live.ServiceSpec.new({
         serviceName: 'DisconnectedService',
         command: ['echo'],
       });
-      const managed = $supervisor.ManagedService.new({ spec, supervisor: sup });
+      const managed = $live.ManagedService.new({ spec, supervisor: sup });
 
       const result = await sup.healthChecker().check(managed);
 
@@ -658,13 +659,13 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ManagedServicePassesServiceNameInEnv',
     doc: 'ManagedService.start should set AGENDA_SERVICE_NAME in child env',
     do() {
-      const spec = $supervisor.ServiceSpec.new({
+      const spec = $live.ServiceSpec.new({
         serviceName: 'TestEnvPassService',
         command: ['echo', 'test'],
         restartPolicy: 'never',
       });
-      const sup = $supervisor.Supervisor.new({ port: 13050 });
-      const managed = $supervisor.ManagedService.new({ spec, supervisor: sup });
+      const sup = $live.Supervisor.new({ port: 13050 });
+      const managed = $live.ManagedService.new({ spec, supervisor: sup });
 
       // The env is set during start() via Bun.spawn
       // We verify the implementation passes serviceName correctly
@@ -681,7 +682,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
       const originalPort = process.env.SIMULABRA_PORT;
       process.env.SIMULABRA_PORT = port;
 
-      const sup = $supervisor.Supervisor.new({ port });
+      const sup = $live.Supervisor.new({ port });
       sup.serve();
       await __.sleep(100);
 
@@ -729,7 +730,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ServiceProxyRetriesUntilConnected',
     doc: 'serviceProxy should retry when service is not yet connected',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13061 });
+      const sup = $live.Supervisor.new({ port: 13061 });
       const mockNode = {
         connected() { return true; },
         serviceProxy(c) { return { name: c.name }; }
@@ -760,7 +761,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'ServiceProxyFailsAfterMaxRetries',
     doc: 'serviceProxy should fail after exhausting retries',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13062 });
+      const sup = $live.Supervisor.new({ port: 13062 });
 
       try {
         await sup.serviceProxy({
@@ -779,7 +780,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'WaitForServiceSucceeds',
     doc: 'waitForService should return true when service connects',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13063 });
+      const sup = $live.Supervisor.new({ port: 13063 });
       const mockNode = { connected() { return true; } };
 
       // Register node after delay
@@ -801,7 +802,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'WaitForServiceTimesOut',
     doc: 'waitForService should throw after timeout',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13064 });
+      const sup = $live.Supervisor.new({ port: 13064 });
 
       try {
         await sup.waitForService({
@@ -820,14 +821,14 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'WaitForAllServicesSucceeds',
     doc: 'waitForAllServices should return when all services connect',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13065 });
+      const sup = $live.Supervisor.new({ port: 13065 });
 
       // Register specs
-      sup.registerService($supervisor.ServiceSpec.new({
+      sup.registerService($live.ServiceSpec.new({
         serviceName: 'Svc1',
         command: ['echo'],
       }));
-      sup.registerService($supervisor.ServiceSpec.new({
+      sup.registerService($live.ServiceSpec.new({
         serviceName: 'Svc2',
         command: ['echo'],
       }));
@@ -855,13 +856,13 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
     name: 'WaitForAllServicesTimesOut',
     doc: 'waitForAllServices should report which services failed to connect',
     async do() {
-      const sup = $supervisor.Supervisor.new({ port: 13066 });
+      const sup = $live.Supervisor.new({ port: 13066 });
 
-      sup.registerService($supervisor.ServiceSpec.new({
+      sup.registerService($live.ServiceSpec.new({
         serviceName: 'Connected',
         command: ['echo'],
       }));
-      sup.registerService($supervisor.ServiceSpec.new({
+      sup.registerService($live.ServiceSpec.new({
         serviceName: 'NotConnected',
         command: ['echo'],
       }));
@@ -890,7 +891,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
       const originalPort = process.env.SIMULABRA_PORT;
       process.env.SIMULABRA_PORT = port;
 
-      const sup = $supervisor.Supervisor.new({ port });
+      const sup = $live.Supervisor.new({ port });
       sup.serve();
       await __.sleep(50);
 
@@ -939,7 +940,7 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
       const originalPort = process.env.SIMULABRA_PORT;
       process.env.SIMULABRA_PORT = port;
 
-      const sup = $supervisor.Supervisor.new({ port });
+      const sup = $live.Supervisor.new({ port });
       sup.serve();
       await __.sleep(50);
 
@@ -973,5 +974,5 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
   });
 }.module({
   name: 'test.supervisor',
-  imports: [base, test, helpers, supervisor],
+  imports: [base, test, live, helpers, supervisor],
 }).load();

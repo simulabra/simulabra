@@ -87,6 +87,14 @@ export default await async function (_, $, $redis, $time) {
         toRedis() { return this ? this.toISOString() : null; },
         fromRedis() { return this ? new Date(this) : null; },
       }),
+      $redis.RedisVar.new({
+        name: 'tags',
+        doc: 'optional tags for categorization',
+        default: () => [],
+        indexed: true,
+        toRedis() { return JSON.stringify(this); },
+        fromRedis() { return JSON.parse(this); },
+      }),
       $.Method.new({
         name: 'complete',
         doc: 'mark the task as done',
@@ -102,7 +110,8 @@ export default await async function (_, $, $redis, $time) {
           const status = this.done() ? '✓' : '○';
           const priority = `P${this.priority()}`;
           const due = this.dueDate() ? ` due:${this.dueDate().toISOString().split('T')[0]}` : '';
-          return `${status} [${priority}] ${this.title()}${due}`;
+          const tags = this.tags().length > 0 ? ` [${this.tags().join(', ')}]` : '';
+          return `${status} [${priority}] ${this.title()}${due}${tags}`;
         }
       }),
     ]
