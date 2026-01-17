@@ -463,15 +463,34 @@ export default await async function (_, $, $html) {
         do() {
           return `
             :root {
-              --bg: #1a1a2e;
-              --surface: #16213e;
-              --surface-alt: #0f3460;
-              --primary: #e94560;
-              --secondary: #533483;
-              --text: #eaeaea;
-              --text-dim: #a0a0a0;
-              --success: #4ade80;
-              --warning: #fbbf24;
+              --charcoal: #463C3C;
+              --wood: #B89877;
+              --sand: #E2C79D;
+              --light-sand: #EEDAB8;
+              --seashell: #FAE8F4;
+              --sky: #92B6D5;
+              --ocean: #5893A8;
+              --dusk: #D8586A;
+              --grass: #40A472;
+              --seaweed: #487455;
+
+              --box-shadow-args: 1px 1px 0 0 var(--charcoal),
+                                -1px -1px 0 0 var(--wood),
+                                -2px -2px     var(--wood),
+                                -2px  0       var(--wood),
+                                  0  -2px      var(--wood),
+                                  2px  2px 0 0 var(--charcoal),
+                                  0   2px 0 0  var(--charcoal),
+                                  2px  0       var(--charcoal),
+                                  2px -2px     var(--wood),
+                                -2px  2px     var(--charcoal);
+
+              --box-shadow-args-inset: inset  1px  1px 0   var(--wood),
+                                      inset  0    1px 0   var(--wood),
+                                      inset  1px  0   0   var(--wood),
+                                      inset -1px -1px 0   var(--charcoal),
+                                      inset  0   -1px 0   var(--charcoal),
+                                      inset -1px  0   0   var(--charcoal);
             }
 
             * {
@@ -480,10 +499,15 @@ export default await async function (_, $, $html) {
               padding: 0;
             }
 
+            ::selection {
+              background: var(--ocean);
+              color: var(--seashell);
+            }
+
             body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              background: var(--bg);
-              color: var(--text);
+              font-family: Georgia, 'Times New Roman', serif;
+              background: var(--sand);
+              color: var(--charcoal);
               overflow: hidden;
             }
 
@@ -493,6 +517,8 @@ export default await async function (_, $, $html) {
               height: 100dvh;
               max-width: 480px;
               margin: 0 auto;
+              padding: 4px;
+              gap: 4px;
             }
 
             /* Top Bar */
@@ -500,22 +526,24 @@ export default await async function (_, $, $html) {
               display: flex;
               align-items: center;
               justify-content: space-between;
-              padding: 12px 16px;
-              background: var(--surface);
-              border-bottom: 1px solid var(--surface-alt);
+              padding: 4px 8px;
+              background: var(--wood);
+              box-shadow: var(--box-shadow-args);
             }
 
             .title {
-              font-size: 18px;
-              font-weight: 600;
+              font-size: 16px;
+              font-weight: normal;
+              font-style: italic;
               letter-spacing: 2px;
-              color: var(--primary);
+              color: var(--seashell);
             }
 
             .connection-status {
               font-size: 11px;
-              color: var(--text-dim);
-              text-transform: uppercase;
+              color: var(--seashell);
+              font-style: italic;
+              opacity: 0.8;
             }
 
             /* Views */
@@ -539,64 +567,76 @@ export default await async function (_, $, $html) {
               display: flex;
               align-items: center;
               justify-content: space-between;
-              padding: 12px 16px;
-              background: var(--surface);
+              padding: 4px 8px;
+              background: var(--wood);
+              box-shadow: var(--box-shadow-args);
             }
 
             .view-header h2 {
-              font-size: 16px;
-              font-weight: 500;
+              font-size: 14px;
+              font-weight: normal;
+              font-style: italic;
+              color: var(--seashell);
             }
 
             .task-count {
-              font-size: 12px;
-              color: var(--text-dim);
+              font-size: 11px;
+              color: var(--seashell);
+              font-style: italic;
+              opacity: 0.8;
             }
 
             .empty-state {
               padding: 32px 16px;
               text-align: center;
-              color: var(--text-dim);
+              color: var(--charcoal);
               font-style: italic;
+              opacity: 0.6;
             }
 
             /* Task List */
             .task-list, .log-list, .reminder-list {
               flex: 1;
               overflow-y: auto;
-              padding: 8px;
+              padding: 4px;
+              background: var(--sand);
             }
 
             .task-item {
               display: flex;
               align-items: flex-start;
-              gap: 12px;
-              padding: 12px;
-              background: var(--surface);
-              border-radius: 8px;
-              margin-bottom: 8px;
+              gap: 8px;
+              padding: 8px;
+              background: var(--light-sand);
+              box-shadow: var(--box-shadow-args);
+              margin-bottom: 4px;
             }
 
             .task-item.done {
               opacity: 0.5;
             }
 
-            .task-item.priority-1 { border-left: 3px solid var(--primary); }
-            .task-item.priority-2 { border-left: 3px solid var(--warning); }
-            .task-item.priority-3 { border-left: 3px solid var(--text-dim); }
+            .task-item.priority-1 { border-left: 3px solid var(--dusk); }
+            .task-item.priority-2 { border-left: 3px solid var(--ocean); }
+            .task-item.priority-3 { border-left: 3px solid var(--wood); }
 
             .task-checkbox {
-              background: var(--surface-alt);
-              border: none;
-              color: var(--text);
+              background: var(--sand);
+              border: 0;
+              box-shadow: var(--box-shadow-args);
+              color: var(--seaweed);
               padding: 4px 8px;
-              border-radius: 4px;
               font-size: 11px;
+              font-family: inherit;
               cursor: pointer;
             }
 
             .task-checkbox:hover {
-              background: var(--primary);
+              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
+            }
+
+            .task-checkbox:active {
+              background: var(--wood);
             }
 
             .task-content {
@@ -606,30 +646,34 @@ export default await async function (_, $, $html) {
             .task-title {
               display: block;
               font-size: 14px;
+              color: var(--charcoal);
             }
 
             .task-due {
               font-size: 11px;
-              color: var(--text-dim);
+              color: var(--ocean);
+              font-style: italic;
             }
 
             /* Log Entries */
             .log-entry {
-              padding: 12px;
-              background: var(--surface);
-              border-radius: 8px;
-              margin-bottom: 8px;
+              padding: 8px;
+              background: var(--light-sand);
+              box-shadow: var(--box-shadow-args);
+              margin-bottom: 4px;
             }
 
             .log-timestamp {
               font-size: 11px;
-              color: var(--text-dim);
+              color: var(--ocean);
               margin-bottom: 4px;
+              font-style: italic;
             }
 
             .log-content {
               font-size: 14px;
               line-height: 1.5;
+              color: var(--charcoal);
             }
 
             .log-tags {
@@ -641,19 +685,20 @@ export default await async function (_, $, $html) {
 
             .tag {
               font-size: 11px;
-              color: var(--secondary);
+              color: var(--seaweed);
+              font-style: italic;
             }
 
             /* Reminders */
             .reminder-item {
-              padding: 12px;
-              background: var(--surface);
-              border-radius: 8px;
-              margin-bottom: 8px;
+              padding: 8px;
+              background: var(--light-sand);
+              box-shadow: var(--box-shadow-args);
+              margin-bottom: 4px;
             }
 
             .reminder-item.past {
-              border-left: 3px solid var(--warning);
+              border-left: 3px solid var(--dusk);
             }
 
             .reminder-item.sent {
@@ -662,22 +707,24 @@ export default await async function (_, $, $html) {
 
             .reminder-time {
               font-size: 12px;
-              color: var(--primary);
+              color: var(--ocean);
               margin-bottom: 4px;
+              font-style: italic;
             }
 
             .reminder-message {
               font-size: 14px;
+              color: var(--charcoal);
             }
 
             .reminder-recurring {
               display: inline-block;
               margin-top: 6px;
               font-size: 10px;
-              color: var(--secondary);
-              background: var(--surface-alt);
+              color: var(--seaweed);
+              background: var(--sand);
               padding: 2px 6px;
-              border-radius: 4px;
+              box-shadow: var(--box-shadow-args);
             }
 
             /* Chat View */
@@ -689,76 +736,91 @@ export default await async function (_, $, $html) {
             .chat-messages {
               flex: 1;
               overflow-y: auto;
-              padding: 12px;
+              padding: 8px;
+              background: var(--sand);
             }
 
             .chat-message {
               max-width: 85%;
-              padding: 10px 14px;
-              border-radius: 12px;
-              margin-bottom: 8px;
+              padding: 8px 12px;
+              margin-bottom: 4px;
               font-size: 14px;
               line-height: 1.4;
+              box-shadow: var(--box-shadow-args);
             }
 
             .chat-message.user {
-              background: var(--primary);
+              background: var(--ocean);
+              color: var(--seashell);
               margin-left: auto;
-              border-bottom-right-radius: 4px;
             }
 
             .chat-message.assistant {
-              background: var(--surface);
+              background: var(--light-sand);
+              color: var(--charcoal);
               margin-right: auto;
-              border-bottom-left-radius: 4px;
             }
 
             .chat-message.system {
-              background: var(--surface-alt);
-              margin: 0 auto;
+              background: var(--wood);
+              color: var(--seashell);
+              margin: 4px auto;
               font-size: 12px;
-              color: var(--text-dim);
+              font-style: italic;
               text-align: center;
             }
 
             .chat-input-form {
               display: flex;
-              gap: 8px;
-              padding: 12px;
-              background: var(--surface);
-              border-top: 1px solid var(--surface-alt);
+              gap: 4px;
+              padding: 4px;
+              background: var(--wood);
+              box-shadow: var(--box-shadow-args);
             }
 
             .chat-input {
               flex: 1;
-              background: var(--surface-alt);
-              border: none;
-              border-radius: 20px;
-              padding: 10px 16px;
-              color: var(--text);
+              background: var(--light-sand);
+              border: 0;
+              box-shadow: var(--box-shadow-args);
+              padding: 8px 12px;
+              color: var(--charcoal);
               font-size: 14px;
+              font-family: inherit;
             }
 
             .chat-input:focus {
               outline: none;
-              box-shadow: 0 0 0 2px var(--primary);
+              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
             }
 
             .chat-input::placeholder {
-              color: var(--text-dim);
+              color: var(--charcoal);
+              opacity: 0.5;
             }
 
             .chat-send {
-              background: var(--primary);
-              border: none;
-              border-radius: 20px;
-              padding: 10px 20px;
-              color: var(--text);
+              background: var(--grass);
+              border: 0;
+              box-shadow: var(--box-shadow-args);
+              padding: 8px 16px;
+              color: var(--seashell);
               font-size: 14px;
+              font-family: inherit;
+              font-style: italic;
               cursor: pointer;
             }
 
+            .chat-send:hover {
+              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
+            }
+
+            .chat-send:active {
+              background: var(--seaweed);
+            }
+
             .chat-send:disabled {
+              background: var(--wood);
               opacity: 0.5;
               cursor: not-allowed;
             }
@@ -766,8 +828,8 @@ export default await async function (_, $, $html) {
             /* Bottom Navigation */
             .bottom-nav {
               display: flex;
-              background: var(--surface);
-              border-top: 1px solid var(--surface-alt);
+              background: var(--wood);
+              box-shadow: var(--box-shadow-args);
             }
 
             .nav-tab {
@@ -775,26 +837,41 @@ export default await async function (_, $, $html) {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 4px;
-              padding: 10px;
-              background: none;
-              border: none;
-              color: var(--text-dim);
+              gap: 2px;
+              padding: 6px;
+              background: var(--sand);
+              border: 0;
+              box-shadow: var(--box-shadow-args);
+              color: var(--charcoal);
               cursor: pointer;
+              font-family: inherit;
+              margin: 2px;
+            }
+
+            .nav-tab:hover {
+              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
+            }
+
+            .nav-tab:active {
+              background: var(--wood);
             }
 
             .nav-tab.active {
-              color: var(--primary);
+              background: var(--light-sand);
+              color: var(--ocean);
             }
 
             .nav-icon {
-              font-size: 14px;
+              font-size: 12px;
             }
 
             .nav-label {
-              font-size: 10px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
+              font-size: 9px;
+              font-style: italic;
+            }
+
+            [hidden] {
+              display: none !important;
             }
           `;
         }
