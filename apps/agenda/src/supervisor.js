@@ -18,6 +18,40 @@ export default await async function (_, $, $live) {
           } else if (!this.uid()) {
             this.uid(this.class().name);
           }
+          // Mute health check logging by default
+          this.muteRpcMethod('health');
+        }
+      }),
+      $live.RpcMethod.new({
+        name: 'health',
+        doc: 'default health check endpoint',
+        do() {
+          return {
+            status: 'ok',
+            service: this.uid(),
+          };
+        }
+      }),
+      $.Method.new({
+        name: 'waitForService',
+        doc: 'wait for another service to be available by polling its health endpoint',
+        async do(c) {
+          const name = c.name;
+          const timeoutMs = c.timeoutMs ?? 10000;
+          const retryDelayMs = c.retryDelayMs ?? 200;
+          const startTime = Date.now();
+
+          while (Date.now() - startTime < timeoutMs) {
+            try {
+              const proxy = await this.serviceProxy({ name, timeout: 2 });
+              await proxy.health();
+              return true;
+            } catch (e) {
+              const delay = Math.min(retryDelayMs * Math.pow(2, Math.floor((Date.now() - startTime) / 1000)), 2000);
+              await __.sleep(delay);
+            }
+          }
+          throw new Error(`service ${name} not available after ${timeoutMs}ms`);
         }
       }),
     ]
@@ -322,6 +356,7 @@ export default await async function (_, $, $live) {
           node.uid(from);
           node.connected(true);
           node.responseMap({});
+          node.muteRpcMethod('health');
           node.registerHandler($live.ResponseHandler.new());
           node.registerHandler($live.ErrorHandler.new());
           master.nodeRegistry().register(from, node);
@@ -402,15 +437,69 @@ export default await async function (_, $, $live) {
       }),
       $.Method.new({
         name: 'serviceProxy',
-        doc: 'create an RPC proxy for a service',
+        doc: 'create an RPC proxy for a service with retry support',
         async do(c) {
           const name = c.name;
           const timeout = c.timeout || 30;
-          const node = this.nodeRegistry().get(name);
-          if (!node || !node.connected()) {
-            throw new Error(`service ${name} not connected`);
+          const retries = c.retries ?? 5;
+          const retryDelayMs = c.retryDelayMs ?? 200;
+
+          for (let attempt = 0; attempt <= retries; attempt++) {
+            const node = this.nodeRegistry().get(name);
+            if (node && node.connected()) {
+              return node.serviceProxy({ name, timeout });
+            }
+            if (attempt < retries) {
+              const delay = retryDelayMs * Math.pow(2, attempt);
+              await __.sleep(delay);
+            }
           }
-          return node.serviceProxy({ name, timeout });
+          throw new Error(`service ${name} not connected after ${retries + 1} attempts`);
+        }
+      }),
+      $.Method.new({
+        name: 'waitForService',
+        doc: 'wait for a specific service to connect',
+        async do(c) {
+          const name = c.name;
+          const timeoutMs = c.timeoutMs ?? 10000;
+          const pollMs = c.pollMs ?? 100;
+          const startTime = Date.now();
+
+          while (Date.now() - startTime < timeoutMs) {
+            const node = this.nodeRegistry().get(name);
+            if (node && node.connected()) {
+              return true;
+            }
+            await __.sleep(pollMs);
+          }
+          throw new Error(`service ${name} did not connect within ${timeoutMs}ms`);
+        }
+      }),
+      $.Method.new({
+        name: 'waitForAllServices',
+        doc: 'wait for all registered services to connect',
+        async do(c = {}) {
+          const timeoutMs = c.timeoutMs ?? 30000;
+          const pollMs = c.pollMs ?? 100;
+          const startTime = Date.now();
+          const serviceNames = this.specs().map(s => s.serviceName());
+
+          while (Date.now() - startTime < timeoutMs) {
+            const allConnected = serviceNames.every(name => {
+              const node = this.nodeRegistry().get(name);
+              return node && node.connected();
+            });
+            if (allConnected) {
+              return true;
+            }
+            await __.sleep(pollMs);
+          }
+          const disconnected = serviceNames.filter(name => {
+            const node = this.nodeRegistry().get(name);
+            return !node || !node.connected();
+          });
+          throw new Error(`services did not connect within ${timeoutMs}ms: ${disconnected.join(', ')}`);
         }
       }),
       $.Method.new({
@@ -419,6 +508,21 @@ export default await async function (_, $, $live) {
         do(spec) {
           this.specs().push(spec);
           return this;
+        }
+      }),
+      $.Method.new({
+        name: 'handleUiRpc',
+        doc: 'handle RPC calls from web UI clients',
+        async do(socket, request) {
+          const { callId, service, method, args } = request;
+          try {
+            const proxy = await this.serviceProxy({ name: service, timeout: 30 });
+            const result = await proxy[method](...(args || []));
+            socket.send(JSON.stringify({ callId, result }));
+          } catch (e) {
+            this.tlog(`UI RPC error: ${service}.${method}`, e.message);
+            socket.send(JSON.stringify({ callId, error: e.message }));
+          }
         }
       }),
       $.Method.new({
@@ -437,7 +541,13 @@ export default await async function (_, $, $live) {
             },
             websocket: {
               message(socket, messageStr) {
-                const message = $live.LiveMessage.new(JSON.parse(messageStr));
+                const raw = JSON.parse(messageStr);
+                // Handle UI RPC format (type: "rpc" with service/method/args)
+                if (raw.type === 'rpc' && raw.service) {
+                  self.handleUiRpc(socket, raw);
+                  return;
+                }
+                const message = $live.LiveMessage.new(raw);
                 if (message.to() !== 'master') {
                   return self.routeMessage(message, socket);
                 }
@@ -472,22 +582,43 @@ export default await async function (_, $, $live) {
       $.Method.new({
         name: 'routeMessage',
         do(message, socket) {
-          const node = this.nodeRegistry().get(message.to());
+          const msgTo = message.to?.() ?? message.to;
+          const node = this.nodeRegistry().get(msgTo);
           if (!node || !node.connected()) {
-            this.tlog(`node not found or disconnected: ${message.to()}`);
-            const fromNode = this.nodeRegistry().get(message.from());
+            const sender = this.nodeRegistry().findBySocket(socket);
+            this.tlog(`routing error: node not found or disconnected`, {
+              to: message.to?.() ?? message.to,
+              from: message.from?.() ?? message.from,
+              topic: message.topic?.() ?? message.topic,
+              mid: message.mid?.() ?? message.mid,
+              sender: sender?.name || 'unknown',
+              registeredNodes: Object.keys(this.nodeRegistry().nodes()),
+            });
+            const msgFrom = message.from?.() ?? message.from;
+            const fromNode = this.nodeRegistry().get(msgFrom);
             if (fromNode && fromNode.connected()) {
               fromNode.send($live.LiveMessage.new({
                 topic: 'error',
-                to: message.from(),
+                to: msgFrom,
                 from: 'master',
                 data: {
-                  mid: message.mid(),
-                  value: `unknown node ${message.to()}`
+                  mid: message.mid?.() ?? message.mid,
+                  value: `unknown node ${message.to?.() ?? message.to}`
                 }
               }));
             }
           } else {
+            // Check if this is a response/error for a pending local request
+            // (e.g., from supervisor's health checks via serviceProxy)
+            const topic = message.topic();
+            if ((topic === 'response' || topic === 'error') && node.checkResponse) {
+              const mid = message.data()?.mid;
+              if (mid && node.checkResponse(mid)) {
+                // Handle locally - this response is for a request the supervisor made
+                node.handle(node.socket(), message);
+                return;
+              }
+            }
             node.send(message);
           }
         }

@@ -672,6 +672,305 @@ export default await async function (_, $, $test, $helpers, $supervisor) {
       this.assertEq(managed.spec().serviceName(), 'TestEnvPassService');
     }
   });
+
+  $test.AsyncCase.new({
+    name: 'SupervisorRpcResponseRouting',
+    doc: 'Supervisor RPC responses should be handled locally, not routed back to service',
+    async do() {
+      const port = 13060;
+      const originalPort = process.env.SIMULABRA_PORT;
+      process.env.SIMULABRA_PORT = port;
+
+      const sup = $supervisor.Supervisor.new({ port });
+      sup.serve();
+      await __.sleep(100);
+
+      // Connect a mock service that will receive RPCs
+      const mockService = $supervisor.AgendaService.new({ uid: 'MockService' });
+      mockService._testResult = null;
+
+      // Add a test RPC method
+      mockService.testMethod = async function(arg) {
+        return { echo: arg, service: 'MockService' };
+      };
+
+      await mockService.connect();
+      await __.sleep(100);
+
+      // Verify service is registered
+      this.assert(sup.nodeRegistry().get('MockService'), 'MockService should be registered');
+      this.assert(sup.nodeRegistry().get('MockService').connected(), 'MockService should be connected');
+
+      // Now try to call the service via supervisor's serviceProxy
+      // This is what health checks do
+      try {
+        const proxy = await sup.serviceProxy({ name: 'MockService', timeout: 2 });
+        const result = await proxy.testMethod('hello');
+
+        // If we get here, the response was correctly handled
+        this.assertEq(result.echo, 'hello', 'should receive correct response');
+        this.assertEq(result.service, 'MockService', 'should be from MockService');
+      } catch (e) {
+        // The bug causes this to timeout because response is routed back to service
+        this.assert(false, `RPC failed: ${e.message} - response was likely routed back to service instead of supervisor`);
+      }
+
+      sup.stopAll();
+      if (originalPort !== undefined) {
+        process.env.SIMULABRA_PORT = originalPort;
+      } else {
+        delete process.env.SIMULABRA_PORT;
+      }
+      await __.sleep(100);
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ServiceProxyRetriesUntilConnected',
+    doc: 'serviceProxy should retry when service is not yet connected',
+    async do() {
+      const sup = $supervisor.Supervisor.new({ port: 13061 });
+      const mockNode = {
+        connected() { return true; },
+        serviceProxy(c) { return { name: c.name }; }
+      };
+
+      // Start with no node registered
+      const startTime = Date.now();
+      const proxyPromise = sup.serviceProxy({
+        name: 'DelayedService',
+        retries: 3,
+        retryDelayMs: 50,
+      });
+
+      // Register node after 100ms
+      setTimeout(() => {
+        sup.nodeRegistry().register('DelayedService', mockNode);
+      }, 100);
+
+      const proxy = await proxyPromise;
+      const elapsed = Date.now() - startTime;
+
+      this.assertEq(proxy.name, 'DelayedService');
+      this.assert(elapsed >= 100, 'should have waited for node');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ServiceProxyFailsAfterMaxRetries',
+    doc: 'serviceProxy should fail after exhausting retries',
+    async do() {
+      const sup = $supervisor.Supervisor.new({ port: 13062 });
+
+      try {
+        await sup.serviceProxy({
+          name: 'NonexistentService',
+          retries: 2,
+          retryDelayMs: 10,
+        });
+        this.assert(false, 'should have thrown');
+      } catch (e) {
+        this.assert(e.message.includes('not connected after 3 attempts'), e.message);
+      }
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'WaitForServiceSucceeds',
+    doc: 'waitForService should return true when service connects',
+    async do() {
+      const sup = $supervisor.Supervisor.new({ port: 13063 });
+      const mockNode = { connected() { return true; } };
+
+      // Register node after delay
+      setTimeout(() => {
+        sup.nodeRegistry().register('WaitedService', mockNode);
+      }, 50);
+
+      const result = await sup.waitForService({
+        name: 'WaitedService',
+        timeoutMs: 1000,
+        pollMs: 20,
+      });
+
+      this.assertEq(result, true);
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'WaitForServiceTimesOut',
+    doc: 'waitForService should throw after timeout',
+    async do() {
+      const sup = $supervisor.Supervisor.new({ port: 13064 });
+
+      try {
+        await sup.waitForService({
+          name: 'NeverConnects',
+          timeoutMs: 100,
+          pollMs: 20,
+        });
+        this.assert(false, 'should have thrown');
+      } catch (e) {
+        this.assert(e.message.includes('did not connect within'), e.message);
+      }
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'WaitForAllServicesSucceeds',
+    doc: 'waitForAllServices should return when all services connect',
+    async do() {
+      const sup = $supervisor.Supervisor.new({ port: 13065 });
+
+      // Register specs
+      sup.registerService($supervisor.ServiceSpec.new({
+        serviceName: 'Svc1',
+        command: ['echo'],
+      }));
+      sup.registerService($supervisor.ServiceSpec.new({
+        serviceName: 'Svc2',
+        command: ['echo'],
+      }));
+
+      const mockNode = { connected() { return true; } };
+
+      // Connect services with delay
+      setTimeout(() => {
+        sup.nodeRegistry().register('Svc1', mockNode);
+      }, 30);
+      setTimeout(() => {
+        sup.nodeRegistry().register('Svc2', mockNode);
+      }, 60);
+
+      const result = await sup.waitForAllServices({
+        timeoutMs: 1000,
+        pollMs: 20,
+      });
+
+      this.assertEq(result, true);
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'WaitForAllServicesTimesOut',
+    doc: 'waitForAllServices should report which services failed to connect',
+    async do() {
+      const sup = $supervisor.Supervisor.new({ port: 13066 });
+
+      sup.registerService($supervisor.ServiceSpec.new({
+        serviceName: 'Connected',
+        command: ['echo'],
+      }));
+      sup.registerService($supervisor.ServiceSpec.new({
+        serviceName: 'NotConnected',
+        command: ['echo'],
+      }));
+
+      const mockNode = { connected() { return true; } };
+      sup.nodeRegistry().register('Connected', mockNode);
+
+      try {
+        await sup.waitForAllServices({
+          timeoutMs: 100,
+          pollMs: 20,
+        });
+        this.assert(false, 'should have thrown');
+      } catch (e) {
+        this.assert(e.message.includes('NotConnected'), 'should list disconnected services');
+        this.assert(!e.message.includes('Connected,'), 'should not list connected services');
+      }
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'AgendaServiceWaitForServiceSuccess',
+    doc: 'AgendaService.waitForService should poll until health responds',
+    async do() {
+      const port = 13067;
+      const originalPort = process.env.SIMULABRA_PORT;
+      process.env.SIMULABRA_PORT = port;
+
+      const sup = $supervisor.Supervisor.new({ port });
+      sup.serve();
+      await __.sleep(50);
+
+      // Create a target service
+      $.Class.new({
+        name: 'TargetService',
+        slots: [$supervisor.AgendaService]
+      });
+      const target = _.TargetService.new({ uid: 'TargetService' });
+      await target.connect();
+      await __.sleep(50);
+
+      // Create a client service
+      $.Class.new({
+        name: 'ClientService',
+        slots: [$supervisor.AgendaService]
+      });
+      const client = _.ClientService.new({ uid: 'ClientService' });
+      await client.connect();
+      await __.sleep(50);
+
+      // Client waits for target
+      const result = await client.waitForService({
+        name: 'TargetService',
+        timeoutMs: 2000,
+        retryDelayMs: 50,
+      });
+
+      this.assertEq(result, true);
+
+      sup.stopAll();
+      if (originalPort !== undefined) {
+        process.env.SIMULABRA_PORT = originalPort;
+      } else {
+        delete process.env.SIMULABRA_PORT;
+      }
+      await __.sleep(50);
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'AgendaServiceWaitForServiceTimeout',
+    doc: 'AgendaService.waitForService should timeout if service never responds',
+    async do() {
+      const port = 13068;
+      const originalPort = process.env.SIMULABRA_PORT;
+      process.env.SIMULABRA_PORT = port;
+
+      const sup = $supervisor.Supervisor.new({ port });
+      sup.serve();
+      await __.sleep(50);
+
+      $.Class.new({
+        name: 'WaitingService',
+        slots: [$supervisor.AgendaService]
+      });
+      const client = _.WaitingService.new({ uid: 'WaitingService' });
+      await client.connect();
+      await __.sleep(50);
+
+      try {
+        await client.waitForService({
+          name: 'NonexistentTarget',
+          timeoutMs: 200,
+          retryDelayMs: 30,
+        });
+        this.assert(false, 'should have thrown');
+      } catch (e) {
+        this.assert(e.message.includes('not available'), e.message);
+      }
+
+      sup.stopAll();
+      if (originalPort !== undefined) {
+        process.env.SIMULABRA_PORT = originalPort;
+      } else {
+        delete process.env.SIMULABRA_PORT;
+      }
+      await __.sleep(50);
+    }
+  });
 }.module({
   name: 'test.supervisor',
   imports: [base, test, helpers, supervisor],

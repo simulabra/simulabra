@@ -32,6 +32,10 @@ export default await async function (_, $) {
           if (client.uid() !== message.to()) {
             throw new Error(`received message not meant for me ${client.uid()} ${JSON.stringify(message)}`);
           }
+          // Track muted RPC mids so their responses are also muted
+          if (client.mutedRpcMethods?.()?.has(method)) {
+            client.mutedMids().add(message.mid());
+          }
           const responseValue = await client[method](...args);
           client.send(_.LiveMessage.new({
             topic: 'response',
@@ -187,12 +191,76 @@ export default await async function (_, $) {
         name: 'messageIdCounter',
         default: 1
       }),
+      $.Var.new({
+        name: 'mutedTopics',
+        doc: 'set of message topics to suppress from logging',
+        default: () => new Set(),
+      }),
+      $.Var.new({
+        name: 'mutedRpcMethods',
+        doc: 'set of RPC method names to suppress from logging',
+        default: () => new Set(),
+      }),
+      $.Var.new({
+        name: 'mutedMids',
+        doc: 'set of message IDs for muted RPCs (to mute their responses)',
+        default: () => new Set(),
+      }),
       $.Method.new({
         name: 'genMessageId',
         do() {
           const id = this.messageIdCounter();
           this.messageIdCounter(id + 1);
           return id;
+        }
+      }),
+      $.Method.new({
+        name: 'muteTopic',
+        doc: 'add a topic to the muted list',
+        do(topic) {
+          this.mutedTopics().add(topic);
+          return this;
+        }
+      }),
+      $.Method.new({
+        name: 'unmuteTopic',
+        doc: 'remove a topic from the muted list',
+        do(topic) {
+          this.mutedTopics().delete(topic);
+          return this;
+        }
+      }),
+      $.Method.new({
+        name: 'muteRpcMethod',
+        doc: 'add an RPC method to the muted list',
+        do(method) {
+          this.mutedRpcMethods().add(method);
+          return this;
+        }
+      }),
+      $.Method.new({
+        name: 'shouldMuteMessage',
+        doc: 'check if a message should be muted from logging',
+        do(message) {
+          const topic = message.topic();
+          if (this.mutedTopics().has(topic)) {
+            return true;
+          }
+          if (topic === 'rpc') {
+            const method = message.data()?.method;
+            if (method && this.mutedRpcMethods().has(method)) {
+              this.mutedMids().add(message.mid());
+              return true;
+            }
+          }
+          if (topic === 'response' || topic === 'error') {
+            const mid = message.data()?.mid;
+            if (mid && this.mutedMids().has(mid)) {
+              this.mutedMids().delete(mid);
+              return true;
+            }
+          }
+          return false;
         }
       }),
       $.Method.new({
@@ -207,7 +275,9 @@ export default await async function (_, $) {
           if (message.mid() === undefined) {
             message.mid(crypto.randomUUID());
           }
-          this.tlog('send', message);
+          if (!this.shouldMuteMessage(message)) {
+            this.tlog('send', message);
+          }
           this.socket().send(JSON.stringify(message.json()));
           return message;
         }

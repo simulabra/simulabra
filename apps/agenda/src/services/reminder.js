@@ -159,9 +159,9 @@ export default await async function (_, $, $live, $supervisor) {
   });
 
   if (import.meta.main) {
-    await __.sleep(50);
     const service = _.ReminderService.new();
     await service.connect();
+    await service.waitForService({ name: 'DatabaseService' });
     await service.connectToDatabase();
     service.startPolling();
     __.tlog('ReminderService started');

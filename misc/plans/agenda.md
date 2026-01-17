@@ -674,5 +674,117 @@ Completed: 2026-01-15
 - ManagedServicePassesServiceNameInEnv: Verifies env is configured
 </TestsCovering>
 </Phase5_ServiceIdentityAndBootstrapping>
-<Phase6_ObjectifyTheScripts status="PENDING" />
+<Phase6_ObjectifyTheScripts status="COMPLETE">
+Completed: 2026-01-15
+
+<FilesChanged>
+- Created: `apps/agenda/src/logstreamer.js` - ServiceColorizer, FileTail, LogStreamer classes
+- Updated: `apps/agenda/bin/logs.js` - Minimal entrypoint (7 lines)
+- Created: `apps/agenda/tests/logstreamer.js` - 16 unit tests
+</FilesChanged>
+
+<Implementation>
+1. **Created ServiceColorizer class**:
+   - `colorMap` Var for service name to ANSI color mapping
+   - `colorFor(serviceName)` returns color code or default
+   - `formatLine(serviceName, line)` formats with colored prefix
+
+2. **Created FileTail class** (reifies file tailing behavior):
+   - `filepath` and `serviceName` Vars (serviceName auto-derived from filepath)
+   - `position` tracks current read position in file
+   - `exists()`, `size()` for file status
+   - `readNew()` reads content since last position
+   - `readLastLines(n)` reads last N lines and sets position
+   - `newLines()` convenience method returning new non-empty lines
+
+3. **Created LogStreamer class** (orchestrates multi-file streaming):
+   - `logsDir` directory to watch
+   - `tails` map caches FileTail instances by filepath
+   - `colorizer` for output formatting
+   - `output` function slot (defaults to console.log, can be customized)
+   - `logFiles()` discovers .log files in directory
+   - `getTail(filename)` gets or creates FileTail
+   - `showInitial()` displays last N lines from each file
+   - `startWatching()` uses fs.watch for change events
+   - `startPolling()` backup poll for missed events
+   - `run()` starts full streaming (initial + watch + poll)
+   - `stop()` cleans up watcher and timer
+</Implementation>
+
+<DesignNotes>
+- FileTail encapsulates file reading state, making tailing testable and reusable
+- ServiceColorizer is separate from LogStreamer for single responsibility
+- Output function is injectable for testing (capture lines instead of console.log)
+- The bin script is now 7 lines: import, path calc, instantiate, run
+- This follows the guideline: "ALWAYS use Simulabra for new scripts and functionality"
+</DesignNotes>
+
+<TestsCovering>
+- ServiceColorizerColorFor, DefaultColor, FormatLine, CustomColorMap
+- FileTailDerivesServiceName, PreservesExplicitServiceName
+- FileTailReadLastLines, NewLines, NoNewContent, NonexistentFile
+- LogStreamerLogFiles, GetTailCaching, CollectsOutput, ScanAll
+- LogStreamerStopCleansUp, NonexistentDir
+</TestsCovering>
+</Phase6_ObjectifyTheScripts>
+<Phase7_ServiceStartupOrdering status="COMPLETE">
+Completed: 2026-01-15
+
+<FilesChanged>
+- Updated: `apps/agenda/src/supervisor.js` - Added retry to serviceProxy, waitForService, waitForAllServices, default health RpcMethod
+- Updated: `apps/agenda/src/services/reminder.js` - Uses waitForService before connectToDatabase
+- Updated: `apps/agenda/src/services/geist.js` - Uses waitForService before connectToDatabase
+- Updated: `apps/agenda/tests/supervisor.js` - Added 8 new tests for startup ordering
+</FilesChanged>
+
+<Implementation>
+1. **Retry logic in Supervisor.serviceProxy**:
+   - `retries` parameter (default: 5)
+   - `retryDelayMs` parameter (default: 200ms)
+   - Exponential backoff: delay * 2^attempt
+   - Clear error message after all retries exhausted
+
+2. **Supervisor.waitForService({ name, timeoutMs, pollMs })**:
+   - Polls NodeRegistry until service connects
+   - Returns true on success, throws on timeout
+
+3. **Supervisor.waitForAllServices({ timeoutMs, pollMs })**:
+   - Waits for all registered ServiceSpecs to have connected nodes
+   - Error message lists which services failed to connect
+
+4. **AgendaService.waitForService({ name, timeoutMs, retryDelayMs })**:
+   - Service-level wait that polls target's health endpoint via RPC
+   - Works even before supervisor has the target registered
+   - Uses exponential backoff to reduce polling frequency over time
+
+5. **Default health RpcMethod in AgendaService**:
+   - All AgendaService subclasses now have a default `health()` endpoint
+   - Returns `{ status: 'ok', service: <uid> }`
+   - Services can override with their own implementation
+
+6. **Updated service startup**:
+   - ReminderService and GeistService now call `waitForService({ name: 'DatabaseService' })`
+   - Removed manual `__.sleep(50)` hacks
+   - Startup is now robust regardless of service start order
+</Implementation>
+
+<DesignNotes>
+- Chose "retry with backoff" approach as it's the most elegant and requires minimal changes
+- The AgendaService.waitForService approach is end-to-end: it actually calls the target's health method
+- This validates that RPC routing works, not just that the node is registered
+- Default health endpoint means any AgendaService subclass works without explicit health implementation
+- Services override health() to add service-specific status info (running state, API client status, etc.)
+</DesignNotes>
+
+<TestsCovering>
+- ServiceProxyRetriesUntilConnected: Retry succeeds when service registers during retry window
+- ServiceProxyFailsAfterMaxRetries: Clear error after exhausting retries
+- WaitForServiceSucceeds: Returns true when service connects
+- WaitForServiceTimesOut: Throws with helpful message on timeout
+- WaitForAllServicesSucceeds: Returns when all services connect
+- WaitForAllServicesTimesOut: Lists disconnected services in error
+- AgendaServiceWaitForServiceSuccess: End-to-end test with real RPC health check
+- AgendaServiceWaitForServiceTimeout: Timeout when target never appears
+</TestsCovering>
+</Phase7_ServiceStartupOrdering>
 </RefactoringProgress>

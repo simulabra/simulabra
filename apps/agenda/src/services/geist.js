@@ -127,16 +127,19 @@ For tasks:
         name: 'interpret',
         doc: 'interpret natural language input and execute actions',
         async do(input) {
+          this.tlog(`[conversation] user: ${input}`);
+
           if (!this.client()) {
-            return {
-              success: false,
-              error: 'Claude API not configured. Set AGENDA_CLAUDE_KEY or ANTHROPIC_API_KEY'
-            };
+            const error = 'Claude API not configured. Set AGENDA_CLAUDE_KEY or ANTHROPIC_API_KEY';
+            this.tlog(`[conversation] error: ${error}`);
+            return { success: false, error };
           }
 
           const db = this.dbService();
           if (!db) {
-            return { success: false, error: 'No database service connected' };
+            const error = 'No database service connected';
+            this.tlog(`[conversation] error: ${error}`);
+            return { success: false, error };
           }
 
           try {
@@ -157,13 +160,16 @@ For tasks:
               if (block.type === 'text') {
                 textResponse += block.text;
               } else if (block.type === 'tool_use') {
-                this.tlog(`executing tool: ${block.name}`);
+                this.tlog(`[conversation] tool: ${block.name}(${JSON.stringify(block.input)})`);
                 const toolResult = await this.executeTool(block.name, block.input);
                 results.push({
                   tool: block.name,
                   input: block.input,
                   result: toolResult
                 });
+                if (!toolResult.success) {
+                  this.tlog(`[conversation] tool error: ${toolResult.error}`);
+                }
               }
             }
 
@@ -193,13 +199,14 @@ For tasks:
               }
             }
 
+            this.tlog(`[conversation] assistant: ${textResponse}`);
             return {
               success: true,
               response: textResponse,
               toolsExecuted: results
             };
           } catch (e) {
-            this.tlog(`interpret error: ${e.message}`);
+            this.tlog(`[conversation] error: ${e.message}`);
             return { success: false, error: e.message };
           }
         }
@@ -221,9 +228,9 @@ For tasks:
   });
 
   if (import.meta.main) {
-    await __.sleep(50);
     const service = _.GeistService.new();
     await service.connect();
+    await service.waitForService({ name: 'DatabaseService' });
     await service.connectToDatabase();
     __.tlog('GeistService started');
   }
