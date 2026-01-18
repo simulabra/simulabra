@@ -33,7 +33,12 @@ await async function (_, $, $live) {
           if (!this.geistProxy()) {
             throw new Error('Not connected to GeistService');
           }
-          return await this.geistProxy().interpret(input);
+          return await this.geistProxy().interpretMessage({
+            conversationId: 'main',
+            text: input,
+            source: 'cli',
+            clientUid: 'AgendaCLI',
+          });
         }
       }),
 

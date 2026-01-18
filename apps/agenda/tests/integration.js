@@ -518,6 +518,136 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       await cleanup(dbService.redis());
     }
   });
+
+  $test.AsyncCase.new({
+    name: 'IntegrationInterpretMessagePersistence',
+    doc: 'interpretMessage should persist both user and assistant messages',
+    async do() {
+      const { dbService, geistService } = await createTestServices();
+
+      geistService.client().setResponses([
+        {
+          content: [
+            { type: 'text', text: 'Hello! How can I help you?' }
+          ],
+          stop_reason: 'end_turn'
+        }
+      ]);
+
+      const result = await geistService.interpretMessage({
+        conversationId: 'main',
+        text: 'hi there',
+        source: 'cli',
+        clientUid: 'TestCLI',
+      });
+
+      this.assert(result.success, 'interpretMessage should succeed');
+      this.assert(result.userMessage, 'should return userMessage');
+      this.assert(result.assistantMessage, 'should return assistantMessage');
+      this.assertEq(result.userMessage.content, 'hi there', 'user message content');
+      this.assertEq(result.userMessage.source, 'cli', 'user message source');
+      this.assertEq(result.assistantMessage.source, 'geist', 'assistant message source');
+
+      const messages = await dbService.listChatMessages({ conversationId: 'main', limit: 10 });
+      this.assertEq(messages.length, 2, 'should have 2 persisted messages');
+      this.assertEq(messages[0].role, 'user', 'first message should be user');
+      this.assertEq(messages[1].role, 'assistant', 'second message should be assistant');
+
+      await cleanup(dbService.redis());
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'IntegrationInterpretMessageWithTools',
+    doc: 'interpretMessage should persist tool execution metadata',
+    async do() {
+      const { dbService, geistService } = await createTestServices();
+
+      geistService.client().setResponses([
+        {
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool_1',
+              name: 'create_log',
+              input: { content: 'test entry', tags: [] }
+            }
+          ],
+          stop_reason: 'tool_use'
+        },
+        {
+          content: [
+            { type: 'text', text: 'Created a log entry.' }
+          ],
+          stop_reason: 'end_turn'
+        }
+      ]);
+
+      const result = await geistService.interpretMessage({
+        conversationId: 'main',
+        text: 'log test entry',
+        source: 'ui',
+        clientUid: 'TestUI',
+        clientMessageId: 'msg-123',
+      });
+
+      this.assert(result.success, 'interpretMessage should succeed');
+      this.assertEq(result.toolsExecuted.length, 1, 'should have 1 tool executed');
+      this.assertEq(result.toolsExecuted[0].tool, 'create_log', 'tool should be create_log');
+
+      const messages = await dbService.listChatMessages({ conversationId: 'main', limit: 10 });
+      const assistantMsg = messages.find(m => m.role === 'assistant');
+      this.assert(assistantMsg.meta, 'assistant message should have meta');
+      this.assert(assistantMsg.meta.toolsExecuted, 'should have toolsExecuted in meta');
+      this.assertEq(assistantMsg.meta.toolsExecuted[0], 'create_log', 'should record create_log');
+
+      await cleanup(dbService.redis());
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'IntegrationInterpretMessageUsesHistory',
+    doc: 'interpretMessage with useHistory should build messages from chat history',
+    async do() {
+      const { dbService, geistService } = await createTestServices();
+
+      await dbService.appendChatMessage({
+        conversationId: 'main',
+        role: 'user',
+        content: 'My name is Alice',
+        source: 'cli',
+      });
+      await dbService.appendChatMessage({
+        conversationId: 'main',
+        role: 'assistant',
+        content: 'Nice to meet you, Alice!',
+        source: 'geist',
+      });
+
+      geistService.client().setResponses([
+        {
+          content: [
+            { type: 'text', text: 'Your name is Alice.' }
+          ],
+          stop_reason: 'end_turn'
+        }
+      ]);
+
+      const result = await geistService.interpretMessage({
+        conversationId: 'main',
+        text: 'What is my name?',
+        source: 'cli',
+        useHistory: true,
+      });
+
+      this.assert(result.success, 'interpretMessage should succeed');
+
+      const messages = await dbService.listChatMessages({ conversationId: 'main', limit: 10 });
+      this.assertEq(messages.length, 4, 'should have 4 messages total');
+
+      await cleanup(dbService.redis());
+    }
+  });
 }.module({
   name: 'test.integration',
   imports: [base, test, helpers, redisModule, models, database, geist],

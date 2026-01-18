@@ -3,8 +3,9 @@ import live from 'simulabra/live';
 import supervisor from '../supervisor.js';
 import redis from '../redis.js';
 import models from '../models.js';
+import time from '../time.js';
 
-export default await async function (_, $, $live, $supervisor, $redis, $models) {
+export default await async function (_, $, $live, $supervisor, $redis, $models, $time) {
   $.Class.new({
     name: 'DatabaseService',
     doc: 'CRUD operations for all item types',
@@ -139,7 +140,7 @@ export default await async function (_, $, $live, $supervisor, $redis, $models) 
             triggerAt: new Date(triggerAt)
           };
           if (recurrence) {
-            reminderData.recurrence = $models.RecurrenceRule.new(recurrence);
+            reminderData.recurrence = $time.RecurrenceRule.new(recurrence);
           }
           const reminder = $models.Reminder.new(reminderData);
           await reminder.save(this.redis());
@@ -230,6 +231,102 @@ export default await async function (_, $, $live, $supervisor, $redis, $models) 
           };
         }
       }),
+
+      // Chat message operations
+      $.Method.new({
+        name: 'chatStreamKey',
+        doc: 'get the Redis stream key for a conversation',
+        do(conversationId = 'main') {
+          const prefix = this.redis().keyPrefix() || '';
+          return prefix + 'agenda:chat:' + conversationId;
+        }
+      }),
+
+      $.Method.new({
+        name: 'parseStreamEntry',
+        doc: 'parse a Redis stream entry into a chat message object',
+        do(entry) {
+          const message = entry.message;
+          return {
+            id: entry.id,
+            conversationId: message.conversationId,
+            role: message.role,
+            content: message.content,
+            source: message.source,
+            createdAt: message.createdAt,
+            clientUid: message.clientUid || null,
+            clientMessageId: message.clientMessageId || null,
+            meta: message.meta ? JSON.parse(message.meta) : null,
+          };
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'appendChatMessage',
+        doc: 'append a message to the chat stream',
+        async do(message) {
+          const { conversationId = 'main', role, content, source, clientUid, clientMessageId, meta } = message;
+          const streamKey = this.chatStreamKey(conversationId);
+          const createdAt = new Date().toISOString();
+
+          const entry = {
+            type: 'chat.message',
+            conversationId,
+            role,
+            content,
+            source,
+            createdAt,
+          };
+          if (clientUid) entry.clientUid = clientUid;
+          if (clientMessageId) entry.clientMessageId = clientMessageId;
+          if (meta) entry.meta = JSON.stringify(meta);
+
+          const id = await this.redis().streamAdd(streamKey, entry);
+
+          return {
+            id,
+            conversationId,
+            role,
+            content,
+            source,
+            createdAt,
+            clientUid: clientUid || null,
+            clientMessageId: clientMessageId || null,
+            meta: meta || null,
+          };
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'listChatMessages',
+        doc: 'list recent chat messages (newest limit messages, returned oldest→newest)',
+        async do({ conversationId = 'main', limit = 100 } = {}) {
+          const streamKey = this.chatStreamKey(conversationId);
+          const entries = await this.redis().streamRevRange(streamKey, limit);
+          const messages = entries.map(e => this.parseStreamEntry(e));
+          return messages.reverse();
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'readChatMessages',
+        doc: 'read chat messages after a given id (non-blocking)',
+        async do({ conversationId = 'main', afterId, limit = 100 } = {}) {
+          const streamKey = this.chatStreamKey(conversationId);
+          const entries = await this.redis().streamReadAfter(streamKey, afterId, limit);
+          return entries.map(e => this.parseStreamEntry(e));
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'waitForChatMessages',
+        doc: 'blocking wait for new chat messages after a given id',
+        async do({ conversationId = 'main', afterId, timeoutMs = 20000, limit = 100 } = {}) {
+          const streamKey = this.chatStreamKey(conversationId);
+          const entries = await this.redis().streamReadBlock(streamKey, afterId, timeoutMs, limit);
+          return entries.map(e => this.parseStreamEntry(e));
+        }
+      }),
     ]
   });
 
@@ -242,5 +339,5 @@ export default await async function (_, $, $live, $supervisor, $redis, $models) 
   }
 }.module({
   name: 'services.database',
-  imports: [base, live, supervisor, redis, models],
+  imports: [base, live, supervisor, redis, models, time],
 }).load();

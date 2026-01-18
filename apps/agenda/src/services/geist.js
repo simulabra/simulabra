@@ -78,6 +78,21 @@ tasks: priority 1 (urgent) to 5 (low), default 3. parse due dates.`
       }),
 
       $.Method.new({
+        name: 'buildMessagesFromHistory',
+        doc: 'build messages array from recent chat history',
+        do(chatMessages, currentInput) {
+          const messages = [];
+          for (const msg of chatMessages) {
+            if (msg.role === 'user' || msg.role === 'assistant') {
+              messages.push({ role: msg.role, content: msg.content });
+            }
+          }
+          messages.push({ role: 'user', content: currentInput });
+          return messages;
+        }
+      }),
+
+      $.Method.new({
         name: 'services',
         doc: 'build services context for tool execution',
         do() {
@@ -198,6 +213,122 @@ tasks: priority 1 (urgent) to 5 (low), default 3. parse due dates.`
               success: true,
               response: textResponse,
               toolsExecuted: results
+            };
+          } catch (e) {
+            this.tlog(`[conversation] error: ${e.message}`);
+            return { success: false, error: e.message };
+          }
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'interpretMessage',
+        doc: 'interpret input and persist both user and assistant messages',
+        async do({ conversationId = 'main', text, source, clientUid, clientMessageId, useHistory = true }) {
+          this.tlog(`[conversation] user (${source}): ${text}`);
+
+          if (!this.client()) {
+            const error = 'Claude API not configured. Set AGENDA_CLAUDE_KEY or ANTHROPIC_API_KEY';
+            this.tlog(`[conversation] error: ${error}`);
+            return { success: false, error };
+          }
+
+          const db = this.dbService();
+          if (!db) {
+            const error = 'No database service connected';
+            this.tlog(`[conversation] error: ${error}`);
+            return { success: false, error };
+          }
+
+          try {
+            const userMessage = await db.appendChatMessage({
+              conversationId,
+              role: 'user',
+              content: text,
+              source,
+              clientUid,
+              clientMessageId,
+            });
+
+            let messages;
+            if (useHistory) {
+              const history = await db.listChatMessages({ conversationId, limit: 20 });
+              const historyWithoutCurrent = history.filter(m => m.id !== userMessage.id);
+              messages = this.buildMessagesFromHistory(historyWithoutCurrent, text);
+            } else {
+              messages = this.buildMessages(text);
+            }
+
+            const response = await this.client().messages.create({
+              model: this.model(),
+              max_tokens: 1024,
+              system: this.systemPrompt(),
+              tools: this.tools(),
+              messages,
+            });
+
+            const results = [];
+            let textResponse = '';
+
+            for (const block of response.content) {
+              if (block.type === 'text') {
+                textResponse += block.text;
+              } else if (block.type === 'tool_use') {
+                this.tlog(`[conversation] tool: ${block.name}(${JSON.stringify(block.input)})`);
+                const toolResult = await this.executeTool(block.name, block.input);
+                results.push({
+                  tool: block.name,
+                  input: block.input,
+                  result: toolResult
+                });
+                if (!toolResult.success) {
+                  this.tlog(`[conversation] tool error: ${toolResult.error}`);
+                }
+              }
+            }
+
+            if (response.stop_reason === 'tool_use' && results.length > 0) {
+              const toolResults = results.map((r, i) => ({
+                type: 'tool_result',
+                tool_use_id: response.content.filter(b => b.type === 'tool_use')[i].id,
+                content: JSON.stringify(r.result)
+              }));
+
+              const followUp = await this.client().messages.create({
+                model: this.model(),
+                max_tokens: 1024,
+                system: this.systemPrompt(),
+                tools: this.tools(),
+                messages: [
+                  ...messages,
+                  { role: 'assistant', content: response.content },
+                  { role: 'user', content: toolResults }
+                ],
+              });
+
+              for (const block of followUp.content) {
+                if (block.type === 'text') {
+                  textResponse += block.text;
+                }
+              }
+            }
+
+            const toolNames = results.map(r => r.tool);
+            const assistantMessage = await db.appendChatMessage({
+              conversationId,
+              role: 'assistant',
+              content: textResponse || 'Done.',
+              source: 'geist',
+              meta: toolNames.length > 0 ? { toolsExecuted: toolNames } : null,
+            });
+
+            this.tlog(`[conversation] assistant (geist): ${textResponse}`);
+            return {
+              success: true,
+              response: textResponse,
+              toolsExecuted: results,
+              userMessage,
+              assistantMessage,
             };
           } catch (e) {
             this.tlog(`[conversation] error: ${e.message}`);

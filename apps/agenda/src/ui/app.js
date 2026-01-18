@@ -210,8 +210,11 @@ export default await async function (_, $, $html) {
         name: "render",
         do() {
           const msg = this.message();
+          const source = msg.source;
+          const showSource = source && source !== 'ui' && msg.role !== 'system';
           return $html.HTML.t`
             <div class=${"chat-message " + msg.role}>
+              ${showSource ? $html.HTML.t`<span class="message-source">${source}</span>` : ""}
               <div class="message-content">${msg.content}</div>
             </div>
           `;
@@ -321,18 +324,75 @@ export default await async function (_, $, $html) {
       $.Signal.new({ name: "reminders", default: [] }),
       $.Signal.new({ name: "messages", default: [] }),
       $.Signal.new({ name: "loading", default: false }),
+      $.Var.new({ name: "lastSeenId", default: null }),
+      $.Var.new({ name: "syncRunning", default: false }),
+      $.Var.new({ name: "clientUid", default: () => 'ui-' + crypto.randomUUID().slice(0, 8) }),
 
       $.After.new({
         name: "init",
         do() {
-          this.onConnect(() => {
+          this.onConnect(async () => {
             this.addMessage({ role: "system", content: "Connected to Agenda" });
+            await this.loadChatHistory();
             this.refreshData();
+            this.startSyncLoop();
           });
           this.onError(() => {
             this.addMessage({ role: "system", content: "Offline mode" });
+            this.syncRunning(false);
           });
           setTimeout(() => this.connect().catch(() => {}), 100);
+        }
+      }),
+
+      $.Method.new({
+        name: "loadChatHistory",
+        doc: "load chat history from the server on connect",
+        async do() {
+          try {
+            const history = await this.rpcCall("DatabaseService", "listChatMessages", [{ conversationId: "main", limit: 200 }]);
+            if (history && history.length > 0) {
+              this.messages(history);
+              this.lastSeenId(history[history.length - 1].id);
+            }
+          } catch (e) {
+            this.addMessage({ role: "system", content: `Failed to load history: ${e.message}` });
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "startSyncLoop",
+        doc: "start the background sync loop for new messages",
+        async do() {
+          if (this.syncRunning()) return;
+          this.syncRunning(true);
+
+          while (this.syncRunning() && this.connected()) {
+            try {
+              const newMessages = await this.rpcCall("DatabaseService", "waitForChatMessages", [{
+                conversationId: "main",
+                afterId: this.lastSeenId(),
+                timeoutMs: 20000,
+                limit: 50
+              }]);
+
+              if (newMessages && newMessages.length > 0) {
+                const currentMessages = this.messages();
+                const existingIds = new Set(currentMessages.map(m => m.id));
+                const uniqueNew = newMessages.filter(m => !existingIds.has(m.id));
+
+                if (uniqueNew.length > 0) {
+                  this.messages([...currentMessages, ...uniqueNew]);
+                  this.lastSeenId(newMessages[newMessages.length - 1].id);
+                }
+              }
+            } catch (e) {
+              if (this.connected()) {
+                await new Promise(r => setTimeout(r, 2000));
+              }
+            }
+          }
         }
       }),
 
@@ -365,20 +425,23 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "sendMessage",
         async do(text) {
-          this.addMessage({ role: "user", content: text });
           this.loading(true);
           try {
             if (!this.connected()) {
               this.addMessage({ role: "system", content: "Not connected - try reconnecting" });
               return;
             }
-            const result = await this.rpcCall("GeistService", "interpret", [text]);
-            if (result.success) {
-              this.addMessage({ role: "assistant", content: result.response || "Done." });
-              await this.refreshData();
-            } else {
+            const result = await this.rpcCall("GeistService", "interpretMessage", [{
+              conversationId: "main",
+              text,
+              source: "ui",
+              clientUid: this.clientUid(),
+              clientMessageId: crypto.randomUUID(),
+            }]);
+            if (!result.success) {
               this.addMessage({ role: "system", content: `Error: ${result.error}` });
             }
+            await this.refreshData();
           } catch (e) {
             this.addMessage({ role: "system", content: `Error: ${e.message}` });
           } finally {
@@ -710,6 +773,18 @@ export default await async function (_, $, $html) {
               font-size: 12px;
               font-style: italic;
               text-align: center;
+            }
+
+            .message-source {
+              display: block;
+              font-size: 10px;
+              font-style: italic;
+              opacity: 0.7;
+              margin-bottom: 2px;
+            }
+
+            .chat-message.user .message-source {
+              text-align: right;
             }
 
             .chat-input-form {
