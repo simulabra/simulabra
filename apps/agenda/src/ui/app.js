@@ -10,12 +10,25 @@ export default await async function (_, $, $html) {
       $html.Component,
       $.Var.new({ name: "app" }),
       $.Method.new({
+        name: "statusText",
+        do() {
+          const state = this.app().connectionState();
+          const polling = this.app().fallbackPolling();
+          if (state === "connected") {
+            return polling ? "polling" : "connected";
+          }
+          return state;
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
             <div class="top-bar">
               <h1 class="title">AGENDA</h1>
-              <div class="connection-status">${() => this.app().connected() ? "connected" : "offline"}</div>
+              <div class=${() => "connection-status " + this.app().connectionState()}>
+                ${() => this.statusText()}
+              </div>
             </div>
           `;
         }
@@ -324,24 +337,37 @@ export default await async function (_, $, $html) {
       $.Signal.new({ name: "reminders", default: [] }),
       $.Signal.new({ name: "messages", default: [] }),
       $.Signal.new({ name: "loading", default: false }),
+      $.Signal.new({ name: "connectionState", default: "offline" }),
+      $.Signal.new({ name: "fallbackPolling", default: false }),
       $.Var.new({ name: "lastSeenId", default: null }),
       $.Var.new({ name: "syncRunning", default: false }),
+      $.Var.new({ name: "syncFailCount", default: 0 }),
       $.Var.new({ name: "clientUid", default: () => 'ui-' + crypto.randomUUID().slice(0, 8) }),
 
       $.After.new({
         name: "init",
         do() {
           this.onConnect(async () => {
+            this.connectionState("connected");
+            this.fallbackPolling(false);
+            this.syncFailCount(0);
             this.addMessage({ role: "system", content: "Connected to Agenda" });
             await this.loadChatHistory();
             this.refreshData();
             this.startSyncLoop();
           });
-          this.onError(() => {
-            this.addMessage({ role: "system", content: "Offline mode" });
+          this.onDisconnect(() => {
+            this.connectionState("reconnecting");
             this.syncRunning(false);
           });
-          setTimeout(() => this.connect().catch(() => {}), 100);
+          this.onError(() => {
+            if (this.connectionState() !== "reconnecting") {
+              this.connectionState("offline");
+            }
+          });
+          setTimeout(() => this.connect().catch(() => {
+            this.connectionState("offline");
+          }), 100);
         }
       }),
 
@@ -363,19 +389,35 @@ export default await async function (_, $, $html) {
 
       $.Method.new({
         name: "startSyncLoop",
-        doc: "start the background sync loop for new messages",
+        doc: "start the background sync loop for new messages with fallback polling",
         async do() {
           if (this.syncRunning()) return;
           this.syncRunning(true);
 
           while (this.syncRunning() && this.connected()) {
             try {
-              const newMessages = await this.rpcCall("DatabaseService", "waitForChatMessages", [{
-                conversationId: "main",
-                afterId: this.lastSeenId(),
-                timeoutMs: 20000,
-                limit: 50
-              }]);
+              let newMessages;
+              if (this.fallbackPolling()) {
+                newMessages = await this.rpcCall("DatabaseService", "listChatMessages", [{
+                  conversationId: "main",
+                  afterId: this.lastSeenId(),
+                  limit: 50
+                }]);
+                await new Promise(r => setTimeout(r, 5000));
+              } else {
+                newMessages = await this.rpcCall("DatabaseService", "waitForChatMessages", [{
+                  conversationId: "main",
+                  afterId: this.lastSeenId(),
+                  timeoutMs: 20000,
+                  limit: 50
+                }]);
+              }
+
+              this.syncFailCount(0);
+              if (this.fallbackPolling()) {
+                this.fallbackPolling(false);
+                this.addMessage({ role: "system", content: "Sync restored" });
+              }
 
               if (newMessages && newMessages.length > 0) {
                 const currentMessages = this.messages();
@@ -389,7 +431,13 @@ export default await async function (_, $, $html) {
               }
             } catch (e) {
               if (this.connected()) {
-                await new Promise(r => setTimeout(r, 2000));
+                const failCount = this.syncFailCount() + 1;
+                this.syncFailCount(failCount);
+                if (failCount >= 3 && !this.fallbackPolling()) {
+                  this.fallbackPolling(true);
+                  this.addMessage({ role: "system", content: "Falling back to polling" });
+                }
+                await new Promise(r => setTimeout(r, this.fallbackPolling() ? 5000 : 2000));
               }
             }
           }
@@ -549,6 +597,24 @@ export default await async function (_, $, $html) {
               color: var(--seashell);
               font-style: italic;
               opacity: 0.8;
+            }
+
+            .connection-status.connected {
+              color: var(--grass);
+            }
+
+            .connection-status.reconnecting {
+              color: var(--sand);
+              animation: pulse 1.5s ease-in-out infinite;
+            }
+
+            .connection-status.offline {
+              color: var(--dusk);
+            }
+
+            @keyframes pulse {
+              0%, 100% { opacity: 0.5; }
+              50% { opacity: 1; }
             }
 
             /* Views */
