@@ -65,18 +65,22 @@ await async function (_, $, $test) {
       $.Method.new({
         name: 'run',
         async: true,
-        async do(path, testName) {
+        async do(pathArg) {
           let files;
-          if (testName) {
-            const testFile = `${testName}.js`;
-            files = [testFile];
+          let basePath;
+
+          if (pathArg.endsWith('.js')) {
+            const parts = pathArg.split('/');
+            const file = parts.pop();
+            basePath = parts.join('/') || '.';
+            files = [file];
           } else {
-            files = (await readdir(path)).filter(f => f.endsWith('.js'));
+            basePath = pathArg;
+            files = (await readdir(pathArg)).filter(f => f.endsWith('.js'));
           }
 
           for (const file of files) {
-            // this.log('load', file);
-            const filePath = join(dirname(__dirname), join(path, file));
+            const filePath = join(dirname(__dirname), join(basePath, file));
             try {
               const mod = await this.loadFile(filePath);
               await this.runMod(mod);
@@ -101,9 +105,15 @@ await async function (_, $, $test) {
   if (require.main === module) {
     const runner = _.TestRunner.new();
     const arg = process.argv[2];
-    const path = arg?.includes('/') ? arg : 'tests';
-    const testName = arg?.includes('/') ? undefined : arg;
-    await runner.run(path, testName);
+    let path;
+    if (!arg) {
+      path = 'tests';
+    } else if (arg.endsWith('.js') || arg.includes('/')) {
+      path = arg;
+    } else {
+      path = `tests/${arg}.js`;
+    }
+    await runner.run(path);
     process.exit(0);
   }
 }.module({

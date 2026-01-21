@@ -1,38 +1,54 @@
+import { Database } from 'bun:sqlite';
 import { __, base } from 'simulabra';
 import live from 'simulabra/live';
+import db from 'simulabra/db';
 import supervisor from '../supervisor.js';
-import redis from '../redis.js';
+import sqlite from '../sqlite.js';
 import models from '../models.js';
 import time from '../time.js';
 
-export default await async function (_, $, $live, $supervisor, $redis, $models, $time) {
+export default await async function (_, $, $live, $db, $supervisor, $sqlite, $models, $time) {
   $.Class.new({
     name: 'DatabaseService',
-    doc: 'CRUD operations for all item types',
+    doc: 'CRUD operations for all item types using SQLite',
     slots: [
       $supervisor.AgendaService,
-      $.Var.new({ name: 'redis' }),
-      $.Var.new({ name: 'eventStream', default: 'agenda:events' }),
+      $.Var.new({ name: 'db' }),
+      $.Var.new({ name: 'dbPath', default: 'agenda.db' }),
+      $.Var.new({ name: 'chatStream' }),
+      $.Var.new({ name: 'eventStream' }),
       $.Method.new({
-        name: 'connectRedis',
-        doc: 'connect to Redis (call after init)',
-        async do() {
-          if (!this.redis()) {
-            this.redis($redis.RedisClient.new({
-              url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
-            }));
+        name: 'initDatabase',
+        doc: 'initialize SQLite database and run migrations',
+        do() {
+          if (!this.db()) {
+            const dbPath = process.env.AGENDA_DB_PATH || this.dbPath();
+            this.db(new Database(dbPath));
+            this.tlog('opened SQLite database:', dbPath);
           }
-          if (!this.redis().connected()) {
-            await this.redis().connect();
-            this.tlog('connected to Redis');
+          const runner = $db.MigrationRunner.new({ db: this.db() });
+          for (const migration of $sqlite.AgendaMigrations.all()) {
+            runner.register(migration);
           }
+          const applied = runner.migrate();
+          if (applied > 0) {
+            this.tlog('applied', applied, 'migrations');
+          }
+          this.chatStream($db.SQLiteStream.new({
+            db: this.db(),
+            streamName: 'agenda:chat:main',
+          }));
+          this.eventStream($db.SQLiteStream.new({
+            db: this.db(),
+            streamName: 'agenda:events',
+          }));
         }
       }),
       $.Method.new({
         name: 'publishEvent',
-        doc: 'publish event to Redis Stream',
-        async do(type, data) {
-          await this.redis().streamAdd(this.eventStream(), {
+        doc: 'publish event to event stream',
+        do(type, data) {
+          this.eventStream().append({
             type,
             timestamp: new Date().toISOString(),
             ...data
@@ -51,24 +67,24 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
       // Log operations
       $live.RpcMethod.new({
         name: 'createLog',
-        async do(content, tags = []) {
+        do(content, tags = []) {
           const log = $models.Log.new({ content, tags });
-          await log.save(this.redis());
-          await this.publishEvent('log.created', { id: log.rid() });
+          log.save(this.db());
+          this.publishEvent('log.created', { id: log.sid() });
           return log.jsonify();
         }
       }),
       $live.RpcMethod.new({
         name: 'getLog',
-        async do(id) {
-          const log = await $models.Log.findById(this.redis(), id);
+        do(id) {
+          const log = $models.Log.findById(this.db(), id);
           return log?.jsonify() ?? null;
         }
       }),
       $live.RpcMethod.new({
         name: 'listLogs',
-        async do(limit = 50) {
-          const logs = await $models.Log.findAll(this.redis());
+        do(limit = 50) {
+          const logs = $models.Log.findAll(this.db());
           const sorted = logs.sort((a, b) => b.timestamp() - a.timestamp());
           return sorted.slice(0, limit).map(l => l.jsonify());
         }
@@ -77,42 +93,42 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
       // Task operations
       $live.RpcMethod.new({
         name: 'createTask',
-        async do(title, priority = 3, dueDate = null, tags = []) {
+        do(title, priority = 3, dueDate = null, tags = []) {
           const task = $models.Task.new({
             title,
             priority,
             dueDate: dueDate ? new Date(dueDate) : null,
             tags
           });
-          await task.save(this.redis());
-          await this.publishEvent('task.created', { id: task.rid() });
+          task.save(this.db());
+          this.publishEvent('task.created', { id: task.sid() });
           return task.jsonify();
         }
       }),
       $live.RpcMethod.new({
         name: 'getTask',
-        async do(id) {
-          const task = await $models.Task.findById(this.redis(), id);
+        do(id) {
+          const task = $models.Task.findById(this.db(), id);
           return task?.jsonify() ?? null;
         }
       }),
       $live.RpcMethod.new({
         name: 'completeTask',
-        async do(id) {
-          const task = await $models.Task.findById(this.redis(), id);
+        do(id) {
+          const task = $models.Task.findById(this.db(), id);
           if (!task) {
             throw new Error(`Task not found: ${id}`);
           }
           task.complete();
-          await task.save(this.redis());
-          await this.publishEvent('task.completed', { id: task.rid() });
+          task.save(this.db());
+          this.publishEvent('task.completed', { id: task.sid() });
           return task.jsonify();
         }
       }),
       $live.RpcMethod.new({
         name: 'listTasks',
-        async do(filter = {}) {
-          const tasks = await $models.Task.findAll(this.redis());
+        do(filter = {}) {
+          const tasks = $models.Task.findAll(this.db());
           let filtered = tasks;
 
           if (filter.done !== undefined) {
@@ -134,7 +150,7 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
       // Reminder operations
       $live.RpcMethod.new({
         name: 'createReminder',
-        async do(message, triggerAt, recurrence = null) {
+        do(message, triggerAt, recurrence = null) {
           const reminderData = {
             message,
             triggerAt: new Date(triggerAt)
@@ -143,42 +159,42 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
             reminderData.recurrence = $time.RecurrenceRule.new(recurrence);
           }
           const reminder = $models.Reminder.new(reminderData);
-          await reminder.save(this.redis());
-          await this.publishEvent('reminder.created', { id: reminder.rid() });
+          reminder.save(this.db());
+          this.publishEvent('reminder.created', { id: reminder.sid() });
           return reminder.jsonify();
         }
       }),
       $live.RpcMethod.new({
         name: 'getReminder',
-        async do(id) {
-          const reminder = await $models.Reminder.findById(this.redis(), id);
+        do(id) {
+          const reminder = $models.Reminder.findById(this.db(), id);
           return reminder?.jsonify() ?? null;
         }
       }),
       $live.RpcMethod.new({
         name: 'getDueReminders',
-        async do() {
-          const reminders = await $models.Reminder.findAll(this.redis());
+        do() {
+          const reminders = $models.Reminder.findAll(this.db());
           const due = reminders.filter(r => r.isDue());
           return due.map(r => r.jsonify());
         }
       }),
       $live.RpcMethod.new({
         name: 'markReminderSent',
-        async do(id) {
-          const reminder = await $models.Reminder.findById(this.redis(), id);
+        do(id) {
+          const reminder = $models.Reminder.findById(this.db(), id);
           if (!reminder) {
             throw new Error(`Reminder not found: ${id}`);
           }
           reminder.markSent();
-          await reminder.save(this.redis());
-          await this.publishEvent('reminder.sent', { id: reminder.rid() });
+          reminder.save(this.db());
+          this.publishEvent('reminder.sent', { id: reminder.sid() });
 
           // Create next occurrence if recurring
           const next = reminder.createNextOccurrence();
           if (next) {
-            await next.save(this.redis());
-            await this.publishEvent('reminder.created', { id: next.rid(), recurring: true });
+            next.save(this.db());
+            this.publishEvent('reminder.created', { id: next.sid(), recurring: true });
           }
 
           return reminder.jsonify();
@@ -186,8 +202,8 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
       }),
       $live.RpcMethod.new({
         name: 'listReminders',
-        async do(filter = {}) {
-          const reminders = await $models.Reminder.findAll(this.redis());
+        do(filter = {}) {
+          const reminders = $models.Reminder.findAll(this.db());
           let filtered = reminders;
 
           if (filter.sent !== undefined) {
@@ -203,23 +219,23 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
       // Search
       $live.RpcMethod.new({
         name: 'search',
-        async do(query) {
+        do(query) {
           const q = query.toLowerCase();
           const matchAll = q === '*' || q === '';
 
-          const logs = await $models.Log.findAll(this.redis());
+          const logs = $models.Log.findAll(this.db());
           const matchingLogs = matchAll ? logs : logs.filter(l =>
             l.content().toLowerCase().includes(q) ||
             l.tags().some(t => t.toLowerCase().includes(q))
           );
 
-          const tasks = await $models.Task.findAll(this.redis());
+          const tasks = $models.Task.findAll(this.db());
           const matchingTasks = matchAll ? tasks : tasks.filter(t =>
             t.title().toLowerCase().includes(q) ||
             t.tags().some(tag => tag.toLowerCase().includes(q))
           );
 
-          const reminders = await $models.Reminder.findAll(this.redis());
+          const reminders = $models.Reminder.findAll(this.db());
           const matchingReminders = matchAll ? reminders : reminders.filter(r =>
             r.message().toLowerCase().includes(q)
           );
@@ -234,21 +250,27 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
 
       // Chat message operations
       $.Method.new({
-        name: 'chatStreamKey',
-        doc: 'get the Redis stream key for a conversation',
+        name: 'getChatStream',
+        doc: 'get or create a chat stream for a conversation',
         do(conversationId = 'main') {
-          const prefix = this.redis().keyPrefix() || '';
-          return prefix + 'agenda:chat:' + conversationId;
+          if (conversationId === 'main') {
+            return this.chatStream();
+          }
+          return $db.SQLiteStream.new({
+            db: this.db(),
+            streamName: 'agenda:chat:' + conversationId,
+          });
         }
       }),
 
       $.Method.new({
         name: 'parseStreamEntry',
-        doc: 'parse a Redis stream entry into a chat message object',
+        doc: 'parse a stream entry into a chat message object',
         do(entry) {
           const message = entry.message;
           return {
             id: entry.id,
+            internalId: entry.internalId,
             conversationId: message.conversationId,
             role: message.role,
             content: message.content,
@@ -256,7 +278,7 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
             createdAt: message.createdAt,
             clientUid: message.clientUid || null,
             clientMessageId: message.clientMessageId || null,
-            meta: message.meta ? JSON.parse(message.meta) : null,
+            meta: message.meta ? (typeof message.meta === 'string' ? JSON.parse(message.meta) : message.meta) : null,
           };
         }
       }),
@@ -264,9 +286,9 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
       $live.RpcMethod.new({
         name: 'appendChatMessage',
         doc: 'append a message to the chat stream',
-        async do(message) {
+        do(message) {
           const { conversationId = 'main', role, content, source, clientUid, clientMessageId, meta } = message;
-          const streamKey = this.chatStreamKey(conversationId);
+          const stream = this.getChatStream(conversationId);
           const createdAt = new Date().toISOString();
 
           const entry = {
@@ -281,7 +303,7 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
           if (clientMessageId) entry.clientMessageId = clientMessageId;
           if (meta) entry.meta = JSON.stringify(meta);
 
-          const id = await this.redis().streamAdd(streamKey, entry);
+          const id = stream.append(entry);
 
           return {
             id,
@@ -300,9 +322,9 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
       $live.RpcMethod.new({
         name: 'listChatMessages',
         doc: 'list recent chat messages (newest limit messages, returned oldest→newest)',
-        async do({ conversationId = 'main', limit = 100 } = {}) {
-          const streamKey = this.chatStreamKey(conversationId);
-          const entries = await this.redis().streamRevRange(streamKey, limit);
+        do({ conversationId = 'main', limit = 100 } = {}) {
+          const stream = this.getChatStream(conversationId);
+          const entries = stream.readLatest(limit);
           const messages = entries.map(e => this.parseStreamEntry(e));
           return messages.reverse();
         }
@@ -310,21 +332,39 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
 
       $live.RpcMethod.new({
         name: 'readChatMessages',
-        doc: 'read chat messages after a given id (non-blocking)',
-        async do({ conversationId = 'main', afterId, limit = 100 } = {}) {
-          const streamKey = this.chatStreamKey(conversationId);
-          const entries = await this.redis().streamReadAfter(streamKey, afterId, limit);
+        doc: 'read chat messages after a given internal id (non-blocking)',
+        do({ conversationId = 'main', afterId = 0, limit = 100 } = {}) {
+          const stream = this.getChatStream(conversationId);
+          const entries = stream.readAfter(afterId, limit);
           return entries.map(e => this.parseStreamEntry(e));
         }
       }),
 
       $live.RpcMethod.new({
         name: 'waitForChatMessages',
-        doc: 'blocking wait for new chat messages after a given id',
-        async do({ conversationId = 'main', afterId, timeoutMs = 20000, limit = 100 } = {}) {
-          const streamKey = this.chatStreamKey(conversationId);
-          const entries = await this.redis().streamReadBlock(streamKey, afterId, timeoutMs, limit);
-          return entries.map(e => this.parseStreamEntry(e));
+        doc: 'polling wait for new chat messages after a given internal id',
+        async do({ conversationId = 'main', afterId = 0, timeoutMs = 20000, limit = 100 } = {}) {
+          const stream = this.getChatStream(conversationId);
+          const pollInterval = 200;
+          const startTime = Date.now();
+
+          while (Date.now() - startTime < timeoutMs) {
+            const entries = stream.readAfter(afterId, limit);
+            if (entries.length > 0) {
+              return entries.map(e => this.parseStreamEntry(e));
+            }
+            await __.sleep(pollInterval);
+          }
+          return [];
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'getLastChatInternalId',
+        doc: 'get the last internal id for a conversation (for polling)',
+        do({ conversationId = 'main' } = {}) {
+          const stream = this.getChatStream(conversationId);
+          return stream.getLastInternalId();
         }
       }),
     ]
@@ -333,11 +373,11 @@ export default await async function (_, $, $live, $supervisor, $redis, $models, 
   if (import.meta.main) {
     await __.sleep(50);
     const service = _.DatabaseService.new();
-    await service.connectRedis();
+    service.initDatabase();
     await service.connect();
     __.tlog('DatabaseService connected and ready');
   }
 }.module({
   name: 'services.database',
-  imports: [base, live, supervisor, redis, models, time],
+  imports: [base, live, db, supervisor, sqlite, models, time],
 }).load();

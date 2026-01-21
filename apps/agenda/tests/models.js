@@ -1,10 +1,22 @@
+import { Database } from 'bun:sqlite';
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
-import redis from '../src/redis.js';
+import db from 'simulabra/db';
+import sqlite from '../src/sqlite.js';
 import time from '../src/time.js';
 import models from '../src/models.js';
 
-export default await async function (_, $, $test, $redis, $time, $models) {
+export default await async function (_, $, $test, $db, $sqlite, $time, $models) {
+  const createTestDb = () => {
+    const database = new Database(':memory:');
+    const runner = $db.MigrationRunner.new({ db: database });
+    for (const migration of $sqlite.AgendaMigrations.all()) {
+      runner.register(migration);
+    }
+    runner.migrate();
+    return database;
+  };
+
   $test.Case.new({
     name: 'LogCreation',
     doc: 'Log should be created with content and timestamp',
@@ -43,27 +55,30 @@ export default await async function (_, $, $test, $redis, $time, $models) {
     }
   });
 
-  $test.AsyncCase.new({
+  $test.Case.new({
     name: 'LogPersistence',
-    doc: 'Log should save and load from Redis',
-    async do() {
-      const client = $redis.RedisClient.new({
-        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
-      });
-      await client.connect();
+    doc: 'Log should save and load from SQLite',
+    do() {
+      const database = createTestDb();
 
       const log = $models.Log.new({
         content: 'persistent entry',
         tags: ['test']
       });
-      await log.save(client);
+      log.save(database);
 
-      const found = await $models.Log.findById(client, log.rid());
+      // Debug output
+      const logId = log.sid();
+      const allRows = database.query('SELECT * FROM agenda_Log').all();
+      this.tlog('Saved log id:', logId, 'rows:', allRows.length);
+
+      const found = $models.Log.findById(database, logId);
+      this.tlog('findById result:', found ? 'found' : 'null');
+      this.assert(found !== null, 'should find the log');
       this.assertEq(found.content(), 'persistent entry');
       this.assertEq(found.tags()[0], 'test');
 
-      await log.delete(client);
-      await client.disconnect();
+      database.close();
     }
   });
 
@@ -125,14 +140,11 @@ export default await async function (_, $, $test, $redis, $time, $models) {
     }
   });
 
-  $test.AsyncCase.new({
+  $test.Case.new({
     name: 'TaskPersistence',
-    doc: 'Task should save and load from Redis',
-    async do() {
-      const client = $redis.RedisClient.new({
-        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
-      });
-      await client.connect();
+    doc: 'Task should save and load from SQLite',
+    do() {
+      const database = createTestDb();
 
       const dueDate = new Date('2025-12-31');
       const task = $models.Task.new({
@@ -141,9 +153,9 @@ export default await async function (_, $, $test, $redis, $time, $models) {
         dueDate,
         tags: ['project-x', 'backend']
       });
-      await task.save(client);
+      task.save(database);
 
-      const found = await $models.Task.findById(client, task.rid());
+      const found = $models.Task.findById(database, task.sid());
       this.assertEq(found.title(), 'persistent task');
       this.assertEq(found.priority(), 2);
       this.assertEq(found.dueDate().toISOString().split('T')[0], '2025-12-31');
@@ -151,8 +163,7 @@ export default await async function (_, $, $test, $redis, $time, $models) {
       this.assertEq(found.tags().length, 2);
       this.assertEq(found.tags()[0], 'project-x');
 
-      await task.delete(client);
-      await client.disconnect();
+      database.close();
     }
   });
 
@@ -442,14 +453,11 @@ export default await async function (_, $, $test, $redis, $time, $models) {
     }
   });
 
-  $test.AsyncCase.new({
+  $test.Case.new({
     name: 'ReminderPersistence',
-    doc: 'Reminder should save and load from Redis with recurrence',
-    async do() {
-      const client = $redis.RedisClient.new({
-        url: process.env.AGENDA_REDIS_URL || 'redis://localhost:6379'
-      });
-      await client.connect();
+    doc: 'Reminder should save and load from SQLite with recurrence',
+    do() {
+      const database = createTestDb();
 
       const rule = $time.RecurrenceRule.new({
         pattern: 'weekly',
@@ -460,15 +468,14 @@ export default await async function (_, $, $test, $redis, $time, $models) {
         triggerAt: new Date('2025-06-15T09:00:00Z'),
         recurrence: rule
       });
-      await reminder.save(client);
+      reminder.save(database);
 
-      const found = await $models.Reminder.findById(client, reminder.rid());
+      const found = $models.Reminder.findById(database, reminder.sid());
       this.assertEq(found.message(), 'persistent reminder');
       this.assert(found.recurrence(), 'should have recurrence');
       this.assertEq(found.recurrence().pattern(), 'weekly');
 
-      await reminder.delete(client);
-      await client.disconnect();
+      database.close();
     }
   });
 
@@ -590,7 +597,66 @@ export default await async function (_, $, $test, $redis, $time, $models) {
       this.assertEq(next.getUTCHours(), 8);
     }
   });
+
+  $test.Case.new({
+    name: 'LogFindAll',
+    doc: 'Log.findAll should return all logs',
+    do() {
+      const database = createTestDb();
+
+      const log1 = $models.Log.new({ content: 'first' });
+      const log2 = $models.Log.new({ content: 'second' });
+      log1.save(database);
+      log2.save(database);
+
+      const all = $models.Log.findAll(database);
+      this.assertEq(all.length, 2);
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'LogDelete',
+    doc: 'Log.delete should remove from database',
+    do() {
+      const database = createTestDb();
+
+      const log = $models.Log.new({ content: 'to delete' });
+      log.save(database);
+      const id = log.sid();
+
+      log.delete(database);
+
+      const found = $models.Log.findById(database, id);
+      this.assert(!found, 'should not find deleted log');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'TaskUpdate',
+    doc: 'Task should update existing record',
+    do() {
+      const database = createTestDb();
+
+      const task = $models.Task.new({ title: 'original' });
+      task.save(database);
+      const id = task.sid();
+
+      task.title('updated');
+      task.save(database);
+
+      this.assertEq(task.sid(), id, 'id should not change');
+
+      const found = $models.Task.findById(database, id);
+      this.assertEq(found.title(), 'updated');
+
+      database.close();
+    }
+  });
 }.module({
   name: 'test.models',
-  imports: [base, test, redis, time, models],
+  imports: [base, test, db, sqlite, time, models],
 }).load();

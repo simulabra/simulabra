@@ -1,33 +1,36 @@
 import { __, base } from 'simulabra';
-import redis from './redis.js';
+import db from 'simulabra/db';
+import sqlite from './sqlite.js';
 import time from './time.js';
 
-export default await async function (_, $, $redis, $time) {
+export default await async function (_, $, $db, $sqlite, $time) {
   $.Class.new({
     name: 'Log',
     doc: 'Journal entry with timestamp and optional tags',
     slots: [
-      $redis.RedisPersisted,
-      $redis.RedisVar.new({
+      $sqlite.SQLitePersisted,
+      $db.DBVar.new({
         name: 'content',
         doc: 'the journal entry text',
         searchable: true,
-        required: true,
+        mutable: true,
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'timestamp',
         doc: 'when the entry was created',
         indexed: true,
-        toRedis() { return this ? this.toISOString() : null; },
-        fromRedis() { return this ? new Date(this) : null; },
+        mutable: true,
+        toSQL() { return this ? this.toISOString() : null; },
+        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'tags',
         doc: 'extracted or explicit tags',
         default: () => [],
         indexed: true,
-        toRedis() { return JSON.stringify(this); },
-        fromRedis() { return JSON.parse(this); },
+        mutable: true,
+        toSQL() { return JSON.stringify(this); },
+        fromSQL() { return JSON.parse(this); },
       }),
       $.After.new({
         name: 'init',
@@ -51,49 +54,54 @@ export default await async function (_, $, $redis, $time) {
     name: 'Task',
     doc: 'Actionable item with priority and optional due date',
     slots: [
-      $redis.RedisPersisted,
-      $redis.RedisVar.new({
+      $sqlite.SQLitePersisted,
+      $db.DBVar.new({
         name: 'title',
         doc: 'task description',
         searchable: true,
-        required: true,
+        mutable: true,
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'done',
         doc: 'whether the task is completed',
         default: false,
         indexed: true,
-        toRedis() { return this ? 'true' : 'false'; },
-        fromRedis() { return this === 'true'; },
+        mutable: true,
+        toSQL() { return this ? 'true' : 'false'; },
+        fromSQL() { return this === 'true'; },
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'priority',
         doc: 'priority level (1=highest, 5=lowest)',
         default: 3,
         indexed: true,
-        toRedis() { return String(this); },
-        fromRedis() { return Number(this); },
+        mutable: true,
+        toSQL() { return String(this); },
+        fromSQL() { return Number(this); },
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'dueDate',
         doc: 'optional deadline',
         indexed: true,
-        toRedis() { return this ? this.toISOString() : null; },
-        fromRedis() { return this ? new Date(this) : null; },
+        mutable: true,
+        toSQL() { return this ? this.toISOString() : null; },
+        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'completedAt',
         doc: 'when the task was completed',
-        toRedis() { return this ? this.toISOString() : null; },
-        fromRedis() { return this ? new Date(this) : null; },
+        mutable: true,
+        toSQL() { return this ? this.toISOString() : null; },
+        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'tags',
         doc: 'optional tags for categorization',
         default: () => [],
         indexed: true,
-        toRedis() { return JSON.stringify(this); },
-        fromRedis() { return JSON.parse(this); },
+        mutable: true,
+        toSQL() { return JSON.stringify(this); },
+        fromSQL() { return JSON.parse(this); },
       }),
       $.Method.new({
         name: 'complete',
@@ -121,34 +129,36 @@ export default await async function (_, $, $redis, $time) {
     name: 'Reminder',
     doc: 'Scheduled notification with optional recurrence',
     slots: [
-      $redis.RedisPersisted,
-      $redis.RedisVar.new({
+      $sqlite.SQLitePersisted,
+      $db.DBVar.new({
         name: 'message',
         doc: 'what to remind about',
         searchable: true,
-        required: true,
+        mutable: true,
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'triggerAt',
         doc: 'when to trigger the reminder',
         indexed: true,
-        required: true,
-        toRedis() { return this ? this.toISOString() : null; },
-        fromRedis() { return this ? new Date(this) : null; },
+        mutable: true,
+        toSQL() { return this ? this.toISOString() : null; },
+        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'recurrence',
         doc: 'optional recurrence rule (JSON)',
-        toRedis() { return this ? JSON.stringify(this.toJSON()) : null; },
-        fromRedis() { return this ? $time.RecurrenceRule.fromJSON(JSON.parse(this)) : null; },
+        mutable: true,
+        toSQL() { return this ? JSON.stringify(this.toJSON()) : null; },
+        fromSQL() { return this ? $time.RecurrenceRule.fromJSON(JSON.parse(this)) : null; },
       }),
-      $redis.RedisVar.new({
+      $db.DBVar.new({
         name: 'sent',
         doc: 'whether the reminder has been sent',
         default: false,
         indexed: true,
-        toRedis() { return this ? 'true' : 'false'; },
-        fromRedis() { return this === 'true'; },
+        mutable: true,
+        toSQL() { return this ? 'true' : 'false'; },
+        fromSQL() { return this === 'true'; },
       }),
       $.Method.new({
         name: 'isDue',
@@ -195,5 +205,5 @@ export default await async function (_, $, $redis, $time) {
   });
 }.module({
   name: 'models',
-  imports: [base, redis, time],
+  imports: [base, db, sqlite, time],
 }).load();

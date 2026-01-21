@@ -720,6 +720,7 @@ function bootstrap() {
   // a missing middle
   var $Var = $Class.new({
     name: 'Var',
+    doc: 'variable slot with defaults, required checks, and debug/trace controls',
     fullSlot: true,
     slots: [
       BProperty.new({ name: 'name', }),
@@ -769,6 +770,7 @@ function bootstrap() {
 
   const $Property = $Class.new({
     name: 'Property',
+    doc: 'property slot backed by JS getter/setter with default support',
     fullSlot: true,
     slots: [
       BProperty.new({ name: 'name', }),
@@ -819,13 +821,15 @@ function bootstrap() {
 
   const $Fn = $Class.new({
     name: 'Fn',
+    doc: 'slot wrapper for function bodies',
     slots: [
-      $Var.new({ name: 'do' }), // fn, meat and taters
+      $Var.new({ name: 'do', doc: 'function body for this slot' }), // fn, meat and taters
     ]
   });
 
   const $Static = $Class.new({
     name: 'Static',
+    doc: 'static method slot reified onto the class',
     slots: [
       $Fn,
       $Var.new({ name: 'doc' }),
@@ -843,9 +847,11 @@ function bootstrap() {
 
   const $FakeState = $Class.new({
     name: 'FakeState',
+    doc: 'name/value pair for listing and display',
     slots: [
       $Static.new({
         name: 'listFromMap',
+        doc: 'build FakeState list from a map',
         do: function listFromMap(map) {
           const list = Object.entries(map).map(([k, v]) => this.new({ name: k, value: v }));
           return list;
@@ -869,6 +875,7 @@ function bootstrap() {
 
   const $VarState = $Class.new({
     name: 'VarState',
+    doc: 'state record for a Var slot value',
     slots: [
       $Var.new({ name: 'ref' }),
       $Var.new({ name: 'value' }),
@@ -891,11 +898,12 @@ function bootstrap() {
 
   const $Method = $Class.new({
     name: 'Method',
+    doc: 'method slot with override chaining and debug control',
     slots: [
       $Fn,
-      $Property.new({ name: 'name' }),
+      $Property.new({ name: 'name', doc: 'method name' }),
       $Var.new({ name: 'doc' }),
-      $Var.new({ name: 'debug', default: true }),
+      $Var.new({ name: 'debug', default: true, doc: 'enable debug stack tracking' }),
       function combine(impl) {
         if (impl.__name !== this.name) {
           throw new Error('tried to combine Method on non-same named impl');
@@ -915,9 +923,10 @@ function bootstrap() {
 
   const $Before = $Class.new({
     name: 'Before',
+    doc: 'before modifier that runs ahead of a method',
     slots: [
       $Fn,
-      $Property.new({ name: 'name' }),
+      $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
       function combine(impl) {
         impl.__befores.push(this.do());
@@ -927,9 +936,10 @@ function bootstrap() {
 
   const $After = $Class.new({
     name: 'After',
+    doc: 'after modifier that runs after a method',
     slots: [
       $Fn,
-      $Property.new({ name: 'name' }),
+      $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
       function combine(impl) {
         impl.__afters.unshift(this.do());
@@ -939,9 +949,10 @@ function bootstrap() {
 
   const $AsyncBefore = $Class.new({
     name: 'AsyncBefore',
+    doc: 'async before modifier awaited before a method',
     slots: [
       $Fn,
-      $Property.new({ name: 'name' }),
+      $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
       function combine(impl) {
         impl.__asyncBefores.push(this.do());
@@ -951,9 +962,10 @@ function bootstrap() {
 
   const $AsyncAfter = $Class.new({
     name: 'AsyncAfter',
+    doc: 'async after modifier awaited after a method',
     slots: [
       $Fn,
-      $Property.new({ name: 'name' }),
+      $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
       function combine(impl) {
         impl.__asyncAfters.unshift(this.do());
@@ -963,8 +975,9 @@ function bootstrap() {
 
   const $Virtual = $Class.new({
     name: 'Virtual',
+    doc: 'virtual method slot that must be implemented',
     slots: [
-      $Property.new({ name: 'name' }),
+      $Property.new({ name: 'name', doc: 'method name to implement' }),
       $Var.new({ name: 'doc' }),
       function load(parent) {
         self = this;
@@ -979,9 +992,10 @@ function bootstrap() {
 
   const $ObjectRegistry = $Class.new({
     name: 'ObjectRegistry',
+    doc: 'registry of instances by class and uri using WeakRefs',
     slots: [
-      $Var.new({ name: 'classInstances', default: () => ({}) }),
-      $Var.new({ name: 'refs', default: () => ({}) }),
+      $Var.new({ name: 'classInstances', default: () => ({}), doc: 'class name to instance uri list' }),
+      $Var.new({ name: 'refs', default: () => ({}), doc: 'uri to WeakRef map' }),
       function register(o) {
         this.addInstance(o);
         const u = o.uri();
@@ -1007,9 +1021,11 @@ function bootstrap() {
 
   const $Deffed = $Class.new({
     name: 'Deffed',
+    doc: 'mixin that defines instances in the current module after init',
     slots: [
       $After.new({
         name: 'init',
+        doc: 'define instance in current module after init',
         do() {
           $$().mod()?.def(this.name, this);
         }
@@ -1019,9 +1035,11 @@ function bootstrap() {
 
   const $registered = $Class.new({
     name: 'registered',
+    doc: 'mixin that registers instances in the current module after init',
     slots: [
       $After.new({
         name: 'init',
+        doc: 'register instance in current module after init',
         do() {
           $$().mod()?.register(this);
         }
@@ -1031,24 +1049,27 @@ function bootstrap() {
 
   const $module = $Class.new({
     name: 'Module',
+    doc: 'module namespace with imports, registry, and class definitions',
     slots: [
       $Deffed,
-      $Property.new({ name: 'name' }),
+      $Property.new({ name: 'name', doc: 'module name' }),
       $Var.new({
         name: 'imports',
         desc: 'the other modules available within this one',
+        doc: 'imported modules available for lookup',
         default: [],
         debug: false,
       }),
-      $Var.new({ name: 'mod' }),
-      $Var.new({ name: 'registry' }),
-      $Var.new({ name: 'parent' }),
+      $Var.new({ name: 'mod', doc: 'module initializer function' }),
+      $Var.new({ name: 'registry', doc: 'object registry for instances' }),
+      $Var.new({ name: 'parent', doc: 'parent module for fallback lookups' }),
       $Var.new({ name: 'doc', default: '-' }),
       $Var.new({ name: 'loaded', default: false }),
-      $Var.new({ name: 'repos', default: () => ({}) }),
-      $Var.new({ name: 'classes', default: () => [] }),
+      $Var.new({ name: 'repos', default: () => ({}), doc: 'class name to name->object map' }),
+      $Var.new({ name: 'classes', default: () => [], doc: 'all defined classes in this module' }),
       $Before.new({
         name: 'init',
+        doc: 'initialize registry and parent module',
         do: function init() {
           this.registry($ObjectRegistry.new());
           if (!this.parent()) {
@@ -1091,9 +1112,9 @@ function bootstrap() {
             if (p === 'then' || p === 'format') {
               return target[p];
             }
-              const v = target.repo(ClassName)[p];
+            const v = target.find(ClassName, p);
             if (v === undefined) {
-                const err = new Error(`failed to find ~${ClassName}.${p} in \$${target.name}`);
+              const err = new Error(`failed to find ~${ClassName}.${p} in \$${target.name}`);
               if (errFn) {
                 errFn(err);
               } else {
@@ -1170,10 +1191,12 @@ function bootstrap() {
   _.register(_);
   $.Class.new({
     name: 'StaticVar',
+    doc: 'Var slot that reifies onto the class as a static accessor',
     slots: [
       $.Var,
       $.After.new({
         name: 'load',
+        doc: 'reify static var accessor on class load',
         do: function load() {
           this._getImpl(this.name).reify(this._proto.__class);
         }
@@ -1183,16 +1206,17 @@ function bootstrap() {
 
   $.Class.new({
     name: 'SimulabraGlobal',
+    doc: 'global system root with module state and helpers',
     slots: [
-      $.Var.new({ name: 'mod' }),
-      $.Var.new({ name: 'modules', default: {} }),
-      $.Var.new({ name: 'stack', debug: false }),
+      $.Var.new({ name: 'mod', doc: 'current module' }),
+      $.Var.new({ name: 'modules', default: {}, doc: 'module registry by name' }),
+      $.Var.new({ name: 'stack', debug: false, doc: 'call stack for debug tracing' }),
       $.Var.new({ name: 'debug', default: true }),
       $.Var.new({ name: 'trace', default: true }),
-      $.Var.new({ name: 'tick', default: 0 }),
-      $.Var.new({ name: 'handlers', default: {} }),
-      $.Var.new({ name: 'registry' }),
-      $.Var.new({ name: 'reactor' }),
+      $.Var.new({ name: 'tick', default: 0, doc: 'global tick counter' }),
+      $.Var.new({ name: 'handlers', default: {}, doc: 'global handlers map' }),
+      $.Var.new({ name: 'registry', doc: 'global object registry' }),
+      $.Var.new({ name: 'reactor', doc: 'reactive dependency reactor' }),
       function startTicking() {
         setInterval(() => {
           this.tick(this.tick() + 1);
@@ -1256,10 +1280,12 @@ function bootstrap() {
     slots: [
       $.Var.new({
         name: 'stack',
+        doc: 'stack of dependency sets',
         default: () => [],
       }),
       $.Var.new({
         name: 'pending',
+        doc: 'pending effect callbacks',
         default: () => new Set(),
       }),
       $.Var.new({
@@ -1268,6 +1294,7 @@ function bootstrap() {
       }),
       $.Method.new({
         name: 'push',
+        doc: 'register dependency set with the active effect',
         do(dep) {
           const top = this.stack()[this.stack().length - 1];
           if (top) top.add(dep);
@@ -1275,6 +1302,7 @@ function bootstrap() {
       }),
       $.Method.new({
         name: 'flush',
+        doc: 'await a microtask boundary',
         async do() {
           return new Promise(resolve => {
             queueMicrotask(resolve);
@@ -1283,6 +1311,7 @@ function bootstrap() {
       }),
       $.Method.new({
         name: 'schedule',
+        doc: 'schedule effect callbacks with microtask batching',
         do(task) {
           if (task instanceof Set) {
             task.forEach(t => this.pending().add(t));
@@ -1315,16 +1344,15 @@ function bootstrap() {
       }),
       $.Var.new({
         name: 'deps',
-        doc: 'set of dependencies',
         default: () => new Set()
       }),
       $.Var.new({
         name: 'active',
-        doc: 'whether this effect is active',
         default: true
       }),
       $.Var.new({
         name: 'boundRun',
+        doc: 'cached bound run callback for subscriptions',
       }),
       $.Method.new({
         name: 'run',
@@ -1372,9 +1400,11 @@ function bootstrap() {
 
   var $Debug = $Class.new({
     name: 'Debug',
+    doc: 'debug utilities for logging and formatting',
     slots: [
       $Static.new({
         name: 'log',
+        doc: 'log raw arguments to console',
         do: function log(...args) {
           console.log(...args);
           return this;
@@ -1382,6 +1412,7 @@ function bootstrap() {
       }),
       $Static.new({
         name: 'format',
+        doc: 'format arguments for display output',
         do: function format(...args) {
           return args.map(a => __.display(a));
         }
@@ -1401,6 +1432,7 @@ function bootstrap() {
 
   $.Class.new({
     name: 'EnumVar',
+    doc: 'variable slot restricted to a fixed set of choices',
     slots: [
       $.Var,
       $.Var.new({
@@ -1409,6 +1441,7 @@ function bootstrap() {
       }),
       $.After.new({
         name: 'init',
+        doc: 'validate default against choices',
         do: function after__init() {
           const def = this.default();
           if (def !== undefined && !this.choices().includes(def)) {
@@ -1419,6 +1452,7 @@ function bootstrap() {
 
       $.Method.new({
         name: 'combine',
+        doc: 'enforce enum choices on access and assignment',
         do: function combine(impl) {
           const pk = '__' + this.name;
           const self = this;
@@ -1441,6 +1475,7 @@ function bootstrap() {
 
       $.Method.new({
         name: 'defval',
+        doc: 'validate default enum value',
         do: function defval(ctx) {
           const def = this.default();
           if (def !== undefined) {
@@ -1460,6 +1495,7 @@ function bootstrap() {
 
   $.Class.new({
     name: 'Signal',
+    doc: 'reactive Var that tracks dependencies and schedules subscribers',
     slots: [
       $.Var,
       function combine(impl) {
@@ -1503,6 +1539,7 @@ function bootstrap() {
 
   $.Class.new({
     name: 'ConfigVar',
+    doc: 'ConfigSlot-marked Var for config serialization',
     slots: [
       $.ConfigSlot,
       $.Var
@@ -1511,6 +1548,7 @@ function bootstrap() {
 
   $.Class.new({
     name: 'ConfigSignal',
+    doc: 'ConfigSlot-marked Signal for config serialization',
     slots: [
       $.ConfigSlot,
       $.Signal
@@ -1529,6 +1567,7 @@ function bootstrap() {
       }),
       $.Method.new({
         name: 'configJSON',
+        doc: 'serialize ConfigSlot values to a plain object',
         do() {
           const result = {};
           for (const slot of this.configSlots()) {
@@ -1557,6 +1596,7 @@ function bootstrap() {
 
   $.Class.new({
     name: 'HistorySignal',
+    doc: 'HistorySlot-marked Signal for snapshot tracking',
     slots: [
       $.HistorySlot,
       $.Signal
@@ -1579,6 +1619,7 @@ function bootstrap() {
 
       $.Method.new({
         name: 'snapshot',
+        doc: 'capture current HistorySlot values',
         do() {
           const snap = {};
           for (const slot of this.historySlots()) {
@@ -1600,6 +1641,7 @@ function bootstrap() {
 
       $.Method.new({
         name: 'pushUndo',
+        doc: 'push snapshot onto undo stack and clear redo',
         do() {
           this.undoStack().push(this.snapshot());
           this.redoStack().length = 0;
@@ -1608,6 +1650,7 @@ function bootstrap() {
 
       $.Method.new({
         name: 'undo',
+        doc: 'restore previous snapshot if available',
         do() {
           if (!this.undoStack().length) return false;
           this.redoStack().push(this.snapshot());
@@ -1618,6 +1661,7 @@ function bootstrap() {
 
       $.Method.new({
         name: 'redo',
+        doc: 'reapply snapshot if available',
         do() {
           if (!this.redoStack().length) return false;
           this.undoStack().push(this.snapshot());
@@ -1652,8 +1696,9 @@ function bootstrap() {
 
   $.Class.new({
     name: 'Constant',
+    doc: 'read-only slot that returns a constant value',
     slots: [
-      $.Var.new({ name: 'value' }),
+      $.Var.new({ name: 'value', doc: 'constant value to return' }),
       $.Var.new({ name: 'doc' }),
       function combine(impl) {
         const self = this;
@@ -1674,10 +1719,12 @@ function bootstrap() {
 
   $.Class.new({
     name: 'Command',
+    doc: 'command slot that builds a CommandContext and dispatches run',
     slots: [
-      $.Var.new({ name: 'run' }),
+      $.Var.new({ name: 'run', doc: 'handler for command execution' }),
       $.Method.new({
         name: 'load',
+        doc: 'attach command and context builders to parent',
         do(parent) {
           const self = this;
           const cmdfn = `${this.name}Command`;
@@ -1698,12 +1745,14 @@ function bootstrap() {
 
   $.Class.new({
     name: 'CommandContext',
+    doc: 'execution context for a command invocation',
     slots: [
       $.Var.new({
         name: 'command',
       }),
       $.Var.new({
         name: 'parent',
+        doc: 'parent object executing the command',
       }),
       $.Var.new({
         name: 'args',
@@ -1711,6 +1760,7 @@ function bootstrap() {
       }),
       $.Method.new({
         name: 'run',
+        doc: 'dispatch command via parent runcommand',
         do: function run(ctx) {
           return this.parent().runcommand(this);
         }
@@ -1720,15 +1770,18 @@ function bootstrap() {
 
   $.Class.new({
     name: 'CommandChild',
+    doc: 'marker mixin for command-related child objects',
     slots: [
     ]
   });
 
   $.Class.new({
     name: 'Clone',
+    doc: 'mixin for cloning instances by copying set vars',
     slots: [
       $.Method.new({
         name: 'clone',
+        doc: 'clone instance, optionally deep, with cycle tracking',
         do: function clone(deep = true, cloneMap = new WeakMap()) {
           if (cloneMap.has(this)) {
             return cloneMap.get(this);
@@ -1766,9 +1819,11 @@ function bootstrap() {
 
   $.Class.new({
     name: 'JSON',
+    doc: 'mixin for JSON serialization of slot values',
     slots: [
       $.Method.new({
         name: 'json',
+        doc: 'serialize slots to a JSON-ready object',
         do: function json() {
           function jsonifyValue(value) {
             if (value === null || value === undefined) return value;
