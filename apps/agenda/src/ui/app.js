@@ -278,6 +278,7 @@ export default await async function (_, $, $html) {
             <div class="chat-view view">
               <div class="chat-messages">
                 ${() => this.app().messages().map(msg => _.ChatMessage.new({ message: msg }))}
+                ${() => this.app().loading() ? $html.HTML.t`<div class="chat-message assistant typing">thinking...</div>` : ""}
               </div>
               <form class="chat-input-form" onsubmit=${e => this.handleSubmit(e)}>
                 <input type="text" class="chat-input" placeholder="Ask anything..."
@@ -315,10 +316,33 @@ export default await async function (_, $, $html) {
                 <button class=${() => "nav-tab" + (this.app().activeView() === tab.id ? " active" : "")}
                         onclick=${() => this.app().activeView(tab.id)}>
                   <span class="nav-icon">${tab.icon}</span>
-                  <span class="nav-label">${tab.label}</span>
                 </button>
               `)}
             </nav>
+          `;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: "Bumper",
+    doc: "Footer bumper with current day",
+    slots: [
+      $html.Component,
+      $.Method.new({
+        name: "dayText",
+        do() {
+          return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        }
+      }),
+      $.Method.new({
+        name: "render",
+        do() {
+          return $html.HTML.t`
+            <div class="bumper">
+              ${this.dayText()}
+            </div>
           `;
         }
       })
@@ -342,7 +366,7 @@ export default await async function (_, $, $html) {
       $.Var.new({ name: "lastSeenId", default: null }),
       $.Var.new({ name: "syncRunning", default: false }),
       $.Var.new({ name: "syncFailCount", default: 0 }),
-      $.Var.new({ name: "clientUid", default: () => 'ui-' + crypto.randomUUID().slice(0, 8) }),
+      $.Var.new({ name: "clientUid", default: () => 'ui-' + Math.random().toString(36).slice(2, 10) }),
 
       $.After.new({
         name: "init",
@@ -376,7 +400,7 @@ export default await async function (_, $, $html) {
         doc: "load chat history from the server on connect",
         async do() {
           try {
-            const history = await this.rpcCall("DatabaseService", "listChatMessages", [{ conversationId: "main", limit: 200 }]);
+            const history = await this.rpcCall("DatabaseService", "listChatMessages", [{ conversationId: "main", limit: 10 }]);
             if (history && history.length > 0) {
               this.messages(history);
               this.lastSeenId(history[history.length - 1].id);
@@ -398,9 +422,9 @@ export default await async function (_, $, $html) {
             try {
               let newMessages;
               if (this.fallbackPolling()) {
-                newMessages = await this.rpcCall("DatabaseService", "listChatMessages", [{
+                newMessages = await this.rpcCall("DatabaseService", "readChatMessages", [{
                   conversationId: "main",
-                  afterId: this.lastSeenId(),
+                  afterId: this.lastSeenId() || 0,
                   limit: 50
                 }]);
                 await new Promise(r => setTimeout(r, 5000));
@@ -473,20 +497,30 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "sendMessage",
         async do(text) {
+          if (!this.connected()) {
+            this.addMessage({ role: "system", content: "Not connected - try reconnecting" });
+            return;
+          }
+          const clientMessageId = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+          this.addMessage({ role: "user", content: text, source: "ui", _pending: clientMessageId });
           this.loading(true);
           try {
-            if (!this.connected()) {
-              this.addMessage({ role: "system", content: "Not connected - try reconnecting" });
-              return;
-            }
             const result = await this.rpcCall("GeistService", "interpretMessage", [{
               conversationId: "main",
               text,
               source: "ui",
               clientUid: this.clientUid(),
-              clientMessageId: crypto.randomUUID(),
+              clientMessageId,
             }]);
-            if (!result.success) {
+            if (result.success) {
+              const msgs = this.messages().filter(m => m._pending !== clientMessageId);
+              if (result.userMessage) msgs.push(result.userMessage);
+              if (result.assistantMessage) {
+                msgs.push(result.assistantMessage);
+                this.lastSeenId(result.assistantMessage.id);
+              }
+              this.messages(msgs);
+            } else {
               this.addMessage({ role: "system", content: `Error: ${result.error}` });
             }
             await this.refreshData();
@@ -512,455 +546,6 @@ export default await async function (_, $, $html) {
       }),
 
       $.Method.new({
-        name: "css",
-        do() {
-          return `
-            :root {
-              --charcoal: #463C3C;
-              --wood: #B89877;
-              --sand: #E2C79D;
-              --light-sand: #EEDAB8;
-              --seashell: #FAE8F4;
-              --sky: #92B6D5;
-              --ocean: #5893A8;
-              --dusk: #D8586A;
-              --grass: #40A472;
-              --seaweed: #487455;
-
-              --box-shadow-args: 1px 1px 0 0 var(--charcoal),
-                                -1px -1px 0 0 var(--wood),
-                                -2px -2px     var(--wood),
-                                -2px  0       var(--wood),
-                                  0  -2px      var(--wood),
-                                  2px  2px 0 0 var(--charcoal),
-                                  0   2px 0 0  var(--charcoal),
-                                  2px  0       var(--charcoal),
-                                  2px -2px     var(--wood),
-                                -2px  2px     var(--charcoal);
-
-              --box-shadow-args-inset: inset  1px  1px 0   var(--wood),
-                                      inset  0    1px 0   var(--wood),
-                                      inset  1px  0   0   var(--wood),
-                                      inset -1px -1px 0   var(--charcoal),
-                                      inset  0   -1px 0   var(--charcoal),
-                                      inset -1px  0   0   var(--charcoal);
-            }
-
-            * {
-              box-sizing: border-box;
-              margin: 0;
-              padding: 0;
-            }
-
-            ::selection {
-              background: var(--ocean);
-              color: var(--seashell);
-            }
-
-            body {
-              font-family: Georgia, 'Times New Roman', serif;
-              background: var(--sand);
-              color: var(--charcoal);
-              overflow: hidden;
-            }
-
-            .agenda-app {
-              display: flex;
-              flex-direction: column;
-              height: 100dvh;
-              max-width: 480px;
-              margin: 0 auto;
-              padding: 4px;
-              gap: 4px;
-            }
-
-            /* Top Bar */
-            .top-bar {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              padding: 4px 8px;
-              background: var(--wood);
-              box-shadow: var(--box-shadow-args);
-            }
-
-            .title {
-              font-size: 16px;
-              font-weight: normal;
-              font-style: italic;
-              letter-spacing: 2px;
-              color: var(--seashell);
-            }
-
-            .connection-status {
-              font-size: 11px;
-              color: var(--seashell);
-              font-style: italic;
-              opacity: 0.8;
-            }
-
-            .connection-status.connected {
-              color: var(--grass);
-            }
-
-            .connection-status.reconnecting {
-              color: var(--sand);
-              animation: pulse 1.5s ease-in-out infinite;
-            }
-
-            .connection-status.offline {
-              color: var(--dusk);
-            }
-
-            @keyframes pulse {
-              0%, 100% { opacity: 0.5; }
-              50% { opacity: 1; }
-            }
-
-            /* Views */
-            .view-container {
-              flex: 1;
-              overflow: hidden;
-              position: relative;
-            }
-
-            .view {
-              position: absolute;
-              inset: 0;
-              display: flex;
-              flex-direction: column;
-              overflow: hidden;
-            }
-
-            .view[hidden] { display: none; }
-
-            .view-header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              padding: 4px 8px;
-              background: var(--wood);
-              box-shadow: var(--box-shadow-args);
-            }
-
-            .view-header h2 {
-              font-size: 14px;
-              font-weight: normal;
-              font-style: italic;
-              color: var(--seashell);
-            }
-
-            .task-count {
-              font-size: 11px;
-              color: var(--seashell);
-              font-style: italic;
-              opacity: 0.8;
-            }
-
-            .empty-state {
-              padding: 32px 16px;
-              text-align: center;
-              color: var(--charcoal);
-              font-style: italic;
-              opacity: 0.6;
-            }
-
-            /* Task List */
-            .task-list, .log-list, .reminder-list {
-              flex: 1;
-              overflow-y: auto;
-              padding: 4px;
-              background: var(--sand);
-            }
-
-            .task-item {
-              display: flex;
-              align-items: flex-start;
-              gap: 8px;
-              padding: 8px;
-              background: var(--light-sand);
-              box-shadow: var(--box-shadow-args);
-              margin-bottom: 4px;
-            }
-
-            .task-item.done {
-              opacity: 0.5;
-            }
-
-            .task-item.priority-1 { border-left: 3px solid var(--dusk); }
-            .task-item.priority-2 { border-left: 3px solid var(--ocean); }
-            .task-item.priority-3 { border-left: 3px solid var(--wood); }
-
-            .task-checkbox {
-              background: var(--sand);
-              border: 0;
-              box-shadow: var(--box-shadow-args);
-              color: var(--seaweed);
-              padding: 4px 8px;
-              font-size: 11px;
-              font-family: inherit;
-              cursor: pointer;
-            }
-
-            .task-checkbox:hover {
-              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
-            }
-
-            .task-checkbox:active {
-              background: var(--wood);
-            }
-
-            .task-content {
-              flex: 1;
-            }
-
-            .task-title {
-              display: block;
-              font-size: 14px;
-              color: var(--charcoal);
-            }
-
-            .task-due {
-              font-size: 11px;
-              color: var(--ocean);
-              font-style: italic;
-            }
-
-            /* Log Entries */
-            .log-entry {
-              padding: 8px;
-              background: var(--light-sand);
-              box-shadow: var(--box-shadow-args);
-              margin-bottom: 4px;
-            }
-
-            .log-timestamp {
-              font-size: 11px;
-              color: var(--ocean);
-              margin-bottom: 4px;
-              font-style: italic;
-            }
-
-            .log-content {
-              font-size: 14px;
-              line-height: 1.5;
-              color: var(--charcoal);
-            }
-
-            .log-tags {
-              margin-top: 8px;
-              display: flex;
-              gap: 6px;
-              flex-wrap: wrap;
-            }
-
-            .tag {
-              font-size: 11px;
-              color: var(--seaweed);
-              font-style: italic;
-            }
-
-            /* Reminders */
-            .reminder-item {
-              padding: 8px;
-              background: var(--light-sand);
-              box-shadow: var(--box-shadow-args);
-              margin-bottom: 4px;
-            }
-
-            .reminder-item.past {
-              border-left: 3px solid var(--dusk);
-            }
-
-            .reminder-item.sent {
-              opacity: 0.5;
-            }
-
-            .reminder-time {
-              font-size: 12px;
-              color: var(--ocean);
-              margin-bottom: 4px;
-              font-style: italic;
-            }
-
-            .reminder-message {
-              font-size: 14px;
-              color: var(--charcoal);
-            }
-
-            .reminder-recurring {
-              display: inline-block;
-              margin-top: 6px;
-              font-size: 10px;
-              color: var(--seaweed);
-              background: var(--sand);
-              padding: 2px 6px;
-              box-shadow: var(--box-shadow-args);
-            }
-
-            /* Chat View */
-            .chat-view {
-              display: flex;
-              flex-direction: column;
-            }
-
-            .chat-messages {
-              flex: 1;
-              overflow-y: auto;
-              padding: 8px;
-              background: var(--sand);
-            }
-
-            .chat-message {
-              max-width: 85%;
-              padding: 8px 12px;
-              margin-bottom: 4px;
-              font-size: 14px;
-              line-height: 1.4;
-              box-shadow: var(--box-shadow-args);
-            }
-
-            .chat-message.user {
-              background: var(--ocean);
-              color: var(--seashell);
-              margin-left: auto;
-            }
-
-            .chat-message.assistant {
-              background: var(--light-sand);
-              color: var(--charcoal);
-              margin-right: auto;
-            }
-
-            .chat-message.system {
-              background: var(--wood);
-              color: var(--seashell);
-              margin: 4px auto;
-              font-size: 12px;
-              font-style: italic;
-              text-align: center;
-            }
-
-            .message-source {
-              display: block;
-              font-size: 10px;
-              font-style: italic;
-              opacity: 0.7;
-              margin-bottom: 2px;
-            }
-
-            .chat-message.user .message-source {
-              text-align: right;
-            }
-
-            .chat-input-form {
-              display: flex;
-              gap: 4px;
-              padding: 4px;
-              background: var(--wood);
-              box-shadow: var(--box-shadow-args);
-            }
-
-            .chat-input {
-              flex: 1;
-              background: var(--light-sand);
-              border: 0;
-              box-shadow: var(--box-shadow-args);
-              padding: 8px 12px;
-              color: var(--charcoal);
-              font-size: 14px;
-              font-family: inherit;
-            }
-
-            .chat-input:focus {
-              outline: none;
-              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
-            }
-
-            .chat-input::placeholder {
-              color: var(--charcoal);
-              opacity: 0.5;
-            }
-
-            .chat-send {
-              background: var(--grass);
-              border: 0;
-              box-shadow: var(--box-shadow-args);
-              padding: 8px 16px;
-              color: var(--seashell);
-              font-size: 14px;
-              font-family: inherit;
-              font-style: italic;
-              cursor: pointer;
-            }
-
-            .chat-send:hover {
-              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
-            }
-
-            .chat-send:active {
-              background: var(--seaweed);
-            }
-
-            .chat-send:disabled {
-              background: var(--wood);
-              opacity: 0.5;
-              cursor: not-allowed;
-            }
-
-            /* Bottom Navigation */
-            .bottom-nav {
-              display: flex;
-              background: var(--wood);
-              box-shadow: var(--box-shadow-args);
-            }
-
-            .nav-tab {
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: 2px;
-              padding: 6px;
-              background: var(--sand);
-              border: 0;
-              box-shadow: var(--box-shadow-args);
-              color: var(--charcoal);
-              cursor: pointer;
-              font-family: inherit;
-              margin: 2px;
-            }
-
-            .nav-tab:hover {
-              box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
-            }
-
-            .nav-tab:active {
-              background: var(--wood);
-            }
-
-            .nav-tab.active {
-              background: var(--light-sand);
-              color: var(--ocean);
-            }
-
-            .nav-icon {
-              font-size: 12px;
-            }
-
-            .nav-label {
-              font-size: 9px;
-              font-style: italic;
-            }
-
-            [hidden] {
-              display: none !important;
-            }
-          `;
-        }
-      }),
-
-      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
@@ -981,6 +566,7 @@ export default await async function (_, $, $html) {
                 </div>
               </div>
               ${_.BottomNav.new({ app: this })}
+              ${_.Bumper.new()}
             </div>
           `;
         }

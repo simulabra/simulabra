@@ -10,6 +10,7 @@ await async function (_, $, $live) {
     slots: [
       $live.NodeClient,
       $.Var.new({ name: 'geistProxy' }),
+      $.Var.new({ name: 'dbProxy' }),
       $.Var.new({ name: 'supervisorUrl', default: 'ws://localhost:3030' }),
 
       $.Method.new({
@@ -22,7 +23,30 @@ await async function (_, $, $live) {
 
           await this.connect();
           this.geistProxy(await this.serviceProxy({ name: 'GeistService' }));
+          this.dbProxy(await this.serviceProxy({ name: 'DatabaseService' }));
           this.tlog('connected to GeistService');
+        }
+      }),
+
+      $.Method.new({
+        name: 'displayHistory',
+        doc: 'display recent chat history',
+        async do(limit = 5) {
+          if (!this.dbProxy()) return;
+          try {
+            const messages = await this.dbProxy().listChatMessages({ conversationId: 'main', limit });
+            if (messages.length > 0) {
+              console.log('--- Recent ---');
+              for (const msg of messages) {
+                const prefix = msg.role === 'user' ? '> ' : '  ';
+                const tools = msg.meta?.toolsExecuted?.length > 0 ? ` [${msg.meta.toolsExecuted.join(', ')}]` : '';
+                console.log(`${prefix}${msg.content}${tools}`);
+              }
+              console.log('--------------\n');
+            }
+          } catch (e) {
+            // Silent fail - history display is optional
+          }
         }
       }),
 
@@ -86,6 +110,7 @@ await async function (_, $, $live) {
         async do() {
           try {
             await this.connectToSupervisor();
+            await this.displayHistory(5);
             console.log('Agenda - Personal Productivity Assistant');
             console.log('Type your request, or "quit" to exit.\n');
 

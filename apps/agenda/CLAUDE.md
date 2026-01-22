@@ -41,6 +41,8 @@ Test files:
 - `tests/integration.js` - Cross-service scenarios
 
 Tests use isolated Redis keyspaces via `client.keyPrefix()` to avoid collision.
+
+UI testing: Use the playwright-skill to test UI features in a real browser context.
 </Testing>
 
 <Debugging>

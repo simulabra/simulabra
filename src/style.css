@@ -9,6 +9,7 @@
     --charcoal: #463C3C;
     --wood: #B89877;
     --sand: #E2C79D;
+    --mid-sand: #E9D7B1;
     --light-sand: #EEDAB8;
     --seashell: #FAE8F4;
     --sky: #92B6D5;
@@ -49,7 +50,6 @@ body, html {
     background: var(--sand);
     color: var(--charcoal);
     height: 100%;
-    padding: 2px;
     box-sizing: border-box;
 }
 
