@@ -29,6 +29,26 @@
   color: var(--seashell);
 }
 
+.refresh-btn {
+  position: absolute;
+  left: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--seashell);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  opacity: 0.8;
+}
+
+.refresh-btn:hover {
+  opacity: 1;
+}
+
+.refresh-btn:active {
+  transform: rotate(180deg);
+}
+
 .connection-status {
   position: absolute;
   right: 8px;
@@ -250,15 +270,15 @@
   background: var(--sand);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .chat-message {
   max-width: 85%;
-  padding: 8px 12px;
+  padding: 4px 6px;
   font-size: 14px;
   line-height: 1.4;
-  box-shadow: var(--box-shadow-args);
+  border: 1px solid var(--wood);
 }
 
 .chat-message.user {
@@ -288,16 +308,19 @@
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-.message-source {
-  display: block;
+.message-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 10px;
   font-style: italic;
   opacity: 0.7;
   margin-bottom: 2px;
 }
 
-.chat-message.user .message-source {
-  text-align: right;
+.message-timestamp {
+  font-family: monospace;
+  font-size: 8px;
 }
 
 .chat-input-form {

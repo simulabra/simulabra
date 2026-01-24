@@ -21,10 +21,17 @@ export default await async function (_, $, $html) {
         }
       }),
       $.Method.new({
+        name: "handleRefresh",
+        do() {
+          location.reload();
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
             <div class="top-bar">
+              <button class="refresh-btn" onclick=${() => this.handleRefresh()}>↻</button>
               <h1 class="title">AGENDA</h1>
               <div class=${() => "connection-status " + this.app().connectionState()}>
                 ${() => this.statusText()}
@@ -220,14 +227,38 @@ export default await async function (_, $, $html) {
       $html.Component,
       $.Var.new({ name: "message" }),
       $.Method.new({
+        name: "formatTimestamp",
+        do(ts) {
+          if (!ts) return "";
+          return new Date(ts).toISOString();
+        }
+      }),
+      $.Method.new({
+        name: "subtitle",
+        do() {
+          const msg = this.message();
+          if (msg.role === "system") return null;
+          if (msg.role === "user") {
+            const source = msg.source && msg.source !== "ui" ? msg.source : "user";
+            return source;
+          }
+          return msg.source || "geist";
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           const msg = this.message();
-          const source = msg.source;
-          const showSource = source && source !== 'ui' && msg.role !== 'system';
+          const subtitle = this.subtitle();
+          const timestamp = this.formatTimestamp(msg.timestamp || msg.createdAt);
           return $html.HTML.t`
             <div class=${"chat-message " + msg.role}>
-              ${showSource ? $html.HTML.t`<span class="message-source">${source}</span>` : ""}
+              ${subtitle ? $html.HTML.t`
+                <div class="message-meta">
+                  <span class="message-source">${subtitle}</span>
+                  ${timestamp ? $html.HTML.t`<span class="message-timestamp">${timestamp}</span>` : ""}
+                </div>
+              ` : ""}
               <div class="message-content">${msg.content}</div>
             </div>
           `;
