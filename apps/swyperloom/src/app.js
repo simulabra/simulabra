@@ -322,13 +322,19 @@ export default await async function (_, $, $html, $session) {
       $html.Component,
       $.Var.new({ name: "session" }),
       $.Method.new({
+        name: "handleRefresh",
+        do() {
+          location.reload();
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
             <div class="top-bar">
               <button class="menu-btn" onclick=${() => this.session().openSettings()}>☰</button>
               <h1 class="title">SWYPERLOOM</h1>
-              <div class="spacer"></div>
+              <button class="refresh-btn" onclick=${() => this.handleRefresh()}>↻</button>
             </div>
           `;
         }
@@ -502,6 +508,20 @@ export default await async function (_, $, $html, $session) {
               background: var(--wood);
             }
 
+            .refresh-btn {
+              background: var(--sand);
+              border: 0;
+              box-shadow: var(--box-shadow-args);
+              color: var(--seaweed);
+              font-size: 18px;
+              padding: 4px 8px;
+              cursor: pointer;
+            }
+
+            .refresh-btn:active {
+              background: var(--wood);
+            }
+
             .title {
               flex: 1;
               text-align: center;
@@ -510,8 +530,6 @@ export default await async function (_, $, $html, $session) {
               font-style: italic;
               color: var(--seashell);
             }
-
-            .spacer { width: 40px; }
 
             /* Text Display */
             .text-display {

@@ -51,16 +51,16 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const reminderService = createReminderService(dbService);
 
       // Create a past reminder that is due
-      const dueReminder = await dbService.createReminder(
-        'test due reminder',
-        '2020-01-01T00:00:00Z'
-      );
+      const dueReminder = await dbService.createReminder({
+        message: 'test due reminder',
+        triggerAt: '2020-01-01T00:00:00Z'
+      });
 
       // Create a future reminder that is not due
-      await dbService.createReminder(
-        'future reminder',
-        '2099-01-01T00:00:00Z'
-      );
+      await dbService.createReminder({
+        message: 'future reminder',
+        triggerAt: '2099-01-01T00:00:00Z'
+      });
 
       // Check and process due reminders
       const processed = await reminderService.checkDueReminders();
@@ -68,7 +68,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       this.assert(processed.some(r => r.message === 'test due reminder'), 'should include our due reminder');
 
       // Verify the reminder was marked as sent
-      const reminder = await dbService.getReminder(dueReminder.rid);
+      const reminder = await dbService.getReminder({ id: dueReminder.rid });
       this.assertEq(reminder.sent, true);
 
       // Cleanup
@@ -89,11 +89,11 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const reminderService = createReminderService(dbService);
 
       // Create a past recurring reminder
-      await dbService.createReminder(
-        'daily reminder',
-        '2020-01-01T10:00:00Z',
-        { pattern: 'daily', interval: 1 }
-      );
+      await dbService.createReminder({
+        message: 'daily reminder',
+        triggerAt: '2020-01-01T10:00:00Z',
+        recurrence: { pattern: 'daily', interval: 1 }
+      });
 
       // Process due reminders
       await reminderService.checkDueReminders();
@@ -120,8 +120,8 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const reminderService = createReminderService(dbService);
 
       // Create due reminders
-      await dbService.createReminder('notify me 1', '2020-01-01T00:00:00Z');
-      await dbService.createReminder('notify me 2', '2020-01-02T00:00:00Z');
+      await dbService.createReminder({ message: 'notify me 1', triggerAt: '2020-01-01T00:00:00Z' });
+      await dbService.createReminder({ message: 'notify me 2', triggerAt: '2020-01-02T00:00:00Z' });
 
       // Collect notifications
       const notifications = await reminderService.collectNotifications();
@@ -167,7 +167,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const reminderService = createReminderService(dbService);
 
       // Create only future reminders
-      await dbService.createReminder('future only', '2099-12-31T23:59:59Z');
+      await dbService.createReminder({ message: 'future only', triggerAt: '2099-12-31T23:59:59Z' });
 
       const processed = await reminderService.checkDueReminders();
       this.assertEq(processed.length, 0);
@@ -196,7 +196,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       });
 
       // Create a due reminder
-      await dbService.createReminder('handler test', '2020-01-01T00:00:00Z');
+      await dbService.createReminder({ message: 'handler test', triggerAt: '2020-01-01T00:00:00Z' });
 
       // Process reminders
       await reminderService.checkDueReminders();
@@ -228,7 +228,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       reminderService.addNotificationHandler(async (r) => calls1.push(r.message));
       reminderService.addNotificationHandler(async (r) => calls2.push(r.message));
 
-      await dbService.createReminder('multi handler', '2020-01-01T00:00:00Z');
+      await dbService.createReminder({ message: 'multi handler', triggerAt: '2020-01-01T00:00:00Z' });
       await reminderService.checkDueReminders();
 
       // Both handlers should be called
@@ -263,7 +263,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const calls = [];
       reminderService.addNotificationHandler(async (r) => calls.push(r.message));
 
-      await dbService.createReminder('error test', '2020-01-01T00:00:00Z');
+      await dbService.createReminder({ message: 'error test', triggerAt: '2020-01-01T00:00:00Z' });
       await reminderService.checkDueReminders();
 
       // Second handler should still have been called
@@ -293,7 +293,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       });
 
       // Create and trigger directly
-      const reminder = await dbService.createReminder('direct trigger', '2025-12-31T00:00:00Z');
+      const reminder = await dbService.createReminder({ message: 'direct trigger', triggerAt: '2025-12-31T00:00:00Z' });
       await reminderService.triggerNotification(reminder);
 
       this.assertEq(received.length, 1);
@@ -328,7 +328,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const processed = [];
       reminderService.addNotificationHandler(async (r) => processed.push(r.message));
 
-      await dbService.createReminder('poll test', '2020-01-01T00:00:00Z');
+      await dbService.createReminder({ message: 'poll test', triggerAt: '2020-01-01T00:00:00Z' });
 
       // Start polling
       reminderService.startPolling();

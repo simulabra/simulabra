@@ -62,9 +62,9 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const { dbService, geistService } = await createTestServices();
 
       // Create test data
-      await dbService.createLog('integration test log 1');
-      await dbService.createLog('integration test log 2');
-      await dbService.createTask('integration test task');
+      await dbService.createLog({ content: 'integration test log 1' });
+      await dbService.createLog({ content: 'integration test log 2' });
+      await dbService.createTask({ title: 'integration test task' });
 
       // Mock Claude responding with search tool
       geistService.client().setResponses([
@@ -131,7 +131,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       this.assert(result.response.includes('journal entry'), 'should have response text');
 
       // Verify it's actually in Redis
-      const logs = await dbService.listLogs();
+      const logs = await dbService.listLogs({});
       this.assert(logs.some(l => l.content === 'had a great day today'), 'log should be in Redis');
 
       await cleanup(dbService.redis());
@@ -182,7 +182,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const { dbService, geistService } = await createTestServices();
 
       // First create a task
-      const task = await dbService.createTask('finish report');
+      const task = await dbService.createTask({ title: 'finish report' });
 
       geistService.client().setResponses([
         {
@@ -258,9 +258,9 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
     async do() {
       const { dbService, geistService } = await createTestServices();
 
-      await dbService.createLog('log entry 1');
-      await dbService.createLog('log entry 2');
-      await dbService.createLog('log entry 3');
+      await dbService.createLog({ content: 'log entry 1' });
+      await dbService.createLog({ content: 'log entry 2' });
+      await dbService.createLog({ content: 'log entry 3' });
 
       geistService.client().setResponses([
         {
@@ -298,8 +298,8 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
     async do() {
       const { dbService, geistService } = await createTestServices();
 
-      await dbService.createTask('task 1', 1);
-      await dbService.createTask('task 2', 2);
+      await dbService.createTask({ title: 'task 1', priority: 1 });
+      await dbService.createTask({ title: 'task 2', priority: 2 });
 
       geistService.client().setResponses([
         {
@@ -337,9 +337,9 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
     async do() {
       const { dbService, geistService } = await createTestServices();
 
-      await dbService.createLog('meeting with alice about project');
-      await dbService.createLog('dentist appointment');
-      await dbService.createTask('email alice');
+      await dbService.createLog({ content: 'meeting with alice about project' });
+      await dbService.createLog({ content: 'dentist appointment' });
+      await dbService.createTask({ title: 'email alice' });
 
       geistService.client().setResponses([
         {

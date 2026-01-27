@@ -1,4 +1,5 @@
 import { __, base } from './base.js';
+import http from './http.js';
 import { appendFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -776,6 +777,7 @@ export default await async function (_, $) {
       $.Var.new({ name: 'healthCheckIntervalMs', default: 10000 }),
       $.Var.new({ name: 'healthCheckTimeoutMs', default: 5000 }),
       $.Var.new({ name: 'running', default: false }),
+      $.Var.new({ name: 'httpRouter' }),
       $.After.new({
         name: 'init',
         do() {
@@ -915,15 +917,19 @@ export default await async function (_, $) {
       }),
       $.Method.new({
         name: 'serve',
-        doc: 'start the WebSocket server',
+        doc: 'start the WebSocket server and HTTP router',
         do() {
           const self = this;
           this.running(true);
           Bun.serve({
             port: this.port(),
-            fetch(req, server) {
+            async fetch(req, server) {
               if (server.upgrade(req)) {
                 return;
+              }
+              const router = self.httpRouter();
+              if (router) {
+                return await router.handle(req);
               }
               return new Response('Supervisor', { status: 200 });
             },
@@ -1102,5 +1108,5 @@ export default await async function (_, $) {
   });
 }.module({
   name: 'live',
-  imports: [base],
+  imports: [base, http],
 }).load();

@@ -1,7 +1,8 @@
 import { __, base } from 'simulabra';
+import http from 'simulabra/http';
 import live from 'simulabra/live';
 
-export default await async function (_, $, $live) {
+export default await async function (_, $, $http, $live) {
   $.Class.new({
     name: 'AgendaService',
     doc: 'Agenda service mixin - uses AGENDA_SERVICE_NAME env for backward compatibility',
@@ -121,8 +122,13 @@ export default await async function (_, $, $live) {
   });
 }.module({
   name: 'supervisor',
-  imports: [base, live],
+  imports: [base, http, live],
   exports: [
+    '$http.ApiRouter',
+    '$http.MethodPathHandler',
+    '$http.StaticFileHandler',
+    '$http.HttpError',
+    '$http.jsonResponse',
     '$live.EnvService',
     '$live.ServiceSpec',
     '$live.NodeRegistry',

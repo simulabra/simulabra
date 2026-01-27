@@ -35,7 +35,7 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      const log = service.createLog('test log entry', ['tag1', 'tag2']);
+      const log = service.createLog({ content: 'test log entry', tags: ['tag1', 'tag2'] });
       this.assert(log.$class === 'Log', 'should return Log');
       this.assertEq(log.content, 'test log entry');
       this.assertEq(log.tags[0], 'tag1');
@@ -50,10 +50,10 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      service.createLog('log 1');
-      service.createLog('log 2');
+      service.createLog({ content: 'log 1' });
+      service.createLog({ content: 'log 2' });
 
-      const logs = service.listLogs(10);
+      const logs = service.listLogs({ limit: 10 });
       this.assertEq(logs.length, 2, 'should have 2 logs');
 
       service.db().close();
@@ -66,7 +66,7 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      const task = service.createTask('test task', 1, '2025-12-31');
+      const task = service.createTask({ title: 'test task', priority: 1, dueDate: '2025-12-31' });
       this.assert(task.$class === 'Task', 'should return Task');
       this.assertEq(task.title, 'test task');
       this.assertEq(task.priority, 1);
@@ -82,8 +82,8 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      const task = service.createTask('complete me');
-      const completed = service.completeTask(task.id);
+      const task = service.createTask({ title: 'complete me' });
+      const completed = service.completeTask({ id: task.id });
       this.assertEq(completed.done, true);
       this.assert(completed.completedAt, 'should have completedAt');
 
@@ -97,9 +97,9 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      service.createTask('task 1', 1);
-      const task2 = service.createTask('task 2', 2);
-      service.completeTask(task2.id);
+      service.createTask({ title: 'task 1', priority: 1 });
+      const task2 = service.createTask({ title: 'task 2', priority: 2 });
+      service.completeTask({ id: task2.id });
 
       const allTasks = service.listTasks({});
       this.assertEq(allTasks.length, 2, 'should have 2 tasks');
@@ -120,10 +120,10 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      const reminder = service.createReminder(
-        'test reminder',
-        '2025-12-31T12:00:00Z'
-      );
+      const reminder = service.createReminder({
+        message: 'test reminder',
+        triggerAt: '2025-12-31T12:00:00Z'
+      });
       this.assert(reminder.$class === 'Reminder', 'should return Reminder');
       this.assertEq(reminder.message, 'test reminder');
       this.assertEq(reminder.sent, false);
@@ -138,11 +138,11 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      const reminder = service.createReminder(
-        'daily reminder',
-        '2025-01-15T10:00:00Z',
-        { pattern: 'daily', interval: 1 }
-      );
+      const reminder = service.createReminder({
+        message: 'daily reminder',
+        triggerAt: '2025-01-15T10:00:00Z',
+        recurrence: { pattern: 'daily', interval: 1 }
+      });
       this.assert(reminder.recurrence, 'should have recurrence');
 
       service.db().close();
@@ -156,9 +156,9 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
       const service = createTestService();
 
       // Create a past reminder (due)
-      service.createReminder('past reminder', '2020-01-01T00:00:00Z');
+      service.createReminder({ message: 'past reminder', triggerAt: '2020-01-01T00:00:00Z' });
       // Create a future reminder (not due)
-      service.createReminder('future reminder', '2099-01-01T00:00:00Z');
+      service.createReminder({ message: 'future reminder', triggerAt: '2099-01-01T00:00:00Z' });
 
       const dueReminders = service.getDueReminders();
       this.assert(dueReminders.length >= 1, 'should have at least 1 due reminder');
@@ -175,8 +175,8 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      const reminder = service.createReminder('mark me', '2020-01-01T00:00:00Z');
-      const marked = service.markReminderSent(reminder.id);
+      const reminder = service.createReminder({ message: 'mark me', triggerAt: '2020-01-01T00:00:00Z' });
+      const marked = service.markReminderSent({ id: reminder.id });
       this.assertEq(marked.sent, true);
 
       service.db().close();
@@ -189,11 +189,11 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      service.createLog('searchable log entry');
-      service.createTask('searchable task');
-      service.createReminder('searchable reminder', '2025-12-31T00:00:00Z');
+      service.createLog({ content: 'searchable log entry' });
+      service.createTask({ title: 'searchable task' });
+      service.createReminder({ message: 'searchable reminder', triggerAt: '2025-12-31T00:00:00Z' });
 
-      const results = service.search('searchable');
+      const results = service.search({ query: 'searchable' });
       this.assert(results.logs.length >= 1, 'should find logs');
       this.assert(results.tasks.length >= 1, 'should find tasks');
       this.assert(results.reminders.length >= 1, 'should find reminders');
@@ -208,10 +208,10 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     do() {
       const service = createTestService();
 
-      service.createLog('wildcard test log');
-      service.createTask('wildcard test task');
+      service.createLog({ content: 'wildcard test log' });
+      service.createTask({ title: 'wildcard test task' });
 
-      const results = service.search('*');
+      const results = service.search({ query: '*' });
       this.assert(results.logs.length >= 1, 'should find all logs');
       this.assert(results.tasks.length >= 1, 'should find all tasks');
 

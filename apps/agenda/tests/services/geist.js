@@ -115,7 +115,7 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const geistService = createGeistService(dbService);
 
       // First create a task
-      const task = await dbService.createTask('task to complete');
+      const task = await dbService.createTask({ title: 'task to complete' });
 
       const result = await geistService.executeTool('complete_task', {
         id: task.rid
@@ -162,8 +162,8 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const geistService = createGeistService(dbService);
 
       // Create some searchable items
-      await dbService.createLog('geist search test log');
-      await dbService.createTask('geist search test task');
+      await dbService.createLog({ content: 'geist search test log' });
+      await dbService.createTask({ title: 'geist search test task' });
 
       const result = await geistService.executeTool('search', {
         query: 'geist search test'
@@ -194,8 +194,8 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const geistService = createGeistService(dbService);
 
       // Create some tasks
-      await dbService.createTask('geist list task 1');
-      await dbService.createTask('geist list task 2');
+      await dbService.createTask({ title: 'geist list task 1' });
+      await dbService.createTask({ title: 'geist list task 2' });
 
       const result = await geistService.executeTool('list_tasks', {});
 
@@ -218,8 +218,8 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const dbService = await createDbService();
       const geistService = createGeistService(dbService);
 
-      await dbService.createLog('geist list log 1');
-      await dbService.createLog('geist list log 2');
+      await dbService.createLog({ content: 'geist list log 1' });
+      await dbService.createLog({ content: 'geist list log 2' });
 
       const result = await geistService.executeTool('list_logs', { limit: 10 });
 
@@ -271,8 +271,8 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const dbService = await createDbService();
       const geistService = createGeistService(dbService);
 
-      await dbService.createReminder('geist list reminder 1', new Date(Date.now() + 86400000).toISOString());
-      await dbService.createReminder('geist list reminder 2', new Date(Date.now() + 172800000).toISOString());
+      await dbService.createReminder({ message: 'geist list reminder 1', triggerAt: new Date(Date.now() + 86400000).toISOString() });
+      await dbService.createReminder({ message: 'geist list reminder 2', triggerAt: new Date(Date.now() + 172800000).toISOString() });
 
       const result = await geistService.executeTool('list_reminders', {});
 
@@ -295,9 +295,9 @@ export default await async function (_, $, $test, $helpers, $redis, $models, $db
       const dbService = await createDbService();
       const geistService = createGeistService(dbService);
 
-      const reminder1 = await dbService.createReminder('unsent reminder', new Date(Date.now() + 86400000).toISOString());
-      const reminder2 = await dbService.createReminder('sent reminder', new Date(Date.now() - 86400000).toISOString());
-      await dbService.markReminderSent(reminder2.rid);
+      const reminder1 = await dbService.createReminder({ message: 'unsent reminder', triggerAt: new Date(Date.now() + 86400000).toISOString() });
+      const reminder2 = await dbService.createReminder({ message: 'sent reminder', triggerAt: new Date(Date.now() - 86400000).toISOString() });
+      await dbService.markReminderSent({ id: reminder2.rid });
 
       const unsentResult = await geistService.executeTool('list_reminders', { sent: false });
       const sentResult = await geistService.executeTool('list_reminders', { sent: true });

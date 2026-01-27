@@ -71,7 +71,7 @@ export default await async function (_, $, $live, $supervisor) {
             await this.triggerNotification(reminder);
 
             // Mark as sent (this also handles recurrence in DatabaseService)
-            await db.markReminderSent(reminder.rid);
+            await db.markReminderSent({ id: reminder.rid });
             processed.push(reminder);
           }
 

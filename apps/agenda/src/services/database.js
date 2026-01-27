@@ -67,7 +67,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       // Log operations
       $live.RpcMethod.new({
         name: 'createLog',
-        do(content, tags = []) {
+        do({ content, tags = [] }) {
           const log = $models.Log.new({ content, tags });
           log.save(this.db());
           this.publishEvent('log.created', { id: log.sid() });
@@ -76,14 +76,14 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
       $live.RpcMethod.new({
         name: 'getLog',
-        do(id) {
+        do({ id }) {
           const log = $models.Log.findById(this.db(), id);
           return log?.jsonify() ?? null;
         }
       }),
       $live.RpcMethod.new({
         name: 'listLogs',
-        do(limit = 50) {
+        do({ limit = 50 } = {}) {
           const logs = $models.Log.findAll(this.db());
           const sorted = logs.sort((a, b) => b.timestamp() - a.timestamp());
           return sorted.slice(0, limit).map(l => l.jsonify());
@@ -93,7 +93,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       // Task operations
       $live.RpcMethod.new({
         name: 'createTask',
-        do(title, priority = 3, dueDate = null, tags = []) {
+        do({ title, priority = 3, dueDate = null, tags = [] }) {
           const task = $models.Task.new({
             title,
             priority,
@@ -107,14 +107,14 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
       $live.RpcMethod.new({
         name: 'getTask',
-        do(id) {
+        do({ id }) {
           const task = $models.Task.findById(this.db(), id);
           return task?.jsonify() ?? null;
         }
       }),
       $live.RpcMethod.new({
         name: 'completeTask',
-        do(id) {
+        do({ id }) {
           const task = $models.Task.findById(this.db(), id);
           if (!task) {
             throw new Error(`Task not found: ${id}`);
@@ -150,7 +150,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       // Reminder operations
       $live.RpcMethod.new({
         name: 'createReminder',
-        do(message, triggerAt, recurrence = null) {
+        do({ message, triggerAt, recurrence = null }) {
           const reminderData = {
             message,
             triggerAt: new Date(triggerAt)
@@ -166,7 +166,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
       $live.RpcMethod.new({
         name: 'getReminder',
-        do(id) {
+        do({ id }) {
           const reminder = $models.Reminder.findById(this.db(), id);
           return reminder?.jsonify() ?? null;
         }
@@ -181,7 +181,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
       $live.RpcMethod.new({
         name: 'markReminderSent',
-        do(id) {
+        do({ id }) {
           const reminder = $models.Reminder.findById(this.db(), id);
           if (!reminder) {
             throw new Error(`Reminder not found: ${id}`);
@@ -219,7 +219,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       // Search
       $live.RpcMethod.new({
         name: 'search',
-        do(query) {
+        do({ query }) {
           const q = query.toLowerCase();
           const matchAll = q === '*' || q === '';
 

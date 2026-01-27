@@ -3,6 +3,108 @@ import { __, base } from "simulabra";
 
 export default await async function (_, $, $html) {
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HTTP API Client
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  $.Class.new({
+    name: "AgendaApiClient",
+    doc: "HTTP client for Agenda API endpoints",
+    slots: [
+      $.Var.new({ name: "baseUrl", default: "" }),
+      $.Var.new({ name: "lastSuccessTime" }),
+      $.Var.new({ name: "consecutiveFailures", default: 0 }),
+      $.Method.new({
+        name: "apiCall",
+        async do(method, path, body = null) {
+          const url = this.baseUrl() + path;
+          const options = {
+            method,
+            headers: { "Content-Type": "application/json" },
+          };
+          if (body !== null) {
+            options.body = JSON.stringify(body);
+          }
+          const response = await fetch(url, options);
+          const data = await response.json();
+          if (!data.ok) {
+            throw new Error(data.error || "API call failed");
+          }
+          this.lastSuccessTime(Date.now());
+          this.consecutiveFailures(0);
+          return data.value;
+        }
+      }),
+      $.Method.new({
+        name: "markFailure",
+        do() {
+          this.consecutiveFailures(this.consecutiveFailures() + 1);
+        }
+      }),
+      $.Method.new({
+        name: "isOnline",
+        do() {
+          const last = this.lastSuccessTime();
+          if (!last) return false;
+          return Date.now() - last < 30000;
+        }
+      }),
+      // API methods
+      $.Method.new({
+        name: "getStatus",
+        async do() {
+          return await this.apiCall("GET", "/api/v1/status");
+        }
+      }),
+      $.Method.new({
+        name: "listTasks",
+        async do(filter = {}) {
+          return await this.apiCall("POST", "/api/v1/tasks/list", filter);
+        }
+      }),
+      $.Method.new({
+        name: "completeTask",
+        async do(id) {
+          return await this.apiCall("POST", "/api/v1/tasks/complete", { id });
+        }
+      }),
+      $.Method.new({
+        name: "listLogs",
+        async do(opts = {}) {
+          return await this.apiCall("POST", "/api/v1/logs/list", opts);
+        }
+      }),
+      $.Method.new({
+        name: "listReminders",
+        async do(filter = {}) {
+          return await this.apiCall("POST", "/api/v1/reminders/list", filter);
+        }
+      }),
+      $.Method.new({
+        name: "chatHistory",
+        async do(opts = {}) {
+          return await this.apiCall("POST", "/api/v1/chat/history", opts);
+        }
+      }),
+      $.Method.new({
+        name: "chatWait",
+        async do(opts) {
+          return await this.apiCall("POST", "/api/v1/chat/wait", opts);
+        }
+      }),
+      $.Method.new({
+        name: "chatSend",
+        async do(opts) {
+          return await this.apiCall("POST", "/api/v1/chat/send", opts);
+        }
+      }),
+    ]
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UI Components
+  // ═══════════════════════════════════════════════════════════════════════════
+
   $.Class.new({
     name: "TopBar",
     doc: "Header bar with title and menu toggle",
@@ -278,8 +380,10 @@ export default await async function (_, $, $html) {
         name: "handleSubmit",
         async do(e) {
           e.preventDefault();
-          const text = this.inputText().trim();
+          const input = e.target.querySelector('.chat-input');
+          const text = input.value.trim();
           if (!text) return;
+          input.value = "";
           this.inputText("");
           await this.app().sendMessage(text);
         }
@@ -313,8 +417,9 @@ export default await async function (_, $, $html) {
               </div>
               <form class="chat-input-form" onsubmit=${e => this.handleSubmit(e)}>
                 <input type="text" class="chat-input" placeholder="Ask anything..."
-                       value=${() => this.inputText()}
-                       oninput=${e => this.inputText(e.target.value)} />
+                       oninput=${e => this.inputText(e.target.value)}
+                       onchange=${e => this.inputText(e.target.value)}
+                       onfocus=${e => this.inputText(e.target.value)} />
                 <button type="submit" class="chat-send" disabled=${() => this.app().loading()}>
                   ${() => this.app().loading() ? "..." : "send"}
                 </button>
@@ -385,15 +490,15 @@ export default await async function (_, $, $html) {
     doc: "Main agenda web application",
     slots: [
       $html.Component,
-      $html.LiveBrowserClient,
       $.Signal.new({ name: "activeView", default: "chat" }),
       $.Signal.new({ name: "tasks", default: [] }),
       $.Signal.new({ name: "logs", default: [] }),
       $.Signal.new({ name: "reminders", default: [] }),
       $.Signal.new({ name: "messages", default: [] }),
       $.Signal.new({ name: "loading", default: false }),
-      $.Signal.new({ name: "connectionState", default: "offline" }),
+      $.Signal.new({ name: "connectionState", default: "connecting" }),
       $.Signal.new({ name: "fallbackPolling", default: false }),
+      $.Var.new({ name: "api" }),
       $.Var.new({ name: "lastSeenId", default: null }),
       $.Var.new({ name: "syncRunning", default: false }),
       $.Var.new({ name: "syncFailCount", default: 0 }),
@@ -402,27 +507,33 @@ export default await async function (_, $, $html) {
       $.After.new({
         name: "init",
         do() {
-          this.onConnect(async () => {
+          this.api(_.AgendaApiClient.new());
+          this.initConnection();
+        }
+      }),
+
+      $.Method.new({
+        name: "initConnection",
+        async do() {
+          try {
+            await this.api().getStatus();
             this.connectionState("connected");
-            this.fallbackPolling(false);
-            this.syncFailCount(0);
             this.addMessage({ role: "system", content: "Connected to Agenda" });
             await this.loadChatHistory();
-            this.refreshData();
+            await this.refreshData();
             this.startSyncLoop();
-          });
-          this.onDisconnect(() => {
-            this.connectionState("reconnecting");
-            this.syncRunning(false);
-          });
-          this.onError(() => {
-            if (this.connectionState() !== "reconnecting") {
-              this.connectionState("offline");
-            }
-          });
-          setTimeout(() => this.connect().catch(() => {
+          } catch (e) {
             this.connectionState("offline");
-          }), 100);
+            this.addMessage({ role: "system", content: "Cannot connect to server" });
+            setTimeout(() => this.initConnection(), 5000);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "connected",
+        do() {
+          return this.connectionState() === "connected";
         }
       }),
 
@@ -431,7 +542,7 @@ export default await async function (_, $, $html) {
         doc: "load chat history from the server on connect",
         async do() {
           try {
-            const history = await this.rpcCall("DatabaseService", "listChatMessages", [{ conversationId: "main", limit: 10 }]);
+            const history = await this.api().chatHistory({ conversationId: "main", limit: 10 });
             if (history && history.length > 0) {
               this.messages(history);
               this.lastSeenId(history[history.length - 1].id);
@@ -444,34 +555,23 @@ export default await async function (_, $, $html) {
 
       $.Method.new({
         name: "startSyncLoop",
-        doc: "start the background sync loop for new messages with fallback polling",
+        doc: "start the background sync loop for new messages via HTTP long-polling",
         async do() {
           if (this.syncRunning()) return;
           this.syncRunning(true);
 
           while (this.syncRunning() && this.connected()) {
             try {
-              let newMessages;
-              if (this.fallbackPolling()) {
-                newMessages = await this.rpcCall("DatabaseService", "readChatMessages", [{
-                  conversationId: "main",
-                  afterId: this.lastSeenId() || 0,
-                  limit: 50
-                }]);
-                await new Promise(r => setTimeout(r, 5000));
-              } else {
-                newMessages = await this.rpcCall("DatabaseService", "waitForChatMessages", [{
-                  conversationId: "main",
-                  afterId: this.lastSeenId(),
-                  timeoutMs: 20000,
-                  limit: 50
-                }]);
-              }
+              const newMessages = await this.api().chatWait({
+                conversationId: "main",
+                afterId: this.lastSeenId() || 0,
+                timeoutMs: 20000,
+                limit: 50
+              });
 
               this.syncFailCount(0);
               if (this.fallbackPolling()) {
                 this.fallbackPolling(false);
-                this.addMessage({ role: "system", content: "Sync restored" });
               }
 
               if (newMessages && newMessages.length > 0) {
@@ -488,11 +588,14 @@ export default await async function (_, $, $html) {
               if (this.connected()) {
                 const failCount = this.syncFailCount() + 1;
                 this.syncFailCount(failCount);
-                if (failCount >= 3 && !this.fallbackPolling()) {
-                  this.fallbackPolling(true);
-                  this.addMessage({ role: "system", content: "Falling back to polling" });
+                this.api().markFailure();
+                if (failCount >= 3) {
+                  this.connectionState("reconnecting");
+                  this.syncRunning(false);
+                  setTimeout(() => this.initConnection(), 5000);
+                  return;
                 }
-                await new Promise(r => setTimeout(r, this.fallbackPolling() ? 5000 : 2000));
+                await new Promise(r => setTimeout(r, 2000));
               }
             }
           }
@@ -505,9 +608,9 @@ export default await async function (_, $, $html) {
           if (!this.connected()) return;
           try {
             const [tasks, logs, reminders] = await Promise.all([
-              this.rpcCall("DatabaseService", "listTasks", [{}]),
-              this.rpcCall("DatabaseService", "listLogs", [50]),
-              this.rpcCall("DatabaseService", "listReminders", [{}]),
+              this.api().listTasks({}),
+              this.api().listLogs({ limit: 50 }),
+              this.api().listReminders({}),
             ]);
             this.tasks(tasks);
             this.logs(logs);
@@ -536,13 +639,13 @@ export default await async function (_, $, $html) {
           this.addMessage({ role: "user", content: text, source: "ui", _pending: clientMessageId });
           this.loading(true);
           try {
-            const result = await this.rpcCall("GeistService", "interpretMessage", [{
+            const result = await this.api().chatSend({
               conversationId: "main",
               text,
               source: "ui",
               clientUid: this.clientUid(),
               clientMessageId,
-            }]);
+            });
             if (result.success) {
               const msgs = this.messages().filter(m => m._pending !== clientMessageId);
               if (result.userMessage) msgs.push(result.userMessage);
@@ -568,7 +671,7 @@ export default await async function (_, $, $html) {
         async do(taskId) {
           if (!this.connected()) return;
           try {
-            await this.rpcCall("DatabaseService", "completeTask", [taskId]);
+            await this.api().completeTask(taskId);
             await this.refreshData();
           } catch (e) {
             this.addMessage({ role: "system", content: `Failed to complete task: ${e.message}` });

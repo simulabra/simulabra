@@ -33,7 +33,7 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.createLog(args.content, args.tags || []);
+          return await services.db.createLog({ content: args.content, tags: args.tags || [] });
         }
       }),
     ]
@@ -80,7 +80,12 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.createTask(args.title, args.priority || 3, args.dueDate || null, args.tags || []);
+          return await services.db.createTask({
+            title: args.title,
+            priority: args.priority || 3,
+            dueDate: args.dueDate || null,
+            tags: args.tags || []
+          });
         }
       }),
     ]
@@ -112,7 +117,7 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.completeTask(args.id);
+          return await services.db.completeTask({ id: args.id });
         }
       }),
     ]
@@ -162,7 +167,11 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.createReminder(args.message, args.when, args.recurrence || null);
+          return await services.db.createReminder({
+            message: args.message,
+            triggerAt: args.when,
+            recurrence: args.recurrence || null
+          });
         }
       }),
     ]
@@ -194,7 +203,7 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.search(args.query);
+          return await services.db.search({ query: args.query });
         }
       }),
     ]
@@ -264,7 +273,7 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.listLogs(args.limit || 50);
+          return await services.db.listLogs({ limit: args.limit || 50 });
         }
       }),
     ]
