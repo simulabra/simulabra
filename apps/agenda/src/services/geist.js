@@ -20,7 +20,9 @@ export default await async function (_, $, $live, $supervisor, $tools) {
       }),
       $.Var.new({
         name: 'systemPrompt',
-        default: `you are a productivity ghost. terse responses only.
+        default: `you are a productivity ghost: the geist of SIMULABRA AGENDA. keep your responses terse and to the point.
+sprinkle in a bit of wit when appropriate.
+the user communicates through lazily typed messages. your job is to figure out what they're asking for and do it.
 
 tools:
 - thought/note/journal → create_log
@@ -33,11 +35,48 @@ tools:
 - reminders → list_reminders
 - webhook/automation → trigger_webhook
 
-confirm actions briefly. summarize search results.
-
 reminders: parse natural time ("tomorrow 3pm", "in 2 hours") → iso 8601. recurrence: pattern + interval.
 
 tasks: priority 1 (urgent) to 5 (low), default 3. parse due dates.`
+      }),
+      $.Var.new({
+        name: 'promptGenerationSystemPrompt',
+        default: `You are analyzing a user's productivity state to generate helpful prompts.
+
+Given their tasks, recent activity, and past response patterns, identify 1-3 items that need attention:
+- Tasks that may have been forgotten (no updates in a week+)
+- Tasks approaching deadlines
+- Tasks the user frequently snoozes (maybe should be backlogged)
+- Patterns suggesting follow-up questions
+
+Generate concise, friendly prompts. Each should:
+- Reference a specific task by name
+- Ask a natural question or offer an action
+- Be easy to respond to (yes/no or quick update)
+
+Avoid prompting about items the user has previously dismissed multiple times.
+
+Respond with a JSON array of prompt objects. Each object should have:
+- itemType: "task" | "log" | "reminder"
+- itemId: the id of the related item
+- message: the prompt text to display
+
+Example response:
+[
+  {"itemType": "task", "itemId": "abc123", "message": "Did you get around to fixing the login bug? It's been a week."},
+  {"itemType": "task", "itemId": "def456", "message": "The quarterly report is due tomorrow - still on track?"}
+]
+
+If nothing needs attention, respond with an empty array: []`
+      }),
+      $.Var.new({
+        name: 'pollInterval',
+        doc: 'polling interval in milliseconds for prompt generation',
+        default: 60 * 60 * 1000, // 1 hour
+      }),
+      $.Var.new({
+        name: 'pollTimer',
+        doc: 'reference to the polling timer',
       }),
 
       $.After.new({
@@ -338,6 +377,272 @@ tasks: priority 1 (urgent) to 5 (low), default 3. parse due dates.`
       }),
 
       $.Method.new({
+        name: 'analyzeContext',
+        doc: 'gather current state for prompt generation',
+        async do() {
+          const db = this.dbService();
+          if (!db) {
+            throw new Error('No database service connected');
+          }
+
+          const [tasks, logs, reminders, config] = await Promise.all([
+            db.listTasks({ done: false }),
+            db.listLogs({ limit: 20 }),
+            db.listReminders({ sent: false }),
+            db.getPromptConfig({}),
+          ]);
+
+          return {
+            tasks,
+            logs,
+            reminders,
+            config,
+            currentTime: new Date().toISOString(),
+          };
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'generatePrompts',
+        doc: 'generate prompts by analyzing context and calling Claude',
+        async do() {
+          if (!this.client()) {
+            return { success: false, error: 'Claude API not configured' };
+          }
+
+          const db = this.dbService();
+          if (!db) {
+            return { success: false, error: 'No database service connected' };
+          }
+
+          try {
+            const context = await this.analyzeContext();
+
+            if (context.tasks.length === 0) {
+              await db.updatePromptConfig({ lastGenerationAt: new Date().toISOString() });
+              return { success: true, promptsCreated: 0, message: 'No tasks to analyze' };
+            }
+
+            const userMessage = `Current state:
+
+Tasks (${context.tasks.length}):
+${context.tasks.map(t => `- [${t.id}] ${t.title} (P${t.priority}${t.dueDate ? ', due: ' + t.dueDate : ''})`).join('\n')}
+
+Recent logs (${context.logs.length}):
+${context.logs.slice(0, 5).map(l => `- ${l.content.substring(0, 100)}`).join('\n')}
+
+Pending reminders (${context.reminders.length}):
+${context.reminders.map(r => `- [${r.id}] ${r.message}`).join('\n')}
+
+Response history (last ${Math.min(context.config.responseHistory.length, 10)} actions):
+${context.config.responseHistory.slice(-10).map(r => `- ${r.action} on ${r.itemType}`).join('\n') || 'None'}
+
+Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need attention.`;
+
+            const response = await this.client().messages.create({
+              model: this.model(),
+              max_tokens: 1024,
+              system: this.promptGenerationSystemPrompt(),
+              messages: [{ role: 'user', content: userMessage }],
+            });
+
+            let promptsData = [];
+            for (const block of response.content) {
+              if (block.type === 'text') {
+                try {
+                  promptsData = JSON.parse(block.text);
+                } catch (e) {
+                  this.tlog('Failed to parse prompt response:', e.message);
+                  return { success: false, error: 'Failed to parse Claude response as JSON' };
+                }
+              }
+            }
+
+            let promptsCreated = 0;
+            for (const promptData of promptsData) {
+              if (promptData.itemType && promptData.itemId && promptData.message) {
+                await db.createPrompt({
+                  itemType: promptData.itemType,
+                  itemId: promptData.itemId,
+                  message: promptData.message,
+                  context: { generatedFrom: context },
+                  status: 'pending',
+                });
+                promptsCreated++;
+              }
+            }
+
+            await db.updatePromptConfig({ lastGenerationAt: new Date().toISOString() });
+
+            this.tlog(`Generated ${promptsCreated} prompts`);
+            return { success: true, promptsCreated };
+          } catch (e) {
+            this.tlog('generatePrompts error:', e.message);
+            return { success: false, error: e.message };
+          }
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'getPendingPrompts',
+        doc: 'get pending prompts that are not snoozed',
+        async do({ limit = 10 } = {}) {
+          const db = this.dbService();
+          if (!db) {
+            throw new Error('No database service connected');
+          }
+
+          const prompts = await db.listPrompts({ status: 'pending', limit: limit * 2 });
+          const now = Date.now();
+
+          return prompts
+            .filter(p => {
+              if (!p.snoozeUntil) return true;
+              return new Date(p.snoozeUntil).getTime() <= now;
+            })
+            .slice(0, limit);
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'actionPrompt',
+        doc: 'handle user action on a prompt (done/backlog/snooze/dismiss)',
+        async do({ id, action }) {
+          const db = this.dbService();
+          if (!db) {
+            throw new Error('No database service connected');
+          }
+
+          const prompts = await db.listPrompts({ limit: 1000 });
+          const prompt = prompts.find(p => p.id === id);
+          if (!prompt) {
+            throw new Error(`Prompt not found: ${id}`);
+          }
+
+          const updateFields = {
+            id,
+            action,
+            actionedAt: new Date().toISOString(),
+          };
+
+          switch (action) {
+            case 'done':
+              updateFields.status = 'actioned';
+              if (prompt.itemType === 'task' && prompt.itemId) {
+                try {
+                  await db.completeTask({ id: prompt.itemId });
+                } catch (e) {
+                  this.tlog(`Failed to complete task ${prompt.itemId}:`, e.message);
+                }
+              }
+              break;
+
+            case 'backlog':
+              updateFields.status = 'actioned';
+              if (prompt.itemType === 'task' && prompt.itemId) {
+                try {
+                  await db.updateTask({ id: prompt.itemId, priority: 5 });
+                } catch (e) {
+                  this.tlog(`Failed to backlog task ${prompt.itemId}:`, e.message);
+                }
+              }
+              break;
+
+            case 'snooze':
+              updateFields.status = 'pending';
+              updateFields.snoozeUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+              break;
+
+            case 'dismiss':
+              updateFields.status = 'dismissed';
+              break;
+
+            default:
+              throw new Error(`Unknown action: ${action}`);
+          }
+
+          const result = await db.updatePrompt(updateFields);
+
+          const config = await db.getPromptConfig({});
+          const history = config.responseHistory || [];
+          history.push({
+            promptId: id,
+            action,
+            itemType: prompt.itemType,
+            itemId: prompt.itemId,
+            timestamp: new Date().toISOString(),
+          });
+          if (history.length > 100) {
+            history.shift();
+          }
+          await db.updatePromptConfig({ responseHistory: history });
+
+          return result;
+        }
+      }),
+
+      $.Method.new({
+        name: 'shouldPoll',
+        doc: 'check if enough time has passed for prompt generation',
+        async do() {
+          const db = this.dbService();
+          if (!db) return false;
+
+          const config = await db.getPromptConfig({});
+          if (!config.lastGenerationAt) return true;
+
+          const hoursSince = (Date.now() - new Date(config.lastGenerationAt).getTime()) / (1000 * 60 * 60);
+          return hoursSince >= config.promptFrequencyHours;
+        }
+      }),
+
+      $.Method.new({
+        name: 'pollForPrompts',
+        doc: 'check if prompts should be generated and do so if needed',
+        async do() {
+          if (await this.shouldPoll()) {
+            this.tlog('Polling: generating prompts');
+            await this.generatePrompts();
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: 'startPolling',
+        doc: 'start the prompt generation polling loop',
+        do() {
+          if (this.pollTimer()) {
+            return;
+          }
+
+          const poll = async () => {
+            try {
+              await this.pollForPrompts();
+            } catch (e) {
+              this.tlog('Polling error:', e.message);
+            }
+          };
+
+          poll();
+
+          this.pollTimer(setInterval(() => poll(), this.pollInterval()));
+          this.tlog(`Started prompt polling (interval: ${this.pollInterval() / 1000}s)`);
+        }
+      }),
+
+      $.Method.new({
+        name: 'stopPolling',
+        doc: 'stop the prompt generation polling loop',
+        do() {
+          if (this.pollTimer()) {
+            clearInterval(this.pollTimer());
+            this.pollTimer(null);
+            this.tlog('Stopped prompt polling');
+          }
+        }
+      }),
+
+      $.Method.new({
         name: 'connectToDatabase',
         doc: 'connect to DatabaseService via supervisor proxy',
         async do() {
@@ -357,6 +662,7 @@ tasks: priority 1 (urgent) to 5 (low), default 3. parse due dates.`
     await service.connect();
     await service.waitForService({ name: 'DatabaseService' });
     await service.connectToDatabase();
+    service.startPolling();
     __.tlog('GeistService started');
   }
 }.module({

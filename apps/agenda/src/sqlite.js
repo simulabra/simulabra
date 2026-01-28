@@ -167,6 +167,67 @@ export default await async function (_, $, $db) {
     }
   });
 
+  const migration005 = $db.Migration.new({
+    name: '005_create_prompts',
+    version: '005',
+    description: 'Create Prompt and PromptConfig tables for proactive prompting',
+    up(db) {
+      db.query(`CREATE TABLE IF NOT EXISTS agenda_Prompt (
+        sid TEXT PRIMARY KEY,
+        itemType TEXT,
+        itemId TEXT,
+        message TEXT,
+        context TEXT,
+        status TEXT,
+        action TEXT,
+        generatedAt TEXT,
+        shownAt TEXT,
+        actionedAt TEXT,
+        snoozeUntil TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`).run();
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Prompt_itemType ON agenda_Prompt (itemType)`).run();
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Prompt_status ON agenda_Prompt (status)`).run();
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Prompt_generatedAt ON agenda_Prompt (generatedAt)`).run();
+
+      db.query(`CREATE VIRTUAL TABLE IF NOT EXISTS agenda_Prompt_fts USING fts5(sid, message, content='agenda_Prompt', content_rowid='rowid')`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Prompt_fts_ai AFTER INSERT ON agenda_Prompt BEGIN
+        INSERT INTO agenda_Prompt_fts(rowid, sid, message) VALUES (NEW.rowid, NEW.sid, NEW.message);
+      END`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Prompt_fts_ad AFTER DELETE ON agenda_Prompt BEGIN
+        INSERT INTO agenda_Prompt_fts(agenda_Prompt_fts, rowid, sid, message) VALUES ('delete', OLD.rowid, OLD.sid, OLD.message);
+      END`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Prompt_fts_au AFTER UPDATE ON agenda_Prompt BEGIN
+        INSERT INTO agenda_Prompt_fts(agenda_Prompt_fts, rowid, sid, message) VALUES ('delete', OLD.rowid, OLD.sid, OLD.message);
+        INSERT INTO agenda_Prompt_fts(rowid, sid, message) VALUES (NEW.rowid, NEW.sid, NEW.message);
+      END`).run();
+
+      db.query(`CREATE TABLE IF NOT EXISTS agenda_PromptConfig (
+        sid TEXT PRIMARY KEY,
+        key TEXT UNIQUE,
+        promptFrequencyHours TEXT,
+        maxPromptsPerCycle TEXT,
+        taskStalenessDays TEXT,
+        lastGenerationAt TEXT,
+        responseHistory TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`).run();
+    },
+    down(db) {
+      db.query(`DROP TRIGGER IF EXISTS agenda_Prompt_fts_ai`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Prompt_fts_ad`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Prompt_fts_au`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Prompt_fts`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Prompt_itemType`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Prompt_status`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Prompt_generatedAt`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Prompt`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_PromptConfig`).run();
+    }
+  });
+
   $.Class.new({
     name: 'AgendaMigrations',
     doc: 'Helper class to get agenda migrations',
@@ -175,7 +236,7 @@ export default await async function (_, $, $db) {
         name: 'all',
         doc: 'get all agenda migrations in order',
         do() {
-          return [migration001, migration002, migration003, migration004];
+          return [migration001, migration002, migration003, migration004, migration005];
         }
       }),
     ]

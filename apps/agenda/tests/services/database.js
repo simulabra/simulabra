@@ -303,6 +303,234 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
       service.db().close();
     }
   });
+
+  // Prompt service tests
+  $test.Case.new({
+    name: 'DatabaseServiceCreatePrompt',
+    doc: 'DatabaseService should create prompts',
+    do() {
+      const service = createTestService();
+
+      const prompt = service.createPrompt({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Did you finish this task?'
+      });
+      this.assert(prompt.$class === 'Prompt', 'should return Prompt');
+      this.assertEq(prompt.itemType, 'task');
+      this.assertEq(prompt.itemId, 'task-123');
+      this.assertEq(prompt.message, 'Did you finish this task?');
+      this.assertEq(prompt.status, 'pending');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceCreatePromptWithContext',
+    doc: 'DatabaseService should create prompts with context',
+    do() {
+      const service = createTestService();
+
+      const prompt = service.createPrompt({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Check on this',
+        context: { daysSinceUpdate: 7, taskTitle: 'Important task' }
+      });
+      this.assertEq(prompt.context.daysSinceUpdate, 7);
+      this.assertEq(prompt.context.taskTitle, 'Important task');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceListPrompts',
+    doc: 'DatabaseService should list prompts',
+    do() {
+      const service = createTestService();
+
+      service.createPrompt({ itemType: 'task', itemId: '1', message: 'Prompt 1' });
+      service.createPrompt({ itemType: 'task', itemId: '2', message: 'Prompt 2' });
+
+      const prompts = service.listPrompts({});
+      this.assertEq(prompts.length, 2);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceListPromptsWithStatusFilter',
+    doc: 'DatabaseService should filter prompts by status',
+    do() {
+      const service = createTestService();
+
+      const prompt1 = service.createPrompt({ itemType: 'task', itemId: '1', message: 'Pending 1' });
+      service.createPrompt({ itemType: 'task', itemId: '2', message: 'Pending 2' });
+      service.updatePrompt({ id: prompt1.id, status: 'shown' });
+
+      const pendingPrompts = service.listPrompts({ status: 'pending' });
+      this.assertEq(pendingPrompts.length, 1);
+      this.assertEq(pendingPrompts[0].message, 'Pending 2');
+
+      const shownPrompts = service.listPrompts({ status: 'shown' });
+      this.assertEq(shownPrompts.length, 1);
+      this.assertEq(shownPrompts[0].message, 'Pending 1');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdatePrompt',
+    doc: 'DatabaseService should update prompts',
+    do() {
+      const service = createTestService();
+
+      const prompt = service.createPrompt({ itemType: 'task', itemId: '1', message: 'Test' });
+      const updated = service.updatePrompt({
+        id: prompt.id,
+        status: 'actioned',
+        action: 'done',
+        actionedAt: new Date().toISOString()
+      });
+
+      this.assertEq(updated.status, 'actioned');
+      this.assertEq(updated.action, 'done');
+      this.assert(updated.actionedAt, 'should have actionedAt');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdatePromptSnooze',
+    doc: 'DatabaseService should update prompt with snooze',
+    do() {
+      const service = createTestService();
+
+      const prompt = service.createPrompt({ itemType: 'task', itemId: '1', message: 'Test' });
+      const snoozeTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const updated = service.updatePrompt({
+        id: prompt.id,
+        action: 'snooze',
+        snoozeUntil: snoozeTime
+      });
+
+      this.assertEq(updated.action, 'snooze');
+      this.assert(updated.snoozeUntil, 'should have snoozeUntil');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdatePromptNotFound',
+    doc: 'DatabaseService should throw when updating non-existent prompt',
+    do() {
+      const service = createTestService();
+
+      this.assertThrows(
+        () => service.updatePrompt({ id: 'nonexistent', status: 'shown' }),
+        'Prompt not found',
+        'should throw for non-existent prompt'
+      );
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceGetPromptConfig',
+    doc: 'DatabaseService should get or create prompt config',
+    do() {
+      const service = createTestService();
+
+      const config = service.getPromptConfig({});
+      this.assert(config.$class === 'PromptConfig', 'should return PromptConfig');
+      this.assertEq(config.key, 'main');
+      this.assertEq(config.promptFrequencyHours, 8);
+      this.assertEq(config.maxPromptsPerCycle, 3);
+      this.assertEq(config.taskStalenessDays, 7);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceGetPromptConfigIdempotent',
+    doc: 'DatabaseService getPromptConfig should return same config on multiple calls',
+    do() {
+      const service = createTestService();
+
+      const config1 = service.getPromptConfig({});
+      const config2 = service.getPromptConfig({});
+
+      this.assertEq(config1.id, config2.id);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdatePromptConfig',
+    doc: 'DatabaseService should update prompt config',
+    do() {
+      const service = createTestService();
+
+      service.getPromptConfig({});
+      const updated = service.updatePromptConfig({
+        promptFrequencyHours: 12,
+        maxPromptsPerCycle: 5,
+        taskStalenessDays: 14
+      });
+
+      this.assertEq(updated.promptFrequencyHours, 12);
+      this.assertEq(updated.maxPromptsPerCycle, 5);
+      this.assertEq(updated.taskStalenessDays, 14);
+
+      const fetched = service.getPromptConfig({});
+      this.assertEq(fetched.promptFrequencyHours, 12);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdatePromptConfigLastGeneration',
+    doc: 'DatabaseService should update lastGenerationAt',
+    do() {
+      const service = createTestService();
+
+      const now = new Date().toISOString();
+      const updated = service.updatePromptConfig({ lastGenerationAt: now });
+
+      this.assert(updated.lastGenerationAt, 'should have lastGenerationAt');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdatePromptConfigResponseHistory',
+    doc: 'DatabaseService should update response history',
+    do() {
+      const service = createTestService();
+
+      const history = [
+        { promptId: '1', action: 'done', timestamp: new Date().toISOString() },
+        { promptId: '2', action: 'dismiss', timestamp: new Date().toISOString() }
+      ];
+      const updated = service.updatePromptConfig({ responseHistory: history });
+
+      this.assertEq(updated.responseHistory.length, 2);
+      this.assertEq(updated.responseHistory[0].action, 'done');
+
+      service.db().close();
+    }
+  });
 }.module({
   name: 'test.services.database',
   imports: [base, test, db, helpers, sqlite, models, database],

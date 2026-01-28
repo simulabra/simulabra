@@ -656,6 +656,243 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
       database.close();
     }
   });
+
+  // Prompt model tests
+  $test.Case.new({
+    name: 'PromptCreation',
+    doc: 'Prompt should be created with defaults',
+    do() {
+      const prompt = $models.Prompt.new({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Did you finish this task?'
+      });
+      this.assertEq(prompt.itemType(), 'task');
+      this.assertEq(prompt.itemId(), 'task-123');
+      this.assertEq(prompt.message(), 'Did you finish this task?');
+      this.assertEq(prompt.status(), 'pending');
+      this.assert(prompt.generatedAt() instanceof Date, 'should have generatedAt');
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptWithContext',
+    doc: 'Prompt should store JSON context',
+    do() {
+      const context = { taskTitle: 'Test Task', daysSinceUpdate: 7 };
+      const prompt = $models.Prompt.new({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Check on this task',
+        context
+      });
+      this.assertEq(prompt.context().taskTitle, 'Test Task');
+      this.assertEq(prompt.context().daysSinceUpdate, 7);
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptDescription',
+    doc: 'Prompt description should show status and message',
+    do() {
+      const prompt = $models.Prompt.new({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Did you complete this?'
+      });
+      const desc = prompt.description();
+      this.assert(desc.includes('⏳'), 'should show pending icon');
+      this.assert(desc.includes('[task]'), 'should show item type');
+      this.assert(desc.includes('Did you complete this?'), 'should show message');
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptPersistence',
+    doc: 'Prompt should save and load from SQLite',
+    do() {
+      const database = createTestDb();
+
+      const prompt = $models.Prompt.new({
+        itemType: 'reminder',
+        itemId: 'reminder-456',
+        message: 'Follow up on this reminder',
+        context: { importance: 'high' }
+      });
+      prompt.save(database);
+
+      const found = $models.Prompt.findById(database, prompt.sid());
+      this.assertEq(found.itemType(), 'reminder');
+      this.assertEq(found.itemId(), 'reminder-456');
+      this.assertEq(found.message(), 'Follow up on this reminder');
+      this.assertEq(found.context().importance, 'high');
+      this.assertEq(found.status(), 'pending');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptStatusUpdate',
+    doc: 'Prompt status and action should be mutable',
+    do() {
+      const database = createTestDb();
+
+      const prompt = $models.Prompt.new({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Test prompt'
+      });
+      prompt.save(database);
+
+      prompt.status('actioned');
+      prompt.action('done');
+      prompt.actionedAt(new Date());
+      prompt.save(database);
+
+      const found = $models.Prompt.findById(database, prompt.sid());
+      this.assertEq(found.status(), 'actioned');
+      this.assertEq(found.action(), 'done');
+      this.assert(found.actionedAt() instanceof Date, 'should have actionedAt');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptSnooze',
+    doc: 'Prompt should support snooze functionality',
+    do() {
+      const database = createTestDb();
+
+      const prompt = $models.Prompt.new({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Snoozeable prompt'
+      });
+      prompt.save(database);
+
+      const snoozeTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      prompt.action('snooze');
+      prompt.snoozeUntil(snoozeTime);
+      prompt.save(database);
+
+      const found = $models.Prompt.findById(database, prompt.sid());
+      this.assertEq(found.action(), 'snooze');
+      this.assert(found.snoozeUntil() instanceof Date, 'should have snoozeUntil');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptFindByStatus',
+    doc: 'Prompt should be findable by status index',
+    do() {
+      const database = createTestDb();
+
+      const prompt1 = $models.Prompt.new({ itemType: 'task', itemId: '1', message: 'Pending 1' });
+      const prompt2 = $models.Prompt.new({ itemType: 'task', itemId: '2', message: 'Pending 2' });
+      const prompt3 = $models.Prompt.new({ itemType: 'task', itemId: '3', message: 'Shown', status: 'shown' });
+      prompt1.save(database);
+      prompt2.save(database);
+      prompt3.status('shown');
+      prompt3.save(database);
+
+      const pending = $models.Prompt.findByIndex(database, 'status', 'pending');
+      this.assertEq(pending.length, 2);
+
+      const shown = $models.Prompt.findByIndex(database, 'status', 'shown');
+      this.assertEq(shown.length, 1);
+
+      database.close();
+    }
+  });
+
+  // PromptConfig model tests
+  $test.Case.new({
+    name: 'PromptConfigDefaults',
+    doc: 'PromptConfig should have sensible defaults',
+    do() {
+      const config = $models.PromptConfig.new({});
+      this.assertEq(config.key(), 'main');
+      this.assertEq(config.promptFrequencyHours(), 8);
+      this.assertEq(config.maxPromptsPerCycle(), 3);
+      this.assertEq(config.taskStalenessDays(), 7);
+      this.assertEq(config.responseHistory().length, 0);
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptConfigShouldGenerate',
+    doc: 'PromptConfig.shouldGenerate should check time since last generation',
+    do() {
+      const config = $models.PromptConfig.new({});
+      this.assert(config.shouldGenerate(), 'should generate when no lastGenerationAt');
+
+      config.lastGenerationAt(new Date());
+      this.assert(!config.shouldGenerate(), 'should not generate immediately after');
+
+      const oldTime = new Date(Date.now() - 9 * 60 * 60 * 1000);
+      config.lastGenerationAt(oldTime);
+      this.assert(config.shouldGenerate(), 'should generate after frequency hours passed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptConfigRecordResponse',
+    doc: 'PromptConfig should record responses with history limit',
+    do() {
+      const config = $models.PromptConfig.new({});
+
+      config.recordResponse({ promptId: '1', action: 'done', itemType: 'task' });
+      config.recordResponse({ promptId: '2', action: 'dismiss', itemType: 'task' });
+
+      this.assertEq(config.responseHistory().length, 2);
+      this.assertEq(config.responseHistory()[0].action, 'done');
+      this.assert(config.responseHistory()[0].timestamp, 'should have timestamp');
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptConfigHistoryLimit',
+    doc: 'PromptConfig response history should be limited to 100 entries',
+    do() {
+      const config = $models.PromptConfig.new({});
+
+      for (let i = 0; i < 105; i++) {
+        config.recordResponse({ promptId: String(i), action: 'done' });
+      }
+
+      this.assertEq(config.responseHistory().length, 100);
+      this.assertEq(config.responseHistory()[0].promptId, '5');
+    }
+  });
+
+  $test.Case.new({
+    name: 'PromptConfigPersistence',
+    doc: 'PromptConfig should save and load from SQLite',
+    do() {
+      const database = createTestDb();
+
+      const config = $models.PromptConfig.new({
+        promptFrequencyHours: 12,
+        maxPromptsPerCycle: 5
+      });
+      config.lastGenerationAt(new Date('2025-01-15T10:00:00Z'));
+      config.recordResponse({ promptId: 'test', action: 'done' });
+      config.save(database);
+
+      const found = $models.PromptConfig.findById(database, config.sid());
+      this.assertEq(found.key(), 'main');
+      this.assertEq(found.promptFrequencyHours(), 12);
+      this.assertEq(found.maxPromptsPerCycle(), 5);
+      this.assert(found.lastGenerationAt() instanceof Date, 'should have lastGenerationAt');
+      this.assertEq(found.responseHistory().length, 1);
+
+      database.close();
+    }
+  });
 }.module({
   name: 'test.models',
   imports: [base, test, db, sqlite, time, models],

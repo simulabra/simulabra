@@ -428,3 +428,97 @@
   font-style: italic;
   color: var(--seashell);
 }
+
+/* Notification Banner */
+.notification-banner {
+  padding: 4px;
+  background: var(--mid-sand);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notification-banner:empty {
+  display: none;
+}
+
+.nudge-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background: var(--ocean);
+  color: var(--seashell);
+  font-style: italic;
+  font-size: 14px;
+}
+
+.nudge-btn:hover {
+  box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
+}
+
+.nudge-btn:active {
+  background: var(--sky);
+}
+
+.nudge-btn:disabled {
+  background: var(--wood);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Prompt Card */
+.prompt-card {
+  background: var(--light-sand);
+  padding: 8px;
+  box-shadow: var(--box-shadow-args);
+}
+
+.prompt-message {
+  font-size: 14px;
+  color: var(--charcoal);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.prompt-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.prompt-btn {
+  flex: 1;
+  min-width: 50px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.prompt-btn.done {
+  background: var(--grass);
+  color: var(--seashell);
+}
+
+.prompt-btn.done:hover {
+  box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
+}
+
+.prompt-btn.backlog {
+  background: var(--sand);
+  color: var(--seaweed);
+}
+
+.prompt-btn.later {
+  background: var(--sand);
+  color: var(--ocean);
+}
+
+.prompt-btn.dismiss {
+  background: var(--sand);
+  color: var(--charcoal);
+  opacity: 0.7;
+}
+
+.prompt-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

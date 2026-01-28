@@ -98,12 +98,117 @@ export default await async function (_, $, $html) {
           return await this.apiCall("POST", "/api/v1/chat/send", opts);
         }
       }),
+      $.Method.new({
+        name: "getPendingPrompts",
+        async do(opts = {}) {
+          return await this.apiCall("POST", "/api/v1/prompts/pending", opts);
+        }
+      }),
+      $.Method.new({
+        name: "actionPrompt",
+        async do(opts) {
+          return await this.apiCall("POST", "/api/v1/prompts/action", opts);
+        }
+      }),
+      $.Method.new({
+        name: "generatePrompts",
+        async do() {
+          return await this.apiCall("POST", "/api/v1/prompts/generate", {});
+        }
+      }),
     ]
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // UI Components
   // ═══════════════════════════════════════════════════════════════════════════
+
+  $.Class.new({
+    name: "PromptCard",
+    doc: "Individual prompt notification with action buttons",
+    slots: [
+      $html.Component,
+      $.Var.new({ name: "app" }),
+      $.Var.new({ name: "prompt" }),
+      $.Signal.new({ name: "acting", default: false }),
+      $.Method.new({
+        name: "handleAction",
+        async do(action) {
+          if (this.acting()) return;
+          this.acting(true);
+          try {
+            await this.app().actionPrompt(this.prompt().id, action);
+          } finally {
+            this.acting(false);
+          }
+        }
+      }),
+      $.Method.new({
+        name: "render",
+        do() {
+          const prompt = this.prompt();
+          return $html.HTML.t`
+            <div class="prompt-card">
+              <div class="prompt-message">${prompt.message}</div>
+              <div class="prompt-actions">
+                <button class="prompt-btn done" onclick=${() => this.handleAction("done")}
+                        disabled=${() => this.acting()}>done</button>
+                <button class="prompt-btn backlog" onclick=${() => this.handleAction("backlog")}
+                        disabled=${() => this.acting()}>backlog</button>
+                <button class="prompt-btn later" onclick=${() => this.handleAction("snooze")}
+                        disabled=${() => this.acting()}>later</button>
+                <button class="prompt-btn dismiss" onclick=${() => this.handleAction("dismiss")}
+                        disabled=${() => this.acting()}>dismiss</button>
+              </div>
+            </div>
+          `;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: "NotificationBanner",
+    doc: "Shows pending prompts or nudge button",
+    slots: [
+      $html.Component,
+      $.Var.new({ name: "app" }),
+      $.Signal.new({ name: "generating", default: false }),
+      $.Method.new({
+        name: "handleNudge",
+        async do() {
+          if (this.generating()) return;
+          this.generating(true);
+          try {
+            await this.app().generatePrompts();
+          } finally {
+            this.generating(false);
+          }
+        }
+      }),
+      $.Method.new({
+        name: "render",
+        do() {
+          return $html.HTML.t`
+            <div class="notification-banner">
+              ${() => {
+                const prompts = this.app().pendingPrompts();
+                if (prompts.length === 0) {
+                  return $html.HTML.t`
+                    <button class="nudge-btn" onclick=${() => this.handleNudge()}
+                            disabled=${() => this.generating()}>
+                      ${() => this.generating() ? "thinking..." : "nudge me"}
+                    </button>
+                  `;
+                }
+                return prompts.map(prompt => _.PromptCard.new({ app: this.app(), prompt }));
+              }}
+            </div>
+          `;
+        }
+      })
+    ]
+  });
 
   $.Class.new({
     name: "TopBar",
@@ -498,6 +603,7 @@ export default await async function (_, $, $html) {
       $.Signal.new({ name: "loading", default: false }),
       $.Signal.new({ name: "connectionState", default: "connecting" }),
       $.Signal.new({ name: "fallbackPolling", default: false }),
+      $.Signal.new({ name: "pendingPrompts", default: [] }),
       $.Var.new({ name: "api" }),
       $.Var.new({ name: "lastSeenId", default: null }),
       $.Var.new({ name: "syncRunning", default: false }),
@@ -521,6 +627,7 @@ export default await async function (_, $, $html) {
             this.addMessage({ role: "system", content: "Connected to Agenda" });
             await this.loadChatHistory();
             await this.refreshData();
+            await this.loadPendingPrompts();
             this.startSyncLoop();
           } catch (e) {
             this.connectionState("offline");
@@ -680,11 +787,57 @@ export default await async function (_, $, $html) {
       }),
 
       $.Method.new({
+        name: "loadPendingPrompts",
+        doc: "fetch pending prompts from the API",
+        async do() {
+          if (!this.connected()) return;
+          try {
+            const prompts = await this.api().getPendingPrompts({ limit: 5 });
+            this.pendingPrompts(prompts || []);
+          } catch (e) {
+            this.pendingPrompts([]);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "actionPrompt",
+        doc: "handle user action on a prompt and refresh",
+        async do(id, action) {
+          if (!this.connected()) return;
+          try {
+            await this.api().actionPrompt({ id, action });
+            await this.loadPendingPrompts();
+            if (action === "done" || action === "backlog") {
+              await this.refreshData();
+            }
+          } catch (e) {
+            this.addMessage({ role: "system", content: `Failed to action prompt: ${e.message}` });
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "generatePrompts",
+        doc: "manually trigger prompt generation",
+        async do() {
+          if (!this.connected()) return;
+          try {
+            await this.api().generatePrompts();
+            await this.loadPendingPrompts();
+          } catch (e) {
+            this.addMessage({ role: "system", content: `Failed to generate prompts: ${e.message}` });
+          }
+        }
+      }),
+
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
             <div class="agenda-app">
               ${_.TopBar.new({ app: this })}
+              ${_.NotificationBanner.new({ app: this })}
               <div class="view-container">
                 <div hidden=${() => this.activeView() !== "chat"}>
                   ${_.ChatView.new({ app: this })}

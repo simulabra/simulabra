@@ -138,6 +138,48 @@ await async function (_, $, $supervisor) {
     return await geist.interpretMessage(body);
   });
 
+  // POST /api/v1/prompts/pending - get pending prompts
+  apiHandler('POST', '/api/v1/prompts/pending', async (ctx) => {
+    const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 10 });
+    const body = ctx.body() || {};
+    return await geist.getPendingPrompts(body);
+  });
+
+  // POST /api/v1/prompts/action - handle prompt action
+  apiHandler('POST', '/api/v1/prompts/action', async (ctx) => {
+    const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 10 });
+    const body = ctx.body() || {};
+    if (!body.id) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Missing required field: id',
+        code: 'MISSING_FIELD'
+      });
+    }
+    if (!body.action) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Missing required field: action',
+        code: 'MISSING_FIELD'
+      });
+    }
+    const validActions = ['done', 'backlog', 'snooze', 'dismiss'];
+    if (!validActions.includes(body.action)) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: `Invalid action: ${body.action}. Must be one of: ${validActions.join(', ')}`,
+        code: 'INVALID_ACTION'
+      });
+    }
+    return await geist.actionPrompt(body);
+  });
+
+  // POST /api/v1/prompts/generate - manually trigger prompt generation
+  apiHandler('POST', '/api/v1/prompts/generate', async (ctx) => {
+    const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 120 });
+    return await geist.generatePrompts();
+  });
+
   sup.httpRouter(router);
 
   // Helper to log to both console and file

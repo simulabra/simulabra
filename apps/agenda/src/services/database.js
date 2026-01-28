@@ -146,6 +146,25 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
             .map(t => t.jsonify());
         }
       }),
+      $live.RpcMethod.new({
+        name: 'updateTask',
+        doc: 'update a task by id',
+        do({ id, title, priority, dueDate, tags }) {
+          const task = $models.Task.findById(this.db(), id);
+          if (!task) {
+            throw new Error(`Task not found: ${id}`);
+          }
+
+          if (title !== undefined) task.title(title);
+          if (priority !== undefined) task.priority(priority);
+          if (dueDate !== undefined) task.dueDate(dueDate ? new Date(dueDate) : null);
+          if (tags !== undefined) task.tags(tags);
+
+          task.save(this.db());
+          this.publishEvent('task.updated', { id: task.sid() });
+          return task.jsonify();
+        }
+      }),
 
       // Reminder operations
       $live.RpcMethod.new({
@@ -365,6 +384,99 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
         do({ conversationId = 'main' } = {}) {
           const stream = this.getChatStream(conversationId);
           return stream.getLastInternalId();
+        }
+      }),
+
+      // Prompt operations
+      $live.RpcMethod.new({
+        name: 'createPrompt',
+        doc: 'create a new prompt for surfacing actionable items',
+        do({ itemType, itemId, message, context = null, status = 'pending' }) {
+          const prompt = $models.Prompt.new({
+            itemType,
+            itemId,
+            message,
+            context,
+            status
+          });
+          prompt.save(this.db());
+          this.publishEvent('prompt.created', { id: prompt.sid() });
+          return prompt.jsonify();
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'listPrompts',
+        doc: 'list prompts with optional status filter',
+        do({ status, limit = 50 } = {}) {
+          let prompts = $models.Prompt.findAll(this.db());
+
+          if (status !== undefined) {
+            prompts = prompts.filter(p => p.status() === status);
+          }
+
+          return prompts
+            .sort((a, b) => b.generatedAt() - a.generatedAt())
+            .slice(0, limit)
+            .map(p => p.jsonify());
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'updatePrompt',
+        doc: 'update a prompt by id',
+        do({ id, status, action, shownAt, actionedAt, snoozeUntil }) {
+          const prompt = $models.Prompt.findById(this.db(), id);
+          if (!prompt) {
+            throw new Error(`Prompt not found: ${id}`);
+          }
+
+          if (status !== undefined) prompt.status(status);
+          if (action !== undefined) prompt.action(action);
+          if (shownAt !== undefined) prompt.shownAt(shownAt ? new Date(shownAt) : null);
+          if (actionedAt !== undefined) prompt.actionedAt(actionedAt ? new Date(actionedAt) : null);
+          if (snoozeUntil !== undefined) prompt.snoozeUntil(snoozeUntil ? new Date(snoozeUntil) : null);
+
+          prompt.save(this.db());
+          this.publishEvent('prompt.updated', { id: prompt.sid(), status: prompt.status() });
+          return prompt.jsonify();
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'getPromptConfig',
+        doc: 'get the prompt configuration (creates default if not exists)',
+        do({ key = 'main' } = {}) {
+          const rows = this.db().query('SELECT * FROM agenda_PromptConfig WHERE key = $key').all({ $key: key });
+          if (rows.length > 0) {
+            return $models.PromptConfig.fromSQLRow(rows[0]).jsonify();
+          }
+          const config = $models.PromptConfig.new({ key });
+          config.save(this.db());
+          return config.jsonify();
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'updatePromptConfig',
+        doc: 'update the prompt configuration',
+        do({ key = 'main', promptFrequencyHours, maxPromptsPerCycle, taskStalenessDays, lastGenerationAt, responseHistory }) {
+          const rows = this.db().query('SELECT * FROM agenda_PromptConfig WHERE key = $key').all({ $key: key });
+          let config;
+          if (rows.length > 0) {
+            config = $models.PromptConfig.fromSQLRow(rows[0]);
+          } else {
+            config = $models.PromptConfig.new({ key });
+          }
+
+          if (promptFrequencyHours !== undefined) config.promptFrequencyHours(promptFrequencyHours);
+          if (maxPromptsPerCycle !== undefined) config.maxPromptsPerCycle(maxPromptsPerCycle);
+          if (taskStalenessDays !== undefined) config.taskStalenessDays(taskStalenessDays);
+          if (lastGenerationAt !== undefined) config.lastGenerationAt(lastGenerationAt ? new Date(lastGenerationAt) : null);
+          if (responseHistory !== undefined) config.responseHistory(responseHistory);
+
+          config.save(this.db());
+          return config.jsonify();
         }
       }),
     ]
