@@ -59,6 +59,32 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   };
 
   $test.AsyncCase.new({
+    name: 'GetPromptById',
+    doc: 'getPrompt should return a single prompt by id',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const created = await dbService.createPrompt({
+        itemType: 'task',
+        itemId: 'task-1',
+        message: 'Test prompt',
+        status: 'pending'
+      });
+
+      const fetched = await dbService.getPrompt({ id: created.id });
+
+      this.assertEq(fetched.id, created.id, 'should have matching id');
+      this.assertEq(fetched.message, 'Test prompt', 'should have message');
+
+      const missing = await dbService.getPrompt({ id: 'nonexistent' });
+      this.assertEq(missing, null, 'should return null for missing prompt');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
     name: 'GetPendingPromptsEmpty',
     doc: 'getPendingPrompts should return empty array when no prompts exist',
     async do() {
@@ -301,8 +327,6 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
-
-      const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
 
       await dbService.createTask({ title: 'Recent task', priority: 1 });
       await dbService.createTask({ title: 'Old task', priority: 3 });

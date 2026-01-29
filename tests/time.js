@@ -457,6 +457,177 @@ export default await async function (_, $, $test, $time) {
       this.assertEq(restored.endDate().getTime(), original.endDate().getTime());
     }
   });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleNextOccurrence',
+    doc: 'nextOccurrence should return the next scheduled time',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['10:00', '15:00'],
+      });
+      const morning = new Date('2025-01-15T08:00:00Z');
+      const next = schedule.nextOccurrence(morning, 'UTC');
+      this.assertEq(next.getUTCHours(), 10);
+      this.assertEq(next.getUTCMinutes(), 0);
+      this.assertEq(next.getUTCDate(), 15);
+    }
+  });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleSkipsPastTime',
+    doc: 'nextOccurrence should skip times that have passed today',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['08:00', '18:00'],
+      });
+      const afternoon = new Date('2025-01-15T12:00:00Z');
+      const next = schedule.nextOccurrence(afternoon, 'UTC');
+      this.assertEq(next.getUTCHours(), 18);
+      this.assertEq(next.getUTCDate(), 15);
+    }
+  });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleNextDay',
+    doc: 'nextOccurrence should advance to next day if all times passed',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['08:00', '12:00'],
+      });
+      const evening = new Date('2025-01-15T20:00:00Z');
+      const next = schedule.nextOccurrence(evening, 'UTC');
+      this.assertEq(next.getUTCHours(), 8);
+      this.assertEq(next.getUTCDate(), 16);
+    }
+  });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleDayFilter',
+    doc: 'nextOccurrence should respect day-of-week filter',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['09:00'],
+        days: ['mon', 'wed', 'fri'],
+      });
+      const tuesday = new Date('2025-01-14T10:00:00Z');
+      const next = schedule.nextOccurrence(tuesday, 'UTC');
+      this.assertEq(next.getUTCDate(), 15);
+      this.assertEq(TP.getDayOfWeek(next), 3);
+    }
+  });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleWeekdaysOnly',
+    doc: 'nextOccurrence with weekdays filter should skip weekends',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['09:00'],
+        days: ['mon', 'tue', 'wed', 'thu', 'fri'],
+      });
+      const friday = new Date('2025-01-17T12:00:00Z');
+      const next = schedule.nextOccurrence(friday, 'UTC');
+      this.assertEq(next.getUTCDate(), 20);
+      this.assertEq(TP.getDayOfWeek(next), 1);
+    }
+  });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleEmptyTimes',
+    doc: 'nextOccurrence should return null with no times',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({ times: [] });
+      const now = new Date('2025-01-15T10:00:00Z');
+      const next = schedule.nextOccurrence(now, 'UTC');
+      this.assertEq(next, null);
+    }
+  });
+
+  $test.Case.new({
+    name: 'ScheduledJobCalculatesNextRun',
+    doc: 'ScheduledJob should calculate next run time from schedule',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['14:00'],
+      });
+      const job = $time.ScheduledJob.new({
+        jobName: 'test',
+        schedule,
+        action: async () => {},
+      });
+      const next = job.calculateNextRun('UTC');
+      this.assert(next instanceof Date, 'should return a Date');
+      this.assertEq(next.getUTCHours(), 14);
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerRegistersJobs',
+    doc: 'Scheduler should register and track jobs',
+    do() {
+      const scheduler = $time.Scheduler.new();
+      const schedule = $time.TimeOfDaySchedule.new({ times: ['10:00'] });
+      const job = $time.ScheduledJob.new({
+        jobName: 'myJob',
+        schedule,
+        action: async () => {},
+      });
+      scheduler.register(job);
+      this.assertEq(scheduler.jobs().size, 1);
+      this.assert(scheduler.jobs().has('myJob'));
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerUnregistersJobs',
+    doc: 'Scheduler should remove jobs when unregistered',
+    do() {
+      const scheduler = $time.Scheduler.new();
+      const schedule = $time.TimeOfDaySchedule.new({ times: ['10:00'] });
+      const job = $time.ScheduledJob.new({
+        jobName: 'toRemove',
+        schedule,
+        action: async () => {},
+      });
+      scheduler.register(job);
+      this.assertEq(scheduler.jobs().size, 1);
+      scheduler.unregister('toRemove');
+      this.assertEq(scheduler.jobs().size, 0);
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ScheduledJobRuns',
+    doc: 'ScheduledJob should execute its action when run',
+    async do() {
+      let executed = false;
+      const schedule = $time.TimeOfDaySchedule.new({ times: ['10:00'] });
+      const job = $time.ScheduledJob.new({
+        jobName: 'runTest',
+        schedule,
+        action: async () => { executed = true; },
+      });
+      await job.run();
+      this.assert(executed, 'action should have been called');
+      this.assert(job.lastRunAt() instanceof Date, 'lastRunAt should be set');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ScheduledJobDisabled',
+    doc: 'ScheduledJob should not run when disabled',
+    do() {
+      let executed = false;
+      const schedule = $time.TimeOfDaySchedule.new({ times: ['10:00'] });
+      const job = $time.ScheduledJob.new({
+        jobName: 'disabledJob',
+        schedule,
+        action: async () => { executed = true; },
+        enabled: false,
+      });
+      job.run();
+      this.assert(!executed, 'action should not have been called');
+    }
+  });
 }.module({
   name: 'test.time',
   imports: [base, test, time],

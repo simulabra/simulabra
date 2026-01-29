@@ -13,6 +13,7 @@ $ARGUMENTS
 </Task>
 
 <Process>
+- ALWAYS use simulabractl to manage running processes (start, stop, restart, status, logs)
 - Come up with scenarios for using the software.
 - Hypothesize about what might break the software and use the scientific method to test it.
 - Ensure software is capable of being driven by an agent.

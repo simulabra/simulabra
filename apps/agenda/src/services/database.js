@@ -406,6 +406,15 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
 
       $live.RpcMethod.new({
+        name: 'getPrompt',
+        doc: 'get a single prompt by id',
+        do({ id }) {
+          const prompt = $models.Prompt.findById(this.db(), id);
+          return prompt?.jsonify() ?? null;
+        }
+      }),
+
+      $live.RpcMethod.new({
         name: 'listPrompts',
         doc: 'list prompts with optional status filter',
         do({ status, limit = 50 } = {}) {
@@ -454,6 +463,18 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
           const config = $models.PromptConfig.new({ key });
           config.save(this.db());
           return config.jsonify();
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'hasActivePendingPrompt',
+        doc: 'check if a pending prompt exists for the given itemType/itemId pair',
+        do({ itemType, itemId }) {
+          const stmt = this.db().query(
+            'SELECT 1 FROM agenda_Prompt WHERE itemType = $itemType AND itemId = $itemId AND status = $status LIMIT 1'
+          );
+          const row = stmt.get({ $itemType: itemType, $itemId: itemId, $status: 'pending' });
+          return row !== null;
         }
       }),
 

@@ -2,9 +2,10 @@ import { __, base } from 'simulabra';
 import live from 'simulabra/live';
 import supervisor from '../supervisor.js';
 import tools from '../tools.js';
+import time from '../time.js';
 import Anthropic from '@anthropic-ai/sdk';
 
-export default await async function (_, $, $live, $supervisor, $tools) {
+export default await async function (_, $, $live, $supervisor, $tools, $time) {
   $.Class.new({
     name: 'GeistService',
     doc: 'Claude API integration for natural language understanding',
@@ -70,13 +71,23 @@ Example response:
 If nothing needs attention, respond with an empty array: []`
       }),
       $.Var.new({
-        name: 'pollInterval',
-        doc: 'polling interval in milliseconds for prompt generation',
-        default: 60 * 60 * 1000, // 1 hour
+        name: 'scheduler',
+        doc: 'scheduler for time-based job execution',
       }),
       $.Var.new({
-        name: 'pollTimer',
-        doc: 'reference to the polling timer',
+        name: 'promptTimes',
+        doc: 'times of day to run prompt generation',
+        default: () => (process.env.AGENDA_PROMPT_TIMES || '08:00,18:00').split(',').map(t => t.trim()),
+      }),
+      $.Var.new({
+        name: 'promptDays',
+        doc: 'days of week to run prompt generation (empty = all days)',
+        default: () => (process.env.AGENDA_PROMPT_DAYS || '').split(',').filter(d => d.trim()),
+      }),
+      $.Var.new({
+        name: 'timezone',
+        doc: 'timezone for scheduling',
+        default: process.env.AGENDA_TIMEZONE || 'local',
       }),
 
       $.After.new({
@@ -378,7 +389,7 @@ If nothing needs attention, respond with an empty array: []`
 
       $.Method.new({
         name: 'analyzeContext',
-        doc: 'gather current state for prompt generation',
+        doc: 'gather tasks, logs, reminders and config for prompt generation',
         async do() {
           const db = this.dbService();
           if (!db) {
@@ -459,8 +470,17 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
             }
 
             let promptsCreated = 0;
+            let promptsSkipped = 0;
             for (const promptData of promptsData) {
               if (promptData.itemType && promptData.itemId && promptData.message) {
+                const hasPending = await db.hasActivePendingPrompt({
+                  itemType: promptData.itemType,
+                  itemId: promptData.itemId,
+                });
+                if (hasPending) {
+                  promptsSkipped++;
+                  continue;
+                }
                 await db.createPrompt({
                   itemType: promptData.itemType,
                   itemId: promptData.itemId,
@@ -474,8 +494,8 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
 
             await db.updatePromptConfig({ lastGenerationAt: new Date().toISOString() });
 
-            this.tlog(`Generated ${promptsCreated} prompts`);
-            return { success: true, promptsCreated };
+            this.tlog(`Generated ${promptsCreated} prompts (skipped ${promptsSkipped} duplicates)`);
+            return { success: true, promptsCreated, promptsSkipped };
           } catch (e) {
             this.tlog('generatePrompts error:', e.message);
             return { success: false, error: e.message };
@@ -506,15 +526,14 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
 
       $live.RpcMethod.new({
         name: 'actionPrompt',
-        doc: 'handle user action on a prompt (done/backlog/snooze/dismiss)',
+        doc: 'process user action on a prompt and update related items accordingly',
         async do({ id, action }) {
           const db = this.dbService();
           if (!db) {
             throw new Error('No database service connected');
           }
 
-          const prompts = await db.listPrompts({ limit: 1000 });
-          const prompt = prompts.find(p => p.id === id);
+          const prompt = await db.getPrompt({ id });
           if (!prompt) {
             throw new Error(`Prompt not found: ${id}`);
           }
@@ -563,81 +582,89 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
 
           const result = await db.updatePrompt(updateFields);
 
-          const config = await db.getPromptConfig({});
-          const history = config.responseHistory || [];
-          history.push({
+          await this.recordPromptResponse({
             promptId: id,
             action,
             itemType: prompt.itemType,
             itemId: prompt.itemId,
-            timestamp: new Date().toISOString(),
           });
-          if (history.length > 100) {
-            history.shift();
-          }
-          await db.updatePromptConfig({ responseHistory: history });
 
           return result;
         }
       }),
 
       $.Method.new({
-        name: 'shouldPoll',
-        doc: 'check if enough time has passed for prompt generation',
-        async do() {
+        name: 'recordPromptResponse',
+        doc: 'record a prompt response to the config history for learning',
+        async do({ promptId, action, itemType, itemId }) {
           const db = this.dbService();
-          if (!db) return false;
-
           const config = await db.getPromptConfig({});
-          if (!config.lastGenerationAt) return true;
-
-          const hoursSince = (Date.now() - new Date(config.lastGenerationAt).getTime()) / (1000 * 60 * 60);
-          return hoursSince >= config.promptFrequencyHours;
-        }
-      }),
-
-      $.Method.new({
-        name: 'pollForPrompts',
-        doc: 'check if prompts should be generated and do so if needed',
-        async do() {
-          if (await this.shouldPoll()) {
-            this.tlog('Polling: generating prompts');
-            await this.generatePrompts();
+          const history = config.responseHistory || [];
+          history.push({
+            promptId,
+            action,
+            itemType,
+            itemId,
+            timestamp: new Date().toISOString(),
+          });
+          if (history.length > 100) {
+            history.shift();
           }
+          await db.updatePromptConfig({ responseHistory: history });
         }
       }),
 
       $.Method.new({
-        name: 'startPolling',
-        doc: 'start the prompt generation polling loop',
+        name: 'initScheduler',
+        doc: 'initialize the scheduler with prompt generation job',
         do() {
-          if (this.pollTimer()) {
-            return;
+          const sched = $time.Scheduler.new({
+            timezone: this.timezone(),
+            logger: (...args) => this.tlog(...args),
+          });
+
+          const schedule = $time.TimeOfDaySchedule.new({
+            times: this.promptTimes(),
+            days: this.promptDays(),
+          });
+
+          const job = $time.ScheduledJob.new({
+            jobName: 'generatePrompts',
+            schedule,
+            action: async () => {
+              try {
+                await this.generatePrompts();
+              } catch (e) {
+                this.tlog('generatePrompts error:', e.message);
+              }
+            },
+          });
+
+          sched.register(job);
+          this.scheduler(sched);
+          return sched;
+        }
+      }),
+
+      $.Method.new({
+        name: 'startScheduler',
+        doc: 'start the scheduler for time-based prompt generation',
+        do() {
+          if (!this.scheduler()) {
+            this.initScheduler();
           }
-
-          const poll = async () => {
-            try {
-              await this.pollForPrompts();
-            } catch (e) {
-              this.tlog('Polling error:', e.message);
-            }
-          };
-
-          poll();
-
-          this.pollTimer(setInterval(() => poll(), this.pollInterval()));
-          this.tlog(`Started prompt polling (interval: ${this.pollInterval() / 1000}s)`);
+          this.scheduler().start();
+          this.tlog(`Started scheduler with times: ${this.promptTimes().join(', ')} (timezone: ${this.timezone()})`);
         }
       }),
 
       $.Method.new({
-        name: 'stopPolling',
-        doc: 'stop the prompt generation polling loop',
+        name: 'stopScheduler',
+        doc: 'stop the scheduler',
         do() {
-          if (this.pollTimer()) {
-            clearInterval(this.pollTimer());
-            this.pollTimer(null);
-            this.tlog('Stopped prompt polling');
+          if (this.scheduler()) {
+            this.scheduler().stop();
+            this.tlog('Stopped scheduler');
           }
         }
       }),
@@ -662,10 +689,10 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
     await service.connect();
     await service.waitForService({ name: 'DatabaseService' });
     await service.connectToDatabase();
-    service.startPolling();
+    service.startScheduler();
     __.tlog('GeistService started');
   }
 }.module({
   name: 'services.geist',
-  imports: [base, live, supervisor, tools],
+  imports: [base, live, supervisor, tools, time],
 }).load();

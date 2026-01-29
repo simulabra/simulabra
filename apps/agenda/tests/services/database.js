@@ -531,6 +531,94 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
       service.db().close();
     }
   });
+
+  $test.Case.new({
+    name: 'DatabaseServiceHasActivePendingPromptTrue',
+    doc: 'hasActivePendingPrompt should return true when pending prompt exists',
+    do() {
+      const service = createTestService();
+
+      service.createPrompt({
+        itemType: 'task',
+        itemId: 'task-xyz',
+        message: 'Check on this task',
+        status: 'pending'
+      });
+
+      const hasPending = service.hasActivePendingPrompt({
+        itemType: 'task',
+        itemId: 'task-xyz'
+      });
+      this.assertEq(hasPending, true, 'should have pending prompt');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceHasActivePendingPromptFalse',
+    doc: 'hasActivePendingPrompt should return false when no pending prompt exists',
+    do() {
+      const service = createTestService();
+
+      const hasPending = service.hasActivePendingPrompt({
+        itemType: 'task',
+        itemId: 'nonexistent'
+      });
+      this.assertEq(hasPending, false, 'should not have pending prompt');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceHasActivePendingPromptIgnoresNonPending',
+    doc: 'hasActivePendingPrompt should ignore non-pending prompts',
+    do() {
+      const service = createTestService();
+
+      const prompt = service.createPrompt({
+        itemType: 'task',
+        itemId: 'task-abc',
+        message: 'Already actioned',
+        status: 'pending'
+      });
+      service.updatePrompt({ id: prompt.id, status: 'actioned' });
+
+      const hasPending = service.hasActivePendingPrompt({
+        itemType: 'task',
+        itemId: 'task-abc'
+      });
+      this.assertEq(hasPending, false, 'should not count actioned prompts');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceHasActivePendingPromptDifferentItem',
+    doc: 'hasActivePendingPrompt should distinguish between different items',
+    do() {
+      const service = createTestService();
+
+      service.createPrompt({
+        itemType: 'task',
+        itemId: 'task-1',
+        message: 'Prompt for task 1',
+        status: 'pending'
+      });
+
+      const hasPendingTask1 = service.hasActivePendingPrompt({ itemType: 'task', itemId: 'task-1' });
+      const hasPendingTask2 = service.hasActivePendingPrompt({ itemType: 'task', itemId: 'task-2' });
+      const hasPendingLog1 = service.hasActivePendingPrompt({ itemType: 'log', itemId: 'task-1' });
+
+      this.assertEq(hasPendingTask1, true, 'should have pending for task-1');
+      this.assertEq(hasPendingTask2, false, 'should not have pending for task-2');
+      this.assertEq(hasPendingLog1, false, 'should not match different itemType');
+
+      service.db().close();
+    }
+  });
 }.module({
   name: 'test.services.database',
   imports: [base, test, db, helpers, sqlite, models, database],

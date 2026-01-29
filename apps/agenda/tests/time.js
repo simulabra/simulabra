@@ -246,6 +246,47 @@ export default await async function (_, $, $test, $time) {
       this.assertEq(jan1.getUTCDate(), 1);
     }
   });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleMultipleTimes',
+    doc: 'TimeOfDaySchedule should pick earliest upcoming time',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['08:00', '12:00', '18:00'],
+      });
+      const morning = new Date('2025-01-15T06:00:00Z');
+      const next = schedule.nextOccurrence(morning, 'UTC');
+      this.assertEq(next.getUTCHours(), 8);
+    }
+  });
+
+  $test.Case.new({
+    name: 'TimeOfDayScheduleWeekendSkip',
+    doc: 'TimeOfDaySchedule with weekday filter should skip weekends',
+    do() {
+      const schedule = $time.TimeOfDaySchedule.new({
+        times: ['09:00'],
+        days: ['mon', 'tue', 'wed', 'thu', 'fri'],
+      });
+      const saturdayEvening = new Date('2025-01-18T20:00:00Z');
+      const next = schedule.nextOccurrence(saturdayEvening, 'UTC');
+      this.assertEq(next.getUTCDate(), 20);
+      this.assertEq(TP.getDayOfWeek(next), 1);
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerStartStop',
+    doc: 'Scheduler should track running state',
+    do() {
+      const scheduler = $time.Scheduler.new();
+      this.assertEq(scheduler.running(), false);
+      scheduler.start();
+      this.assertEq(scheduler.running(), true);
+      scheduler.stop();
+      this.assertEq(scheduler.running(), false);
+    }
+  });
 }.module({
   name: 'test.time',
   imports: [base, test, time],
