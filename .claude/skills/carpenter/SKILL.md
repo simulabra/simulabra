@@ -14,11 +14,11 @@ $ARGUMENTS
 
 <Process>
 - Understand the context of the plan in the broader system.
-- Update the tests to reflect the desired functionality.
+- Before modifying code, update the tests to reflect the desired functionality.
 - Modify code until the tests pass.
 - Don't take shortcuts, be a craftsman.
 </Process>
 
 <Output>
-Report back with an overview of the changes.
+Report back with an overview of the changes and any struggles you faced.
 </Output>

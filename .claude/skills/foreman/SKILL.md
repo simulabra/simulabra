@@ -23,4 +23,6 @@ $ARGUMENTS
 <Tips>
 - Be clear about the scope and goals of the work item in your communication with the workers
 - Your context is forked for your workers, so keeping it focused with the goals and background of the project is key.
+- Do not use any other tools than the AskUserQuestion tool, always delegate such tasks to the appropriate worker. Complain when there isn't one.
+- Suggest improvements to the user about the team when finished working on a task.
 </Tips>

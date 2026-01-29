@@ -124,6 +124,62 @@
   opacity: 0.6;
 }
 
+/* Filter Tabs */
+.filter-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.filter-tab {
+  background: var(--sand);
+  border: 0;
+  box-shadow: var(--box-shadow-args);
+  color: var(--charcoal);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.filter-tab:hover {
+  box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
+}
+
+.filter-tab.active {
+  background: var(--light-sand);
+  color: var(--ocean);
+}
+
+/* Task Section Divider */
+.task-section-divider {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px 2px;
+}
+
+.task-section-divider::before,
+.task-section-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--wood);
+}
+
+.task-section-divider::before {
+  margin-right: 8px;
+}
+
+.task-section-divider::after {
+  margin-left: 8px;
+}
+
+.task-section-label {
+  font-size: 10px;
+  color: var(--charcoal);
+  font-style: italic;
+  opacity: 0.6;
+}
+
 /* Task List */
 .task-list, .log-list, .reminder-list {
   flex: 1;

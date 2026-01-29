@@ -487,22 +487,100 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
     }
   });
 
-  $test.Case.new({
-    name: 'ShouldPoll',
-    doc: 'shouldPoll should check PromptConfig.shouldGenerate',
+  $test.AsyncCase.new({
+    name: 'PromptConfigLastGenerationTracking',
+    doc: 'PromptConfig tracks lastGenerationAt through the database service',
     async do() {
       const database = createTestDb();
-      const { dbService, geistService } = createTestServices(database);
+      const { dbService } = createTestServices(database);
 
-      const shouldPoll1 = await geistService.shouldPoll();
-      this.assert(shouldPoll1, 'should poll when never generated');
+      const config1 = await dbService.getPromptConfig({});
+      this.assert(!config1.lastGenerationAt,
+        'should have no lastGenerationAt when freshly created');
 
       await dbService.updatePromptConfig({
         lastGenerationAt: new Date().toISOString()
       });
 
-      const shouldPoll2 = await geistService.shouldPoll();
-      this.assert(!shouldPoll2, 'should not poll right after generation');
+      const config2 = await dbService.getPromptConfig({});
+      this.assert(config2.lastGenerationAt, 'should have lastGenerationAt after update');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeneratePromptsResultStructure',
+    doc: 'generatePrompts returns result with success, promptsCreated, and promptsSkipped fields',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const task = await dbService.createTask({ title: 'Result structure task', priority: 2 });
+
+      geistService.client().setResponse({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify([
+              {
+                itemType: 'task',
+                itemId: task.id,
+                message: 'Check on the result structure task?'
+              }
+            ])
+          }
+        ],
+        stop_reason: 'end_turn'
+      });
+
+      const result = await geistService.generatePrompts();
+
+      this.assertEq(result.success, true, 'result should have success: true');
+      this.assertEq(result.promptsCreated, 1, 'result should report promptsCreated');
+      this.assertEq(result.promptsSkipped, 0, 'result should report promptsSkipped');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeneratePromptsDuplicatesSkipped',
+    doc: 'generatePrompts skips duplicate prompts and reports them in promptsSkipped',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const task = await dbService.createTask({ title: 'Duplicate test task', priority: 2 });
+
+      await dbService.createPrompt({
+        itemType: 'task',
+        itemId: task.id,
+        message: 'Existing prompt for this task',
+        status: 'pending'
+      });
+
+      geistService.client().setResponse({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify([
+              {
+                itemType: 'task',
+                itemId: task.id,
+                message: 'Duplicate prompt for same task'
+              }
+            ])
+          }
+        ],
+        stop_reason: 'end_turn'
+      });
+
+      const result = await geistService.generatePrompts();
+
+      this.assertEq(result.success, true, 'should succeed');
+      this.assertEq(result.promptsCreated, 0, 'should create 0 prompts (all duplicates)');
+      this.assertEq(result.promptsSkipped, 1, 'should skip 1 duplicate');
 
       database.close();
     }

@@ -1,0 +1,4 @@
+add watch functionality for simulabractl and the build.sh script
+investigate why ReminderService is failing in the logs
+make the height of the nudge button inline with the text and send button
+create the bin/tree.js tool and associated agent skill - tree should print out a listing of all the files and the classes in them, recursively, from the current directory. ignore directories like node_modules, out, tmp, and misc.

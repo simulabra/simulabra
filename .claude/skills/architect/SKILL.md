@@ -16,6 +16,7 @@ $ARGUMENTS
 - Use the AskUserQuestion tool to interact with the user and resolve uncertainties, provide suggestions and alternatives, and gather requirements.
 - Explore the codebase, deeply understand the existing context
 - Progressively refine a plan in misc/plans/<planname>.md
+- Always confirm with the user before handing back the plan
 - Report back when the plan is done and the user is satisfied with it.
 </Process>
 
@@ -26,6 +27,7 @@ Plans should focus on architecture and design, not implementation details:
 - Show data flow and component relationships
 - Use diagrams or pseudocode where helpful
 - DO NOT include code implementations - the carpenter will write the actual code
+- Include the location of the relevant files in the plan
 </PlanFormat>
 
 <Output>

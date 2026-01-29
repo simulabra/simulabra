@@ -15,6 +15,7 @@
     "./live": "./src/live.js",
     "./http": "./src/http.js",
     "./time": "./src/time.js",
+    "./logs": "./src/logs.js",
     "./tools": "./src/tools.js"
   },
   "module": "./src/base.js",

@@ -16,6 +16,7 @@ export default await async function (_, $, $html) {
       $.Var.new({ name: "consecutiveFailures", default: 0 }),
       $.Method.new({
         name: "apiCall",
+        doc: "make an HTTP request, tracking connection health and unwrapping the response envelope",
         async do(method, path, body = null) {
           const url = this.baseUrl() + path;
           const options = {
@@ -37,19 +38,20 @@ export default await async function (_, $, $html) {
       }),
       $.Method.new({
         name: "markFailure",
+        doc: "increment consecutive failure count for connection health tracking",
         do() {
           this.consecutiveFailures(this.consecutiveFailures() + 1);
         }
       }),
       $.Method.new({
         name: "isOnline",
+        doc: "true if a successful API call occurred within the last 30 seconds",
         do() {
           const last = this.lastSuccessTime();
           if (!last) return false;
           return Date.now() - last < 30000;
         }
       }),
-      // API methods
       $.Method.new({
         name: "getStatus",
         async do() {
@@ -123,6 +125,15 @@ export default await async function (_, $, $html) {
   // UI Components
   // ═══════════════════════════════════════════════════════════════════════════
 
+  const formatTimestamp = $.Method.new({
+    name: "formatTimestamp",
+    doc: "format a timestamp string as ISO 8601, returning empty string for falsy values",
+    do(ts) {
+      if (!ts) return "";
+      return new Date(ts).toISOString();
+    }
+  });
+
   $.Class.new({
     name: "PromptMessage",
     doc: "Prompt rendered inline as a chat message with action buttons",
@@ -143,13 +154,7 @@ export default await async function (_, $, $html) {
           }
         }
       }),
-      $.Method.new({
-        name: "formatTimestamp",
-        do(ts) {
-          if (!ts) return "";
-          return new Date(ts).toISOString();
-        }
-      }),
+      formatTimestamp,
       $.Method.new({
         name: "render",
         do() {
@@ -255,10 +260,91 @@ export default await async function (_, $, $html) {
 
   $.Class.new({
     name: "TodosView",
-    doc: "Classic todo list view with task status",
+    doc: "Task list view with active/backlog/completed filter tabs",
     slots: [
       $html.Component,
       $.Var.new({ name: "app" }),
+      $.Signal.new({ name: "taskFilter", default: "active" }),
+      $.Method.new({
+        name: "filteredTasks",
+        doc: "partition tasks by current filter mode, returning {items, recentDone}",
+        do() {
+          const tasks = this.app().tasks();
+          const mode = this.taskFilter();
+          if (mode === "active") {
+            const items = tasks
+              .filter(t => !t.done && (t.priority || 3) <= 3)
+              .sort((a, b) => (a.priority || 3) - (b.priority || 3));
+            const recentDone = tasks
+              .filter(t => t.done && t.completedAt)
+              .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+              .slice(0, 3);
+            return { items, recentDone };
+          } else if (mode === "backlog") {
+            const items = tasks
+              .filter(t => !t.done && (t.priority || 3) > 3)
+              .sort((a, b) => (a.priority || 3) - (b.priority || 3));
+            return { items, recentDone: [] };
+          } else if (mode === "completed") {
+            const items = tasks
+              .filter(t => t.done)
+              .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+            return { items, recentDone: [] };
+          }
+          return { items: [], recentDone: [] };
+        }
+      }),
+      $.Method.new({
+        name: "filterTabs",
+        doc: "render the active/backlog/done tab bar",
+        do() {
+          const tabs = [
+            { id: "active", label: "Active" },
+            { id: "backlog", label: "Backlog" },
+            { id: "completed", label: "Done" },
+          ];
+          return $html.HTML.t`
+            <div class="filter-tabs">
+              ${tabs.map(tab => $html.HTML.t`
+                <button class=${() => "filter-tab" + (this.taskFilter() === tab.id ? " active" : "")}
+                        onclick=${() => this.taskFilter(tab.id)}>
+                  ${tab.label}
+                </button>
+              `)}
+            </div>
+          `;
+        }
+      }),
+      $.Method.new({
+        name: "taskCount",
+        doc: "number of primary tasks in the current filter",
+        do() {
+          return this.filteredTasks().items.length;
+        }
+      }),
+      $.Method.new({
+        name: "renderTaskList",
+        doc: "render task items with optional recently-done divider",
+        do() {
+          const { items, recentDone } = this.filteredTasks();
+
+          if (!items.length && !recentDone.length) {
+            const labels = { active: "No active tasks", backlog: "No backlog tasks", completed: "No completed tasks" };
+            return $html.HTML.t`<div class="empty-state">${labels[this.taskFilter()] || "No tasks"}</div>`;
+          }
+
+          const rendered = items.map(task => _.TaskItem.new({ app: this.app(), task }));
+          if (recentDone.length) {
+            rendered.push($html.HTML.t`
+              <div class="task-section-divider">
+                <span class="task-section-label">recently done</span>
+              </div>
+            `);
+            recentDone.forEach(task => rendered.push(_.TaskItem.new({ app: this.app(), task })));
+          }
+          return rendered;
+        }
+      }),
       $.Method.new({
         name: "render",
         do() {
@@ -266,16 +352,11 @@ export default await async function (_, $, $html) {
             <div class="todos-view view">
               <div class="view-header">
                 <h2>Tasks</h2>
-                <span class="task-count">${() => this.app().tasks().filter(t => !t.done).length} active</span>
+                ${this.filterTabs()}
+                <span class="task-count">${() => this.taskCount()} ${() => this.taskFilter()}</span>
               </div>
               <div class="task-list">
-                ${() => {
-                  const tasks = this.app().tasks();
-                  if (!tasks.length) return $html.HTML.t`<div class="empty-state">No tasks yet</div>`;
-                  return tasks
-                    .sort((a, b) => (a.priority || 3) - (b.priority || 3))
-                    .map(task => _.TaskItem.new({ app: this.app(), task }));
-                }}
+                ${() => this.renderTaskList()}
               </div>
             </div>
           `;
@@ -402,13 +483,7 @@ export default await async function (_, $, $html) {
     slots: [
       $html.Component,
       $.Var.new({ name: "message" }),
-      $.Method.new({
-        name: "formatTimestamp",
-        do(ts) {
-          if (!ts) return "";
-          return new Date(ts).toISOString();
-        }
-      }),
+      formatTimestamp,
       $.Method.new({
         name: "subtitle",
         do() {
@@ -470,6 +545,8 @@ export default await async function (_, $, $html) {
           this.generating(true);
           try {
             await this.app().generatePrompts();
+          } catch (e) {
+            this.app().addMessage({ role: "system", content: `Nudge failed: ${e.message}` });
           } finally {
             this.generating(false);
           }
@@ -797,7 +874,7 @@ export default await async function (_, $, $html) {
             const prompt = this.pendingPrompts().find(p => p.id === id);
             await this.api().actionPrompt({ id, action });
             if (prompt) {
-              const label = action === "snooze" ? "snoozed" : action === "done" ? "marked done" : action + "ed";
+              const label = { done: "marked done", snooze: "snoozed", backlog: "backlogged", dismiss: "dismissed" }[action] || action;
               const snippet = prompt.message.length > 60 ? prompt.message.slice(0, 57) + "..." : prompt.message;
               this.addMessage({ role: "system", content: `${label}: "${snippet}"` });
             }
@@ -815,9 +892,19 @@ export default await async function (_, $, $html) {
         name: "generatePrompts",
         doc: "manually trigger prompt generation",
         async do() {
-          if (!this.connected()) return;
+          if (!this.connected()) {
+            this.addMessage({ role: "system", content: "Not connected - try reconnecting" });
+            return;
+          }
           try {
-            await this.api().generatePrompts();
+            const result = await this.api().generatePrompts();
+            if (!result.success) {
+              this.addMessage({ role: "system", content: `Prompt generation failed: ${result.error}` });
+              return;
+            }
+            if (result.promptsCreated === 0) {
+              this.addMessage({ role: "system", content: "No new prompts to suggest" });
+            }
             await this.loadPendingPrompts();
           } catch (e) {
             this.addMessage({ role: "system", content: `Failed to generate prompts: ${e.message}` });

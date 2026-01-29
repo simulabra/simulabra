@@ -20,6 +20,11 @@ $ARGUMENTS
 - Note rough spots and ideas for improvement.
 </Process>
 
+<Tools>
+- use simulabractl to manage and restart services (like `agenda`) after code changes
+- use the `agent-browser` binary for browser automation
+</Tools>
+
 <Output>
 Report back on what was accomplished with the software, what went wrong, and one or two brief ideas for improvements.
 </Output>

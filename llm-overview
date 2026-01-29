@@ -1,0 +1,2 @@
+cd ~/projects/simulabra/core
+aicat ./misc/prompts/tut.md ./src/base.js ./tests/core.js

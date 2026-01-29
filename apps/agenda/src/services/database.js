@@ -137,6 +137,9 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
           if (filter.priority !== undefined) {
             filtered = filtered.filter(t => t.priority() === filter.priority);
           }
+          if (filter.maxPriority !== undefined) {
+            filtered = filtered.filter(t => t.priority() <= filter.maxPriority);
+          }
           if (filter.tag !== undefined) {
             filtered = filtered.filter(t => t.tags().includes(filter.tag));
           }

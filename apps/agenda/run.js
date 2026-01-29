@@ -9,45 +9,36 @@ config({ path: resolve(import.meta.dir, '../../.env') });
 import { __, base } from 'simulabra';
 import supervisor from './src/supervisor.js';
 
-await async function (_, $, $supervisor) {
+export default await async function (_, $, $supervisor) {
+  if (require.main !== module) return;
+
   const port = parseInt(process.env.AGENDA_PORT || '3030', 10);
   const logsDir = join(import.meta.dir, 'logs');
   const staticDir = resolve(import.meta.dir, '../../out/agenda');
 
-  // Ensure logs directory exists
   if (!existsSync(logsDir)) {
     mkdirSync(logsDir, { recursive: true });
   }
 
-  // Create supervisor with logs directory (AgendaSupervisor uses AGENDA_SERVICE_NAME env)
   const sup = $supervisor.AgendaSupervisor.new({ port, logsDir });
-
-  // Set up HTTP router with static file serving
   const router = $supervisor.ApiRouter.new();
 
-  // Redirect root to /agenda/
   router.addHandler($supervisor.MethodPathHandler.new({
     httpMethod: 'GET',
     path: '/',
     handlerFn: () => Response.redirect('/agenda/', 302)
   }));
 
-  // Redirect /agenda to /agenda/
   router.addHandler($supervisor.MethodPathHandler.new({
     httpMethod: 'GET',
     path: '/agenda',
     handlerFn: () => Response.redirect('/agenda/', 302)
   }));
 
-  // Serve static files from out/agenda
   router.addHandler($supervisor.StaticFileHandler.new({
     urlPrefix: '/agenda/',
     rootDir: staticDir
   }));
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // HTTP API Endpoints
-  // ═══════════════════════════════════════════════════════════════════════════
 
   const apiHandler = (method, path, handler) => {
     router.addHandler($supervisor.MethodPathHandler.new({
@@ -70,19 +61,16 @@ await async function (_, $, $supervisor) {
     }));
   };
 
-  // GET /api/v1/status - supervisor status
   apiHandler('GET', '/api/v1/status', async () => {
     return sup.status();
   });
 
-  // POST /api/v1/tasks/list - list tasks
   apiHandler('POST', '/api/v1/tasks/list', async (ctx) => {
     const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
     const body = ctx.body() || {};
     return await db.listTasks(body);
   });
 
-  // POST /api/v1/tasks/complete - complete a task
   apiHandler('POST', '/api/v1/tasks/complete', async (ctx) => {
     const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
     const body = ctx.body() || {};
@@ -96,35 +84,30 @@ await async function (_, $, $supervisor) {
     return await db.completeTask(body);
   });
 
-  // POST /api/v1/logs/list - list logs
   apiHandler('POST', '/api/v1/logs/list', async (ctx) => {
     const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
     const body = ctx.body() || {};
     return await db.listLogs(body);
   });
 
-  // POST /api/v1/reminders/list - list reminders
   apiHandler('POST', '/api/v1/reminders/list', async (ctx) => {
     const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
     const body = ctx.body() || {};
     return await db.listReminders(body);
   });
 
-  // POST /api/v1/chat/history - load chat history
   apiHandler('POST', '/api/v1/chat/history', async (ctx) => {
     const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
     const body = ctx.body() || {};
     return await db.listChatMessages(body);
   });
 
-  // POST /api/v1/chat/wait - long-poll for new chat messages
   apiHandler('POST', '/api/v1/chat/wait', async (ctx) => {
     const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 60 });
     const body = ctx.body() || {};
     return await db.waitForChatMessages(body);
   });
 
-  // POST /api/v1/chat/send - send a chat message
   apiHandler('POST', '/api/v1/chat/send', async (ctx) => {
     const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 120 });
     const body = ctx.body() || {};
@@ -138,14 +121,12 @@ await async function (_, $, $supervisor) {
     return await geist.interpretMessage(body);
   });
 
-  // POST /api/v1/prompts/pending - get pending prompts
   apiHandler('POST', '/api/v1/prompts/pending', async (ctx) => {
     const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 10 });
     const body = ctx.body() || {};
     return await geist.getPendingPrompts(body);
   });
 
-  // POST /api/v1/prompts/action - handle prompt action
   apiHandler('POST', '/api/v1/prompts/action', async (ctx) => {
     const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 10 });
     const body = ctx.body() || {};
@@ -174,7 +155,6 @@ await async function (_, $, $supervisor) {
     return await geist.actionPrompt(body);
   });
 
-  // POST /api/v1/prompts/generate - manually trigger prompt generation
   apiHandler('POST', '/api/v1/prompts/generate', async (ctx) => {
     const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 120 });
     return await geist.generatePrompts();
@@ -182,13 +162,11 @@ await async function (_, $, $supervisor) {
 
   sup.httpRouter(router);
 
-  // Helper to log to both console and file
   const log = (msg) => {
     __.tlog(msg);
     sup.writeLog(msg);
   };
 
-  // Register services
   sup.registerService($supervisor.ServiceSpec.new({
     serviceName: 'DatabaseService',
     command: ['bun', 'run', 'src/services/database.js'],
@@ -213,13 +191,8 @@ await async function (_, $, $supervisor) {
     healthCheckMethod: 'health',
   }));
 
-  // Start supervisor WebSocket server
   sup.serve();
-
-  // Start all services
   await sup.startAll();
-
-  // Start health check loop
   sup.healthCheckLoop();
 
   log('Agenda supervisor started');
@@ -228,7 +201,6 @@ await async function (_, $, $supervisor) {
   log('Services: DatabaseService, ReminderService, GeistService');
   log(`Logs directory: ${logsDir}`);
 
-  // Handle shutdown
   const shutdown = async () => {
     log('Shutting down...');
     sup.stopAll();

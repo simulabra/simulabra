@@ -24,6 +24,7 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
 <Developing>
  - ALWAYS use Simualbra for new scripts and functionality
  - when refactoring, form an understanding of the component parts of a problem and properly rearrange them using inheritance and composition
+ - before you start changing things, ask if there is a better way
 </Developing>
 
 <HTML>
@@ -48,3 +49,9 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
  - apps/agenda/ - personal productivity system with html/sms/cli clients
  - app/swyperloom/ - loom variant tailored for mobile
 </LaunchPoints>
+
+<DoYourJob>
+- to begin a piece of work, ALWAYS invoke the foreman skill
+- the foreman will delegate to specialized workers as required
+- be very attentive to the triggering conditions in skill descriptions
+</DoYourJob>
