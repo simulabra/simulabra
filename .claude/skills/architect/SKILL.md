@@ -13,7 +13,7 @@ $ARGUMENTS
 </Task>
 
 <Process>
-- Use the AskUserQuestion tool to interact with the user and resolve uncertainties.
+- Use the AskUserQuestion tool to interact with the user and resolve uncertainties, provide suggestions and alternatives, and gather requirements.
 - Explore the codebase, deeply understand the existing context
 - Progressively refine a plan in misc/plans/<planname>.md
 - Report back when the plan is done and the user is satisfied with it.
@@ -21,11 +21,11 @@ $ARGUMENTS
 
 <PlanFormat>
 Plans should focus on architecture and design, not implementation details:
-- Describe classes, methods, and their responsibilities
+- Sketch the conceptual domain of the problem in terms of interacting objects
+- Describe classes, methods, and their responsibilities without writing code
 - Show data flow and component relationships
 - Use diagrams or pseudocode where helpful
-- DO NOT include full code implementations - the carpenter will write the actual code
-- Keep code snippets minimal - just signatures or brief examples to clarify intent
+- DO NOT include code implementations - the carpenter will write the actual code
 </PlanFormat>
 
 <Output>

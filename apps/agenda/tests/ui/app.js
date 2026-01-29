@@ -206,6 +206,40 @@ export default await async function (_, $, $test) {
     }
   });
 
+  $test.BrowserCase.new({
+    name: 'AgendaAppNoNotificationBanner',
+    doc: 'Notification banner should not exist; prompts are inline in chat',
+    isMobile: true,
+    async do() {
+      const server = createMockServer();
+      try {
+        await loadPage(this.page(), server);
+
+        const banner = await this.page().$('.notification-banner');
+        this.assertEq(banner, null, 'Notification banner should not be present');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'AgendaAppNudgeButtonInChat',
+    doc: 'Nudge button should be in the chat input area',
+    isMobile: true,
+    async do() {
+      const server = createMockServer();
+      try {
+        await loadPage(this.page(), server);
+
+        const nudge = await this.page().$('.chat-input-form .nudge-btn');
+        this.assert(nudge !== null, 'Nudge button should be in chat input form');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
 }.module({
   name: 'test.agenda.ui',
   imports: [base, test],

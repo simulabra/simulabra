@@ -383,6 +383,27 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
     }
   });
 
+  $test.Case.new({
+    name: 'PromptSystemPromptIncludesFreshTasks',
+    doc: 'prompt generation system prompt should mention recently added tasks',
+    do() {
+      const database = createTestDb();
+      const { geistService } = createTestServices(database);
+
+      const prompt = geistService.promptGenerationSystemPrompt();
+      this.assert(
+        prompt.includes('recently added') || prompt.includes('added today'),
+        'should mention recently added items'
+      );
+      this.assert(
+        prompt.includes('clarifying') || prompt.includes('deadline') || prompt.includes('priority'),
+        'should suggest clarifying questions for new items'
+      );
+
+      database.close();
+    }
+  });
+
   $test.AsyncCase.new({
     name: 'GeneratePromptsCreatesRecords',
     doc: 'generatePrompts should create Prompt records from Claude response',

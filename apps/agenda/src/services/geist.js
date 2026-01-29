@@ -48,6 +48,7 @@ Given their tasks, recent activity, and past response patterns, identify 1-3 ite
 - Tasks that may have been forgotten (no updates in a week+)
 - Tasks approaching deadlines
 - Tasks the user frequently snoozes (maybe should be backlogged)
+- Tasks added today or recently added that lack details - ask clarifying questions like "you just added X - want to set a deadline?" or "what priority should X be?"
 - Patterns suggesting follow-up questions
 
 Generate concise, friendly prompts. Each should:
@@ -65,7 +66,8 @@ Respond with a JSON array of prompt objects. Each object should have:
 Example response:
 [
   {"itemType": "task", "itemId": "abc123", "message": "Did you get around to fixing the login bug? It's been a week."},
-  {"itemType": "task", "itemId": "def456", "message": "The quarterly report is due tomorrow - still on track?"}
+  {"itemType": "task", "itemId": "def456", "message": "The quarterly report is due tomorrow - still on track?"},
+  {"itemType": "task", "itemId": "ghi789", "message": "You just added 'redesign homepage' - want to set a deadline or priority?"}
 ]
 
 If nothing needs attention, respond with an empty array: []`

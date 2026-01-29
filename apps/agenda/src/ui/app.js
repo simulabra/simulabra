@@ -124,8 +124,8 @@ export default await async function (_, $, $html) {
   // ═══════════════════════════════════════════════════════════════════════════
 
   $.Class.new({
-    name: "PromptCard",
-    doc: "Individual prompt notification with action buttons",
+    name: "PromptMessage",
+    doc: "Prompt rendered inline as a chat message with action buttons",
     slots: [
       $html.Component,
       $.Var.new({ name: "app" }),
@@ -144,12 +144,24 @@ export default await async function (_, $, $html) {
         }
       }),
       $.Method.new({
+        name: "formatTimestamp",
+        do(ts) {
+          if (!ts) return "";
+          return new Date(ts).toISOString();
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           const prompt = this.prompt();
+          const timestamp = this.formatTimestamp(prompt.createdAt);
           return $html.HTML.t`
-            <div class="prompt-card">
-              <div class="prompt-message">${prompt.message}</div>
+            <div class="chat-message assistant prompt">
+              <div class="message-meta">
+                <span class="message-source">geist</span>
+                ${timestamp ? $html.HTML.t`<span class="message-timestamp">${timestamp}</span>` : ""}
+              </div>
+              <div class="message-content">${prompt.message}</div>
               <div class="prompt-actions">
                 <button class="prompt-btn done" onclick=${() => this.handleAction("done")}
                         disabled=${() => this.acting()}>done</button>
@@ -160,49 +172,6 @@ export default await async function (_, $, $html) {
                 <button class="prompt-btn dismiss" onclick=${() => this.handleAction("dismiss")}
                         disabled=${() => this.acting()}>dismiss</button>
               </div>
-            </div>
-          `;
-        }
-      })
-    ]
-  });
-
-  $.Class.new({
-    name: "NotificationBanner",
-    doc: "Shows pending prompts or nudge button",
-    slots: [
-      $html.Component,
-      $.Var.new({ name: "app" }),
-      $.Signal.new({ name: "generating", default: false }),
-      $.Method.new({
-        name: "handleNudge",
-        async do() {
-          if (this.generating()) return;
-          this.generating(true);
-          try {
-            await this.app().generatePrompts();
-          } finally {
-            this.generating(false);
-          }
-        }
-      }),
-      $.Method.new({
-        name: "render",
-        do() {
-          return $html.HTML.t`
-            <div class="notification-banner">
-              ${() => {
-                const prompts = this.app().pendingPrompts();
-                if (prompts.length === 0) {
-                  return $html.HTML.t`
-                    <button class="nudge-btn" onclick=${() => this.handleNudge()}
-                            disabled=${() => this.generating()}>
-                      ${() => this.generating() ? "thinking..." : "nudge me"}
-                    </button>
-                  `;
-                }
-                return prompts.map(prompt => _.PromptCard.new({ app: this.app(), prompt }));
-              }}
             </div>
           `;
         }
@@ -481,6 +450,7 @@ export default await async function (_, $, $html) {
       $html.Component,
       $.Var.new({ name: "app" }),
       $.Signal.new({ name: "inputText", default: "" }),
+      $.Signal.new({ name: "generating", default: false }),
       $.Method.new({
         name: "handleSubmit",
         async do(e) {
@@ -491,6 +461,18 @@ export default await async function (_, $, $html) {
           input.value = "";
           this.inputText("");
           await this.app().sendMessage(text);
+        }
+      }),
+      $.Method.new({
+        name: "handleNudge",
+        async do() {
+          if (this.generating()) return;
+          this.generating(true);
+          try {
+            await this.app().generatePrompts();
+          } finally {
+            this.generating(false);
+          }
         }
       }),
       $.Method.new({
@@ -507,6 +489,7 @@ export default await async function (_, $, $html) {
         do() {
           $.Effect.create(() => {
             this.app().messages();
+            this.app().pendingPrompts();
             this.scrollToBottom();
           });
         }
@@ -518,9 +501,14 @@ export default await async function (_, $, $html) {
             <div class="chat-view view">
               <div class="chat-messages">
                 ${() => this.app().messages().map(msg => _.ChatMessage.new({ message: msg }))}
+                ${() => this.app().pendingPrompts().map(prompt => _.PromptMessage.new({ app: this.app(), prompt }))}
                 ${() => this.app().loading() ? $html.HTML.t`<div class="chat-message assistant typing">thinking...</div>` : ""}
               </div>
               <form class="chat-input-form" onsubmit=${e => this.handleSubmit(e)}>
+                <button type="button" class="nudge-btn" onclick=${() => this.handleNudge()}
+                        disabled=${() => this.generating()}>
+                  ${() => this.generating() ? "..." : "nudge"}
+                </button>
                 <input type="text" class="chat-input" placeholder="Ask anything..."
                        oninput=${e => this.inputText(e.target.value)}
                        onchange=${e => this.inputText(e.target.value)}
@@ -806,7 +794,13 @@ export default await async function (_, $, $html) {
         async do(id, action) {
           if (!this.connected()) return;
           try {
+            const prompt = this.pendingPrompts().find(p => p.id === id);
             await this.api().actionPrompt({ id, action });
+            if (prompt) {
+              const label = action === "snooze" ? "snoozed" : action === "done" ? "marked done" : action + "ed";
+              const snippet = prompt.message.length > 60 ? prompt.message.slice(0, 57) + "..." : prompt.message;
+              this.addMessage({ role: "system", content: `${label}: "${snippet}"` });
+            }
             await this.loadPendingPrompts();
             if (action === "done" || action === "backlog") {
               await this.refreshData();
@@ -837,7 +831,6 @@ export default await async function (_, $, $html) {
           return $html.HTML.t`
             <div class="agenda-app">
               ${_.TopBar.new({ app: this })}
-              ${_.NotificationBanner.new({ app: this })}
               <div class="view-container">
                 <div hidden=${() => this.activeView() !== "chat"}>
                   ${_.ChatView.new({ app: this })}
