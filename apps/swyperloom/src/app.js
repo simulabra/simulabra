@@ -43,7 +43,7 @@ export default await async function (_, $, $html, $session) {
         do() {
           const vnode = $html.HTML.t`
             <div class="text-display">
-              <div class="text-content" onclick=${() => this.session().startEditing()}><span class="main-text">${() => this.session().text()}</span><span class="preview-text">${() => this.session().preview()}</span></div>
+              <div class="text-content" onclick=${() => this.session().startEditing()}><div class="text-inner"><span class="main-text">${() => this.session().text()}</span><span class="preview-text">${() => this.session().preview()}</span></div></div>
             </div>
           `;
           this.rootVNode(vnode);
@@ -61,6 +61,12 @@ export default await async function (_, $, $html, $session) {
       $.Var.new({ name: "entry" }),
       $.Var.new({ name: "session" }),
       $.Method.new({
+        name: "displayToken",
+        do(tok) {
+          return tok.replace(/\n/g, "↵").replace(/\t/g, "⇥").replace(/\r/g, "↵");
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           const prob = this.entry().probability();
@@ -68,7 +74,7 @@ export default await async function (_, $, $html, $session) {
           if (display.length > 5) display = "<.01";
           return $html.HTML.t`
             <button class="logprob-btn" onclick=${() => this.session().insertToken(this.entry().token())}>
-              <span class="token">${this.entry().token()}</span>
+              <span class="token">${this.displayToken(this.entry().token())}</span>
               <span class="prob">${display}</span>
             </button>
           `;
@@ -545,12 +551,18 @@ export default await async function (_, $, $html, $session) {
               padding: 2px;
               flex: 1;
               overflow-y: auto;
+              display: flex;
+              flex-direction: column;
+              cursor: pointer;
+            }
+
+            .text-inner {
+              margin-top: auto;
               font-size: 15px;
               line-height: 1.5;
               color: var(--charcoal);
               white-space: pre-wrap;
               word-break: break-word;
-              cursor: pointer;
             }
 
             .text-content:active {
@@ -593,12 +605,13 @@ export default await async function (_, $, $html, $session) {
 
             .logprob-btn {
               display: flex;
-              flex-direction: column;
-              align-items: center;
+              flex-direction: row;
+              align-items: baseline;
+              gap: 3px;
               background: var(--light-sand);
               border: 0;
               box-shadow: var(--box-shadow-args);
-              padding: 4px 8px;
+              padding: 2px 6px;
               color: var(--seaweed);
               cursor: pointer;
               flex-shrink: 0;

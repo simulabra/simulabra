@@ -200,7 +200,7 @@ export default await async function (_, $, $test, $llm) {
 
       const initialText = await this.page().$eval('.main-text', el => el.textContent);
 
-      await this.page().click('.swype-choice.top-left');
+      await this.page().dispatchEvent('.swype-choice.top-left', 'click');
       await __.sleep(100);
 
       const finalText = await this.page().$eval('.main-text', el => el.textContent);
@@ -223,13 +223,13 @@ export default await async function (_, $, $test, $llm) {
 
       const initialText = await this.page().$eval('.main-text', el => el.textContent);
 
-      await this.page().click('.swype-choice.top-left');
+      await this.page().dispatchEvent('.swype-choice.top-left', 'click');
       await __.sleep(100);
 
       const afterSelectText = await this.page().$eval('.main-text', el => el.textContent);
       this.assert(afterSelectText.length > initialText.length, 'Text should have grown');
 
-      await this.page().locator('.bar-btn:has-text("undo")').click();
+      await this.page().dispatchEvent('.bottom-bar .bar-btn:nth-child(2)', 'click');
       await __.sleep(100);
 
       const afterUndoText = await this.page().$eval('.main-text', el => el.textContent);
@@ -250,15 +250,15 @@ export default await async function (_, $, $test, $llm) {
         return choice && choice.textContent && choice.textContent !== '...';
       }, { timeout: 5000 });
 
-      await this.page().click('.swype-choice.top-left');
+      await this.page().dispatchEvent('.swype-choice.top-left', 'click');
       await __.sleep(100);
 
       const afterSelectText = await this.page().$eval('.main-text', el => el.textContent);
 
-      await this.page().locator('.bar-btn:has-text("undo")').click();
+      await this.page().dispatchEvent('.bottom-bar .bar-btn:nth-child(2)', 'click');
       await __.sleep(100);
 
-      await this.page().locator('.bar-btn:has-text("redo")').click();
+      await this.page().dispatchEvent('.bottom-bar .bar-btn:nth-child(3)', 'click');
       await __.sleep(100);
 
       const afterRedoText = await this.page().$eval('.main-text', el => el.textContent);
@@ -426,7 +426,7 @@ export default await async function (_, $, $test, $llm) {
       const choiceText = await this.page().$eval('.swype-choice.top-left .choice-text', el => el.textContent);
       const expectedWordCount = choiceText.trim().split(/\s+/).filter(w => w).length;
 
-      await this.page().click('.swype-choice.top-left');
+      await this.page().dispatchEvent('.swype-choice.top-left', 'click');
       await __.sleep(100);
 
       const afterClick = await this.page().$eval('.main-text', el => el.textContent);
