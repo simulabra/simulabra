@@ -18,3 +18,5 @@ API key and server URL are configurable in Settings (hamburger menu).
 
 HTML entry point: `index.html`
 Build with: `bash build.sh` (outputs to `out/swyperloom/`)
+
+Always rebuild with `bash build.sh` after making changes — the PWA serves from `out/`.

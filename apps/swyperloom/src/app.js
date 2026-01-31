@@ -5,6 +5,30 @@ import session from "./session.js";
 
 export default await async function (_, $, $html, $session) {
 
+  let debugEl = null;
+  let debugMessages = [];
+
+  function debugLog(msg) {
+    debugMessages.push(msg);
+    if (debugMessages.length > 30) debugMessages.shift();
+    if (debugEl) debugEl.textContent = debugMessages.join('\n');
+  }
+
+  function toggleDebug() {
+    if (debugEl) {
+      debugEl.remove();
+      debugEl = null;
+      debugMessages = [];
+    } else {
+      debugEl = document.createElement('pre');
+      debugEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.85);color:#0f0;font-size:10px;padding:4px;max-height:30vh;overflow-y:auto;z-index:9999;pointer-events:none;margin:0;';
+      document.body.appendChild(debugEl);
+      debugLog('debug on');
+      debugLog('ua: ' + navigator.userAgent);
+      debugLog('vibrate: ' + !!navigator.vibrate);
+    }
+  }
+
   $.Class.new({
     name: "TextDisplay",
     doc: "Ornate framed text display area for completions",
@@ -18,15 +42,6 @@ export default await async function (_, $, $html, $session) {
           $.Effect.create(() => {
             this.session().text();
             this.scrollToBottom();
-          });
-          let started = false;
-          $.Effect.create(() => {
-            this.session().preview();
-            if (started) {
-              try { navigator.vibrate?.(25); } catch {}
-            } else {
-              started = true;
-            }
           });
         }
       }),
@@ -435,6 +450,7 @@ export default await async function (_, $, $html, $session) {
                          oninput=${e => this.session().updateApiKey(e.target.value)}
                          placeholder="hyperbolic key" />
                 </div>
+                <button class="settings-done" onclick=${() => toggleDebug()}>Debug</button>
                 <button class="settings-done" onclick=${() => this.session().closeSettings()}>Done</button>
               </div>
             </div>
@@ -802,6 +818,8 @@ export default await async function (_, $, $html, $session) {
               font-size: 11px;
               font-style: italic;
               color: var(--seashell);
+              position: relative;
+              top: -4px;
             }
 
             /* Edit Modal */
