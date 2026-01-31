@@ -1,0 +1,98 @@
+# Simulabra Project System 
+The Simulabra Project System (SPS) is a file-based software development work tracker. 
+
+```
+$ cat sps/projects.jsonl
+{"name": "agenda-refactor", "brief": "increase code quality of the agenda app and potential library improvements", "startedAt": "2026-01-31T20:56:33.123Z", "status": "NOT STARTED"}
+$ ls sps/prj/agenda-refactor
+docs/
+plan/
+PROJECT.md
+WORKLOG.md
+
+$ cat sps/prj/agenda-refactor/PROJECT.md
+---
+tltle: agenda-refactor
+description: increase code quality of the agenda app and potential library improvements
+tags:
+    - agenda
+    - refactor
+---
+
+# Agenda refactor
+
+## Project overview
+The agenda application has seen a good deal of work recently, with many new features. But before we go further, it needs to be refactored, with lessons extracted back to the main library. 
+
+## Status
+Not started. Would be blocked by any other active work on agenda.
+
+## History
+### 1.31.2026
+- created project from user intent
+```
+
+
+## Project catalog
+`sps/projects.jsonl` contains a catalog of projects with basic information like the name/directory, the time it started, and the status. It also contains a brief that describes the goals of the project in a relatively short sentence.
+
+### Schema
+name: string (no spaces, used as directory)
+brief: string
+startedAt: ISO timestamp
+status: "NOT STARTED" | "IN PROGRESS" | "COMPLETE" | "ON HOLD" | "CANCELED"
+
+## Project directory
+All files for a project are stored in `sps/prj/{project.name}/`.
+
+### PROJECT.md
+`PROJECT.md` is the information hub of the project. The intention is to get an interested party up to speed on a project without overwhelming theme in minutiae. 
+
+It containes the following sections:
+
+#### Frontmatter
+Include frontmatter with the title and description from the project catalog, and any tags that might apply.
+
+#### Project overview
+A paragraph version of the brief, with more details about the goals and desired outcomes of the project, and more on its context in the broader system.
+
+#### Status
+A short, accurate description of the current status of the project. Include any blockers or prereqs that need to be called out.
+
+#### History
+A comprehensive log of short messages for each item of work done for a project, organized into headers with the date. 
+
+### docs/
+Contains high-level project document markdown files, like PRDs, research notes, reports, etc.
+
+### plan/
+Contains plan files - 1 for each phase, broken down into amounts that can be reasonably accomplished in one session. Name files like `phase1-style-consistency.md`
+
+### WORKLOG.md
+More granular log of work done, separated into sections by day. Include interpreted requests from the user, files created, scope changes, thoughts about out-of-scope work, musings, accomplishments, etc. 
+
+## The system
+
+### Initializing a project
+First, when the user mentions starting a new project, confirm the name and brief using the AskUserQuestion tool. 
+
+After confirming, create the project directory structure, `PROJECT.md` file, and `WORKLOG.md`. Ask about first steps - requirement gathering, research, prototyping, etc. 
+
+### Information gathering
+Before starting work, it is typically prudent to refine your thoughts around the matter.
+
+#### Using codex
+In my own testing I have found codex with gpt-5.2 to be better at pure knowledge work. Delegate high-level docs tasks to it like so (make sure to include the location of the doc):
+```
+$ codex e "Analyze the code base and architecture of the agenda app, looking for bad abstractions, excessive duplication, and other sources of accidental complexity. Write your report to sps/prj/agenda-refactor/docs/analysis.md. Include file locations with line numbers and suggestions for improvements, but no code. Include libraries the app is using in the scope of this report."
+```
+
+Codex is slow, and will generate a lot of output while running. Run it in a tmux session, then do your own information gathering in parallel, focusing on building a map of the relevant code, design sketches, and requirement gathering from the user. 
+
+### Planning
+Once enough information has been gathered to have a clear understanding of the goals, domain, and scope of the project, move on to planning. Using the docs, organize the work into phases in the plan/ directory. Call out any uncertainties that might come up during implementation time, references to docs or project files, and acceptance criteria. 
+
+### Executing plans
+Track the current phase of the plan in `PROJECT.md`, and add a note to the plan file when done as well. The phase is complete when the acceptance criteria in it are met and tests are working. If the phase is impossible/overly scoped, call that out to the user. Add to `WORKLOG.md` when appropriate - have fun with it, that file is yours. 
+
+### Completing projects
