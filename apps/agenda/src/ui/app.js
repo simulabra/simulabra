@@ -127,10 +127,19 @@ export default await async function (_, $, $html) {
 
   const formatTimestamp = $.Method.new({
     name: "formatTimestamp",
-    doc: "format a timestamp string as ISO 8601, returning empty string for falsy values",
+    doc: "format a timestamp as M.DD at H:MMAM/PM Pacific",
     do(ts) {
       if (!ts) return "";
-      return new Date(ts).toISOString();
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).formatToParts(new Date(ts));
+      const get = (type) => parts.find(p => p.type === type)?.value || '';
+      return `${get('month')}.${get('day')} at ${get('hour')}:${get('minute')}${get('dayPeriod')}`;
     }
   });
 
@@ -371,14 +380,14 @@ export default await async function (_, $, $html) {
     slots: [
       $html.Component,
       $.Var.new({ name: "log" }),
+      formatTimestamp,
       $.Method.new({
         name: "render",
         do() {
           const log = this.log();
-          const date = new Date(log.timestamp);
           return $html.HTML.t`
             <div class="log-entry">
-              <div class="log-timestamp">${date.toLocaleString()}</div>
+              <div class="log-timestamp">${this.formatTimestamp(log.timestamp)}</div>
               <div class="log-content">${log.content}</div>
               ${log.tags && log.tags.length ? $html.HTML.t`
                 <div class="log-tags">
@@ -428,15 +437,15 @@ export default await async function (_, $, $html) {
     slots: [
       $html.Component,
       $.Var.new({ name: "reminder" }),
+      formatTimestamp,
       $.Method.new({
         name: "render",
         do() {
           const reminder = this.reminder();
-          const date = new Date(reminder.triggerAt);
-          const isPast = date < new Date();
+          const isPast = new Date(reminder.triggerAt) < new Date();
           return $html.HTML.t`
             <div class=${() => "reminder-item" + (reminder.sent ? " sent" : "") + (isPast ? " past" : "")}>
-              <div class="reminder-time">${date.toLocaleString()}</div>
+              <div class="reminder-time">${this.formatTimestamp(reminder.triggerAt)}</div>
               <div class="reminder-message">${reminder.message}</div>
               ${reminder.recurrence ? $html.HTML.t`<span class="reminder-recurring">recurring</span>` : ""}
             </div>

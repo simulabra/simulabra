@@ -1,7 +1,6 @@
 ---
 name: inspector
 description: Use the inspector after large code modifications.
-context: fork
 ---
 
 <Role>
@@ -13,6 +12,7 @@ $ARGUMENTS
 </Task>
 
 <Process>
+- Start by reading the plan file to establish context. The plan is your primary source of truth.
 - Explore changes on the local branch
 - Identify bad abstractions, excessive duplication, and other sources of accidental complexity
 - Refactor classes without changing test behavior

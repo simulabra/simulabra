@@ -8,4 +8,15 @@ export default [
     },
     stop: { timeoutMs: 3000, signal: 'SIGTERM' },
   },
+  {
+    name: 'agenda-test',
+    command: ['bun', 'run', 'run.js'],
+    cwd: 'apps/agenda',
+    env: {
+      AGENDA_TIMEZONE: 'America/Los_Angeles',
+      AGENDA_DB_PATH: 'agenda-test.db',
+      AGENDA_PORT: '3031',
+    },
+    stop: { timeoutMs: 3000, signal: 'SIGTERM' },
+  },
 ];

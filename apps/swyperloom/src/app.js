@@ -1,3 +1,4 @@
+// SwypeLoom UI: mobile swipe-based LLM text generation with logprob token selection
 import html from "../../../src/html.js";
 import { __, base } from "../../../src/base.js";
 import session from "./session.js";
@@ -39,11 +40,23 @@ export default await async function (_, $, $html, $session) {
         }
       }),
       $.Method.new({
+        name: "spanify",
+        do(text) {
+          const processed = text.replace(/\n/g, '|||\\n|||');
+          return processed.split('|||').map(p => {
+            if (p === '\\n') {
+              return $html.HTML.t`<br>`;
+            }
+            return p;
+          });
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           const vnode = $html.HTML.t`
             <div class="text-display">
-              <div class="text-content" onclick=${() => this.session().startEditing()}><div class="text-inner"><span class="main-text">${() => this.session().text()}</span><span class="preview-text">${() => this.session().preview()}</span></div></div>
+              <div class="text-content" onclick=${() => this.session().startEditing()}><div class="text-inner"><span class="main-text">${() => this.spanify(this.session().text())}</span><span class="preview-text">${() => this.spanify(this.session().preview())}</span></div></div>
             </div>
           `;
           this.rootVNode(vnode);
@@ -322,6 +335,24 @@ export default await async function (_, $, $html, $session) {
   });
 
   $.Class.new({
+    name: "Bumper",
+    doc: "Footer bumper with branding",
+    slots: [
+      $html.Component,
+      $.Method.new({
+        name: "render",
+        do() {
+          return $html.HTML.t`
+            <div class="bumper">
+              SIMULABRA INSIDE
+            </div>
+          `;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
     name: "TopBar",
     doc: "Header bar with title and menu",
     slots: [
@@ -363,7 +394,18 @@ export default await async function (_, $, $html, $session) {
               <div class="edit-container">
                 <textarea class="edit-textarea"
                           oninput=${e => this.session().editText(e.target.value)}>${() => this.session().text()}</textarea>
-                <button class="edit-done" onclick=${() => this.session().stopEditing()}>Done</button>
+                <div class="edit-actions">
+                  <button class="edit-btn edit-copy" onclick=${(e) => {
+                    const ta = e.target.closest('.edit-container').querySelector('textarea');
+                    ta.select();
+                    document.execCommand('copy');
+                  }}>copy</button>
+                  <button class="edit-btn edit-clear" onclick=${(e) => {
+                    e.target.closest('.edit-container').querySelector('textarea').blur();
+                    this.session().editText('');
+                  }}>clear</button>
+                  <button class="edit-btn edit-close" onclick=${() => this.session().stopEditing()}>close</button>
+                </div>
               </div>
             </div>
           `;
@@ -561,8 +603,12 @@ export default await async function (_, $, $html, $session) {
               font-size: 15px;
               line-height: 1.5;
               color: var(--charcoal);
-              white-space: pre-wrap;
               word-break: break-word;
+            }
+
+            .escape-char {
+              color: var(--dusk);
+              font-size: 0.8em;
             }
 
             .text-content:active {
@@ -666,6 +712,7 @@ export default await async function (_, $, $html, $session) {
               line-height: 1.4;
               color: var(--charcoal);
               word-break: break-word;
+              white-space: pre-line;
               transition: opacity 0.1s ease-out;
             }
 
@@ -746,6 +793,17 @@ export default await async function (_, $, $html, $session) {
               font-style: italic;
             }
 
+            /* Bumper */
+            .bumper {
+              text-align: center;
+              padding: 4px 8px;
+              background: var(--wood);
+              box-shadow: var(--box-shadow-args);
+              font-size: 11px;
+              font-style: italic;
+              color: var(--seashell);
+            }
+
             /* Edit Modal */
             .edit-modal {
               position: fixed;
@@ -792,8 +850,13 @@ export default await async function (_, $, $html, $session) {
               box-shadow: var(--box-shadow-args), var(--box-shadow-args-inset);
             }
 
-            .edit-done {
-              background: var(--grass);
+            .edit-actions {
+              display: flex;
+              gap: 8px;
+            }
+
+            .edit-btn {
+              flex: 1;
               border: 0;
               box-shadow: var(--box-shadow-args);
               padding: 8px;
@@ -803,9 +866,14 @@ export default await async function (_, $, $html, $session) {
               cursor: pointer;
             }
 
-            .edit-done:active {
-              background: var(--seaweed);
-            }
+            .edit-copy { background: var(--ocean); }
+            .edit-copy:active { background: var(--sky); }
+
+            .edit-clear { background: var(--dusk); }
+            .edit-clear:active { background: var(--charcoal); }
+
+            .edit-close { background: var(--grass); }
+            .edit-close:active { background: var(--seaweed); }
 
             /* Settings Modal */
             .settings-modal {
@@ -907,6 +975,7 @@ export default await async function (_, $, $html, $session) {
               ${_.LogprobsBar.new({ session: this.session() })}
               ${_.Swyper.new({ session: this.session(), textDisplay: this.textDisplay() })}
               ${_.BottomBar.new({ session: this.session() })}
+              ${_.Bumper.new()}
               ${_.EditModal.new({ session: this.session() })}
               ${_.SettingsModal.new({ session: this.session() })}
             </div>

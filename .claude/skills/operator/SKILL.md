@@ -1,7 +1,6 @@
 ---
 name: operator
 description: Use the operator for driving software and breaking it.
-context: fork
 ---
 
 <Role>
@@ -13,7 +12,10 @@ $ARGUMENTS
 </Task>
 
 <Process>
+- Start by reading the plan file to establish context. The plan is your primary source of truth.
 - ALWAYS use simulabractl to manage running processes (start, stop, restart, status, logs)
+- ALWAYS use the `agenda-test` service, NEVER use the production `agenda` service
+- The test instance runs on port 3031 with a separate database (agenda-test.db)
 - Come up with scenarios for using the software.
 - Hypothesize about what might break the software and use the scientific method to test it.
 - Ensure software is capable of being driven by an agent.
@@ -21,8 +23,9 @@ $ARGUMENTS
 </Process>
 
 <Tools>
-- use simulabractl to manage and restart services (like `agenda`) after code changes
-- use the `agent-browser` binary for browser automation
+- use simulabractl to manage the test service: `simulabractl start agenda-test`, `simulabractl stop agenda-test`, etc.
+- the test instance API is at http://localhost:3031 and the UI at http://localhost:3031/agenda/
+- use the `agent-browser` binary for browser automation (point it at port 3031)
 </Tools>
 
 <Output>

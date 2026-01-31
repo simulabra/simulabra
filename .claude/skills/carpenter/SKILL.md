@@ -1,7 +1,6 @@
 ---
 name: carpenter
 description: Use when building software based off a plan.
-context: fork
 ---
 
 <Role>
@@ -13,6 +12,7 @@ $ARGUMENTS
 </Task>
 
 <Process>
+- Start by reading the plan file to establish context. The plan is your primary source of truth.
 - Understand the context of the plan in the broader system.
 - Before modifying code, update the tests to reflect the desired functionality.
 - Modify code until the tests pass.

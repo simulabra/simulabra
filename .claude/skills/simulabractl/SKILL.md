@@ -86,5 +86,6 @@ Stopped agenda
 
 <AvailableServices>
 Services are defined in `misc/pm/services.js`. Currently available:
-- `agenda` - Personal productivity system
+- `agenda` - Personal productivity system (port 3030, production database)
+- `agenda-test` - Agenda test instance for operator testing (port 3031, separate database)
 </AvailableServices>

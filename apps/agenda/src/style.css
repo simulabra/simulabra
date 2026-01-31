@@ -8,6 +8,8 @@
   max-width: 480px;
   margin: 0 auto;
   gap: 4px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Top Bar */

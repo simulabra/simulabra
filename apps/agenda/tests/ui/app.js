@@ -240,6 +240,33 @@ export default await async function (_, $, $test) {
     }
   });
 
+  $test.BrowserCase.new({
+    name: 'AgendaAppLongTextNoOverflow',
+    doc: 'Long unbroken strings should not overflow the app container',
+    isMobile: true,
+    async do() {
+      const server = createMockServer();
+      try {
+        await loadPage(this.page(), server);
+
+        await this.page().evaluate(() => {
+          const el = document.querySelector('.chat-messages');
+          const div = document.createElement('div');
+          div.textContent = 'x'.repeat(500);
+          el.appendChild(div);
+        });
+        await __.sleep(100);
+
+        const hasHorizontalScroll = await this.page().evaluate(() => {
+          return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+        });
+        this.assert(!hasHorizontalScroll, 'Long unbroken text should not cause horizontal overflow');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
 }.module({
   name: 'test.agenda.ui',
   imports: [base, test],
