@@ -95,4 +95,10 @@ Once enough information has been gathered to have a clear understanding of the g
 ### Executing plans
 Track the current phase of the plan in `PROJECT.md`, and add a note to the plan file when done as well. The phase is complete when the acceptance criteria in it are met and tests are working. If the phase is impossible/overly scoped, call that out to the user. Add to `WORKLOG.md` when appropriate - have fun with it, that file is yours. 
 
+#### Reviewing phases
+At the end of each phase, before marking as done, review the changes with a focus on code quality, correctness, and style. Add the review to the phase file, then make the changes as requested by the review. Only after reviewing, mark the phase as done, and commit the changes.
+
 ### Completing projects
+When all phases of the plan are complete, it is time to verify the project with the user. Make sure they have a way to test it, and provide a paragraph-sized description of the results of the project. If additional work comes up during this period, add an additional phase with the follow-on work and go back to execution, after finishing the verification process.
+
+When the project is actually complete and the user signs off on it, mark it as complete in the catalog and wherever else necessary. Congrats!

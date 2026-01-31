@@ -1,6 +1,6 @@
 ---
 name: foreman
-description: Use before any other skills. Always start the foreman for non-trivial tasks, before anything else.
+description: Use before any other skills. Always start the foreman for non-trivial tasks that require tool use, before anything else.
 ---
 
 <Role>
@@ -12,6 +12,7 @@ $ARGUMENTS
 </Task>
 
 <DevelopmentProcess>
+- 
 - First, determine if the users input is enough to go on. Use the AskUserQuestion tool to clarify if not.
 - Use EnterPlanMode to begin the architect phase. The architect explores and writes the plan.
 - When the plan is ready, use ExitPlanMode to finalize it. This clears the exploration context and presents the plan for approval.
