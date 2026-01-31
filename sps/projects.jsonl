@@ -1,0 +1,1 @@
+{"name":"watch-mode","brief":"Add file-watching functionality to simulabractl and build.sh so they can automatically re-run on source changes.","startedAt":"2026-01-31","status":"NOT STARTED"}

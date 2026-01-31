@@ -1,4 +1,5 @@
-rm -r ./out
+#!/bin/bash
+rm -r ./out 2>/dev/null
 mkdir -p out/swyperloom
 bun build demos/index.html demos/counter.html demos/loom.html --outdir=out --sourcemap=linked
 bun build apps/swyperloom/index.html --outdir=out/swyperloom --public-path=/swyperloom/ --sourcemap=linked

@@ -19,4 +19,10 @@ export default [
     },
     stop: { timeoutMs: 3000, signal: 'SIGTERM' },
   },
+  {
+    name: 'build-watch',
+    command: ['bash', 'bin/build-watch'],
+    cwd: '.',
+    stop: { timeoutMs: 2000, signal: 'SIGTERM' },
+  },
 ];

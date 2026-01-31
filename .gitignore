@@ -9,6 +9,7 @@ dist/
 .chatconfig.json
 jsconfig.json
 *.db
+*.db.bak
 tmp/
 bun.lockb
 devlog.txt

@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+set -e
+
+PREFIX="cc"
+
+die() {
+  echo "teemux: $1" >&2
+  exit "${2:-1}"
+}
+
+session_name() {
+  local raw="$1"
+  raw=$(echo "$raw" | sed 's/\.[a-zA-Z]*$//' | tr '[:upper:]' '[:lower:]')
+  raw=$(echo "$raw" | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|--$//g')
+  echo "${PREFIX}-${raw}"
+}
+
+unique_session() {
+  local base="$1"
+  if ! tmux has-session -t "$base" 2>/dev/null; then
+    echo "$base"
+    return
+  fi
+  local n=2
+  while tmux has-session -t "${base}-${n}" 2>/dev/null; do
+    ((n++))
+  done
+  echo "${base}-${n}"
+}
+
+resolve_session() {
+  local name="$1"
+  [[ -z "$name" ]] && die "session name required" 1
+  if tmux has-session -t "$name" 2>/dev/null; then
+    echo "$name"
+    return
+  fi
+  local prefixed="${PREFIX}-${name}"
+  if tmux has-session -t "$prefixed" 2>/dev/null; then
+    echo "$prefixed"
+    return
+  fi
+  die "session not found: $name" 2
+}
+
+cmd_start() {
+  local name=""
+  if [[ "$1" == "--name" ]]; then
+    [[ -z "$2" ]] && die "missing value for --name" 1
+    name="${PREFIX}-${2}"
+    shift 2
+  fi
+  [[ $# -eq 0 ]] && die "usage: teemux start [--name <n>] <command...>" 1
+  if [[ -z "$name" ]]; then
+    local best_arg="" last_arg=""
+    for arg in "$@"; do
+      if [[ "$arg" != -* ]]; then
+        last_arg="$arg"
+        [[ ! "$arg" =~ ^[0-9]+$ ]] && best_arg="$arg"
+      fi
+    done
+    name=$(session_name "${best_arg:-${last_arg:-$1}}")
+  fi
+  name=$(unique_session "$name")
+  if tmux has-session -t "$name" 2>/dev/null; then
+    die "session already exists: $name" 3
+  fi
+  tmux new-session -d -s "$name" "$*"
+  echo "started $name"
+}
+
+cmd_check() {
+  local session
+  session=$(resolve_session "$1")
+  tmux capture-pane -t "$session" -p -S -80
+}
+
+cmd_list() {
+  local sessions
+  sessions=$(tmux list-sessions -F '#{session_name} #{session_created} #{session_windows} #{?session_attached,attached,detached}' 2>/dev/null || true)
+  if [[ -z "$sessions" ]]; then
+    echo "no active sessions"
+    return
+  fi
+  local found=0
+  while IFS= read -r line; do
+    local sname
+    sname=$(echo "$line" | awk '{print $1}')
+    if [[ "$sname" == ${PREFIX}-* ]]; then
+      if [[ $found -eq 0 ]]; then
+        printf "%-20s %-12s %-8s %s\n" "SESSION" "CREATED" "WINDOWS" "STATE"
+        found=1
+      fi
+      local created windows state
+      created=$(echo "$line" | awk '{print $2}')
+      windows=$(echo "$line" | awk '{print $3}')
+      state=$(echo "$line" | awk '{print $4}')
+      created=$(date -d "@$created" '+%H:%M:%S' 2>/dev/null || date -r "$created" '+%H:%M:%S' 2>/dev/null || echo "$created")
+      printf "%-20s %-12s %-8s %s\n" "$sname" "$created" "$windows" "$state"
+    fi
+  done <<< "$sessions"
+  if [[ $found -eq 0 ]]; then
+    echo "no active cc- sessions"
+  fi
+}
+
+cmd_stop() {
+  local session
+  session=$(resolve_session "$1")
+  tmux kill-session -t "$session"
+  echo "stopped $session"
+}
+
+cmd_send() {
+  local session
+  session=$(resolve_session "$1")
+  shift
+  [[ $# -eq 0 ]] && die "usage: teemux send <session> <keys...>" 1
+  tmux send-keys -t "$session" "$@"
+}
+
+cmd_tail() {
+  local session
+  session=$(resolve_session "$1")
+  trap 'exit 0' INT
+  while tmux has-session -t "$session" 2>/dev/null; do
+    clear
+    echo "=== $session ==="
+    tmux capture-pane -t "$session" -p -S -80
+    sleep 1
+  done
+  echo "session ended: $session"
+}
+
+cmd_attach() {
+  local session
+  session=$(resolve_session "$1")
+  exec tmux attach -t "$session"
+}
+
+cmd_help() {
+  cat <<'HELP'
+teemux - tmux session manager for Claude Code
+
+usage: teemux <command> [args...]
+
+commands:
+  start [--name <n>] <command...>   run command in a new cc- session
+  check <session>                   capture last 80 lines of output
+  list                              show all cc- prefixed sessions
+  stop <session>                    kill a session
+  send <session> <keys...>          send input to a session
+  tail <session>                    continuously watch session output
+  attach <session>                  attach to a session interactively
+  help                              show this help
+
+session names:
+  auto-derived from the command (bun run test -> cc-test)
+  override with --name on start
+  check/stop/send accept names with or without cc- prefix
+HELP
+}
+
+case "${1:-help}" in
+  start)  shift; cmd_start "$@" ;;
+  check)  shift; cmd_check "$@" ;;
+  list)   cmd_list ;;
+  stop)   shift; cmd_stop "$@" ;;
+  send)   shift; cmd_send "$@" ;;
+  tail)   shift; cmd_tail "$@" ;;
+  attach) shift; cmd_attach "$@" ;;
+  help)   cmd_help ;;
+  *)      die "unknown command: $1 (try 'teemux help')" 1 ;;
+esac

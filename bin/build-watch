@@ -1,0 +1,2 @@
+#!/bin/bash
+exec watchexec -w demos -w apps -w src -e js,html,css -- bash bin/build

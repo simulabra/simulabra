@@ -77,6 +77,8 @@ await async function (_, $, $pm) {
             case 'logfile':
             case 'log':
               return this.cmdLogfile(ctrl, rest);
+            case 'watch':
+              return this.cmdWatch(ctrl, rest);
             case 'help':
             case undefined:
               return this.cmdHelp();
@@ -176,6 +178,37 @@ await async function (_, $, $pm) {
         }
       }),
       $.Method.new({
+        name: 'cmdWatch',
+        async do(ctrl, args) {
+          if (args.length === 0) {
+            console.error('Usage: simulabractl watch <service> [paths...]');
+            return 1;
+          }
+
+          const [name, ...watchPaths] = args;
+          const registry = await ctrl.loadRegistry();
+          const service = registry.get(name);
+          if (!service) {
+            console.error(`Unknown service: ${name}`);
+            return 2;
+          }
+
+          const paths = watchPaths.length > 0 ? watchPaths : [service.cwd()];
+          const exts = this.options().exts || 'js';
+
+          const watchArgs = [];
+          for (const p of paths) {
+            watchArgs.push('-w', p);
+          }
+          watchArgs.push('-e', exts, '--', 'bun', 'run', 'bin/simulabractl.js', 'restart', name);
+
+          const proc = Bun.spawn(['watchexec', ...watchArgs], {
+            stdio: ['inherit', 'inherit', 'inherit'],
+          });
+          return await proc.exited;
+        }
+      }),
+      $.Method.new({
         name: 'cmdHelp',
         do(exitCode = 0) {
           console.log(`Simulabra Process Manager (SPM)
@@ -187,6 +220,7 @@ Commands:
   start <service>...          Start one or more services
   stop <service>              Stop a service
   restart <service>           Stop then start a service
+  watch <service> [paths...]  Watch files and restart service on changes
   logfile <service>           Print the log file path
   help                        Show this help message
 
@@ -198,6 +232,7 @@ Options:
   --quiet, -q                 Suppress output messages
   --force                     Force stop (SIGKILL after timeout)
   --timeout <ms>              Stop timeout in milliseconds
+  --exts <extensions>         File extensions to watch (default: js)
 
 Exit Codes:
   0    Success

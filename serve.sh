@@ -1,2 +1,2 @@
-./build.sh
+./bin/build
 bun x http-server ./out
