@@ -53,7 +53,7 @@ export default await async function (_, $, $test, $db, $sqlite) {
       }
 
       const applied = runner.migrate();
-      this.assertEq(applied, 5, 'should apply 5 migrations');
+      this.assertEq(applied, 6, 'should apply 6 migrations');
 
       const pending = runner.pending();
       this.assertEq(pending.length, 0, 'should have no pending migrations');
@@ -330,13 +330,13 @@ export default await async function (_, $, $test, $db, $sqlite) {
 
       runner.migrate();
       const applied = runner.appliedVersions();
-      this.assertEq(applied.length, 5);
+      this.assertEq(applied.length, 6);
 
       const rolled = runner.rollback();
-      this.assertEq(rolled.version(), '005');
+      this.assertEq(rolled.version(), '006');
 
       const afterRollback = runner.appliedVersions();
-      this.assertEq(afterRollback.length, 4);
+      this.assertEq(afterRollback.length, 5);
 
       database.close();
     }

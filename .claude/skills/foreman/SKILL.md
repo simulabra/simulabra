@@ -27,8 +27,7 @@ Determine which phase the project is in, and delegate accordingly:
 
 2. **NOT STARTED / early IN PROGRESS, no plan yet** - Information gathering and planning phase.
    - Delegate to the **architect** to explore, gather requirements, and write phase plans in `sps/prj/{name}/plan/`.
-   - The architect may use codex for high-level analysis (run in tmux, work in parallel).
-   - Use EnterPlanMode for the architect phase. Use ExitPlanMode when the plan is ready.
+   - The architect handles plan mode internally — do NOT use EnterPlanMode yourself.
 
 3. **IN PROGRESS, plan exists with unfinished phases** - Execution phase.
    - List the files in `sps/prj/{name}/plan/` to see all phases.
@@ -50,16 +49,16 @@ Determine which phase the project is in, and delegate accordingly:
 
 <PlanOnDisk>
 Plans MUST live in `sps/prj/{name}/plan/` as files, never only in the conversation.
-- The architect writes plan files to disk during plan mode, before calling ExitPlanMode.
+- The architect writes plan files to disk, then uses ExitPlanMode with a phase index for approval.
 - If the user provides a plan inline (pasted in the prompt), write it to the project's `plan/` directory as phase files before delegating to the carpenter.
-- This ensures plans survive the context clear and drive the workflow from a single source of truth.
+- This ensures plans survive context clears and drive the workflow from a single source of truth.
 </PlanOnDisk>
 
 <Tips>
 - Always check `sps/projects.jsonl` and the project's PROJECT.md to understand current state before delegating.
 - Be clear about the scope and goals when communicating with workers. Include the project name and phase file path.
-- The built-in plan mode handles the context transition between the architect and implementation phases.
-- Do not use tools other than AskUserQuestion yourself - always delegate to the appropriate worker.
+- Do not use tools other than AskUserQuestion yourself — always delegate to the appropriate worker skill.
+- Do NOT enter plan mode yourself. The architect skill handles plan mode internally.
 - Update WORKLOG.md with a summary after each worker completes their piece.
 - Suggest improvements to the user about the team when finished working on a task.
 </Tips>

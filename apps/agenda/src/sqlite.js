@@ -228,6 +228,58 @@ export default await async function (_, $, $db) {
     }
   });
 
+  const migration006 = $db.Migration.new({
+    name: '006_create_projects',
+    version: '006',
+    description: 'Create Project table and add projectId to Task, Log, Reminder',
+    up(db) {
+      db.query(`CREATE TABLE IF NOT EXISTS agenda_Project (
+        sid TEXT PRIMARY KEY,
+        title TEXT,
+        slug TEXT,
+        archived TEXT,
+        context TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`).run();
+
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Project_archived ON agenda_Project (archived)`).run();
+      db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_agenda_Project_slug ON agenda_Project (slug)`).run();
+
+      db.query(`CREATE VIRTUAL TABLE IF NOT EXISTS agenda_Project_fts USING fts5(sid, title, content='agenda_Project', content_rowid='rowid')`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Project_fts_ai AFTER INSERT ON agenda_Project BEGIN
+        INSERT INTO agenda_Project_fts(rowid, sid, title) VALUES (NEW.rowid, NEW.sid, NEW.title);
+      END`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Project_fts_ad AFTER DELETE ON agenda_Project BEGIN
+        INSERT INTO agenda_Project_fts(agenda_Project_fts, rowid, sid, title) VALUES ('delete', OLD.rowid, OLD.sid, OLD.title);
+      END`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Project_fts_au AFTER UPDATE ON agenda_Project BEGIN
+        INSERT INTO agenda_Project_fts(agenda_Project_fts, rowid, sid, title) VALUES ('delete', OLD.rowid, OLD.sid, OLD.title);
+        INSERT INTO agenda_Project_fts(rowid, sid, title) VALUES (NEW.rowid, NEW.sid, NEW.title);
+      END`).run();
+
+      db.query(`ALTER TABLE agenda_Task ADD COLUMN projectId TEXT`).run();
+      db.query(`ALTER TABLE agenda_Log ADD COLUMN projectId TEXT`).run();
+      db.query(`ALTER TABLE agenda_Reminder ADD COLUMN projectId TEXT`).run();
+
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Task_projectId ON agenda_Task (projectId)`).run();
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Log_projectId ON agenda_Log (projectId)`).run();
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Reminder_projectId ON agenda_Reminder (projectId)`).run();
+    },
+    down(db) {
+      db.query(`DROP TRIGGER IF EXISTS agenda_Project_fts_ai`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Project_fts_ad`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Project_fts_au`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Project_fts`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Project_archived`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Project_slug`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Task_projectId`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Log_projectId`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Reminder_projectId`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Project`).run();
+    }
+  });
+
   $.Class.new({
     name: 'AgendaMigrations',
     doc: 'Helper class to get agenda migrations',
@@ -236,7 +288,7 @@ export default await async function (_, $, $db) {
         name: 'all',
         doc: 'get all agenda migrations in order',
         do() {
-          return [migration001, migration002, migration003, migration004, migration005];
+          return [migration001, migration002, migration003, migration004, migration005, migration006];
         }
       }),
     ]

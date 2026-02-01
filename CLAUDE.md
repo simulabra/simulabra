@@ -11,6 +11,7 @@ Simulabra is, most simply, a metaobject system for javascript. On top of this a 
  - try to always do things the simulabra way, in style and idiom
  - always read the whole file a change is in and all the modules it depends on
  - start with the interface, think like the caller
+ - NEVER use `name` as a Var or DBVar slot — it is a reserved built-in property on all Simulabra objects (holds the identity string). Use `title` or a more specific alternative instead.
 </CodingStandards>
  
 <Testing>

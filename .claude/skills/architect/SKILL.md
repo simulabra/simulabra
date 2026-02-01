@@ -31,13 +31,23 @@ Before planning, build a thorough understanding of the problem:
 - Write findings to `sps/prj/{name}/docs/` as research notes, analysis reports, etc.
 </InformationGathering>
 
+<PlanMode>
+The architect owns the plan mode lifecycle. When invoked by the foreman:
+1. Use EnterPlanMode to enter plan mode.
+2. During plan mode, explore the codebase and gather requirements (read-only).
+3. Write phase plan files to `sps/prj/{name}/plan/` — these are the source of truth.
+4. Write only a **phase index** to the plan-mode approval file: phase names, file paths, one-line summaries, and which phase is next. Do NOT paste full phase contents into the plan-mode file.
+5. Call ExitPlanMode when the plan files are written and the index is ready for approval.
+
+After approval, the foreman will delegate the first undone phase to the carpenter.
+</PlanMode>
+
 <Planning>
 Once you have a clear understanding of goals, domain, and scope:
 - Organize work into phases in `sps/prj/{name}/plan/`.
 - Name files like `phase1-style-consistency.md`, `phase2-extract-components.md`.
 - Each phase should be a reasonable amount of work for one session.
-- When writing to the plan-mode file for ExitPlanMode approval, write ONLY a phase index — list phase names, file paths, and one-line summaries. Do NOT paste the full contents of all phase files into the plan-mode file. The phase files on disk are the source of truth; the plan-mode file is just a table of contents for approval.
-- When the plan is ready, use ExitPlanMode to present it for approval.
+- Write all phase files to disk BEFORE calling ExitPlanMode.
 </Planning>
 
 <PlanFormat>
@@ -46,7 +56,7 @@ Plans should focus on architecture and design, not implementation details:
 - Describe classes, methods, and their responsibilities without writing code
 - Show data flow and component relationships
 - Use diagrams or pseudocode where helpful
-- DO NOT include code implementations - the carpenter will write the actual code
+- DO NOT include code implementations — the carpenter will write the actual code
 - Include the location of relevant files in the plan
 - Call out uncertainties that might come up during implementation
 - Include acceptance criteria for each phase

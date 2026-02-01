@@ -869,6 +869,174 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
     }
   });
 
+  // Project model tests
+  $test.Case.new({
+    name: 'ProjectCreation',
+    doc: 'Project should be created with title, slug, context and default archived=false',
+    do() {
+      const project = $models.Project.new({
+        title: 'Ancient Coins',
+        slug: 'ancient-coins',
+        context: 'Cleaning and identifying ancient Roman coins',
+      });
+      this.assertEq(project.title(), 'Ancient Coins');
+      this.assertEq(project.slug(), 'ancient-coins');
+      this.assertEq(project.archived(), false);
+      this.assertEq(project.context(), 'Cleaning and identifying ancient Roman coins');
+      this.assertEq(project.description(), '[ancient-coins] Ancient Coins');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ProjectDescriptionArchived',
+    doc: 'Project description should show archived indicator when archived',
+    do() {
+      const project = $models.Project.new({
+        title: 'Old Project',
+        slug: 'old-project',
+        archived: true,
+      });
+      this.assertEq(project.description(), '[old-project] Old Project (archived)');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ProjectPersistence',
+    doc: 'Project should save and load from SQLite with all fields',
+    do() {
+      const database = createTestDb();
+
+      const project = $models.Project.new({
+        title: 'House Projects',
+        slug: 'house-projects',
+        context: 'Tracking home improvement tasks',
+      });
+      project.save(database);
+
+      const found = $models.Project.findById(database, project.sid());
+      this.assert(found !== null, 'should find the project');
+      this.assertEq(found.title(), 'House Projects');
+      this.assertEq(found.slug(), 'house-projects');
+      this.assertEq(found.archived(), false);
+      this.assertEq(found.context(), 'Tracking home improvement tasks');
+      this.assert(found.createdAt(), 'should have createdAt');
+      this.assert(found.updatedAt(), 'should have updatedAt');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'ProjectSlugUniqueness',
+    doc: 'Project slug should be unique at the database level',
+    do() {
+      const database = createTestDb();
+
+      const project1 = $models.Project.new({
+        title: 'First',
+        slug: 'duplicate-slug',
+      });
+      project1.save(database);
+
+      const project2 = $models.Project.new({
+        title: 'Second',
+        slug: 'duplicate-slug',
+      });
+
+      this.assertThrows(
+        () => project2.save(database),
+        'UNIQUE constraint',
+        'should reject duplicate slug'
+      );
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'TaskWithProjectId',
+    doc: 'Task should persist projectId',
+    do() {
+      const database = createTestDb();
+
+      const project = $models.Project.new({ title: 'Test', slug: 'test-proj' });
+      project.save(database);
+
+      const task = $models.Task.new({
+        title: 'project task',
+        projectId: project.sid(),
+      });
+      task.save(database);
+
+      const found = $models.Task.findById(database, task.sid());
+      this.assertEq(found.projectId(), project.sid());
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'TaskWithNullProjectId',
+    doc: 'Task without projectId should default to null (Inbox)',
+    do() {
+      const database = createTestDb();
+
+      const task = $models.Task.new({ title: 'inbox task' });
+      task.save(database);
+
+      const found = $models.Task.findById(database, task.sid());
+      this.assert(found.projectId() === null || found.projectId() === undefined,
+        'projectId should be null for inbox items');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'LogWithProjectId',
+    doc: 'Log should persist projectId',
+    do() {
+      const database = createTestDb();
+
+      const project = $models.Project.new({ title: 'Test', slug: 'log-proj' });
+      project.save(database);
+
+      const log = $models.Log.new({
+        content: 'project log entry',
+        projectId: project.sid(),
+      });
+      log.save(database);
+
+      const found = $models.Log.findById(database, log.sid());
+      this.assertEq(found.projectId(), project.sid());
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'ReminderWithProjectId',
+    doc: 'Reminder should persist projectId',
+    do() {
+      const database = createTestDb();
+
+      const project = $models.Project.new({ title: 'Test', slug: 'reminder-proj' });
+      project.save(database);
+
+      const reminder = $models.Reminder.new({
+        message: 'project reminder',
+        triggerAt: new Date('2025-12-31T12:00:00Z'),
+        projectId: project.sid(),
+      });
+      reminder.save(database);
+
+      const found = $models.Reminder.findById(database, reminder.sid());
+      this.assertEq(found.projectId(), project.sid());
+
+      database.close();
+    }
+  });
+
   $test.Case.new({
     name: 'PromptConfigPersistence',
     doc: 'PromptConfig should save and load from SQLite',

@@ -32,6 +32,12 @@ export default await async function (_, $, $db, $sqlite, $time) {
         toSQL() { return JSON.stringify(this); },
         fromSQL() { return JSON.parse(this); },
       }),
+      $db.DBVar.new({
+        name: 'projectId',
+        doc: 'optional project reference',
+        indexed: true,
+        mutable: true,
+      }),
       $.After.new({
         name: 'init',
         do() {
@@ -103,6 +109,12 @@ export default await async function (_, $, $db, $sqlite, $time) {
         toSQL() { return JSON.stringify(this); },
         fromSQL() { return JSON.parse(this); },
       }),
+      $db.DBVar.new({
+        name: 'projectId',
+        doc: 'optional project reference',
+        indexed: true,
+        mutable: true,
+      }),
       $.Method.new({
         name: 'complete',
         doc: 'mark the task as done',
@@ -159,6 +171,12 @@ export default await async function (_, $, $db, $sqlite, $time) {
         mutable: true,
         toSQL() { return this ? 'true' : 'false'; },
         fromSQL() { return this === 'true'; },
+      }),
+      $db.DBVar.new({
+        name: 'projectId',
+        doc: 'optional project reference',
+        indexed: true,
+        mutable: true,
       }),
       $.Method.new({
         name: 'isDue',
@@ -372,6 +390,47 @@ export default await async function (_, $, $db, $sqlite, $time) {
           }
           this.responseHistory(history);
           return this;
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'Project',
+    doc: 'Named project that groups tasks, logs, and reminders with shared context',
+    slots: [
+      $sqlite.SQLitePersisted,
+      $db.DBVar.new({
+        name: 'title',
+        doc: 'human-readable project name',
+        searchable: true,
+        mutable: true,
+      }),
+      $db.DBVar.new({
+        name: 'slug',
+        doc: 'unique URL-safe handle',
+        indexed: true,
+        mutable: true,
+      }),
+      $db.DBVar.new({
+        name: 'archived',
+        doc: 'whether the project is archived',
+        default: false,
+        indexed: true,
+        mutable: true,
+        toSQL() { return this ? 'true' : 'false'; },
+        fromSQL() { return this === 'true'; },
+      }),
+      $db.DBVar.new({
+        name: 'context',
+        doc: 'freeform markdown context for Geist and humans',
+        mutable: true,
+      }),
+      $.Method.new({
+        name: 'description',
+        do() {
+          const suffix = this.archived() ? ' (archived)' : '';
+          return `[${this.slug()}] ${this.title()}${suffix}`;
         }
       }),
     ]
