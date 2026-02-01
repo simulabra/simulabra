@@ -1,1 +1,2 @@
 {"name":"watch-mode","brief":"Add file-watching functionality to simulabractl and build.sh so they can automatically re-run on source changes.","startedAt":"2026-01-31","status":"NOT STARTED"}
+{"name":"tree-tool","brief":"Create bin/tree.js CLI tool and Claude Code agent skill that prints a recursive listing of files and their Simulabra classes, ignoring node_modules/out/tmp/misc.","startedAt":"2026-01-31","status":"NOT STARTED"}

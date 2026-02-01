@@ -36,6 +36,7 @@ Once you have a clear understanding of goals, domain, and scope:
 - Organize work into phases in `sps/prj/{name}/plan/`.
 - Name files like `phase1-style-consistency.md`, `phase2-extract-components.md`.
 - Each phase should be a reasonable amount of work for one session.
+- When writing to the plan-mode file for ExitPlanMode approval, write ONLY a phase index — list phase names, file paths, and one-line summaries. Do NOT paste the full contents of all phase files into the plan-mode file. The phase files on disk are the source of truth; the plan-mode file is just a table of contents for approval.
 - When the plan is ready, use ExitPlanMode to present it for approval.
 </Planning>
 

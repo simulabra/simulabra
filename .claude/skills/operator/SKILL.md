@@ -28,6 +28,7 @@ $ARGUMENTS
 - use simulabractl to manage the test service: `simulabractl start agenda-test`, `simulabractl stop agenda-test`, etc.
 - the test instance API is at http://localhost:3031 and the UI at http://localhost:3031/agenda/
 - use the `agent-browser` binary for browser automation (point it at port 3031)
+- to serve HTML apps for testing: `bin/teemux start --name build-watch bin/build-watch` then `bin/teemux start --name serve bunx serve ./out` — apps will be at http://localhost:3000
 </Tools>
 
 <Output>

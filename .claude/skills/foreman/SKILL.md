@@ -31,10 +31,12 @@ Determine which phase the project is in, and delegate accordingly:
    - Use EnterPlanMode for the architect phase. Use ExitPlanMode when the plan is ready.
 
 3. **IN PROGRESS, plan exists with unfinished phases** - Execution phase.
-   - Identify the current phase from PROJECT.md.
-   - Delegate the phase to the **carpenter** with the path to the phase plan file.
-   - When the carpenter finishes a phase, send the **inspector** to review it before marking it done.
-   - Repeat for each phase.
+   - List the files in `sps/prj/{name}/plan/` to see all phases.
+   - Read PROJECT.md to see which phases are already marked done.
+   - Find the NEXT UNDONE phase — delegate ONLY that single phase file to the **carpenter**.
+   - Do NOT pass multiple phases or combine phase contents. One phase per carpenter invocation.
+   - When the carpenter finishes, send the **inspector** to review before marking the phase done in PROJECT.md.
+   - After the inspector approves, stop and report back. The user will re-invoke the foreman for the next phase.
 
 4. **IN PROGRESS, all phases done** - Verification phase.
    - Delegate to the **operator** to verify the project works as intended.
