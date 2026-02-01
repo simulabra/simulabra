@@ -14,11 +14,11 @@ Evolve the Agenda productivity app by adding Projects as a grouping and context 
 Use cases driving this: organizing ancient coin cleaning/identification work and house projects, each with their own context and task streams.
 
 ## Status
-IN PROGRESS — Phase 1 done, Phase 2 next.
+IN PROGRESS — Phase 2 done, Phase 3 next.
 
 ## Phases
 - [x] Phase 1: Project Model & Migration
-- [ ] Phase 2: DatabaseService Project CRUD
+- [x] Phase 2: DatabaseService Project CRUD
 - [ ] Phase 3: HTTP API Endpoints
 - [ ] Phase 4: Project Tools for Geist
 - [ ] Phase 5: Context-Driven Project Resolution
@@ -42,3 +42,5 @@ IN PROGRESS — Phase 1 done, Phase 2 next.
 - Wrote 8-phase plan
 - **Phase 1 complete**: Project model (title/slug/archived/context), migration 006, projectId on Task/Log/Reminder. Note: plan used `name` for Project's human-readable field but renamed to `title` to avoid Simulabra `name` slot collision.
 - **Phase 1 review**: Approved. Code is clean, idiomatic, well-tested. 57 model + 13 sqlite tests pass. No issues found.
+- **Phase 2 complete**: Project CRUD RPCs (createProject, getProject, getProjectBySlug, listProjects, updateProject), projectId on create/list/update for Task/Log/Reminder, new updateLog and updateReminder RPCs. 49 database service tests pass.
+- **Phase 2 review**: Approved. Added doc strings to all 7 new RPCs. Code is correct, idiomatic, and consistent with existing patterns. Three-way projectId filtering applied uniformly. No issues found.

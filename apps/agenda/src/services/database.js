@@ -67,8 +67,8 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       // Log operations
       $live.RpcMethod.new({
         name: 'createLog',
-        do({ content, tags = [] }) {
-          const log = $models.Log.new({ content, tags });
+        do({ content, tags = [], projectId = null }) {
+          const log = $models.Log.new({ content, tags, projectId });
           log.save(this.db());
           this.publishEvent('log.created', { id: log.sid() });
           return log.jsonify();
@@ -83,8 +83,13 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
       $live.RpcMethod.new({
         name: 'listLogs',
-        do({ limit = 50 } = {}) {
-          const logs = $models.Log.findAll(this.db());
+        do({ limit = 50, projectId } = {}) {
+          let logs = $models.Log.findAll(this.db());
+          if (projectId === null) {
+            logs = logs.filter(l => !l.projectId());
+          } else if (projectId !== undefined) {
+            logs = logs.filter(l => l.projectId() === projectId);
+          }
           const sorted = logs.sort((a, b) => b.timestamp() - a.timestamp());
           return sorted.slice(0, limit).map(l => l.jsonify());
         }
@@ -93,12 +98,13 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       // Task operations
       $live.RpcMethod.new({
         name: 'createTask',
-        do({ title, priority = 3, dueDate = null, tags = [] }) {
+        do({ title, priority = 3, dueDate = null, tags = [], projectId = null }) {
           const task = $models.Task.new({
             title,
             priority,
             dueDate: dueDate ? new Date(dueDate) : null,
-            tags
+            tags,
+            projectId
           });
           task.save(this.db());
           this.publishEvent('task.created', { id: task.sid() });
@@ -131,6 +137,11 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
           const tasks = $models.Task.findAll(this.db());
           let filtered = tasks;
 
+          if (filter.projectId === null) {
+            filtered = filtered.filter(t => !t.projectId());
+          } else if (filter.projectId !== undefined) {
+            filtered = filtered.filter(t => t.projectId() === filter.projectId);
+          }
           if (filter.done !== undefined) {
             filtered = filtered.filter(t => t.done() === filter.done);
           }
@@ -152,7 +163,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       $live.RpcMethod.new({
         name: 'updateTask',
         doc: 'update a task by id',
-        do({ id, title, priority, dueDate, tags }) {
+        do({ id, title, priority, dueDate, tags, projectId }) {
           const task = $models.Task.findById(this.db(), id);
           if (!task) {
             throw new Error(`Task not found: ${id}`);
@@ -162,6 +173,7 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
           if (priority !== undefined) task.priority(priority);
           if (dueDate !== undefined) task.dueDate(dueDate ? new Date(dueDate) : null);
           if (tags !== undefined) task.tags(tags);
+          if (projectId !== undefined) task.projectId(projectId);
 
           task.save(this.db());
           this.publishEvent('task.updated', { id: task.sid() });
@@ -172,10 +184,11 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       // Reminder operations
       $live.RpcMethod.new({
         name: 'createReminder',
-        do({ message, triggerAt, recurrence = null }) {
+        do({ message, triggerAt, recurrence = null, projectId = null }) {
           const reminderData = {
             message,
-            triggerAt: new Date(triggerAt)
+            triggerAt: new Date(triggerAt),
+            projectId
           };
           if (recurrence) {
             reminderData.recurrence = $time.RecurrenceRule.new(recurrence);
@@ -228,6 +241,11 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
           const reminders = $models.Reminder.findAll(this.db());
           let filtered = reminders;
 
+          if (filter.projectId === null) {
+            filtered = filtered.filter(r => !r.projectId());
+          } else if (filter.projectId !== undefined) {
+            filtered = filtered.filter(r => r.projectId() === filter.projectId);
+          }
           if (filter.sent !== undefined) {
             filtered = filtered.filter(r => r.sent() === filter.sent);
           }
@@ -501,6 +519,95 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
 
           config.save(this.db());
           return config.jsonify();
+        }
+      }),
+
+      // Project operations
+      $live.RpcMethod.new({
+        name: 'createProject',
+        doc: 'create a new project with title, slug, and optional context',
+        do({ title, slug, context = null, archived = false }) {
+          const project = $models.Project.new({ title, slug, context, archived });
+          project.save(this.db());
+          this.publishEvent('project.created', { id: project.sid() });
+          return project.jsonify();
+        }
+      }),
+      $live.RpcMethod.new({
+        name: 'getProject',
+        doc: 'get a project by id',
+        do({ id }) {
+          const project = $models.Project.findById(this.db(), id);
+          return project?.jsonify() ?? null;
+        }
+      }),
+      $live.RpcMethod.new({
+        name: 'getProjectBySlug',
+        doc: 'get a project by its unique slug via direct SQL lookup',
+        do({ slug }) {
+          const row = this.db().query('SELECT * FROM agenda_Project WHERE slug = $slug').get({ $slug: slug });
+          if (!row) return null;
+          return $models.Project.fromSQLRow(row).jsonify();
+        }
+      }),
+      $live.RpcMethod.new({
+        name: 'listProjects',
+        doc: 'list projects with optional archived filter, sorted by title',
+        do({ archived } = {}) {
+          let projects = $models.Project.findAll(this.db());
+          if (archived !== undefined) {
+            projects = projects.filter(p => p.archived() === archived);
+          }
+          return projects
+            .sort((a, b) => a.title().localeCompare(b.title()))
+            .map(p => p.jsonify());
+        }
+      }),
+      $live.RpcMethod.new({
+        name: 'updateProject',
+        doc: 'update a project by id',
+        do({ id, title, slug, context, archived }) {
+          const project = $models.Project.findById(this.db(), id);
+          if (!project) {
+            throw new Error(`Project not found: ${id}`);
+          }
+          if (title !== undefined) project.title(title);
+          if (slug !== undefined) project.slug(slug);
+          if (context !== undefined) project.context(context);
+          if (archived !== undefined) project.archived(archived);
+          project.save(this.db());
+          this.publishEvent('project.updated', { id: project.sid() });
+          return project.jsonify();
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'updateLog',
+        doc: 'update a log by id',
+        do({ id, projectId }) {
+          const log = $models.Log.findById(this.db(), id);
+          if (!log) {
+            throw new Error(`Log not found: ${id}`);
+          }
+          if (projectId !== undefined) log.projectId(projectId);
+          log.save(this.db());
+          this.publishEvent('log.updated', { id: log.sid() });
+          return log.jsonify();
+        }
+      }),
+
+      $live.RpcMethod.new({
+        name: 'updateReminder',
+        doc: 'update a reminder by id',
+        do({ id, projectId }) {
+          const reminder = $models.Reminder.findById(this.db(), id);
+          if (!reminder) {
+            throw new Error(`Reminder not found: ${id}`);
+          }
+          if (projectId !== undefined) reminder.projectId(projectId);
+          reminder.save(this.db());
+          this.publishEvent('reminder.updated', { id: reminder.sid() });
+          return reminder.jsonify();
         }
       }),
     ]

@@ -619,6 +619,318 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
       service.db().close();
     }
   });
+
+  // Project CRUD tests (Phase 2)
+  $test.Case.new({
+    name: 'DatabaseServiceCreateProject',
+    doc: 'DatabaseService should create projects',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Coin Cleaning', slug: 'coin-cleaning', context: 'Ancient Roman coins' });
+      this.assertEq(project.$class, 'Project');
+      this.assertEq(project.title, 'Coin Cleaning');
+      this.assertEq(project.slug, 'coin-cleaning');
+      this.assertEq(project.context, 'Ancient Roman coins');
+      this.assertEq(project.archived, false);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceGetProject',
+    doc: 'DatabaseService should get a project by id',
+    do() {
+      const service = createTestService();
+
+      const created = service.createProject({ title: 'House Reno', slug: 'house-reno' });
+      const fetched = service.getProject({ id: created.id });
+      this.assertEq(fetched.id, created.id);
+      this.assertEq(fetched.title, 'House Reno');
+      this.assertEq(fetched.slug, 'house-reno');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceGetProjectBySlug',
+    doc: 'DatabaseService should get a project by slug',
+    do() {
+      const service = createTestService();
+
+      service.createProject({ title: 'Garden', slug: 'garden' });
+      const fetched = service.getProjectBySlug({ slug: 'garden' });
+      this.assertEq(fetched.title, 'Garden');
+      this.assertEq(fetched.slug, 'garden');
+
+      const missing = service.getProjectBySlug({ slug: 'nonexistent' });
+      this.assertEq(missing, null);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceListProjects',
+    doc: 'DatabaseService should list projects with optional archived filter',
+    do() {
+      const service = createTestService();
+
+      service.createProject({ title: 'Active Project', slug: 'active' });
+      service.createProject({ title: 'Archived Project', slug: 'archived', archived: true });
+
+      const all = service.listProjects({});
+      this.assertEq(all.length, 2, 'should list all projects');
+
+      const activeOnly = service.listProjects({ archived: false });
+      this.assertEq(activeOnly.length, 1, 'should filter to active only');
+      this.assertEq(activeOnly[0].title, 'Active Project');
+
+      const archivedOnly = service.listProjects({ archived: true });
+      this.assertEq(archivedOnly.length, 1, 'should filter to archived only');
+      this.assertEq(archivedOnly[0].title, 'Archived Project');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateProject',
+    doc: 'DatabaseService should update a project',
+    do() {
+      const service = createTestService();
+
+      const created = service.createProject({ title: 'Old Title', slug: 'proj' });
+      const updated = service.updateProject({ id: created.id, title: 'New Title', context: 'updated context' });
+      this.assertEq(updated.title, 'New Title');
+      this.assertEq(updated.context, 'updated context');
+      this.assertEq(updated.slug, 'proj');
+
+      const refetched = service.getProject({ id: created.id });
+      this.assertEq(refetched.title, 'New Title');
+      this.assertEq(refetched.context, 'updated context');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateProjectNotFound',
+    doc: 'DatabaseService should throw when updating a non-existent project',
+    do() {
+      const service = createTestService();
+
+      this.assertThrows(
+        () => service.updateProject({ id: 'nonexistent', title: 'Nope' }),
+        'Project not found',
+        'should throw for non-existent project'
+      );
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceCreateTaskWithProjectId',
+    doc: 'DatabaseService should create a task with projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Test Project', slug: 'test-proj' });
+      const task = service.createTask({ title: 'project task', projectId: project.id });
+      this.assertEq(task.projectId, project.id);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceListTasksFilterByProjectId',
+    doc: 'DatabaseService should filter tasks by projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Filter Project', slug: 'filter-proj' });
+      service.createTask({ title: 'in project 1', projectId: project.id });
+      service.createTask({ title: 'in project 2', projectId: project.id });
+      service.createTask({ title: 'inbox task' });
+
+      const projectTasks = service.listTasks({ projectId: project.id });
+      this.assertEq(projectTasks.length, 2, 'should return 2 project tasks');
+
+      const inboxTasks = service.listTasks({ projectId: null });
+      this.assertEq(inboxTasks.length, 1, 'should return 1 inbox task');
+
+      const allTasks = service.listTasks({});
+      this.assertEq(allTasks.length, 3, 'should return all tasks when no projectId filter');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateTaskProjectId',
+    doc: 'DatabaseService should update a task projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Move Target', slug: 'move-target' });
+      const task = service.createTask({ title: 'movable task' });
+      this.assertEq(task.projectId, null);
+
+      const updated = service.updateTask({ id: task.id, projectId: project.id });
+      this.assertEq(updated.projectId, project.id);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceCreateLogWithProjectId',
+    doc: 'DatabaseService should create a log with projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Log Project', slug: 'log-proj' });
+      const log = service.createLog({ content: 'project log', projectId: project.id });
+      this.assertEq(log.projectId, project.id);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceListLogsFilterByProjectId',
+    doc: 'DatabaseService should filter logs by projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Log Filter', slug: 'log-filter' });
+      service.createLog({ content: 'in project', projectId: project.id });
+      service.createLog({ content: 'inbox log' });
+
+      const projectLogs = service.listLogs({ projectId: project.id });
+      this.assertEq(projectLogs.length, 1, 'should return 1 project log');
+      this.assertEq(projectLogs[0].content, 'in project');
+
+      const inboxLogs = service.listLogs({ projectId: null });
+      this.assertEq(inboxLogs.length, 1, 'should return 1 inbox log');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceCreateReminderWithProjectId',
+    doc: 'DatabaseService should create a reminder with projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Reminder Project', slug: 'reminder-proj' });
+      const reminder = service.createReminder({
+        message: 'project reminder',
+        triggerAt: '2025-12-31T12:00:00Z',
+        projectId: project.id
+      });
+      this.assertEq(reminder.projectId, project.id);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceListRemindersFilterByProjectId',
+    doc: 'DatabaseService should filter reminders by projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Reminder Filter', slug: 'rem-filter' });
+      service.createReminder({ message: 'in project', triggerAt: '2025-12-31T12:00:00Z', projectId: project.id });
+      service.createReminder({ message: 'inbox reminder', triggerAt: '2025-12-31T12:00:00Z' });
+
+      const projectReminders = service.listReminders({ projectId: project.id });
+      this.assertEq(projectReminders.length, 1, 'should return 1 project reminder');
+
+      const inboxReminders = service.listReminders({ projectId: null });
+      this.assertEq(inboxReminders.length, 1, 'should return 1 inbox reminder');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateLog',
+    doc: 'DatabaseService should update a log projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Log Move', slug: 'log-move' });
+      const log = service.createLog({ content: 'movable log' });
+      this.assertEq(log.projectId, null);
+
+      const updated = service.updateLog({ id: log.id, projectId: project.id });
+      this.assertEq(updated.projectId, project.id);
+
+      const refetched = service.getLog({ id: log.id });
+      this.assertEq(refetched.projectId, project.id);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateLogNotFound',
+    doc: 'DatabaseService should throw when updating a non-existent log',
+    do() {
+      const service = createTestService();
+
+      this.assertThrows(
+        () => service.updateLog({ id: 'nonexistent', projectId: 'abc' }),
+        'Log not found',
+        'should throw for non-existent log'
+      );
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateReminder',
+    doc: 'DatabaseService should update a reminder projectId',
+    do() {
+      const service = createTestService();
+
+      const project = service.createProject({ title: 'Rem Move', slug: 'rem-move' });
+      const reminder = service.createReminder({ message: 'movable reminder', triggerAt: '2025-12-31T12:00:00Z' });
+      this.assertEq(reminder.projectId, null);
+
+      const updated = service.updateReminder({ id: reminder.id, projectId: project.id });
+      this.assertEq(updated.projectId, project.id);
+
+      const refetched = service.getReminder({ id: reminder.id });
+      this.assertEq(refetched.projectId, project.id);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateReminderNotFound',
+    doc: 'DatabaseService should throw when updating a non-existent reminder',
+    do() {
+      const service = createTestService();
+
+      this.assertThrows(
+        () => service.updateReminder({ id: 'nonexistent', projectId: 'abc' }),
+        'Reminder not found',
+        'should throw for non-existent reminder'
+      );
+
+      service.db().close();
+    }
+  });
 }.module({
   name: 'test.services.database',
   imports: [base, test, db, helpers, sqlite, models, database],

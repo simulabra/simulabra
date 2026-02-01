@@ -30,3 +30,17 @@ Interesting architectural note: the current filtering in DatabaseService is all 
 **Scope change:** Plan specified `name` as the human-readable DBVar. In Simulabra, `name` is a reserved slot on all objects (it holds the object's identity string). Renamed to `title` to avoid collision — consistent with Task's existing `title` slot. This affects the DB column, FTS index, and all callers.
 
 **Test results:** 57 model tests pass, 13 sqlite tests pass, all core tests pass. No regressions.
+
+### Phase 2 — DatabaseService Project CRUD
+
+**Files changed:**
+- `apps/agenda/src/services/database.js` — Added 7 new RPC methods: createProject, getProject, getProjectBySlug, listProjects, updateProject, updateLog, updateReminder. Extended 6 existing RPCs: createTask, updateTask, listTasks (projectId filter), createLog, listLogs (projectId filter), createReminder, listReminders (projectId filter).
+- `apps/agenda/tests/services/database.js` — Added 18 new test cases covering all project CRUD operations, projectId on task/log/reminder creation, filtering by projectId (including null=Inbox), updateLog/updateReminder, and not-found error handling.
+
+**Design notes:**
+- `getProjectBySlug` uses a direct SQL query (`SELECT * FROM agenda_Project WHERE slug = $slug`) + `fromSQLRow()`, matching the PromptConfig pattern, since `findAll`+filter would be wasteful when we have an indexed slug column.
+- `listProjects` sorts by `title` alphabetically (using `localeCompare`), unlike tasks (priority) or logs (timestamp), since projects are name-navigated entities.
+- projectId filtering uses a three-way check: `=== null` means Inbox, `!== undefined` means specific project, `undefined` means no filter (backward compatible). This pattern is applied consistently to listTasks, listLogs, and listReminders.
+- `updateLog` and `updateReminder` are minimal RPCs (only projectId for now) to support Phase 4's `move_to_project` tool. They can be expanded later.
+
+**Test results:** 49 database service tests pass (31 existing + 18 new), 57 model tests pass, all core tests pass. No regressions.

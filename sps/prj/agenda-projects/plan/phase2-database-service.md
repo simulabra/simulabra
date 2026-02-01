@@ -93,3 +93,27 @@ Run: `bun run test`
 - projectId=null is filterable as "Inbox"
 - updateLog and updateReminder exist for move_to_project support
 - All existing tests continue to pass
+
+## Review
+
+**Verdict: APPROVED**
+
+Code is correct, idiomatic, and well-tested. All acceptance criteria are met. 49 database service tests pass (31 existing + 18 new), all core tests pass, no regressions.
+
+**Correctness:**
+- All 5 Project CRUD RPCs match the plan spec. `name` was correctly translated to `title` (Phase 1 rename).
+- The three-way projectId filter (`=== null` / `!== undefined` / `undefined`) is applied consistently across listTasks, listLogs, and listReminders.
+- `getProjectBySlug` uses direct SQL with `fromSQLRow()`, matching the `getPromptConfig` precedent.
+- `updateLog` and `updateReminder` are minimal as specified, ready for Phase 4 expansion.
+- Backward compatibility preserved: all existing callers continue to work since projectId defaults to null/undefined.
+
+**Style:**
+- Added doc strings to all 7 new RPC methods during review (they were missing).
+- Removed two orphaned inline comments (`// Log update (for move_to_project)` and `// Reminder update (for move_to_project)`) — the doc strings now carry that information.
+- Code follows existing service patterns faithfully.
+
+**Test coverage:**
+- 18 new tests cover: all CRUD paths, not-found errors, projectId on creation, filtering both ways (project + inbox), and updateLog/updateReminder round-trip persistence.
+- Tests go beyond the plan by adding UpdateLogNotFound and UpdateReminderNotFound cases.
+
+**No issues found.**
