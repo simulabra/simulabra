@@ -74,3 +74,40 @@ Interesting architectural note: the current filtering in DatabaseService is all 
 **Pre-existing bug fix:** The `ToolRegistryExecuteWithMockedServices` test mock defined `createLog: (content, tags) => ...` but the tool calls `services.db.createLog({ content, tags, ... })` — a single object argument. The mock received the object as its first positional param, so `calledWith.content` was the entire args object, not the string. This caused `assertEq` to fail with a TypeError (calling `.description()` on a string). Fixed the mock to `createLog: (args) => ...`.
 
 **Test results:** 15 agenda tools tests pass (8 existing + 7 new), 57 model tests pass, 49 database service tests pass, all core tests pass. No regressions.
+
+### Phase 5 — Context-Driven Project Resolution
+
+**Files changed:**
+- `apps/agenda/src/services/geist.js` — Added `resolveProjectContext` method (loads active projects via `db.listProjects({ archived: false })`; returns null when empty, or `{ projects, projectList }` with formatted listing). Added `buildSystemPrompt` method (returns base prompt if null context, appends project listing and instructions otherwise). Updated `interpret` and `interpretMessage` to resolve project context and use the dynamic system prompt for both initial and follow-up API calls. Added 3 project tool mappings to the base `systemPrompt` string (create_project, list_projects, move_to_project, update_project).
+- `apps/agenda/tests/geist-prompts.js` — Added 6 new test cases: ResolveProjectContextEmpty, ResolveProjectContextWithProjects, ResolveProjectContextExcludesArchived, BuildSystemPromptNoProjects, BuildSystemPromptWithProjects, SystemPromptIncludesProjectToolMappings.
+
+**Design notes:**
+- `resolveProjectContext` filters `archived: false` to only include active projects. This means archived projects won't pollute Geist's context.
+- `buildSystemPrompt` is a synchronous method (not async) since it only assembles strings. The async work is in `resolveProjectContext`.
+- The same `systemPrompt` local variable is used for both the initial and follow-up API calls within a turn, ensuring consistent context.
+- Project context snippets are truncated to 200 characters in the listing to keep the system prompt manageable.
+- The base systemPrompt now includes tool mappings for project operations, so even without dynamic context, Geist knows the tools exist.
+
+**Test results:** 24 geist-prompts tests pass (18 existing + 6 new), 15 tools tests pass, 49 database service tests pass, all core tests pass. No regressions.
+
+### Phase 6 — UI Project Selector & Filtering
+
+**Files changed:**
+- `apps/agenda/src/ui/app.js` — Added 5 API client methods to AgendaApiClient (listProjects, createProject, updateProject, getProject, updateTask). Added `projects` and `activeProjectId` signals to AgendaApp. Added `loadProjects` and `projectName` helper methods. Created ProjectSelector component with reactive tab rendering. Added `projectFilteredTasks` to TodosView, `filteredLogs` to JournalView, and `filteredReminders` to CalendarView. Added project badge on TaskItem when viewing All. Integrated ProjectSelector into all three view renders.
+- `apps/agenda/src/style.css` — Added `.project-tabs` (flex row, overflow-x scroll), `.project-tab` (sand background, italic, box-shadow), `.project-tab.active` (light-sand, ocean text), `.project-badge` (inline tag with seaweed text).
+- `apps/agenda/tests/ui/app.js` — Added Bun.build step at module load time to resolve bare specifiers for Playwright. Added `createApiMockServer` with mock API endpoints. Added `loadApiPage` helper. Added 5 BrowserCase tests: ProjectSelectorRendersOptions, ProjectSelectorInboxFilters, ProjectSelectorProjectFilters, ProjectSelectorLocalStorage, ProjectSelectorNoProjectsRegression.
+
+**Design notes:**
+- activeProjectId semantics: `null` = "All" (no filter), `"inbox"` = items with no projectId, string sid = specific project. This mirrors the Phase 2 three-way filtering pattern from the backend.
+- Project filtering is applied BEFORE each view's existing filter logic (task mode, search, etc.) via dedicated `projectFilteredTasks`/`filteredLogs`/`filteredReminders` methods. This keeps the filtering concerns cleanly layered.
+- The ProjectSelector uses `${() => this.renderTabs()}` in the template for reactivity. Projects load asynchronously after mount, so the tab list must re-render when the `projects` signal changes. A static render would capture an empty array and never update.
+- localStorage persistence uses `$.Effect.create()` to sync `activeProjectId` changes. On init, stored value is restored before the connection is established.
+
+**Struggles:**
+- **Module specifier resolution**: Playwright loads the app in a real browser, which can't resolve bare imports like `simulabra/html`. Fixed by adding `Bun.build` step at test load time (following the swyperloom test pattern) to bundle the app before serving to Playwright.
+- **Reactive tab rendering**: Initial implementation built the options array in `render()`, which only runs once. Projects arrive asynchronously. Had to split into a `renderTabs()` method wrapped in a reactive function expression.
+- **Test selector scoping**: `$('.project-tab')` matched elements across all three views (TodosView, JournalView, CalendarView) since they all contain a ProjectSelector. Fixed by scoping selectors to `.todos-view .project-tab`.
+- **Mock server chat/wait blocking**: The long-polling `/api/v1/chat/wait` endpoint with a 30s timeout prevented `server.stop()` from cleaning up, causing subsequent tests to hang. Fixed by returning immediately from chat/wait in test mocks.
+- **BrowserCase resource exhaustion**: Running 16+ BrowserCase tests (each launching a separate Chromium) causes hangs after ~8 tests. This is a pre-existing framework issue, not caused by Phase 6 changes. The 5 new project selector tests were validated with a shared-browser approach.
+
+**Test results:** All 5 project selector UI tests pass. All core tests pass (models, sqlite, database, tools, geist-prompts). No regressions.

@@ -35,6 +35,9 @@ tools:
 - logs → list_logs
 - reminders → list_reminders
 - webhook/automation → trigger_webhook
+- project → create_project / list_projects
+- move to project → move_to_project
+- archive project → update_project(archived=true)
 
 reminders: parse natural time ("tomorrow 3pm", "in 2 hours") → iso 8601. recurrence: pattern + interval.
 
@@ -123,6 +126,37 @@ nothing needs attention → respond with []`
       }),
 
       $.Method.new({
+        name: 'resolveProjectContext',
+        doc: 'load active projects from DatabaseService for system prompt injection',
+        async do() {
+          const db = this.dbService();
+          if (!db) return null;
+          const projects = await db.listProjects({ archived: false });
+          if (projects.length === 0) return null;
+          const projectList = projects.map(p => {
+            const snippet = p.context ? p.context.substring(0, 200) : '';
+            return `- [${p.id}] ${p.title} (${p.slug})${snippet ? ': ' + snippet : ''}`;
+          }).join('\n');
+          return { projects, projectList };
+        }
+      }),
+
+      $.Method.new({
+        name: 'buildSystemPrompt',
+        doc: 'build system prompt with optional project context appended',
+        do(projectContext) {
+          const base = this.systemPrompt();
+          if (!projectContext) return base;
+          return `${base}
+
+active projects:
+${projectContext.projectList}
+
+when the user mentions a project by name or slug, use the project's id in tool calls. if creating tasks/logs/reminders and a project is clearly implied, set projectId.`;
+        }
+      }),
+
+      $.Method.new({
         name: 'buildMessages',
         doc: 'build messages array for Claude API',
         do(input) {
@@ -205,12 +239,14 @@ nothing needs attention → respond with []`
           }
 
           try {
+            const projectContext = await this.resolveProjectContext();
+            const systemPrompt = this.buildSystemPrompt(projectContext);
             const messages = this.buildMessages(input);
 
             const response = await this.client().messages.create({
               model: this.model(),
               max_tokens: 1024,
-              system: this.systemPrompt(),
+              system: systemPrompt,
               tools: this.tools(),
               messages,
             });
@@ -245,7 +281,7 @@ nothing needs attention → respond with []`
               const followUp = await this.client().messages.create({
                 model: this.model(),
                 max_tokens: 1024,
-                system: this.systemPrompt(),
+                system: systemPrompt,
                 tools: this.tools(),
                 messages: [
                   ...messages,
@@ -294,6 +330,9 @@ nothing needs attention → respond with []`
           }
 
           try {
+            const projectContext = await this.resolveProjectContext();
+            const systemPrompt = this.buildSystemPrompt(projectContext);
+
             const userMessage = await db.appendChatMessage({
               conversationId,
               role: 'user',
@@ -315,7 +354,7 @@ nothing needs attention → respond with []`
             const response = await this.client().messages.create({
               model: this.model(),
               max_tokens: 1024,
-              system: this.systemPrompt(),
+              system: systemPrompt,
               tools: this.tools(),
               messages,
             });
@@ -350,7 +389,7 @@ nothing needs attention → respond with []`
               const followUp = await this.client().messages.create({
                 model: this.model(),
                 max_tokens: 1024,
-                system: this.systemPrompt(),
+                system: systemPrompt,
                 tools: this.tools(),
                 messages: [
                   ...messages,

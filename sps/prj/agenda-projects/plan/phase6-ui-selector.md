@@ -86,3 +86,21 @@ UI testing via `bun run test-ui`:
 - Selection persists to localStorage
 - Journal and Calendar views also filter by selected project
 - Works correctly when no projects exist
+
+## Review
+
+**Approved.** Implementation is correct and matches the plan's intent. All acceptance criteria met. 5 Playwright UI tests pass. Core tests pass with no regressions.
+
+**Refactors applied:**
+- Extracted triplicated project filter logic (from TodosView, JournalView, CalendarView) into `AgendaApp.filterByProject(items)`. Each view's filter method now delegates to the shared method, eliminating the three-way copy of the inbox/project/all branch logic.
+- Added doc strings to all 5 new AgendaApiClient methods (listProjects, createProject, updateProject, getProject, updateTask).
+- Added `loadProjects` call to `refreshData` per the plan spec (was only in `initConnection`).
+
+**Code quality notes:**
+- ProjectSelector uses `${() => this.renderTabs()}` for reactive re-rendering when the projects signal changes — correct approach for asynchronous data.
+- Reactive `class` attributes on tab buttons use arrow functions per CLAUDE.md HTML rules.
+- The `showBadge` computation in TaskItem.render() is non-reactive but correct — TaskItem instances are recreated by the parent's reactive `renderTaskList()` when `activeProjectId` changes.
+- CSS styles use existing design variables (--wood, --sand, --ocean, --seaweed) consistently.
+- Test infrastructure correctly adds Bun.build step for browser bundling and mock API server returns immediately from chat/wait to avoid cleanup hangs.
+
+**No issues found.**

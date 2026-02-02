@@ -14,15 +14,15 @@ Evolve the Agenda productivity app by adding Projects as a grouping and context 
 Use cases driving this: organizing ancient coin cleaning/identification work and house projects, each with their own context and task streams.
 
 ## Status
-IN PROGRESS — Phase 4 done, Phase 5 next.
+IN PROGRESS — Phase 6 done, Phase 7 next.
 
 ## Phases
 - [x] Phase 1: Project Model & Migration
 - [x] Phase 2: DatabaseService Project CRUD
 - [x] Phase 3: HTTP API Endpoints
 - [x] Phase 4: Project Tools for Geist
-- [ ] Phase 5: Context-Driven Project Resolution
-- [ ] Phase 6: UI Project Selector & Filtering
+- [x] Phase 5: Context-Driven Project Resolution
+- [x] Phase 6: UI Project Selector & Filtering
 - [ ] Phase 7: UI Project Context Panel
 - [ ] Phase 8: Prompting System Integration
 
@@ -48,3 +48,7 @@ IN PROGRESS — Phase 4 done, Phase 5 next.
 - **Phase 3 review**: Approved. All endpoints follow the established apiHandler pattern. Validation is consistent (HttpError with MISSING_FIELD code). Correctly uses `title` over plan's `name`. No issues found.
 - **Phase 4 complete**: 4 new Geist tools (create_project, list_projects, update_project, move_to_project). 6 existing tools extended with optional projectId. Registry now has 13 tools. move_to_project supports both projectId and projectSlug lookup. Fixed pre-existing mock bug in tools test. 15 agenda tools tests pass.
 - **Phase 4 review**: Approved. Fixed ListLogsTool.execute which was discarding projectId despite declaring it in schema. Code is correct, idiomatic, and consistent. MoveToProjectTool dispatch logic is clean. All 13 tool definitions pass Anthropic format validation. No other issues found.
+- **Phase 5 complete**: resolveProjectContext loads active (non-archived) projects from DatabaseService; buildSystemPrompt dynamically appends project listing and instructions when projects exist. Both interpret and interpretMessage now use the dynamic prompt. Added 3 project tool mappings to base system prompt. 6 new tests, 24 total geist-prompts tests pass.
+- **Phase 5 review**: Approved. Fixed missing `database.close()` in one test, removed unused variable binding, added missing blank line between test cases. Code is correct, minimal, and well-separated (async data fetch vs sync prompt assembly). No issues found.
+- **Phase 6 complete**: UI Project Selector & Filtering. Added ProjectSelector component with reactive tab bar (All / Inbox / per-project tabs). Project filtering applied to TodosView, JournalView, and CalendarView. localStorage persistence for activeProjectId. Project badge on TaskItem in All view. 5 API client methods, 2 new signals. 5 Playwright UI tests pass. Fixed test infrastructure to use Bun.build for browser bundling.
+- **Phase 6 review**: Approved. Extracted triplicated filter logic into `AgendaApp.filterByProject`. Added doc strings to 5 API client methods. Added `loadProjects` to `refreshData` per plan. No issues found.

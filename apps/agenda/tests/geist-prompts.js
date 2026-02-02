@@ -585,6 +585,125 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       database.close();
     }
   });
+
+  $test.AsyncCase.new({
+    name: 'ResolveProjectContextEmpty',
+    doc: 'resolveProjectContext should return null when no projects exist',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const ctx = await geistService.resolveProjectContext();
+
+      this.assertEq(ctx, null, 'should return null when no projects');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ResolveProjectContextWithProjects',
+    doc: 'resolveProjectContext should return projects array and projectList string',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      await dbService.createProject({ title: 'Ancient Coins', slug: 'coins', context: 'Cleaning and identifying ancient Roman coins' });
+      await dbService.createProject({ title: 'House Renovation', slug: 'house', context: 'Kitchen and bathroom remodel' });
+
+      const ctx = await geistService.resolveProjectContext();
+
+      this.assert(ctx, 'should return context object');
+      this.assertEq(ctx.projects.length, 2, 'should have 2 projects');
+      this.assert(ctx.projectList.includes('Ancient Coins'), 'projectList should include first project title');
+      this.assert(ctx.projectList.includes('House Renovation'), 'projectList should include second project title');
+      this.assert(ctx.projectList.includes('coins'), 'projectList should include first project slug');
+      this.assert(ctx.projectList.includes('house'), 'projectList should include second project slug');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ResolveProjectContextExcludesArchived',
+    doc: 'resolveProjectContext should only return active (non-archived) projects',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      await dbService.createProject({ title: 'Active Project', slug: 'active' });
+      const archived = await dbService.createProject({ title: 'Old Project', slug: 'old' });
+      await dbService.updateProject({ id: archived.id, archived: true });
+
+      const ctx = await geistService.resolveProjectContext();
+
+      this.assert(ctx, 'should return context');
+      this.assertEq(ctx.projects.length, 1, 'should have 1 active project');
+      this.assertEq(ctx.projects[0].title, 'Active Project', 'should be the active one');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'BuildSystemPromptNoProjects',
+    doc: 'buildSystemPrompt should return base prompt when projectContext is null',
+    do() {
+      const database = createTestDb();
+      const { geistService } = createTestServices(database);
+
+      const prompt = geistService.buildSystemPrompt(null);
+
+      this.assertEq(prompt, geistService.systemPrompt(), 'should return base prompt unchanged');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'BuildSystemPromptWithProjects',
+    doc: 'buildSystemPrompt should append project listing when projects exist',
+    do() {
+      const database = createTestDb();
+      const { geistService } = createTestServices(database);
+
+      const projectContext = {
+        projects: [
+          { id: 'p1', title: 'Coins', slug: 'coins', context: 'Ancient coin cleaning' },
+          { id: 'p2', title: 'House', slug: 'house', context: 'Kitchen remodel' },
+        ],
+        projectList: '- [p1] Coins (coins): Ancient coin cleaning\n- [p2] House (house): Kitchen remodel',
+      };
+
+      const prompt = geistService.buildSystemPrompt(projectContext);
+
+      this.assert(prompt.includes(geistService.systemPrompt()), 'should include base prompt');
+      this.assert(prompt.includes('Coins'), 'should include project name');
+      this.assert(prompt.includes('House'), 'should include second project name');
+      this.assert(prompt.includes('coins'), 'should include slug');
+      this.assert(prompt.includes('projectId'), 'should include projectId instruction');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'SystemPromptIncludesProjectToolMappings',
+    doc: 'base system prompt should include project tool mappings',
+    do() {
+      const database = createTestDb();
+      const { geistService } = createTestServices(database);
+
+      const prompt = geistService.systemPrompt();
+
+      this.assert(prompt.includes('create_project'), 'should mention create_project');
+      this.assert(prompt.includes('list_projects'), 'should mention list_projects');
+      this.assert(prompt.includes('move_to_project'), 'should mention move_to_project');
+      this.assert(prompt.includes('update_project'), 'should mention update_project');
+
+      database.close();
+    }
+  });
 }.module({
   name: 'test.geist-prompts',
   imports: [base, test, db, sqlite, models, database, geist],

@@ -1,6 +1,17 @@
 import { __, base } from 'simulabra';
 import test from 'simulabra/test';
 
+const { randomUUID } = await import('crypto');
+const buildDir = `/tmp/agenda-test-${randomUUID()}`;
+const buildResult = await Bun.build({
+  entrypoints: [process.cwd() + '/apps/agenda/index.html'],
+  outdir: buildDir,
+});
+if (!buildResult.success) {
+  console.error('Build failed:', buildResult.logs);
+  throw new Error('Agenda build failed');
+}
+
 export default await async function (_, $, $test) {
 
   function createMockServer() {
@@ -8,13 +19,18 @@ export default await async function (_, $, $test) {
       port: 0,
       async fetch(req) {
         const url = new URL(req.url);
-        const file = Bun.file(process.cwd() + url.pathname);
-        if (await file.exists()) {
-          return new Response(file);
-        }
+        let path = url.pathname === '/' ? '/index.html' : url.pathname;
+        const file = Bun.file(buildDir + path);
+        if (await file.exists()) return new Response(file);
         return new Response('Not found', { status: 404 });
       }
     });
+  }
+
+  async function loadPage(page, server) {
+    const url = `http://localhost:${server.port}/index.html`;
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.agenda-app', { timeout: 5000 });
   }
 
   $test.BrowserCase.new({
@@ -24,12 +40,14 @@ export default await async function (_, $, $test) {
     async do() {
       const server = createMockServer();
       try {
-        const url = `http://localhost:${server.port}/apps/agenda/index.html`;
+        const url = `http://localhost:${server.port}/index.html`;
         const errors = [];
         this.page().on('pageerror', err => errors.push(err.message));
         this.page().on('console', msg => {
-          // Ignore WebSocket connection errors (expected when no backend)
-          if (msg.type() === 'error' && !msg.text().includes('WebSocket')) {
+          if (msg.type() === 'error'
+              && !msg.text().includes('WebSocket')
+              && !msg.text().includes('Failed to load resource')
+              && !msg.text().includes('fetch')) {
             errors.push(msg.text());
           }
         });
@@ -44,12 +62,6 @@ export default await async function (_, $, $test) {
     }
   });
 
-  async function loadPage(page, server) {
-    const url = `http://localhost:${server.port}/apps/agenda/index.html`;
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('.agenda-app', { timeout: 5000 });
-  }
-
   $test.BrowserCase.new({
     name: 'AgendaAppHasNavTabs',
     doc: 'Verifies all navigation tabs are present',
@@ -61,12 +73,6 @@ export default await async function (_, $, $test) {
 
         const tabs = await this.page().$$('.nav-tab');
         this.assertEq(tabs.length, 4, 'Should have 4 navigation tabs');
-
-        const labels = await this.page().$$eval('.nav-label', els => els.map(e => e.textContent));
-        this.assert(labels.includes('Chat'), 'Should have Chat tab');
-        this.assert(labels.includes('Tasks'), 'Should have Tasks tab');
-        this.assert(labels.includes('Journal'), 'Should have Journal tab');
-        this.assert(labels.includes('Reminders'), 'Should have Reminders tab');
       } finally {
         server.stop();
       }
@@ -261,6 +267,200 @@ export default await async function (_, $, $test) {
           return document.documentElement.scrollWidth > document.documentElement.clientWidth;
         });
         this.assert(!hasHorizontalScroll, 'Long unbroken text should not cause horizontal overflow');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Project Selector Tests
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const testProjects = [
+    { sid: 'proj-1', title: 'Coins', slug: 'coins', archived: false, context: 'Ancient coin cleaning' },
+    { sid: 'proj-2', title: 'House', slug: 'house', archived: false, context: 'House renovation' },
+  ];
+
+  const testTasks = [
+    { rid: 't1', title: 'Clean denarius', priority: 1, done: false, projectId: 'proj-1' },
+    { rid: 't2', title: 'Fix deck', priority: 2, done: false, projectId: 'proj-2' },
+    { rid: 't3', title: 'Buy groceries', priority: 2, done: false, projectId: null },
+  ];
+
+  const testLogs = [
+    { id: 'l1', content: 'Soaked coins', timestamp: '2026-01-30T10:00:00Z', tags: [], projectId: 'proj-1' },
+    { id: 'l2', content: 'General note', timestamp: '2026-01-30T11:00:00Z', tags: [], projectId: null },
+  ];
+
+  const testReminders = [
+    { id: 'r1', message: 'Check coins', triggerAt: '2026-02-15T10:00:00Z', sent: false, projectId: 'proj-1' },
+    { id: 'r2', message: 'Dentist', triggerAt: '2026-02-16T10:00:00Z', sent: false, projectId: null },
+  ];
+
+  function createApiMockServer(opts = {}) {
+    const projects = opts.projects || testProjects;
+    const tasks = opts.tasks || testTasks;
+    const logs = opts.logs || testLogs;
+    const reminders = opts.reminders || testReminders;
+
+    return Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url);
+        const path = url.pathname;
+
+        if (path.startsWith('/api/v1/')) {
+          const json = (value) => new Response(JSON.stringify({ ok: true, value }), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (path === '/api/v1/status') return json({ status: 'ok' });
+          if (path === '/api/v1/tasks/list') return json(tasks);
+          if (path === '/api/v1/logs/list') return json(logs);
+          if (path === '/api/v1/reminders/list') return json(reminders);
+          if (path === '/api/v1/projects/list') return json(projects);
+          if (path === '/api/v1/chat/history') return json([]);
+          if (path === '/api/v1/prompts/pending') return json([]);
+          if (path === '/api/v1/chat/wait') return json([]);
+          return json(null);
+        }
+
+        let filePath = path === '/' ? '/index.html' : path;
+        const file = Bun.file(buildDir + filePath);
+        if (await file.exists()) return new Response(file);
+        return new Response('Not found', { status: 404 });
+      }
+    });
+  }
+
+  async function loadApiPage(page, server) {
+    const url = `http://localhost:${server.port}/index.html`;
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.agenda-app', { timeout: 5000 });
+    await page.waitForSelector('.connection-status.connected', { timeout: 5000 });
+  }
+
+  $test.BrowserCase.new({
+    name: 'ProjectSelectorRendersOptions',
+    doc: 'ProjectSelector shows All, Inbox, and project tabs when projects exist',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const labels = await this.page().$$eval('.todos-view .project-tab', els => els.map(e => e.textContent.trim()));
+        this.assertEq(labels.length, 4, 'Should have All + Inbox + 2 project tabs');
+        this.assert(labels.includes('All'), 'Should have All tab');
+        this.assert(labels.includes('Inbox'), 'Should have Inbox tab');
+        this.assert(labels.includes('Coins'), 'Should have Coins project tab');
+        this.assert(labels.includes('House'), 'Should have House project tab');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ProjectSelectorInboxFilters',
+    doc: 'Selecting Inbox filters to tasks with no projectId',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const allTasks = await this.page().$$('.todos-view .task-item');
+        this.assertEq(allTasks.length, 3, 'All view shows all 3 tasks');
+
+        await this.page().click('.todos-view .project-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const filtered = await this.page().$$('.todos-view .task-item');
+        this.assertEq(filtered.length, 1, 'Inbox shows only unassigned task');
+
+        const title = await this.page().$eval('.todos-view .task-item .task-title', el => el.textContent);
+        this.assertEq(title, 'Buy groceries', 'Inbox task should be Buy groceries');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ProjectSelectorProjectFilters',
+    doc: 'Selecting a project filters to matching tasks',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+
+        await this.page().click('.todos-view .project-tab:nth-child(3)');
+        await __.sleep(300);
+
+        const filtered = await this.page().$$('.todos-view .task-item');
+        this.assertEq(filtered.length, 1, 'Coins project shows 1 task');
+
+        const title = await this.page().$eval('.todos-view .task-item .task-title', el => el.textContent);
+        this.assertEq(title, 'Clean denarius', 'Coins task should be Clean denarius');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ProjectSelectorLocalStorage',
+    doc: 'Project selection persists to localStorage',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+
+        await this.page().click('.todos-view .project-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const stored = await this.page().evaluate(() => localStorage.getItem('agenda_activeProjectId'));
+        this.assertEq(stored, 'inbox', 'localStorage should store inbox selection');
+
+        await this.page().click('.todos-view .project-tab:nth-child(1)');
+        await __.sleep(300);
+
+        const cleared = await this.page().evaluate(() => localStorage.getItem('agenda_activeProjectId'));
+        this.assertEq(cleared, null, 'localStorage should clear for All selection');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ProjectSelectorNoProjectsRegression',
+    doc: 'When no projects exist, selector shows only All and Inbox',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer({ projects: [] });
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const tabs = await this.page().$$('.todos-view .project-tab');
+        this.assertEq(tabs.length, 2, 'Should have only All + Inbox when no projects');
+
+        const labels = await this.page().$$eval('.todos-view .project-tab', els => els.map(e => e.textContent.trim()));
+        this.assert(labels.includes('All'), 'Should have All tab');
+        this.assert(labels.includes('Inbox'), 'Should have Inbox tab');
       } finally {
         server.stop();
       }

@@ -76,3 +76,27 @@ Run: `bun run test`
 - interpretMessage and interpret use dynamic system prompt
 - System prompt includes project tool mappings
 - No regression when no projects exist
+
+## Review
+
+**Verdict: Approved.**
+
+The implementation is correct, minimal, and follows the plan faithfully.
+
+**Code quality:**
+- `resolveProjectContext` and `buildSystemPrompt` are properly factored — one async for data fetching, one sync for string assembly. Clean separation.
+- The `systemPrompt` local variable correctly replaces both `this.systemPrompt()` call sites in both `interpret` and `interpretMessage`, ensuring consistent context across initial and follow-up API calls within a turn.
+- Doc strings are present and descriptive on both new methods.
+- No accidental complexity introduced; the changes are the minimum needed.
+
+**Fixes made during review:**
+- Added missing blank line between test cases (style consistency with the rest of the file).
+- Added missing `database.close()` in `BuildSystemPromptWithProjects` test.
+- Removed unused `proj` variable binding in `ResolveProjectContextExcludesArchived` test.
+
+**Tests:**
+- 6 new tests cover all specified scenarios plus an extra archived-exclusion test beyond what the plan called for.
+- The plan's `ToolDefinitionsIncludeProjectTools` test was already covered by the Phase 4 `ToolRegistryCount` test in tools.js. The carpenter chose `SystemPromptIncludesProjectToolMappings` instead, which tests the actual integration point (system prompt text) — a better choice.
+- All 24 geist-prompts tests pass. No regressions in tools (15) or database (49) tests.
+
+**No issues found.**

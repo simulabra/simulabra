@@ -118,6 +118,41 @@ export default await async function (_, $, $html) {
           return await this.apiCall("POST", "/api/v1/prompts/generate", {});
         }
       }),
+      $.Method.new({
+        name: "listProjects",
+        doc: "fetch projects, optionally filtered by archived status",
+        async do(filter = {}) {
+          return await this.apiCall("POST", "/api/v1/projects/list", filter);
+        }
+      }),
+      $.Method.new({
+        name: "createProject",
+        doc: "create a new project with title, slug, and optional context",
+        async do(opts) {
+          return await this.apiCall("POST", "/api/v1/projects/create", opts);
+        }
+      }),
+      $.Method.new({
+        name: "updateProject",
+        doc: "update project fields by id",
+        async do(opts) {
+          return await this.apiCall("POST", "/api/v1/projects/update", opts);
+        }
+      }),
+      $.Method.new({
+        name: "getProject",
+        doc: "fetch a single project by id or slug",
+        async do(opts) {
+          return await this.apiCall("POST", "/api/v1/projects/get", opts);
+        }
+      }),
+      $.Method.new({
+        name: "updateTask",
+        doc: "update task fields including projectId assignment",
+        async do(opts) {
+          return await this.apiCall("POST", "/api/v1/tasks/update", opts);
+        }
+      }),
     ]
   });
 
@@ -250,7 +285,9 @@ export default await async function (_, $, $html) {
         name: "render",
         do() {
           const task = this.task();
+          const app = this.app();
           const priorityClass = `priority-${task.priority || 3}`;
+          const showBadge = app.activeProjectId() === null && task.projectId;
           return $html.HTML.t`
             <div class=${() => "task-item " + priorityClass + (task.done ? " done" : "")}>
               <button class="task-checkbox" onclick=${() => this.handleComplete()}>
@@ -259,7 +296,45 @@ export default await async function (_, $, $html) {
               <div class="task-content">
                 <span class="task-title">${task.title}</span>
                 ${task.dueDate ? $html.HTML.t`<span class="task-due">due ${new Date(task.dueDate).toLocaleDateString()}</span>` : ""}
+                ${showBadge ? $html.HTML.t`<span class="project-badge">${app.projectName(task.projectId)}</span>` : ""}
               </div>
+            </div>
+          `;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
+    name: "ProjectSelector",
+    doc: "Tab bar for selecting the active project filter",
+    slots: [
+      $html.Component,
+      $.Var.new({ name: "app" }),
+      $.Method.new({
+        name: "renderTabs",
+        doc: "reactive tab list that updates when projects signal changes",
+        do() {
+          const app = this.app();
+          const options = [
+            { value: null, label: 'All' },
+            { value: 'inbox', label: 'Inbox' },
+            ...app.projects().map(p => ({ value: p.sid, label: p.title })),
+          ];
+          return options.map(opt => $html.HTML.t`
+            <button class=${() => "project-tab" + (app.activeProjectId() === opt.value ? " active" : "")}
+                    onclick=${() => app.activeProjectId(opt.value)}>
+              ${opt.label}
+            </button>
+          `);
+        }
+      }),
+      $.Method.new({
+        name: "render",
+        do() {
+          return $html.HTML.t`
+            <div class="project-tabs">
+              ${() => this.renderTabs()}
             </div>
           `;
         }
@@ -275,10 +350,17 @@ export default await async function (_, $, $html) {
       $.Var.new({ name: "app" }),
       $.Signal.new({ name: "taskFilter", default: "active" }),
       $.Method.new({
+        name: "projectFilteredTasks",
+        doc: "apply project filter before task-mode filtering",
+        do() {
+          return this.app().filterByProject(this.app().tasks());
+        }
+      }),
+      $.Method.new({
         name: "filteredTasks",
         doc: "partition tasks by current filter mode, returning {items, recentDone}",
         do() {
-          const tasks = this.app().tasks();
+          const tasks = this.projectFilteredTasks();
           const mode = this.taskFilter();
           if (mode === "active") {
             const items = tasks
@@ -364,6 +446,7 @@ export default await async function (_, $, $html) {
                 ${this.filterTabs()}
                 <span class="task-count">${() => this.taskCount()} ${() => this.taskFilter()}</span>
               </div>
+              ${_.ProjectSelector.new({ app: this.app() })}
               <div class="task-list">
                 ${() => this.renderTaskList()}
               </div>
@@ -408,6 +491,13 @@ export default await async function (_, $, $html) {
       $html.Component,
       $.Var.new({ name: "app" }),
       $.Method.new({
+        name: "filteredLogs",
+        doc: "apply project filter to logs",
+        do() {
+          return this.app().filterByProject(this.app().logs());
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
@@ -415,9 +505,10 @@ export default await async function (_, $, $html) {
               <div class="view-header">
                 <h2>Journal</h2>
               </div>
+              ${_.ProjectSelector.new({ app: this.app() })}
               <div class="log-list">
                 ${() => {
-                  const logs = this.app().logs();
+                  const logs = this.filteredLogs();
                   if (!logs.length) return $html.HTML.t`<div class="empty-state">No entries yet</div>`;
                   return logs
                     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
@@ -462,6 +553,13 @@ export default await async function (_, $, $html) {
       $html.Component,
       $.Var.new({ name: "app" }),
       $.Method.new({
+        name: "filteredReminders",
+        doc: "apply project filter to reminders",
+        do() {
+          return this.app().filterByProject(this.app().reminders());
+        }
+      }),
+      $.Method.new({
         name: "render",
         do() {
           return $html.HTML.t`
@@ -469,9 +567,10 @@ export default await async function (_, $, $html) {
               <div class="view-header">
                 <h2>Reminders</h2>
               </div>
+              ${_.ProjectSelector.new({ app: this.app() })}
               <div class="reminder-list">
                 ${() => {
-                  const reminders = this.app().reminders();
+                  const reminders = this.filteredReminders();
                   if (!reminders.length) return $html.HTML.t`<div class="empty-state">No reminders set</div>`;
                   return reminders
                     .filter(r => !r.sent)
@@ -678,6 +777,8 @@ export default await async function (_, $, $html) {
       $.Signal.new({ name: "connectionState", default: "connecting" }),
       $.Signal.new({ name: "fallbackPolling", default: false }),
       $.Signal.new({ name: "pendingPrompts", default: [] }),
+      $.Signal.new({ name: "projects", default: [] }),
+      $.Signal.new({ name: "activeProjectId", default: null }),
       $.Var.new({ name: "api" }),
       $.Var.new({ name: "lastSeenId", default: null }),
       $.Var.new({ name: "syncRunning", default: false }),
@@ -687,7 +788,17 @@ export default await async function (_, $, $html) {
       $.After.new({
         name: "init",
         do() {
+          const stored = localStorage.getItem('agenda_activeProjectId');
+          if (stored) this.activeProjectId(stored);
           this.api(_.AgendaApiClient.new());
+          $.Effect.create(() => {
+            const val = this.activeProjectId();
+            if (val === null) {
+              localStorage.removeItem('agenda_activeProjectId');
+            } else {
+              localStorage.setItem('agenda_activeProjectId', val);
+            }
+          });
           this.initConnection();
         }
       }),
@@ -700,6 +811,7 @@ export default await async function (_, $, $html) {
             this.connectionState("connected");
             this.addMessage({ role: "system", content: "Connected to Agenda" });
             await this.loadChatHistory();
+            await this.loadProjects();
             await this.refreshData();
             await this.loadPendingPrompts();
             this.startSyncLoop();
@@ -784,6 +896,41 @@ export default await async function (_, $, $html) {
       }),
 
       $.Method.new({
+        name: "loadProjects",
+        doc: "fetch active projects from the API",
+        async do() {
+          if (!this.connected()) return;
+          try {
+            const projects = await this.api().listProjects({ archived: false });
+            this.projects(projects || []);
+          } catch (e) {
+            this.projects([]);
+          }
+        }
+      }),
+
+      $.Method.new({
+        name: "projectName",
+        doc: "look up project title by id, returning Inbox for null",
+        do(projectId) {
+          if (!projectId) return 'Inbox';
+          const proj = this.projects().find(p => p.sid === projectId);
+          return proj ? proj.title : projectId;
+        }
+      }),
+
+      $.Method.new({
+        name: "filterByProject",
+        doc: "filter a list of items by the active project selection",
+        do(items) {
+          const pid = this.activeProjectId();
+          if (pid === 'inbox') return items.filter(i => !i.projectId);
+          if (pid !== null) return items.filter(i => i.projectId === pid);
+          return items;
+        }
+      }),
+
+      $.Method.new({
         name: "refreshData",
         async do() {
           if (!this.connected()) return;
@@ -796,6 +943,7 @@ export default await async function (_, $, $html) {
             this.tasks(tasks);
             this.logs(logs);
             this.reminders(reminders);
+            await this.loadProjects();
           } catch (e) {
             this.addMessage({ role: "system", content: `Refresh failed: ${e.message}` });
           }
