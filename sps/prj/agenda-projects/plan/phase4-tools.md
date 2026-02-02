@@ -74,3 +74,29 @@ Run: `bun run test`
 - All new tool definitions conform to Anthropic API format
 - Existing tools accept optional projectId without breaking
 - move_to_project supports both projectId and projectSlug lookup
+
+## Review
+
+**Verdict: Approved** with one bug fix applied.
+
+### Bug fixed
+- `ListLogsTool.execute` was hardcoding `{ limit: args.limit || 50 }`, discarding `projectId` even though the schema declared it. The plan says "ListLogsTool — same" (as ListTasksTool which passes args through). Fixed to `{ ...args, limit: args.limit || 50 }` which spreads all args (including projectId) then applies the limit default.
+
+### Code quality
+- New tool classes are structurally identical to the existing tools. Consistent Simulabra idiom: `$tools.Tool` mixin, `toolName`/`doc`/`inputSchema` Vars, `execute` Method.
+- `MoveToProjectTool.execute` is the most complex method in the file. The `?? null` / slug-lookup / switch dispatch logic is clean and readable. Error handling for missing project and unknown itemType is correct.
+- The `name` → `title` rename from Phase 1 is applied consistently throughout.
+- Doc strings on all 4 new Classes are present and match existing style.
+
+### Style
+- The `|| null` pattern for optional projectId in create tools is consistent with existing patterns (e.g., `dueDate: args.dueDate || null`).
+- Schema descriptions are clear and consistent across all tools.
+
+### Test quality
+- 7 new test cases cover schemas, execution, and slug resolution.
+- Pre-existing mock bug fix (positional → object args) is a legitimate fix.
+- `ToolRegistryCount` partially overlaps with `AgendaToolRegistryDefaults` on the count assertion, but they test different name sets — acceptable.
+- `ToolDefinitionsMatchAnthropicFormat` test (pre-existing) now validates all 13 tools automatically.
+
+### No issues found
+All acceptance criteria are met. 15 agenda tools tests pass, all core tests pass.

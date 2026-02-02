@@ -25,6 +25,10 @@ export default await async function (_, $, $tools) {
               type: 'array',
               items: { type: 'string' },
               description: 'Optional tags for categorization'
+            },
+            projectId: {
+              type: 'string',
+              description: 'Optional project ID to associate the log with'
             }
           },
           required: ['content']
@@ -33,7 +37,7 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.createLog({ content: args.content, tags: args.tags || [] });
+          return await services.db.createLog({ content: args.content, tags: args.tags || [], projectId: args.projectId || null });
         }
       }),
     ]
@@ -72,6 +76,10 @@ export default await async function (_, $, $tools) {
               type: 'array',
               items: { type: 'string' },
               description: 'Optional tags for categorization'
+            },
+            projectId: {
+              type: 'string',
+              description: 'Optional project ID to associate the task with'
             }
           },
           required: ['title']
@@ -84,7 +92,8 @@ export default await async function (_, $, $tools) {
             title: args.title,
             priority: args.priority || 3,
             dueDate: args.dueDate || null,
-            tags: args.tags || []
+            tags: args.tags || [],
+            projectId: args.projectId || null
           });
         }
       }),
@@ -159,6 +168,10 @@ export default await async function (_, $, $tools) {
                   description: 'Repeat every N units'
                 }
               }
+            },
+            projectId: {
+              type: 'string',
+              description: 'Optional project ID to associate the reminder with'
             }
           },
           required: ['message', 'when']
@@ -170,7 +183,8 @@ export default await async function (_, $, $tools) {
           return await services.db.createReminder({
             message: args.message,
             triggerAt: args.when,
-            recurrence: args.recurrence || null
+            recurrence: args.recurrence || null,
+            projectId: args.projectId || null
           });
         }
       }),
@@ -235,6 +249,10 @@ export default await async function (_, $, $tools) {
             tag: {
               type: 'string',
               description: 'Filter by tag'
+            },
+            projectId: {
+              type: 'string',
+              description: 'Filter by project ID (null for Inbox items)'
             }
           }
         }),
@@ -266,6 +284,10 @@ export default await async function (_, $, $tools) {
             limit: {
               type: 'integer',
               description: 'Maximum number of entries to return (default 50)'
+            },
+            projectId: {
+              type: 'string',
+              description: 'Filter by project ID (null for Inbox items)'
             }
           }
         }),
@@ -273,7 +295,7 @@ export default await async function (_, $, $tools) {
       $.Method.new({
         name: 'execute',
         async do(args, services) {
-          return await services.db.listLogs({ limit: args.limit || 50 });
+          return await services.db.listLogs({ ...args, limit: args.limit || 50 });
         }
       }),
     ]
@@ -297,6 +319,10 @@ export default await async function (_, $, $tools) {
             sent: {
               type: 'boolean',
               description: 'Filter by sent status (true=sent, false=pending)'
+            },
+            projectId: {
+              type: 'string',
+              description: 'Filter by project ID (null for Inbox items)'
             }
           }
         }),
@@ -356,6 +382,188 @@ export default await async function (_, $, $tools) {
   });
 
   $.Class.new({
+    name: 'CreateProjectTool',
+    doc: 'Tool for creating a new project',
+    slots: [
+      $tools.Tool,
+      $.Var.new({ name: 'toolName', default: 'create_project' }),
+      $.Var.new({
+        name: 'doc',
+        default: 'Create a new project for organizing tasks, logs, and reminders',
+      }),
+      $.Var.new({
+        name: 'inputSchema',
+        default: () => ({
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              description: 'The project title'
+            },
+            slug: {
+              type: 'string',
+              description: 'Optional URL-friendly identifier (auto-generated from title if omitted)'
+            },
+            context: {
+              type: 'string',
+              description: 'Optional project context for Geist to use when scoping responses'
+            }
+          },
+          required: ['title']
+        }),
+      }),
+      $.Method.new({
+        name: 'execute',
+        async do(args, services) {
+          return await services.db.createProject({
+            title: args.title,
+            slug: args.slug,
+            context: args.context || null
+          });
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'ListProjectsTool',
+    doc: 'Tool for listing all projects',
+    slots: [
+      $tools.Tool,
+      $.Var.new({ name: 'toolName', default: 'list_projects' }),
+      $.Var.new({
+        name: 'doc',
+        default: 'List all projects, optionally filtering by archived status',
+      }),
+      $.Var.new({
+        name: 'inputSchema',
+        default: () => ({
+          type: 'object',
+          properties: {
+            archived: {
+              type: 'boolean',
+              description: 'Filter by archived status (true=archived, false=active)'
+            }
+          }
+        }),
+      }),
+      $.Method.new({
+        name: 'execute',
+        async do(args, services) {
+          return await services.db.listProjects(args || {});
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'UpdateProjectTool',
+    doc: 'Tool for updating a project',
+    slots: [
+      $tools.Tool,
+      $.Var.new({ name: 'toolName', default: 'update_project' }),
+      $.Var.new({
+        name: 'doc',
+        default: 'Update a project title, slug, context, or archived status',
+      }),
+      $.Var.new({
+        name: 'inputSchema',
+        default: () => ({
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              description: 'The project ID to update'
+            },
+            title: {
+              type: 'string',
+              description: 'New project title'
+            },
+            slug: {
+              type: 'string',
+              description: 'New URL-friendly identifier'
+            },
+            context: {
+              type: 'string',
+              description: 'New project context for Geist'
+            },
+            archived: {
+              type: 'boolean',
+              description: 'Set archived status'
+            }
+          },
+          required: ['id']
+        }),
+      }),
+      $.Method.new({
+        name: 'execute',
+        async do(args, services) {
+          return await services.db.updateProject(args);
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'MoveToProjectTool',
+    doc: 'Tool for moving items between projects',
+    slots: [
+      $tools.Tool,
+      $.Var.new({ name: 'toolName', default: 'move_to_project' }),
+      $.Var.new({
+        name: 'doc',
+        default: 'Move a task, log, or reminder to a project (or to Inbox by passing null projectId)',
+      }),
+      $.Var.new({
+        name: 'inputSchema',
+        default: () => ({
+          type: 'object',
+          properties: {
+            itemType: {
+              type: 'string',
+              enum: ['task', 'log', 'reminder'],
+              description: 'The type of item to move'
+            },
+            itemId: {
+              type: 'string',
+              description: 'The ID of the item to move'
+            },
+            projectId: {
+              type: 'string',
+              description: 'Target project ID (null or omit to move to Inbox)'
+            },
+            projectSlug: {
+              type: 'string',
+              description: 'Target project slug (alternative to projectId)'
+            }
+          },
+          required: ['itemType', 'itemId']
+        }),
+      }),
+      $.Method.new({
+        name: 'execute',
+        async do(args, services) {
+          let targetProjectId = args.projectId ?? null;
+          if (args.projectSlug && !args.projectId) {
+            const project = await services.db.getProjectBySlug({ slug: args.projectSlug });
+            if (!project) {
+              throw new Error(`Project not found: ${args.projectSlug}`);
+            }
+            targetProjectId = project.id;
+          }
+          const updateArgs = { id: args.itemId, projectId: targetProjectId };
+          switch (args.itemType) {
+            case 'task': return await services.db.updateTask(updateArgs);
+            case 'log': return await services.db.updateLog(updateArgs);
+            case 'reminder': return await services.db.updateReminder(updateArgs);
+            default: throw new Error(`Unknown item type: ${args.itemType}`);
+          }
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
     name: 'AgendaToolRegistry',
     doc: 'Pre-configured registry with all Agenda tools',
     slots: [
@@ -372,6 +580,10 @@ export default await async function (_, $, $tools) {
           this.register(_.ListLogsTool.new());
           this.register(_.ListRemindersTool.new());
           this.register(_.TriggerWebhookTool.new());
+          this.register(_.CreateProjectTool.new());
+          this.register(_.ListProjectsTool.new());
+          this.register(_.UpdateProjectTool.new());
+          this.register(_.MoveToProjectTool.new());
         }
       }),
     ]

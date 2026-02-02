@@ -57,7 +57,7 @@ export default await async function (_, $, $test, $coreTools, $tools) {
     do() {
       const registry = $tools.AgendaToolRegistry.new();
 
-      this.assertEq(registry.tools().length, 9, 'should have 9 tools');
+      this.assertEq(registry.tools().length, 13, 'should have 13 tools');
 
       const toolNames = registry.tools().map(t => t.toolName());
       this.assert(toolNames.includes('create_log'), 'should have create_log');
@@ -114,9 +114,9 @@ export default await async function (_, $, $test, $coreTools, $tools) {
       let calledWith = null;
       const mockServices = {
         db: {
-          createLog: (content, tags) => {
-            calledWith = { content, tags };
-            return { id: 'test-id', content, tags };
+          createLog: (args) => {
+            calledWith = args;
+            return { id: 'test-id', ...args };
           }
         }
       };
@@ -164,6 +164,138 @@ export default await async function (_, $, $test, $coreTools, $tools) {
         this.assertEq(def.input_schema.type, 'object', `${def.name}: input_schema type should be object`);
         this.assert(def.input_schema.properties, `${def.name}: input_schema should have properties`);
       }
+    }
+  });
+
+  $test.Case.new({
+    name: 'ToolRegistryCount',
+    doc: 'AgendaToolRegistry should have 13 tools after project tools added',
+    do() {
+      const registry = $tools.AgendaToolRegistry.new();
+      this.assertEq(registry.tools().length, 13, 'should have 13 tools');
+
+      const toolNames = registry.tools().map(t => t.toolName());
+      this.assert(toolNames.includes('create_project'), 'should have create_project');
+      this.assert(toolNames.includes('list_projects'), 'should have list_projects');
+      this.assert(toolNames.includes('update_project'), 'should have update_project');
+      this.assert(toolNames.includes('move_to_project'), 'should have move_to_project');
+    }
+  });
+
+  $test.Case.new({
+    name: 'CreateProjectToolSchema',
+    doc: 'create_project should require title, with slug and context optional',
+    do() {
+      const registry = $tools.AgendaToolRegistry.new();
+      const tool = registry.get('create_project');
+      const schema = tool.inputSchema();
+
+      this.assert(schema.properties.title, 'should have title property');
+      this.assert(schema.properties.slug, 'should have slug property');
+      this.assert(schema.properties.context, 'should have context property');
+      this.assert(schema.required.includes('title'), 'title should be required');
+      this.assert(!schema.required.includes('slug'), 'slug should not be required');
+      this.assert(!schema.required.includes('context'), 'context should not be required');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MoveToProjectToolSchema',
+    doc: 'move_to_project should require itemType and itemId, with projectId and projectSlug optional',
+    do() {
+      const registry = $tools.AgendaToolRegistry.new();
+      const tool = registry.get('move_to_project');
+      const schema = tool.inputSchema();
+
+      this.assert(schema.properties.itemType, 'should have itemType property');
+      this.assert(schema.properties.itemId, 'should have itemId property');
+      this.assert(schema.properties.projectId, 'should have projectId property');
+      this.assert(schema.properties.projectSlug, 'should have projectSlug property');
+      this.assert(schema.required.includes('itemType'), 'itemType should be required');
+      this.assert(schema.required.includes('itemId'), 'itemId should be required');
+      this.assert(!schema.required.includes('projectId'), 'projectId should not be required');
+      this.assert(!schema.required.includes('projectSlug'), 'projectSlug should not be required');
+    }
+  });
+
+  $test.Case.new({
+    name: 'CreateTaskToolSchemaExtended',
+    doc: 'create_task should now include optional projectId in schema',
+    do() {
+      const registry = $tools.AgendaToolRegistry.new();
+      const createTask = registry.get('create_task');
+      const schema = createTask.inputSchema();
+
+      this.assert(schema.properties.projectId, 'create_task should have projectId property');
+      this.assertEq(schema.properties.projectId.type, 'string', 'projectId should be string type');
+      this.assert(!schema.required || !schema.required.includes('projectId'), 'projectId should not be required');
+
+      const createLog = registry.get('create_log');
+      this.assert(createLog.inputSchema().properties.projectId, 'create_log should have projectId property');
+
+      const createReminder = registry.get('create_reminder');
+      this.assert(createReminder.inputSchema().properties.projectId, 'create_reminder should have projectId property');
+
+      const listTasks = registry.get('list_tasks');
+      this.assert(listTasks.inputSchema().properties.projectId, 'list_tasks should have projectId property');
+
+      const listLogs = registry.get('list_logs');
+      this.assert(listLogs.inputSchema().properties.projectId, 'list_logs should have projectId property');
+
+      const listReminders = registry.get('list_reminders');
+      this.assert(listReminders.inputSchema().properties.projectId, 'list_reminders should have projectId property');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ToolExecuteCreateProject',
+    doc: 'create_project tool should call db.createProject with correct args',
+    async do() {
+      const registry = $tools.AgendaToolRegistry.new();
+
+      let calledWith = null;
+      const mockServices = {
+        db: {
+          createProject: (args) => {
+            calledWith = args;
+            return { id: 'proj-1', ...args };
+          }
+        }
+      };
+
+      const result = await registry.execute('create_project', { title: 'Coins', slug: 'coins', context: 'Ancient coin cleaning' }, mockServices);
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(calledWith.title, 'Coins', 'should pass title');
+      this.assertEq(calledWith.slug, 'coins', 'should pass slug');
+      this.assertEq(calledWith.context, 'Ancient coin cleaning', 'should pass context');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ToolExecuteMoveToProjectBySlug',
+    doc: 'move_to_project should resolve projectSlug to projectId and dispatch to correct update method',
+    async do() {
+      const registry = $tools.AgendaToolRegistry.new();
+
+      let updateCalledWith = null;
+      const mockServices = {
+        db: {
+          getProjectBySlug: ({ slug }) => {
+            return { id: 'proj-abc', title: 'House', slug };
+          },
+          updateTask: (args) => {
+            updateCalledWith = args;
+            return { id: args.id, projectId: args.projectId };
+          }
+        }
+      };
+
+      const result = await registry.execute('move_to_project', { itemType: 'task', itemId: 'task-123', projectSlug: 'house' }, mockServices);
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(updateCalledWith.id, 'task-123', 'should pass item id');
+      this.assertEq(updateCalledWith.projectId, 'proj-abc', 'should resolve slug to project id');
     }
   });
 }.module({

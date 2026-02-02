@@ -14,13 +14,13 @@ Evolve the Agenda productivity app by adding Projects as a grouping and context 
 Use cases driving this: organizing ancient coin cleaning/identification work and house projects, each with their own context and task streams.
 
 ## Status
-IN PROGRESS — Phase 2 done, Phase 3 next.
+IN PROGRESS — Phase 4 done, Phase 5 next.
 
 ## Phases
 - [x] Phase 1: Project Model & Migration
 - [x] Phase 2: DatabaseService Project CRUD
-- [ ] Phase 3: HTTP API Endpoints
-- [ ] Phase 4: Project Tools for Geist
+- [x] Phase 3: HTTP API Endpoints
+- [x] Phase 4: Project Tools for Geist
 - [ ] Phase 5: Context-Driven Project Resolution
 - [ ] Phase 6: UI Project Selector & Filtering
 - [ ] Phase 7: UI Project Context Panel
@@ -44,3 +44,7 @@ IN PROGRESS — Phase 2 done, Phase 3 next.
 - **Phase 1 review**: Approved. Code is clean, idiomatic, well-tested. 57 model + 13 sqlite tests pass. No issues found.
 - **Phase 2 complete**: Project CRUD RPCs (createProject, getProject, getProjectBySlug, listProjects, updateProject), projectId on create/list/update for Task/Log/Reminder, new updateLog and updateReminder RPCs. 49 database service tests pass.
 - **Phase 2 review**: Approved. Added doc strings to all 7 new RPCs. Code is correct, idiomatic, and consistent with existing patterns. Three-way projectId filtering applied uniformly. No issues found.
+- **Phase 3 complete**: 5 new HTTP API endpoints in run.js — project CRUD (list/create/get/update) and tasks/update. Thin adapter layer with 400 validation. Existing list endpoints automatically support projectId filtering. All tests pass.
+- **Phase 3 review**: Approved. All endpoints follow the established apiHandler pattern. Validation is consistent (HttpError with MISSING_FIELD code). Correctly uses `title` over plan's `name`. No issues found.
+- **Phase 4 complete**: 4 new Geist tools (create_project, list_projects, update_project, move_to_project). 6 existing tools extended with optional projectId. Registry now has 13 tools. move_to_project supports both projectId and projectSlug lookup. Fixed pre-existing mock bug in tools test. 15 agenda tools tests pass.
+- **Phase 4 review**: Approved. Fixed ListLogsTool.execute which was discarding projectId despite declaring it in schema. Code is correct, idiomatic, and consistent. MoveToProjectTool dispatch logic is clean. All 13 tool definitions pass Anthropic format validation. No other issues found.
