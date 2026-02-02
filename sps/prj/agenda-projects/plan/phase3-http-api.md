@@ -56,3 +56,8 @@ Run: `bun run test`
 - Tasks can be moved between projects via POST /api/v1/tasks/update
 - Existing endpoints continue to work (backward compatible)
 - Missing required fields return 400 errors
+
+## Review
+**Status: Approved.**
+
+Five endpoints added to `run.js`, all following the established `apiHandler` pattern exactly. Validation uses `HttpError.new` with `MISSING_FIELD` code consistently. The `projects/get` endpoint correctly dispatches to `getProjectBySlug` when slug is provided, `getProject` otherwise. The create endpoint validates `title` (not plan's `name`), matching the Phase 1 rename — correct. No duplication beyond the intentional idiom. No issues found.

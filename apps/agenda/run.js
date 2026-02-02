@@ -160,6 +160,69 @@ export default await async function (_, $, $supervisor) {
     return await geist.generatePrompts();
   });
 
+  // Project endpoints
+  apiHandler('POST', '/api/v1/projects/list', async (ctx) => {
+    const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
+    const body = ctx.body() || {};
+    return await db.listProjects(body);
+  });
+
+  apiHandler('POST', '/api/v1/projects/create', async (ctx) => {
+    const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
+    const body = ctx.body() || {};
+    if (!body.title) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Missing required field: title',
+        code: 'MISSING_FIELD'
+      });
+    }
+    return await db.createProject(body);
+  });
+
+  apiHandler('POST', '/api/v1/projects/get', async (ctx) => {
+    const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
+    const body = ctx.body() || {};
+    if (!body.id && !body.slug) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Missing required field: id or slug',
+        code: 'MISSING_FIELD'
+      });
+    }
+    if (body.slug) {
+      return await db.getProjectBySlug(body);
+    }
+    return await db.getProject(body);
+  });
+
+  apiHandler('POST', '/api/v1/projects/update', async (ctx) => {
+    const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
+    const body = ctx.body() || {};
+    if (!body.id) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Missing required field: id',
+        code: 'MISSING_FIELD'
+      });
+    }
+    return await db.updateProject(body);
+  });
+
+  // Task update endpoint (for moving tasks between projects)
+  apiHandler('POST', '/api/v1/tasks/update', async (ctx) => {
+    const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
+    const body = ctx.body() || {};
+    if (!body.id) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Missing required field: id',
+        code: 'MISSING_FIELD'
+      });
+    }
+    return await db.updateTask(body);
+  });
+
   sup.httpRouter(router);
 
   const log = (msg) => {
