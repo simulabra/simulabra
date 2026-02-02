@@ -343,6 +343,123 @@ export default await async function (_, $, $html) {
   });
 
   $.Class.new({
+    name: "ProjectContextPanel",
+    doc: "Collapsible panel for viewing and editing the selected project's context",
+    slots: [
+      $html.Component,
+      $.Var.new({ name: "app" }),
+      $.Signal.new({ name: "expanded", default: false }),
+      $.Signal.new({ name: "editing", default: false }),
+      $.Signal.new({ name: "editText", default: "" }),
+      $.Signal.new({ name: "saving", default: false }),
+      $.Method.new({
+        name: "currentProject",
+        doc: "look up active project from app.projects(), null for All or Inbox",
+        do() {
+          const pid = this.app().activeProjectId();
+          if (pid === null || pid === 'inbox') return null;
+          return this.app().projects().find(p => p.sid === pid) || null;
+        }
+      }),
+      $.Method.new({
+        name: "toggleExpand",
+        do() {
+          const wasExpanded = this.expanded();
+          this.expanded(!wasExpanded);
+          if (!wasExpanded) {
+            const proj = this.currentProject();
+            this.editText(proj ? proj.context || '' : '');
+          }
+          this.editing(false);
+        }
+      }),
+      $.Method.new({
+        name: "startEdit",
+        do() {
+          const proj = this.currentProject();
+          this.editText(proj ? proj.context || '' : '');
+          this.editing(true);
+        }
+      }),
+      $.Method.new({
+        name: "cancelEdit",
+        do() {
+          this.editing(false);
+        }
+      }),
+      $.Method.new({
+        name: "saveContext",
+        doc: "persist editText to the project via API, then refresh and exit edit mode",
+        async do() {
+          const proj = this.currentProject();
+          if (!proj || this.saving()) return;
+          this.saving(true);
+          try {
+            await this.app().api().updateProject({ id: proj.sid, context: this.editText() });
+            await this.app().loadProjects();
+            this.editing(false);
+          } finally {
+            this.saving(false);
+          }
+        }
+      }),
+      $.Method.new({
+        name: "renderHeader",
+        doc: "clickable header bar with expand/collapse toggle and project title",
+        do(proj) {
+          const arrow = this.expanded() ? '▼' : '▶';
+          return $html.HTML.t`
+            <div class="context-panel-header" onclick=${() => this.toggleExpand()}>
+              <span class="context-toggle">${arrow}</span>
+              <span class="context-project-title">${proj.title}</span>
+            </div>
+          `;
+        }
+      }),
+      $.Method.new({
+        name: "render",
+        do() {
+          return $html.HTML.t`
+            <div class="context-panel">
+              ${() => {
+                const proj = this.currentProject();
+                if (!proj) return '';
+                if (!this.expanded()) {
+                  return this.renderHeader(proj);
+                }
+                if (this.editing()) {
+                  return $html.HTML.t`
+                    ${this.renderHeader(proj)}
+                    <div class="context-panel-body">
+                      <textarea class="context-textarea"
+                                oninput=${(e) => this.editText(e.target.value)}>${this.editText()}</textarea>
+                      <div class="context-actions">
+                        <button class="context-save-btn" onclick=${() => this.saveContext()}
+                                disabled=${() => this.saving()}>
+                          ${() => this.saving() ? '...' : 'save'}
+                        </button>
+                        <button class="context-cancel-btn" onclick=${() => this.cancelEdit()}>cancel</button>
+                      </div>
+                    </div>
+                  `;
+                }
+                const contextStr = proj.context || '';
+                return $html.HTML.t`
+                  ${this.renderHeader(proj)}
+                  <div class="context-panel-body">
+                    <div class="context-text">${contextStr || '(no context set)'}</div>
+                    <button class="context-edit-btn" onclick=${() => this.startEdit()}>edit</button>
+                  </div>
+                `;
+              }}
+            </div>
+          `;
+        }
+      })
+    ]
+  });
+
+  $.Class.new({
     name: "TodosView",
     doc: "Task list view with active/backlog/completed filter tabs",
     slots: [
@@ -447,6 +564,7 @@ export default await async function (_, $, $html) {
                 <span class="task-count">${() => this.taskCount()} ${() => this.taskFilter()}</span>
               </div>
               ${_.ProjectSelector.new({ app: this.app() })}
+              ${_.ProjectContextPanel.new({ app: this.app() })}
               <div class="task-list">
                 ${() => this.renderTaskList()}
               </div>

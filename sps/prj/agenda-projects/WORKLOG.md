@@ -111,3 +111,21 @@ Interesting architectural note: the current filtering in DatabaseService is all 
 - **BrowserCase resource exhaustion**: Running 16+ BrowserCase tests (each launching a separate Chromium) causes hangs after ~8 tests. This is a pre-existing framework issue, not caused by Phase 6 changes. The 5 new project selector tests were validated with a shared-browser approach.
 
 **Test results:** All 5 project selector UI tests pass. All core tests pass (models, sqlite, database, tools, geist-prompts). No regressions.
+
+### Phase 7 — UI Project Context Panel
+
+**Files changed:**
+- `apps/agenda/src/ui/app.js` — Added ProjectContextPanel component with 4 signals (expanded, editing, editText, saving), 5 methods (currentProject, toggleExpand, startEdit, cancelEdit, saveContext), and a conditional render method. Integrated into TodosView.render between ProjectSelector and the task-list div.
+- `apps/agenda/src/style.css` — Added context panel styles: `.context-panel-header` (flex, wood background, cursor pointer), `.context-toggle` (▶/▼ indicators), `.context-project-title` (italic, seashell), `.context-panel-body` (light-sand background, padded), `.context-text` (pre-wrap for markdown), `.context-textarea` (full-width, resizable), `.context-actions` (flex row with save/cancel buttons), plus hover/disabled states.
+- `apps/agenda/tests/ui/app.js` — Updated `createApiMockServer` to handle `projects/update` endpoint with mutable project state and request tracking via `server.state`. Added 6 new BrowserCase tests: ContextPanelHiddenForAll, ContextPanelHiddenForInbox, ContextPanelShowsForProject, ContextPanelExpandCollapse, ContextPanelEditAndSave, ContextPanelEditCancel.
+
+**Design notes:**
+- The render method uses a single outer reactive block `${() => { ... }}` that reads `currentProject()` (which depends on `activeProjectId` and `projects` signals) and the `expanded`/`editing` signals. When any signal changes, the entire panel re-renders with the correct state.
+- Textarea content is set statically (not reactively) to prevent cursor-jump issues during typing. The outer reactive block re-renders the editing view fresh when `editing()` becomes true, so the initial value is always current.
+- `saveContext` calls `updateProject` then `loadProjects` to refresh the project data, so the read-mode view shows the updated context. It resets `editing(false)` only after success.
+- The mock server mutates its projects array on update, so tests can verify the round-trip (save → re-read shows updated data).
+- `toggleExpand` always resets `editing(false)` — collapsing while in edit mode discards unsaved changes, which is the expected UX.
+
+**Pre-existing infrastructure issue:** BrowserCase tests (each launching a Chromium instance) still exhaust system resources after ~8 tests. The context panel tests are structurally correct but hit the same timeout issue documented in Phase 6. This is not caused by Phase 7 changes.
+
+**Test results:** App builds successfully. All core tests pass (211 total). All agenda non-UI tests pass (models, sqlite, database, tools, geist-prompts). UI tests hit pre-existing BrowserCase resource exhaustion. No regressions from Phase 7 changes.

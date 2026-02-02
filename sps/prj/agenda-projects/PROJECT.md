@@ -14,7 +14,7 @@ Evolve the Agenda productivity app by adding Projects as a grouping and context 
 Use cases driving this: organizing ancient coin cleaning/identification work and house projects, each with their own context and task streams.
 
 ## Status
-IN PROGRESS — Phase 6 done, Phase 7 next.
+IN PROGRESS — Phase 7 done, Phase 8 next.
 
 ## Phases
 - [x] Phase 1: Project Model & Migration
@@ -23,7 +23,7 @@ IN PROGRESS — Phase 6 done, Phase 7 next.
 - [x] Phase 4: Project Tools for Geist
 - [x] Phase 5: Context-Driven Project Resolution
 - [x] Phase 6: UI Project Selector & Filtering
-- [ ] Phase 7: UI Project Context Panel
+- [x] Phase 7: UI Project Context Panel
 - [ ] Phase 8: Prompting System Integration
 
 ## Key decisions
@@ -52,3 +52,5 @@ IN PROGRESS — Phase 6 done, Phase 7 next.
 - **Phase 5 review**: Approved. Fixed missing `database.close()` in one test, removed unused variable binding, added missing blank line between test cases. Code is correct, minimal, and well-separated (async data fetch vs sync prompt assembly). No issues found.
 - **Phase 6 complete**: UI Project Selector & Filtering. Added ProjectSelector component with reactive tab bar (All / Inbox / per-project tabs). Project filtering applied to TodosView, JournalView, and CalendarView. localStorage persistence for activeProjectId. Project badge on TaskItem in All view. 5 API client methods, 2 new signals. 5 Playwright UI tests pass. Fixed test infrastructure to use Bun.build for browser bundling.
 - **Phase 6 review**: Approved. Extracted triplicated filter logic into `AgendaApp.filterByProject`. Added doc strings to 5 API client methods. Added `loadProjects` to `refreshData` per plan. No issues found.
+- **Phase 7 complete**: UI Project Context Panel. Added ProjectContextPanel component with collapsible header (▶/▼), expanded read mode with context text and edit button, and edit mode with textarea/save/cancel. Integrated between ProjectSelector and task-list in TodosView. Panel hidden for All/Inbox, visible only for specific projects. Save persists via API updateProject and refreshes project data. Static textarea content to prevent cursor jumps. 6 new UI tests. CSS follows existing design system (wood, sand, seashell palette).
+- **Phase 7 review**: Approved. Extracted triplicated header template into `renderHeader` method. Added doc strings to `saveContext` and `renderHeader`. No other issues found.

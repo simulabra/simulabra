@@ -30,7 +30,9 @@ export default await async function (_, $) {
         name: 'assertEq',
         do(a, b, msg = '') {
           if (a !== b) {
-            throw new Error(`${this.description()}: assertEq failed (${a?.description()} !== ${b?.description()}) ${msg}`);
+            const descA = typeof a?.description === 'function' ? a.description() : JSON.stringify(a);
+            const descB = typeof b?.description === 'function' ? b.description() : JSON.stringify(b);
+            throw new Error(`${this.description()}: assertEq failed (${descA} !== ${descB}) ${msg}`);
           }
         }
       }),
@@ -85,12 +87,15 @@ export default await async function (_, $) {
     ]
   });
 
+  let sharedBrowser = null;
+
   $.Class.new({
     name: 'BrowserCase',
-    doc: 'Test case with Playwright browser automation',
+    doc: 'Test case with Playwright browser automation. Shares one Chromium instance across all tests, using isolated BrowserContexts for per-test state.',
     slots: [
       _.AsyncCase,
       $.Var.new({ name: 'browser' }),
+      $.Var.new({ name: 'context' }),
       $.Var.new({ name: 'page' }),
       $.Var.new({ name: 'isMobile', default: false }),
       $.Var.new({ name: 'pageErrors', default: () => [] }),
@@ -98,12 +103,16 @@ export default await async function (_, $) {
       $.AsyncBefore.new({
         name: 'run',
         async do() {
-          const { chromium, devices } = await import('playwright');
-          this.browser(await chromium.launch());
-          const pageOptions = this.isMobile()
+          const { chromium } = await import('playwright');
+          if (!sharedBrowser || !sharedBrowser.isConnected()) {
+            sharedBrowser = await chromium.launch({ timeout: 30000 });
+          }
+          this.browser(sharedBrowser);
+          const contextOptions = this.isMobile()
             ? { viewport: { width: 390, height: 844 } }
             : {};
-          this.page(await this.browser().newPage(pageOptions));
+          this.context(await this.browser().newContext(contextOptions));
+          this.page(await this.context().newPage());
           this.page().on('pageerror', err => this.pageErrors().push(`[pageerror] ${err.message}`));
           this.page().on('console', msg => {
             if (msg.type() === 'error') {
@@ -119,7 +128,7 @@ export default await async function (_, $) {
           if (this.pageErrors().length > 0) {
             console.log(`Page errors in ${this.title()}:\n  ${this.pageErrors().join('\n  ')}`);
           }
-          await this.browser()?.close();
+          await this.context()?.close();
         }
       }),
 

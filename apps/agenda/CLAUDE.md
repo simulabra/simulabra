@@ -66,6 +66,7 @@ Gotchas:
 - Don't use native Date methods for arithmetic; use TimePolicy
 - Service specs require `healthCheckMethod` for RPC health checks
 - WebSocket connections auto-reconnect via supervisor restart policy
+- Test fixture arrays must deep-copy objects: `.map(o => ({...o}))` not `[...arr]`. Spread on an array copies references, so mock server handlers that mutate objects will contaminate subsequent tests.
 </Development>
 
 <Services>

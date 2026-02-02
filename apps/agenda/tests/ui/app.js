@@ -15,16 +15,42 @@ if (!buildResult.success) {
 export default await async function (_, $, $test) {
 
   function createMockServer() {
-    return Bun.serve({
+    const ac = new AbortController();
+    const server = Bun.serve({
       port: 0,
       async fetch(req) {
         const url = new URL(req.url);
         let path = url.pathname === '/' ? '/index.html' : url.pathname;
+
+        if (path.startsWith('/api/v1/')) {
+          const json = (value) => new Response(JSON.stringify({ ok: true, value }), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (path === '/api/v1/status') return json({ status: 'ok' });
+          if (path === '/api/v1/tasks/list') return json([]);
+          if (path === '/api/v1/logs/list') return json([]);
+          if (path === '/api/v1/reminders/list') return json([]);
+          if (path === '/api/v1/projects/list') return json([]);
+          if (path === '/api/v1/chat/history') return json([]);
+          if (path === '/api/v1/prompts/pending') return json([]);
+          if (path === '/api/v1/chat/wait') {
+            await new Promise(resolve => {
+              const timer = setTimeout(resolve, 30000);
+              ac.signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); });
+            });
+            return json([]);
+          }
+          return json(null);
+        }
+
         const file = Bun.file(buildDir + path);
         if (await file.exists()) return new Response(file);
         return new Response('Not found', { status: 404 });
       }
     });
+    const origStop = server.stop.bind(server);
+    server.stop = () => { ac.abort(); origStop(); };
+    return server;
   }
 
   async function loadPage(page, server) {
@@ -299,12 +325,14 @@ export default await async function (_, $, $test) {
   ];
 
   function createApiMockServer(opts = {}) {
-    const projects = opts.projects || testProjects;
+    const projects = (opts.projects || testProjects).map(p => ({...p}));
     const tasks = opts.tasks || testTasks;
     const logs = opts.logs || testLogs;
     const reminders = opts.reminders || testReminders;
+    const state = { lastUpdateBody: null };
+    const ac = new AbortController();
 
-    return Bun.serve({
+    const server = Bun.serve({
       port: 0,
       async fetch(req) {
         const url = new URL(req.url);
@@ -319,9 +347,22 @@ export default await async function (_, $, $test) {
           if (path === '/api/v1/logs/list') return json(logs);
           if (path === '/api/v1/reminders/list') return json(reminders);
           if (path === '/api/v1/projects/list') return json(projects);
+          if (path === '/api/v1/projects/update') {
+            const body = await req.json();
+            state.lastUpdateBody = body;
+            const proj = projects.find(p => p.sid === body.id);
+            if (proj && body.context !== undefined) proj.context = body.context;
+            return json(proj || null);
+          }
           if (path === '/api/v1/chat/history') return json([]);
           if (path === '/api/v1/prompts/pending') return json([]);
-          if (path === '/api/v1/chat/wait') return json([]);
+          if (path === '/api/v1/chat/wait') {
+            await new Promise(resolve => {
+              const timer = setTimeout(resolve, 30000);
+              ac.signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); });
+            });
+            return json([]);
+          }
           return json(null);
         }
 
@@ -331,6 +372,10 @@ export default await async function (_, $, $test) {
         return new Response('Not found', { status: 404 });
       }
     });
+    server.state = state;
+    const origStop = server.stop.bind(server);
+    server.stop = () => { ac.abort(); origStop(); };
+    return server;
   }
 
   async function loadApiPage(page, server) {
@@ -461,6 +506,173 @@ export default await async function (_, $, $test) {
         const labels = await this.page().$$eval('.todos-view .project-tab', els => els.map(e => e.textContent.trim()));
         this.assert(labels.includes('All'), 'Should have All tab');
         this.assert(labels.includes('Inbox'), 'Should have Inbox tab');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Project Context Panel Tests
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async function navigateToTasksWithProject(page, server) {
+    await loadApiPage(page, server);
+    await page.click('.nav-tab:nth-child(2)');
+    await __.sleep(300);
+    await page.click('.todos-view .project-tab:nth-child(3)');
+    await __.sleep(300);
+  }
+
+  $test.BrowserCase.new({
+    name: 'ContextPanelHiddenForAll',
+    doc: 'Context panel renders nothing when All is selected',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const header = await this.page().$('.todos-view .context-panel-header');
+        this.assertEq(header, null, 'Context panel header should not exist for All');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ContextPanelHiddenForInbox',
+    doc: 'Context panel renders nothing when Inbox is selected',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+        await this.page().click('.todos-view .project-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const header = await this.page().$('.todos-view .context-panel-header');
+        this.assertEq(header, null, 'Context panel header should not exist for Inbox');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ContextPanelShowsForProject',
+    doc: 'Selecting a project shows a collapsed context panel header',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await navigateToTasksWithProject(this.page(), server);
+
+        const header = await this.page().$('.todos-view .context-panel-header');
+        this.assert(header !== null, 'Context panel header should appear for project');
+
+        const text = await header.textContent();
+        this.assert(text.includes('Coins'), 'Header should contain project title');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ContextPanelExpandCollapse',
+    doc: 'Click to expand shows context text, click again collapses',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await navigateToTasksWithProject(this.page(), server);
+
+        let body = await this.page().$('.todos-view .context-panel-body');
+        this.assertEq(body, null, 'Body should be hidden when collapsed');
+
+        await this.page().click('.context-panel-header');
+        await __.sleep(200);
+
+        body = await this.page().$('.todos-view .context-panel-body');
+        this.assert(body !== null, 'Body should appear after expanding');
+
+        const text = await this.page().$eval('.context-panel-body .context-text', el => el.textContent);
+        this.assertEq(text, 'Ancient coin cleaning', 'Should display project context');
+
+        await this.page().click('.context-panel-header');
+        await __.sleep(200);
+
+        body = await this.page().$('.todos-view .context-panel-body');
+        this.assertEq(body, null, 'Body should be hidden after collapsing');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ContextPanelEditAndSave',
+    doc: 'Edit mode shows textarea, save persists via API',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await navigateToTasksWithProject(this.page(), server);
+
+        await this.page().click('.context-panel-header');
+        await __.sleep(200);
+
+        await this.page().click('.context-edit-btn');
+        await __.sleep(200);
+
+        const textarea = await this.page().$('.context-panel-body textarea');
+        this.assert(textarea !== null, 'Textarea should appear in edit mode');
+
+        await textarea.fill('Updated coin notes');
+        await this.page().click('.context-save-btn');
+        await __.sleep(500);
+
+        this.assert(server.state.lastUpdateBody !== null, 'Should have sent update request');
+        this.assertEq(server.state.lastUpdateBody.context, 'Updated coin notes', 'Should send updated context');
+
+        const editBtn = await this.page().$('.context-edit-btn');
+        this.assert(editBtn !== null, 'Should return to read mode after save');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'ContextPanelEditCancel',
+    doc: 'Cancel in edit mode returns to read mode without saving',
+    isMobile: true,
+    async do() {
+      const server = createApiMockServer();
+      try {
+        await navigateToTasksWithProject(this.page(), server);
+
+        await this.page().click('.context-panel-header');
+        await __.sleep(200);
+        await this.page().click('.context-edit-btn');
+        await __.sleep(200);
+
+        const textarea = await this.page().$('.context-panel-body textarea');
+        await textarea.fill('This should not be saved');
+
+        await this.page().click('.context-cancel-btn');
+        await __.sleep(200);
+
+        this.assertEq(server.state.lastUpdateBody, null, 'Should not have sent update on cancel');
+
+        const text = await this.page().$eval('.context-panel-body .context-text', el => el.textContent);
+        this.assertEq(text, 'Ancient coin cleaning', 'Should show original context after cancel');
       } finally {
         server.stop();
       }
