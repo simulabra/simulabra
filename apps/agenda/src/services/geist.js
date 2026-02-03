@@ -35,9 +35,13 @@ tools:
 - logs → list_logs
 - reminders → list_reminders
 - webhook/automation → trigger_webhook
-- project → create_project / list_projects
-- move to project → move_to_project
-- archive project → update_project(archived=true)
+projects: organizational containers that group related tasks, logs, and reminders.
+- create_project: makes a NEW project (not a task). use when user wants to organize work into a project.
+- list_projects: shows existing projects
+- update_project: edit project title, context, or archive it (archived=true)
+- move_to_project: moves an existing task/log/reminder into a project
+do NOT use create_task when the user asks to create a project. projects and tasks are different things.
+a project is a container; a task is an actionable item inside a container.
 
 reminders: parse natural time ("tomorrow 3pm", "in 2 hours") → iso 8601. recurrence: pattern + interval.
 
@@ -56,6 +60,8 @@ attention categories:
 - frequently snoozed → maybe backlog
 - recently added, lacking details → ask about deadline/priority
 - patterns suggesting follow-up
+- project context relevance: tasks that may need updates relative to their project's goals
+- cross-project awareness: surface the most neglected project
 
 each prompt should:
 - reference a specific task by name
@@ -68,10 +74,11 @@ respond with a JSON array of prompt objects:
 - itemType: "task" | "log" | "reminder"
 - itemId: the id of the related item
 - message: the prompt text
+- projectId: (optional) the project id if this prompt relates to a specific project
 
 example:
 [
-  {"itemType": "task", "itemId": "ghi789", "message": "still planning on redesigning the homepage?"}
+  {"itemType": "task", "itemId": "ghi789", "message": "still planning on redesigning the homepage?", "projectId": "proj123"}
 ]
 
 nothing needs attention → respond with []`
@@ -431,25 +438,41 @@ when the user mentions a project by name or slug, use the project's id in tool c
 
       $.Method.new({
         name: 'analyzeContext',
-        doc: 'gather tasks, logs, reminders and config for prompt generation',
+        doc: 'gather tasks, logs, reminders, projects and config for prompt generation',
         async do() {
           const db = this.dbService();
           if (!db) {
             throw new Error('No database service connected');
           }
 
-          const [tasks, logs, reminders, config] = await Promise.all([
+          const [tasks, logs, reminders, config, projects] = await Promise.all([
             db.listTasks({ done: false }),
             db.listLogs({ limit: 20 }),
             db.listReminders({ sent: false }),
             db.getPromptConfig({}),
+            db.listProjects({ archived: false }),
           ]);
+
+          const projectMap = {};
+          for (const p of projects) {
+            projectMap[p.id] = p;
+          }
+
+          const tasksByProject = {};
+          for (const t of tasks) {
+            const key = t.projectId || 'inbox';
+            if (!tasksByProject[key]) tasksByProject[key] = [];
+            tasksByProject[key].push(t);
+          }
 
           return {
             tasks,
             logs,
             reminders,
             config,
+            projects,
+            projectMap,
+            tasksByProject,
             currentTime: new Date().toISOString(),
           };
         }
@@ -476,10 +499,29 @@ when the user mentions a project by name or slug, use the project's id in tool c
               return { success: true, promptsCreated: 0, message: 'No tasks to analyze' };
             }
 
+            const formatTask = t => `- [${t.id}] ${t.title} (P${t.priority}${t.dueDate ? ', due: ' + t.dueDate : ''})`;
+
+            let tasksSection;
+            if (context.projects.length > 0) {
+              const parts = [];
+              for (const p of context.projects) {
+                const projectTasks = context.tasksByProject[p.id];
+                if (!projectTasks || projectTasks.length === 0) continue;
+                const snippet = p.context ? p.context.substring(0, 150) : '';
+                parts.push(`${p.title}:${snippet ? '\n  context: ' + snippet : ''}\n${projectTasks.map(t => '  ' + formatTask(t)).join('\n')}`);
+              }
+              const inboxTasks = context.tasksByProject['inbox'];
+              if (inboxTasks && inboxTasks.length > 0) {
+                parts.push(`Inbox (unassigned):\n${inboxTasks.map(t => '  ' + formatTask(t)).join('\n')}`);
+              }
+              tasksSection = `Active projects (${context.projects.length}):\n${context.projects.map(p => `- [${p.id}] ${p.title} (${p.slug})`).join('\n')}\n\nTasks (${context.tasks.length}):\n${parts.join('\n\n')}`;
+            } else {
+              tasksSection = `Tasks (${context.tasks.length}):\n${context.tasks.map(formatTask).join('\n')}`;
+            }
+
             const userMessage = `Current state:
 
-Tasks (${context.tasks.length}):
-${context.tasks.map(t => `- [${t.id}] ${t.title} (P${t.priority}${t.dueDate ? ', due: ' + t.dueDate : ''})`).join('\n')}
+${tasksSection}
 
 Recent logs (${context.logs.length}):
 ${context.logs.slice(0, 5).map(l => `- ${l.content.substring(0, 100)}`).join('\n')}
@@ -527,7 +569,7 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
                   itemType: promptData.itemType,
                   itemId: promptData.itemId,
                   message: promptData.message,
-                  context: { generatedFrom: context },
+                  context: { generatedFrom: context, projectId: promptData.projectId || null },
                   status: 'pending',
                 });
                 promptsCreated++;

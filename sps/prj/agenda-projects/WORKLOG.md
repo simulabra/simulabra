@@ -129,3 +129,97 @@ Interesting architectural note: the current filtering in DatabaseService is all 
 **Pre-existing infrastructure issue:** BrowserCase tests (each launching a Chromium instance) still exhaust system resources after ~8 tests. The context panel tests are structurally correct but hit the same timeout issue documented in Phase 6. This is not caused by Phase 7 changes.
 
 **Test results:** App builds successfully. All core tests pass (211 total). All agenda non-UI tests pass (models, sqlite, database, tools, geist-prompts). UI tests hit pre-existing BrowserCase resource exhaustion. No regressions from Phase 7 changes.
+
+---
+
+## Phase 8: Prompting System Integration — 2026-02-02
+
+**Files changed:**
+- `apps/agenda/src/services/geist.js` — Extended `analyzeContext`, `generatePrompts`, and `promptGenerationSystemPrompt`
+- `apps/agenda/tests/geist-prompts.js` — Added 5 new test cases, updated 1 existing test
+
+**Changes to `analyzeContext`:**
+- Added `db.listProjects({ archived: false })` to the parallel `Promise.all` fetch (now 5 concurrent fetches)
+- Built `projectMap` — `{ [id]: project }` lookup from fetched projects
+- Built `tasksByProject` — `{ [projectId|'inbox']: [tasks] }` grouping from all incomplete tasks
+- Return shape now includes: `projects`, `projectMap`, `tasksByProject`
+
+**Changes to `generatePrompts`:**
+- When projects exist, tasks section uses project-grouped format with project title headers, context snippets (150 chars), and indented task listings. An `Active projects (N):` section lists all projects by id/title/slug.
+- Inbox (unassigned) tasks grouped under `Inbox (unassigned):` header.
+- When no projects exist, falls back to the original flat listing (backward compatible).
+- `createPrompt` call now passes `{ generatedFrom: context, projectId: promptData.projectId || null }` as context, allowing Claude-generated prompts to carry project association.
+
+**Changes to `promptGenerationSystemPrompt`:**
+- Added two attention categories: "project context relevance" and "cross-project awareness"
+- Added optional `projectId` field to the prompt object format specification
+- Updated the example to show `projectId` usage
+
+**Tests added:**
+- `AnalyzeContextIncludesProjects` — projects with assigned tasks, verifies projectMap and tasksByProject population
+- `AnalyzeContextGroupsCorrectly` — 2 projects + unassigned tasks, verifies correct grouping keys and counts
+- `AnalyzeContextNoProjects` — zero projects, verifies all tasks under 'inbox' key (backward compat)
+- `GeneratePromptsGroupsByProject` — projects exist, verifies user message contains project headers, context snippets, inbox section, and project listing
+- `GeneratePromptsProjectId` — Claude returns projectId in prompt data, verifies it's stored in prompt context
+
+**Existing test updated:**
+- `AnalyzeContext` — added assertions for `projects`, `projectMap`, and `tasksByProject` fields
+
+**Struggles:** None. Implementation was straightforward — the existing parallel fetch pattern in `analyzeContext` made adding `listProjects` trivial. The formatting logic in `generatePrompts` required a bit of care to handle the project-grouped vs flat-list branching cleanly.
+
+**Test results:** 29 geist-prompts tests pass (24 existing + 5 new). 57 model, 13 sqlite, 49 database, 15 tools tests all pass. No regressions.
+
+---
+
+## Phase 9: Inline Prompt Reminders — 2026-02-02
+
+**Files changed:**
+- `apps/agenda/src/ui/app.js` — Added `chatTimeline` Method to ChatView, replaced two separate reactive blocks in render template with single merged timeline
+- `apps/agenda/tests/geist-prompts.js` — Added 4 new test cases and a `mergeTimeline` helper function
+
+**Changes to `app.js` (ChatView):**
+- Added `chatTimeline` Method between `generating` signal and `handleSubmit` method. Tags each message as `{ kind: 'message', ts: m.timestamp || m.createdAt, item: m }` and each prompt as `{ kind: 'prompt', ts: p.createdAt, item: p }`. Splits tagged items into with-timestamp and without-timestamp groups, sorts with-timestamp ascending, then appends without-timestamp items to preserve relative order at the end.
+- Replaced two separate reactive blocks (`messages().map(...)` and `pendingPrompts().map(...)`) with a single block that maps over `chatTimeline()` and dispatches to `ChatMessage` or `PromptMessage` based on `entry.kind`.
+
+**What was NOT changed (as planned):**
+- ChatMessage and PromptMessage components — untouched
+- Auto-scroll Effect — already watches both signals, continues to work
+- All data loading methods (loadChatHistory, loadPendingPrompts, startSyncLoop) — untouched
+- actionPrompt behavior — system messages (no timestamp) still sort to end
+
+**Tests added:**
+- `ChatTimelineMergesChronologically` — 3 messages at T+0,T+2,T+4 with 2 prompts at T+1,T+3 → verifies interleaved output
+- `ChatTimelineNoTimestampSortsToEnd` — system message without timestamp sorts after all timestamped items
+- `ChatTimelineEmptyPrompts` — messages only when no prompts exist
+- `ChatTimelineEmptyMessages` — prompts only when no messages exist
+
+**Design notes:**
+- The merge logic is defined as a standalone `mergeTimeline` function in the test file, mirroring the same algorithm used in `chatTimeline`. This avoids needing to import the HTML module in the headless test environment while still validating the exact merge behavior.
+- Since `chatTimeline` reads both `messages()` and `pendingPrompts()` signals, Simulabra's reactive template system automatically re-renders when either signal changes — no additional Effect wiring needed.
+
+**Struggles:** None. The implementation was minimal and focused.
+
+**Test results:** 33 geist-prompts tests pass (29 existing + 4 new). All core tests pass. No regressions.
+
+---
+
+## Phase 10: Bugfixes — Task Toggle, Project Creation, Geist Prompt — 2026-02-02
+
+**Files changed:**
+- `apps/agenda/src/models.js` — Added `toggle()` Method to Task: flips done/completedAt. Existing `complete()` preserved for Geist tool backward compatibility.
+- `apps/agenda/src/services/database.js` — Added `toggleTask` RpcMethod: calls `task.toggle()`, publishes `task.completed` or `task.uncompleted` event based on new state.
+- `apps/agenda/run.js` — Added `POST /api/v1/tasks/toggle` endpoint calling `db.toggleTask(body)`. Existing `/api/v1/tasks/complete` preserved for Geist tool use.
+- `apps/agenda/src/ui/app.js` — Fixed `TaskItem.handleComplete()`: `.rid` → `.id`. Renamed `completeTask` → `toggleTask` in AgendaApiClient (points to `/api/v1/tasks/toggle`) and AgendaApp.
+- `apps/agenda/src/services/geist.js` — Expanded system prompt: replaced terse tool mappings with a dedicated projects section explaining organizational containers vs tasks, explicit `do NOT use create_task` warning.
+- `apps/agenda/tests/services/database.js` — Added `DatabaseServiceToggleTask` test: complete→uncomplete→recomplete cycle with all state assertions.
+- `apps/agenda/tests/ui/app.js` — Fixed mock data `rid` → `id`. Added `TaskItemToggleSendsCorrectId` BrowserCase test with custom mock server tracking toggle API calls.
+- `apps/agenda/tests/geist-prompts.js` — Added `SystemPromptDistinguishesProjectsFromTasks` test: verifies prompt contains "organizational containers", "do NOT use create_task", and "projects and tasks are different".
+
+**Design notes:**
+- Key architectural decision: Geist's `complete_task` tool stays one-way (always marks done) while the UI checkbox toggles. This keeps two different intents separate — AI completing a task is a deliberate action, while UI toggling is user convenience. The `completeTask` RPC and `/api/v1/tasks/complete` endpoint are preserved for Geist; the new `toggleTask` RPC and `/api/v1/tasks/toggle` endpoint serve the UI.
+- The `toggle()` method on Task is symmetric: it flips done and sets/clears completedAt in a single atomic operation, then returns `this` for chaining (matching `complete()`'s pattern).
+- The Geist system prompt expansion is the key fix for Bug 3: the original prompt had "project → create_project / list_projects" as a single terse line, which LLMs parse as "if user mentions 'project', maybe use create_project". The expanded version uses an explicit block format with a strong negative instruction ("do NOT use create_task when the user asks to create a project") and a conceptual distinction ("a project is a container; a task is an actionable item inside a container").
+
+**Struggles:** None. Clean implementation with clear scope.
+
+**Test results:** 50 database service tests pass (49 + 1 new). 34 geist-prompts tests pass (33 + 1 new). 23 agenda UI tests pass (22 + 1 new). All core tests pass. No regressions.

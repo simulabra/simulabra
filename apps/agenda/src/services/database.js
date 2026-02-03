@@ -132,6 +132,21 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
         }
       }),
       $live.RpcMethod.new({
+        name: 'toggleTask',
+        doc: 'toggle a task between done and not-done',
+        do({ id }) {
+          const task = $models.Task.findById(this.db(), id);
+          if (!task) {
+            throw new Error(`Task not found: ${id}`);
+          }
+          task.toggle();
+          task.save(this.db());
+          const eventType = task.done() ? 'task.completed' : 'task.uncompleted';
+          this.publishEvent(eventType, { id: task.sid() });
+          return task.jsonify();
+        }
+      }),
+      $live.RpcMethod.new({
         name: 'listTasks',
         do(filter = {}) {
           const tasks = $models.Task.findAll(this.db());

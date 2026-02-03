@@ -14,7 +14,7 @@ Evolve the Agenda productivity app by adding Projects as a grouping and context 
 Use cases driving this: organizing ancient coin cleaning/identification work and house projects, each with their own context and task streams.
 
 ## Status
-IN PROGRESS — Phase 7 done, Phase 8 next.
+IN PROGRESS — Phase 10 in progress.
 
 ## Phases
 - [x] Phase 1: Project Model & Migration
@@ -24,7 +24,9 @@ IN PROGRESS — Phase 7 done, Phase 8 next.
 - [x] Phase 5: Context-Driven Project Resolution
 - [x] Phase 6: UI Project Selector & Filtering
 - [x] Phase 7: UI Project Context Panel
-- [ ] Phase 8: Prompting System Integration
+- [x] Phase 8: Prompting System Integration
+- [x] Phase 9: Inline Prompt Reminders
+- [ ] Phase 10: Bugfixes — Task Toggle, Project Creation, Geist Prompt
 
 ## Key decisions
 - Virtual Inbox: projectId=null means Inbox/Unassigned
@@ -54,3 +56,7 @@ IN PROGRESS — Phase 7 done, Phase 8 next.
 - **Phase 6 review**: Approved. Extracted triplicated filter logic into `AgendaApp.filterByProject`. Added doc strings to 5 API client methods. Added `loadProjects` to `refreshData` per plan. No issues found.
 - **Phase 7 complete**: UI Project Context Panel. Added ProjectContextPanel component with collapsible header (▶/▼), expanded read mode with context text and edit button, and edit mode with textarea/save/cancel. Integrated between ProjectSelector and task-list in TodosView. Panel hidden for All/Inbox, visible only for specific projects. Save persists via API updateProject and refreshes project data. Static textarea content to prevent cursor jumps. 6 new UI tests. CSS follows existing design system (wood, sand, seashell palette).
 - **Phase 7 review**: Approved. Extracted triplicated header template into `renderHeader` method. Added doc strings to `saveContext` and `renderHeader`. No other issues found.
+- **Phase 8 complete**: Prompting System Integration. Extended analyzeContext to fetch projects in parallel and build projectMap + tasksByProject groupings. generatePrompts now formats tasks grouped by project with context snippets when projects exist, falls back to flat listing for backward compatibility. promptGenerationSystemPrompt updated with project-awareness attention categories and optional projectId in prompt format. Created prompts carry projectId in context field when Claude includes it. 5 new tests, 29 total geist-prompts tests pass.
+### 2.2.2026
+- **Phase 9 complete**: Inline Prompt Reminders. Added `chatTimeline` Method to ChatView that merges `messages()` and `pendingPrompts()` into a single chronologically sorted array with kind discriminator. Template updated to render from the merged timeline. Items without timestamps sort to end. 4 new tests, 33 total geist-prompts tests pass.
+- **Phase 10 complete**: Bugfixes — Task Toggle, Project Creation, Geist Prompt. Fixed `.rid` → `.id` migration gap in UI. Added `toggle()` to Task model and `toggleTask` RPC for bidirectional done/not-done. Expanded Geist system prompt to clearly distinguish projects (containers) from tasks. Added 3 new tests (DB toggle, UI toggle, prompt content). 50 DB tests, 34 geist-prompts tests, 23 UI tests pass.

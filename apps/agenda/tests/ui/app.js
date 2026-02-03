@@ -309,9 +309,9 @@ export default await async function (_, $, $test) {
   ];
 
   const testTasks = [
-    { rid: 't1', title: 'Clean denarius', priority: 1, done: false, projectId: 'proj-1' },
-    { rid: 't2', title: 'Fix deck', priority: 2, done: false, projectId: 'proj-2' },
-    { rid: 't3', title: 'Buy groceries', priority: 2, done: false, projectId: null },
+    { id: 't1', title: 'Clean denarius', priority: 1, done: false, projectId: 'proj-1' },
+    { id: 't2', title: 'Fix deck', priority: 2, done: false, projectId: 'proj-2' },
+    { id: 't3', title: 'Buy groceries', priority: 2, done: false, projectId: null },
   ];
 
   const testLogs = [
@@ -506,6 +506,73 @@ export default await async function (_, $, $test) {
         const labels = await this.page().$$eval('.todos-view .project-tab', els => els.map(e => e.textContent.trim()));
         this.assert(labels.includes('All'), 'Should have All tab');
         this.assert(labels.includes('Inbox'), 'Should have Inbox tab');
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
+  $test.BrowserCase.new({
+    name: 'TaskItemToggleSendsCorrectId',
+    doc: 'Clicking task checkbox sends toggle API call with correct id',
+    isMobile: true,
+    async do() {
+      const toggleCalls = [];
+      const ac = new AbortController();
+      const server = Bun.serve({
+        port: 0,
+        async fetch(req) {
+          const url = new URL(req.url);
+          const path = url.pathname;
+
+          if (path.startsWith('/api/v1/')) {
+            const json = (value) => new Response(JSON.stringify({ ok: true, value }), {
+              headers: { 'Content-Type': 'application/json' },
+            });
+            if (path === '/api/v1/status') return json({ status: 'ok' });
+            if (path === '/api/v1/tasks/list') return json(testTasks.map(t => ({...t})));
+            if (path === '/api/v1/tasks/toggle') {
+              const body = await req.json();
+              toggleCalls.push(body);
+              const task = testTasks.find(t => t.id === body.id);
+              return json(task ? { ...task, done: !task.done } : null);
+            }
+            if (path === '/api/v1/logs/list') return json([]);
+            if (path === '/api/v1/reminders/list') return json([]);
+            if (path === '/api/v1/projects/list') return json([]);
+            if (path === '/api/v1/chat/history') return json([]);
+            if (path === '/api/v1/prompts/pending') return json([]);
+            if (path === '/api/v1/chat/wait') {
+              await new Promise(resolve => {
+                const timer = setTimeout(resolve, 30000);
+                ac.signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); });
+              });
+              return json([]);
+            }
+            return json(null);
+          }
+
+          let filePath = path === '/' ? '/index.html' : path;
+          const file = Bun.file(buildDir + filePath);
+          if (await file.exists()) return new Response(file);
+          return new Response('Not found', { status: 404 });
+        }
+      });
+      const origStop = server.stop.bind(server);
+      server.stop = () => { ac.abort(); origStop(); };
+
+      try {
+        await loadApiPage(this.page(), server);
+        await this.page().click('.nav-tab:nth-child(2)');
+        await __.sleep(300);
+
+        const checkbox = await this.page().$('.task-item .task-checkbox');
+        this.assert(checkbox !== null, 'Task checkbox should exist');
+        await checkbox.click();
+        await __.sleep(500);
+
+        this.assert(toggleCalls.length > 0, 'Should have sent toggle API call');
+        this.assertEq(toggleCalls[0].id, 't1', 'Should send correct task id');
       } finally {
         server.stop();
       }

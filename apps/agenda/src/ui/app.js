@@ -65,9 +65,9 @@ export default await async function (_, $, $html) {
         }
       }),
       $.Method.new({
-        name: "completeTask",
+        name: "toggleTask",
         async do(id) {
-          return await this.apiCall("POST", "/api/v1/tasks/complete", { id });
+          return await this.apiCall("POST", "/api/v1/tasks/toggle", { id });
         }
       }),
       $.Method.new({
@@ -278,7 +278,7 @@ export default await async function (_, $, $html) {
       $.Method.new({
         name: "handleComplete",
         async do() {
-          await this.app().completeTask(this.task().rid);
+          await this.app().toggleTask(this.task().id);
         }
       }),
       $.Method.new({
@@ -753,6 +753,20 @@ export default await async function (_, $, $html) {
       $.Signal.new({ name: "inputText", default: "" }),
       $.Signal.new({ name: "generating", default: false }),
       $.Method.new({
+        name: "chatTimeline",
+        doc: "merge messages and prompts into a single chronologically sorted array",
+        do() {
+          const tagged = [
+            ...this.app().messages().map(m => ({ kind: 'message', ts: m.timestamp || m.createdAt, item: m })),
+            ...this.app().pendingPrompts().map(p => ({ kind: 'prompt', ts: p.createdAt, item: p })),
+          ];
+          const withTs = tagged.filter(e => e.ts);
+          const withoutTs = tagged.filter(e => !e.ts);
+          withTs.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+          return [...withTs, ...withoutTs];
+        }
+      }),
+      $.Method.new({
         name: "handleSubmit",
         async do(e) {
           e.preventDefault();
@@ -803,8 +817,11 @@ export default await async function (_, $, $html) {
           return $html.HTML.t`
             <div class="chat-view view">
               <div class="chat-messages">
-                ${() => this.app().messages().map(msg => _.ChatMessage.new({ message: msg }))}
-                ${() => this.app().pendingPrompts().map(prompt => _.PromptMessage.new({ app: this.app(), prompt }))}
+                ${() => this.chatTimeline().map(entry =>
+                  entry.kind === 'message'
+                    ? _.ChatMessage.new({ message: entry.item })
+                    : _.PromptMessage.new({ app: this.app(), prompt: entry.item })
+                )}
                 ${() => this.app().loading() ? $html.HTML.t`<div class="chat-message assistant typing">thinking...</div>` : ""}
               </div>
               <form class="chat-input-form" onsubmit=${e => this.handleSubmit(e)}>
@@ -1114,14 +1131,14 @@ export default await async function (_, $, $html) {
       }),
 
       $.Method.new({
-        name: "completeTask",
+        name: "toggleTask",
         async do(taskId) {
           if (!this.connected()) return;
           try {
-            await this.api().completeTask(taskId);
+            await this.api().toggleTask(taskId);
             await this.refreshData();
           } catch (e) {
-            this.addMessage({ role: "system", content: `Failed to complete task: ${e.message}` });
+            this.addMessage({ role: "system", content: `Failed to toggle task: ${e.message}` });
           }
         }
       }),

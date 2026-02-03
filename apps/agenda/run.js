@@ -84,6 +84,19 @@ export default await async function (_, $, $supervisor) {
     return await db.completeTask(body);
   });
 
+  apiHandler('POST', '/api/v1/tasks/toggle', async (ctx) => {
+    const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
+    const body = ctx.body() || {};
+    if (!body.id) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Missing required field: id',
+        code: 'MISSING_FIELD'
+      });
+    }
+    return await db.toggleTask(body);
+  });
+
   apiHandler('POST', '/api/v1/logs/list', async (ctx) => {
     const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
     const body = ctx.body() || {};

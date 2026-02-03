@@ -323,7 +323,7 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
 
   $test.AsyncCase.new({
     name: 'AnalyzeContext',
-    doc: 'analyzeContext should gather tasks, logs, and reminders',
+    doc: 'analyzeContext should gather tasks, logs, reminders, and projects',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -338,8 +338,155 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       this.assert(context.logs, 'should have logs');
       this.assert(context.reminders, 'should have reminders');
       this.assert(context.config, 'should have config');
+      this.assert(context.projects, 'should have projects');
+      this.assert(context.projectMap, 'should have projectMap');
+      this.assert(context.tasksByProject, 'should have tasksByProject');
       this.assertEq(context.tasks.length, 2, 'should have 2 tasks');
       this.assertEq(context.logs.length, 1, 'should have 1 log');
+      this.assertEq(context.projects.length, 0, 'should have 0 projects');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'AnalyzeContextIncludesProjects',
+    doc: 'analyzeContext should include projects and group tasks by project',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const project = await dbService.createProject({ title: 'Coins', slug: 'coins', context: 'Ancient coin cleaning' });
+      await dbService.createTask({ title: 'Clean denarius', priority: 2, projectId: project.id });
+      await dbService.createTask({ title: 'ID sestertius', priority: 3, projectId: project.id });
+
+      const context = await geistService.analyzeContext();
+
+      this.assertEq(context.projects.length, 1, 'should have 1 project');
+      this.assertEq(context.projects[0].title, 'Coins', 'project title should match');
+      this.assert(context.projectMap[project.id], 'projectMap should have project by id');
+      this.assertEq(context.projectMap[project.id].title, 'Coins', 'projectMap entry should match');
+      this.assert(context.tasksByProject[project.id], 'tasksByProject should have project key');
+      this.assertEq(context.tasksByProject[project.id].length, 2, 'should have 2 tasks for project');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'AnalyzeContextGroupsCorrectly',
+    doc: 'analyzeContext should group tasks by project and inbox correctly',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const proj1 = await dbService.createProject({ title: 'Coins', slug: 'coins' });
+      const proj2 = await dbService.createProject({ title: 'House', slug: 'house' });
+      await dbService.createTask({ title: 'Clean coin', priority: 2, projectId: proj1.id });
+      await dbService.createTask({ title: 'Fix roof', priority: 1, projectId: proj2.id });
+      await dbService.createTask({ title: 'Buy groceries', priority: 3 });
+
+      const context = await geistService.analyzeContext();
+
+      this.assertEq(context.projects.length, 2, 'should have 2 projects');
+      this.assertEq(context.tasksByProject[proj1.id].length, 1, 'project 1 should have 1 task');
+      this.assertEq(context.tasksByProject[proj2.id].length, 1, 'project 2 should have 1 task');
+      this.assert(context.tasksByProject['inbox'], 'should have inbox key');
+      this.assertEq(context.tasksByProject['inbox'].length, 1, 'inbox should have 1 task');
+      this.assertEq(context.tasksByProject['inbox'][0].title, 'Buy groceries', 'inbox task should match');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'AnalyzeContextNoProjects',
+    doc: 'analyzeContext should work with zero projects, all tasks under inbox',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      await dbService.createTask({ title: 'Task 1', priority: 2 });
+      await dbService.createTask({ title: 'Task 2', priority: 3 });
+
+      const context = await geistService.analyzeContext();
+
+      this.assertEq(context.projects.length, 0, 'should have 0 projects');
+      this.assert(context.tasksByProject['inbox'], 'should have inbox key');
+      this.assertEq(context.tasksByProject['inbox'].length, 2, 'inbox should have 2 tasks');
+      this.assertEq(Object.keys(context.tasksByProject).length, 1, 'should only have inbox key');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeneratePromptsGroupsByProject',
+    doc: 'generatePrompts should format tasks grouped by project in the user message',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const project = await dbService.createProject({ title: 'Coins', slug: 'coins', context: 'Ancient coin identification and cleaning' });
+      const task = await dbService.createTask({ title: 'Clean denarius', priority: 2, projectId: project.id });
+      await dbService.createTask({ title: 'Buy groceries', priority: 3 });
+
+      geistService.client().setResponse({
+        content: [{ type: 'text', text: '[]' }],
+        stop_reason: 'end_turn'
+      });
+
+      await geistService.generatePrompts();
+
+      const userMsg = geistService.client().lastRequest.messages[0].content;
+      this.assert(userMsg.includes('Coins:'), 'should include project name as header');
+      this.assert(userMsg.includes('Ancient coin'), 'should include project context snippet');
+      this.assert(userMsg.includes('Inbox (unassigned):'), 'should include inbox section');
+      this.assert(userMsg.includes('Clean denarius'), 'should include project task');
+      this.assert(userMsg.includes('Buy groceries'), 'should include inbox task');
+      this.assert(userMsg.includes('Active projects (1):'), 'should include project listing');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeneratePromptsProjectId',
+    doc: 'generatePrompts should store projectId in prompt context when Claude includes it',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      const project = await dbService.createProject({ title: 'Coins', slug: 'coins' });
+      const task = await dbService.createTask({ title: 'Clean coin', priority: 2, projectId: project.id });
+
+      geistService.client().setResponse({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify([
+              {
+                itemType: 'task',
+                itemId: task.id,
+                message: 'How is the coin cleaning going?',
+                projectId: project.id
+              }
+            ])
+          }
+        ],
+        stop_reason: 'end_turn'
+      });
+
+      const result = await geistService.generatePrompts();
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(result.promptsCreated, 1, 'should create 1 prompt');
+
+      const prompts = await dbService.listPrompts({ status: 'pending', limit: 10 });
+      const created = prompts[0];
+      this.assert(created.context, 'should have context');
+      const ctx = typeof created.context === 'string' ? JSON.parse(created.context) : created.context;
+      this.assertEq(ctx.projectId, project.id, 'context should carry projectId');
 
       database.close();
     }
@@ -687,6 +834,97 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
     }
   });
 
+  const mergeTimeline = (messages, prompts) => {
+    const tagged = [
+      ...messages.map(m => ({ kind: 'message', ts: m.timestamp || m.createdAt, item: m })),
+      ...prompts.map(p => ({ kind: 'prompt', ts: p.createdAt, item: p })),
+    ];
+    const withTs = tagged.filter(e => e.ts);
+    const withoutTs = tagged.filter(e => !e.ts);
+    withTs.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+    return [...withTs, ...withoutTs];
+  };
+
+  $test.Case.new({
+    name: 'ChatTimelineMergesChronologically',
+    doc: 'chatTimeline should interleave messages and prompts by timestamp',
+    do() {
+      const messages = [
+        { role: 'user', content: 'Hello', timestamp: '2025-01-15T10:00:00Z' },
+        { role: 'assistant', content: 'Hi', timestamp: '2025-01-15T10:02:00Z' },
+        { role: 'user', content: 'Bye', timestamp: '2025-01-15T10:04:00Z' },
+      ];
+      const prompts = [
+        { id: 'p1', message: 'Check task?', createdAt: '2025-01-15T10:01:00Z' },
+        { id: 'p2', message: 'How about this?', createdAt: '2025-01-15T10:03:00Z' },
+      ];
+
+      const timeline = mergeTimeline(messages, prompts);
+
+      this.assertEq(timeline.length, 5, 'should have 5 entries');
+      this.assertEq(timeline[0].kind, 'message', 'T+0 should be message');
+      this.assertEq(timeline[1].kind, 'prompt', 'T+1 should be prompt');
+      this.assertEq(timeline[2].kind, 'message', 'T+2 should be message');
+      this.assertEq(timeline[3].kind, 'prompt', 'T+3 should be prompt');
+      this.assertEq(timeline[4].kind, 'message', 'T+4 should be message');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ChatTimelineNoTimestampSortsToEnd',
+    doc: 'messages without timestamps should appear after all timestamped items',
+    do() {
+      const messages = [
+        { role: 'system', content: 'Connected' },
+        { role: 'user', content: 'Hello', timestamp: '2025-01-15T10:00:00Z' },
+      ];
+      const prompts = [
+        { id: 'p1', message: 'Check task?', createdAt: '2025-01-15T10:01:00Z' },
+      ];
+
+      const timeline = mergeTimeline(messages, prompts);
+
+      this.assertEq(timeline.length, 3, 'should have 3 entries');
+      this.assertEq(timeline[0].kind, 'message', 'first should be timestamped message');
+      this.assertEq(timeline[0].item.content, 'Hello', 'first should be Hello');
+      this.assertEq(timeline[1].kind, 'prompt', 'second should be prompt');
+      this.assertEq(timeline[2].kind, 'message', 'last should be no-timestamp message');
+      this.assertEq(timeline[2].item.content, 'Connected', 'last should be system message');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ChatTimelineEmptyPrompts',
+    doc: 'chatTimeline with no prompts should return messages only',
+    do() {
+      const messages = [
+        { role: 'user', content: 'Hello', timestamp: '2025-01-15T10:00:00Z' },
+        { role: 'assistant', content: 'Hi', timestamp: '2025-01-15T10:01:00Z' },
+      ];
+
+      const timeline = mergeTimeline(messages, []);
+
+      this.assertEq(timeline.length, 2, 'should have 2 entries');
+      this.assert(timeline.every(e => e.kind === 'message'), 'all should be messages');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ChatTimelineEmptyMessages',
+    doc: 'chatTimeline with no messages should return prompts only',
+    do() {
+      const prompts = [
+        { id: 'p1', message: 'Check this?', createdAt: '2025-01-15T10:00:00Z' },
+        { id: 'p2', message: 'How about that?', createdAt: '2025-01-15T10:01:00Z' },
+      ];
+
+      const timeline = mergeTimeline([], prompts);
+
+      this.assertEq(timeline.length, 2, 'should have 2 entries');
+      this.assert(timeline.every(e => e.kind === 'prompt'), 'all should be prompts');
+    }
+  });
+
   $test.Case.new({
     name: 'SystemPromptIncludesProjectToolMappings',
     doc: 'base system prompt should include project tool mappings',
@@ -700,6 +938,23 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       this.assert(prompt.includes('list_projects'), 'should mention list_projects');
       this.assert(prompt.includes('move_to_project'), 'should mention move_to_project');
       this.assert(prompt.includes('update_project'), 'should mention update_project');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'SystemPromptDistinguishesProjectsFromTasks',
+    doc: 'base system prompt should clearly explain that projects are containers, not tasks',
+    do() {
+      const database = createTestDb();
+      const { geistService } = createTestServices(database);
+
+      const prompt = geistService.systemPrompt();
+
+      this.assert(prompt.includes('organizational containers'), 'should describe projects as organizational containers');
+      this.assert(prompt.includes('do NOT use create_task'), 'should warn against using create_task for projects');
+      this.assert(prompt.includes('projects and tasks are different'), 'should state projects and tasks are different');
 
       database.close();
     }

@@ -125,6 +125,20 @@ export default await async function (_, $, $db, $sqlite, $time) {
         }
       }),
       $.Method.new({
+        name: 'toggle',
+        doc: 'flip between done and not-done',
+        do() {
+          if (this.done()) {
+            this.done(false);
+            this.completedAt(null);
+          } else {
+            this.done(true);
+            this.completedAt(new Date());
+          }
+          return this;
+        }
+      }),
+      $.Method.new({
         name: 'description',
         do() {
           const status = this.done() ? '✓' : '○';

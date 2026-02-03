@@ -92,6 +92,31 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
+    name: 'DatabaseServiceToggleTask',
+    doc: 'DatabaseService should toggle tasks between done and not-done',
+    do() {
+      const service = createTestService();
+
+      const task = service.createTask({ title: 'toggle me' });
+      this.assertEq(task.done, false, 'should start not done');
+
+      const toggled = service.toggleTask({ id: task.id });
+      this.assertEq(toggled.done, true, 'should be done after first toggle');
+      this.assert(toggled.completedAt, 'should have completedAt after completing');
+
+      const unToggled = service.toggleTask({ id: task.id });
+      this.assertEq(unToggled.done, false, 'should be not done after second toggle');
+      this.assertEq(unToggled.completedAt, null, 'completedAt should be cleared');
+
+      const reToggled = service.toggleTask({ id: task.id });
+      this.assertEq(reToggled.done, true, 'should be done again after third toggle');
+      this.assert(reToggled.completedAt, 'should have completedAt again');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
     name: 'DatabaseServiceListTasks',
     doc: 'DatabaseService should list and filter tasks',
     do() {
