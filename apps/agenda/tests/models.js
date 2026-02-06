@@ -657,71 +657,91 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
     }
   });
 
-  // Prompt model tests
+  // Haunt model tests
   $test.Case.new({
-    name: 'PromptCreation',
-    doc: 'Prompt should be created with defaults',
+    name: 'HauntCreation',
+    doc: 'Haunt should be created with defaults',
     do() {
-      const prompt = $models.Prompt.new({
+      const haunt = $models.Haunt.new({
         itemType: 'task',
         itemId: 'task-123',
         message: 'Did you finish this task?'
       });
-      this.assertEq(prompt.itemType(), 'task');
-      this.assertEq(prompt.itemId(), 'task-123');
-      this.assertEq(prompt.message(), 'Did you finish this task?');
-      this.assertEq(prompt.status(), 'pending');
-      this.assert(prompt.generatedAt() instanceof Date, 'should have generatedAt');
+      this.assertEq(haunt.itemType(), 'task');
+      this.assertEq(haunt.itemId(), 'task-123');
+      this.assertEq(haunt.message(), 'Did you finish this task?');
+      this.assertEq(haunt.status(), 'pending');
+      this.assert(haunt.generatedAt() instanceof Date, 'should have generatedAt');
     }
   });
 
   $test.Case.new({
-    name: 'PromptWithContext',
-    doc: 'Prompt should store JSON context',
+    name: 'HauntWithContext',
+    doc: 'Haunt should store JSON context',
     do() {
       const context = { taskTitle: 'Test Task', daysSinceUpdate: 7 };
-      const prompt = $models.Prompt.new({
+      const haunt = $models.Haunt.new({
         itemType: 'task',
         itemId: 'task-123',
         message: 'Check on this task',
         context
       });
-      this.assertEq(prompt.context().taskTitle, 'Test Task');
-      this.assertEq(prompt.context().daysSinceUpdate, 7);
+      this.assertEq(haunt.context().taskTitle, 'Test Task');
+      this.assertEq(haunt.context().daysSinceUpdate, 7);
     }
   });
 
   $test.Case.new({
-    name: 'PromptDescription',
-    doc: 'Prompt description should show status and message',
+    name: 'HauntWithActions',
+    doc: 'Haunt should store actions array',
     do() {
-      const prompt = $models.Prompt.new({
+      const actions = [
+        { label: 'Mark done', message: 'complete task task-123' },
+        { label: 'Snooze', message: 'remind me tomorrow' },
+      ];
+      const haunt = $models.Haunt.new({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Still working on this?',
+        actions
+      });
+      this.assertEq(haunt.actions().length, 2);
+      this.assertEq(haunt.actions()[0].label, 'Mark done');
+      this.assertEq(haunt.actions()[1].message, 'remind me tomorrow');
+    }
+  });
+
+  $test.Case.new({
+    name: 'HauntDescription',
+    doc: 'Haunt description should show ghost icon and message',
+    do() {
+      const haunt = $models.Haunt.new({
         itemType: 'task',
         itemId: 'task-123',
         message: 'Did you complete this?'
       });
-      const desc = prompt.description();
-      this.assert(desc.includes('⏳'), 'should show pending icon');
+      const desc = haunt.description();
+      this.assert(desc.includes('👻'), 'should show ghost icon for pending');
       this.assert(desc.includes('[task]'), 'should show item type');
       this.assert(desc.includes('Did you complete this?'), 'should show message');
     }
   });
 
   $test.Case.new({
-    name: 'PromptPersistence',
-    doc: 'Prompt should save and load from SQLite',
+    name: 'HauntPersistence',
+    doc: 'Haunt should save and load from SQLite',
     do() {
       const database = createTestDb();
 
-      const prompt = $models.Prompt.new({
+      const haunt = $models.Haunt.new({
         itemType: 'reminder',
         itemId: 'reminder-456',
         message: 'Follow up on this reminder',
         context: { importance: 'high' }
       });
-      prompt.save(database);
+      haunt.save(database);
 
-      const found = $models.Prompt.findById(database, prompt.sid());
+      const found = $models.Haunt.findById(database, haunt.sid());
       this.assertEq(found.itemType(), 'reminder');
       this.assertEq(found.itemId(), 'reminder-456');
       this.assertEq(found.message(), 'Follow up on this reminder');
@@ -733,24 +753,71 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
   });
 
   $test.Case.new({
-    name: 'PromptStatusUpdate',
-    doc: 'Prompt status and action should be mutable',
+    name: 'HauntActionsPersistence',
+    doc: 'Haunt actions should round-trip through SQLite',
     do() {
       const database = createTestDb();
 
-      const prompt = $models.Prompt.new({
+      const actions = [
+        { label: 'Complete it', message: 'mark task done' },
+        { label: 'Postpone', message: 'snooze for a week' },
+      ];
+      const haunt = $models.Haunt.new({
+        itemType: 'task',
+        itemId: 'task-789',
+        message: 'Actions round-trip test',
+        actions
+      });
+      haunt.save(database);
+
+      const found = $models.Haunt.findById(database, haunt.sid());
+      this.assertEq(found.actions().length, 2);
+      this.assertEq(found.actions()[0].label, 'Complete it');
+      this.assertEq(found.actions()[1].message, 'snooze for a week');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'HauntNullActionsPersistence',
+    doc: 'Haunt with null actions should round-trip through SQLite',
+    do() {
+      const database = createTestDb();
+
+      const haunt = $models.Haunt.new({
+        itemType: 'task',
+        itemId: 'task-000',
+        message: 'No actions haunt'
+      });
+      haunt.save(database);
+
+      const found = $models.Haunt.findById(database, haunt.sid());
+      this.assert(!found.actions(), 'null actions should not be present');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'HauntStatusUpdate',
+    doc: 'Haunt status and action should be mutable',
+    do() {
+      const database = createTestDb();
+
+      const haunt = $models.Haunt.new({
         itemType: 'task',
         itemId: 'task-123',
-        message: 'Test prompt'
+        message: 'Test haunt'
       });
-      prompt.save(database);
+      haunt.save(database);
 
-      prompt.status('actioned');
-      prompt.action('done');
-      prompt.actionedAt(new Date());
-      prompt.save(database);
+      haunt.status('actioned');
+      haunt.action('done');
+      haunt.actionedAt(new Date());
+      haunt.save(database);
 
-      const found = $models.Prompt.findById(database, prompt.sid());
+      const found = $models.Haunt.findById(database, haunt.sid());
       this.assertEq(found.status(), 'actioned');
       this.assertEq(found.action(), 'done');
       this.assert(found.actionedAt() instanceof Date, 'should have actionedAt');
@@ -760,24 +827,24 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
   });
 
   $test.Case.new({
-    name: 'PromptSnooze',
-    doc: 'Prompt should support snooze functionality',
+    name: 'HauntSnooze',
+    doc: 'Haunt should support snooze functionality',
     do() {
       const database = createTestDb();
 
-      const prompt = $models.Prompt.new({
+      const haunt = $models.Haunt.new({
         itemType: 'task',
         itemId: 'task-123',
-        message: 'Snoozeable prompt'
+        message: 'Snoozeable haunt'
       });
-      prompt.save(database);
+      haunt.save(database);
 
       const snoozeTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
-      prompt.action('snooze');
-      prompt.snoozeUntil(snoozeTime);
-      prompt.save(database);
+      haunt.action('snooze');
+      haunt.snoozeUntil(snoozeTime);
+      haunt.save(database);
 
-      const found = $models.Prompt.findById(database, prompt.sid());
+      const found = $models.Haunt.findById(database, haunt.sid());
       this.assertEq(found.action(), 'snooze');
       this.assert(found.snoozeUntil() instanceof Date, 'should have snoozeUntil');
 
@@ -786,48 +853,48 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
   });
 
   $test.Case.new({
-    name: 'PromptFindByStatus',
-    doc: 'Prompt should be findable by status index',
+    name: 'HauntFindByStatus',
+    doc: 'Haunt should be findable by status index',
     do() {
       const database = createTestDb();
 
-      const prompt1 = $models.Prompt.new({ itemType: 'task', itemId: '1', message: 'Pending 1' });
-      const prompt2 = $models.Prompt.new({ itemType: 'task', itemId: '2', message: 'Pending 2' });
-      const prompt3 = $models.Prompt.new({ itemType: 'task', itemId: '3', message: 'Shown', status: 'shown' });
-      prompt1.save(database);
-      prompt2.save(database);
-      prompt3.status('shown');
-      prompt3.save(database);
+      const haunt1 = $models.Haunt.new({ itemType: 'task', itemId: '1', message: 'Pending 1' });
+      const haunt2 = $models.Haunt.new({ itemType: 'task', itemId: '2', message: 'Pending 2' });
+      const haunt3 = $models.Haunt.new({ itemType: 'task', itemId: '3', message: 'Shown', status: 'shown' });
+      haunt1.save(database);
+      haunt2.save(database);
+      haunt3.status('shown');
+      haunt3.save(database);
 
-      const pending = $models.Prompt.findByIndex(database, 'status', 'pending');
+      const pending = $models.Haunt.findByIndex(database, 'status', 'pending');
       this.assertEq(pending.length, 2);
 
-      const shown = $models.Prompt.findByIndex(database, 'status', 'shown');
+      const shown = $models.Haunt.findByIndex(database, 'status', 'shown');
       this.assertEq(shown.length, 1);
 
       database.close();
     }
   });
 
-  // PromptConfig model tests
+  // HauntConfig model tests
   $test.Case.new({
-    name: 'PromptConfigDefaults',
-    doc: 'PromptConfig should have sensible defaults',
+    name: 'HauntConfigDefaults',
+    doc: 'HauntConfig should have sensible defaults',
     do() {
-      const config = $models.PromptConfig.new({});
+      const config = $models.HauntConfig.new({});
       this.assertEq(config.key(), 'main');
-      this.assertEq(config.promptFrequencyHours(), 8);
-      this.assertEq(config.maxPromptsPerCycle(), 3);
+      this.assertEq(config.hauntFrequencyHours(), 8);
+      this.assertEq(config.maxHauntsPerCycle(), 3);
       this.assertEq(config.taskStalenessDays(), 7);
       this.assertEq(config.responseHistory().length, 0);
     }
   });
 
   $test.Case.new({
-    name: 'PromptConfigShouldGenerate',
-    doc: 'PromptConfig.shouldGenerate should check time since last generation',
+    name: 'HauntConfigShouldGenerate',
+    doc: 'HauntConfig.shouldGenerate should check time since last generation',
     do() {
-      const config = $models.PromptConfig.new({});
+      const config = $models.HauntConfig.new({});
       this.assert(config.shouldGenerate(), 'should generate when no lastGenerationAt');
 
       config.lastGenerationAt(new Date());
@@ -840,13 +907,13 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
   });
 
   $test.Case.new({
-    name: 'PromptConfigRecordResponse',
-    doc: 'PromptConfig should record responses with history limit',
+    name: 'HauntConfigRecordResponse',
+    doc: 'HauntConfig should record responses with history limit',
     do() {
-      const config = $models.PromptConfig.new({});
+      const config = $models.HauntConfig.new({});
 
-      config.recordResponse({ promptId: '1', action: 'done', itemType: 'task' });
-      config.recordResponse({ promptId: '2', action: 'dismiss', itemType: 'task' });
+      config.recordResponse({ hauntId: '1', action: 'done', itemType: 'task' });
+      config.recordResponse({ hauntId: '2', action: 'dismiss', itemType: 'task' });
 
       this.assertEq(config.responseHistory().length, 2);
       this.assertEq(config.responseHistory()[0].action, 'done');
@@ -855,17 +922,17 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
   });
 
   $test.Case.new({
-    name: 'PromptConfigHistoryLimit',
-    doc: 'PromptConfig response history should be limited to 100 entries',
+    name: 'HauntConfigHistoryLimit',
+    doc: 'HauntConfig response history should be limited to 100 entries',
     do() {
-      const config = $models.PromptConfig.new({});
+      const config = $models.HauntConfig.new({});
 
       for (let i = 0; i < 105; i++) {
-        config.recordResponse({ promptId: String(i), action: 'done' });
+        config.recordResponse({ hauntId: String(i), action: 'done' });
       }
 
       this.assertEq(config.responseHistory().length, 100);
-      this.assertEq(config.responseHistory()[0].promptId, '5');
+      this.assertEq(config.responseHistory()[0].hauntId, '5');
     }
   });
 
@@ -1038,23 +1105,23 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
   });
 
   $test.Case.new({
-    name: 'PromptConfigPersistence',
-    doc: 'PromptConfig should save and load from SQLite',
+    name: 'HauntConfigPersistence',
+    doc: 'HauntConfig should save and load from SQLite',
     do() {
       const database = createTestDb();
 
-      const config = $models.PromptConfig.new({
-        promptFrequencyHours: 12,
-        maxPromptsPerCycle: 5
+      const config = $models.HauntConfig.new({
+        hauntFrequencyHours: 12,
+        maxHauntsPerCycle: 5
       });
       config.lastGenerationAt(new Date('2025-01-15T10:00:00Z'));
-      config.recordResponse({ promptId: 'test', action: 'done' });
+      config.recordResponse({ hauntId: 'test', action: 'done' });
       config.save(database);
 
-      const found = $models.PromptConfig.findById(database, config.sid());
+      const found = $models.HauntConfig.findById(database, config.sid());
       this.assertEq(found.key(), 'main');
-      this.assertEq(found.promptFrequencyHours(), 12);
-      this.assertEq(found.maxPromptsPerCycle(), 5);
+      this.assertEq(found.hauntFrequencyHours(), 12);
+      this.assertEq(found.maxHauntsPerCycle(), 5);
       this.assert(found.lastGenerationAt() instanceof Date, 'should have lastGenerationAt');
       this.assertEq(found.responseHistory().length, 1);
 

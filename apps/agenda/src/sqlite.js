@@ -280,6 +280,76 @@ export default await async function (_, $, $db) {
     }
   });
 
+  const migration007 = $db.Migration.new({
+    name: '007_rename_prompts_to_haunts',
+    version: '007',
+    description: 'Rename Prompt→Haunt, PromptConfig→HauntConfig, add actions column',
+    up(db) {
+      db.query(`CREATE TABLE IF NOT EXISTS agenda_Haunt (
+        sid TEXT PRIMARY KEY,
+        itemType TEXT,
+        itemId TEXT,
+        message TEXT,
+        context TEXT,
+        status TEXT,
+        action TEXT,
+        actions TEXT,
+        generatedAt TEXT,
+        shownAt TEXT,
+        actionedAt TEXT,
+        snoozeUntil TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`).run();
+
+      db.query(`INSERT INTO agenda_Haunt (sid, itemType, itemId, message, context, status, action, actions, generatedAt, shownAt, actionedAt, snoozeUntil, createdAt, updatedAt)
+        SELECT sid, itemType, itemId, message, context, status, action, NULL, generatedAt, shownAt, actionedAt, snoozeUntil, createdAt, updatedAt
+        FROM agenda_Prompt`).run();
+
+      db.query(`DROP TRIGGER IF EXISTS agenda_Prompt_fts_ai`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Prompt_fts_ad`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Prompt_fts_au`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Prompt_fts`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Prompt_itemType`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Prompt_status`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Prompt_generatedAt`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Prompt`).run();
+
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Haunt_itemType ON agenda_Haunt (itemType)`).run();
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Haunt_status ON agenda_Haunt (status)`).run();
+      db.query(`CREATE INDEX IF NOT EXISTS idx_agenda_Haunt_generatedAt ON agenda_Haunt (generatedAt)`).run();
+
+      db.query(`CREATE VIRTUAL TABLE IF NOT EXISTS agenda_Haunt_fts USING fts5(sid, message, content='agenda_Haunt', content_rowid='rowid')`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Haunt_fts_ai AFTER INSERT ON agenda_Haunt BEGIN
+        INSERT INTO agenda_Haunt_fts(rowid, sid, message) VALUES (NEW.rowid, NEW.sid, NEW.message);
+      END`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Haunt_fts_ad AFTER DELETE ON agenda_Haunt BEGIN
+        INSERT INTO agenda_Haunt_fts(agenda_Haunt_fts, rowid, sid, message) VALUES ('delete', OLD.rowid, OLD.sid, OLD.message);
+      END`).run();
+      db.query(`CREATE TRIGGER IF NOT EXISTS agenda_Haunt_fts_au AFTER UPDATE ON agenda_Haunt BEGIN
+        INSERT INTO agenda_Haunt_fts(agenda_Haunt_fts, rowid, sid, message) VALUES ('delete', OLD.rowid, OLD.sid, OLD.message);
+        INSERT INTO agenda_Haunt_fts(rowid, sid, message) VALUES (NEW.rowid, NEW.sid, NEW.message);
+      END`).run();
+
+      db.query(`ALTER TABLE agenda_PromptConfig RENAME TO agenda_HauntConfig`).run();
+      db.query(`ALTER TABLE agenda_HauntConfig RENAME COLUMN promptFrequencyHours TO hauntFrequencyHours`).run();
+      db.query(`ALTER TABLE agenda_HauntConfig RENAME COLUMN maxPromptsPerCycle TO maxHauntsPerCycle`).run();
+    },
+    down(db) {
+      db.query(`DROP TRIGGER IF EXISTS agenda_Haunt_fts_ai`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Haunt_fts_ad`).run();
+      db.query(`DROP TRIGGER IF EXISTS agenda_Haunt_fts_au`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Haunt_fts`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Haunt_itemType`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Haunt_status`).run();
+      db.query(`DROP INDEX IF EXISTS idx_agenda_Haunt_generatedAt`).run();
+      db.query(`DROP TABLE IF EXISTS agenda_Haunt`).run();
+      db.query(`ALTER TABLE agenda_HauntConfig RENAME TO agenda_PromptConfig`).run();
+      db.query(`ALTER TABLE agenda_PromptConfig RENAME COLUMN hauntFrequencyHours TO promptFrequencyHours`).run();
+      db.query(`ALTER TABLE agenda_PromptConfig RENAME COLUMN maxHauntsPerCycle TO maxPromptsPerCycle`).run();
+    }
+  });
+
   $.Class.new({
     name: 'AgendaMigrations',
     doc: 'Helper class to get agenda migrations',
@@ -288,7 +358,7 @@ export default await async function (_, $, $db) {
         name: 'all',
         doc: 'get all agenda migrations in order',
         do() {
-          return [migration001, migration002, migration003, migration004, migration005, migration006];
+          return [migration001, migration002, migration003, migration004, migration005, migration006, migration007];
         }
       }),
     ]

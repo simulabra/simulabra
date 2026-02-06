@@ -237,8 +237,8 @@ export default await async function (_, $, $db, $sqlite, $time) {
   });
 
   $.Class.new({
-    name: 'Prompt',
-    doc: 'Proactive prompt for surfacing actionable items',
+    name: 'Haunt',
+    doc: 'Proactive suggestion with context-specific action choices',
     slots: [
       $sqlite.SQLitePersisted,
       $db.DBVar.new({
@@ -254,7 +254,7 @@ export default await async function (_, $, $db, $sqlite, $time) {
       }),
       $db.DBVar.new({
         name: 'message',
-        doc: 'prompt text to display',
+        doc: 'haunt text to display',
         searchable: true,
         mutable: true,
       }),
@@ -267,19 +267,26 @@ export default await async function (_, $, $db, $sqlite, $time) {
       }),
       $db.DBVar.new({
         name: 'status',
-        doc: 'prompt status: pending/shown/actioned/dismissed',
+        doc: 'haunt status: pending/shown/actioned/dismissed',
         default: 'pending',
         indexed: true,
         mutable: true,
       }),
       $db.DBVar.new({
         name: 'action',
-        doc: 'user action: done/backlog/snooze/dismiss',
+        doc: 'user action taken on this haunt',
         mutable: true,
       }),
       $db.DBVar.new({
+        name: 'actions',
+        doc: 'LLM-generated action choices [{label, message}]',
+        mutable: true,
+        toSQL() { return this ? JSON.stringify(this) : null; },
+        fromSQL() { return this ? JSON.parse(this) : null; },
+      }),
+      $db.DBVar.new({
         name: 'generatedAt',
-        doc: 'when the prompt was generated',
+        doc: 'when the haunt was generated',
         indexed: true,
         mutable: true,
         toSQL() { return this ? this.toISOString() : null; },
@@ -287,7 +294,7 @@ export default await async function (_, $, $db, $sqlite, $time) {
       }),
       $db.DBVar.new({
         name: 'shownAt',
-        doc: 'when the prompt was shown to user',
+        doc: 'when the haunt was shown to user',
         mutable: true,
         toSQL() { return this ? this.toISOString() : null; },
         fromSQL() { return this ? new Date(this) : null; },
@@ -301,7 +308,7 @@ export default await async function (_, $, $db, $sqlite, $time) {
       }),
       $db.DBVar.new({
         name: 'snoozeUntil',
-        doc: 'for snoozed prompts, when to show again',
+        doc: 'for snoozed haunts, when to show again',
         mutable: true,
         toSQL() { return this ? this.toISOString() : null; },
         fromSQL() { return this ? new Date(this) : null; },
@@ -318,7 +325,7 @@ export default await async function (_, $, $db, $sqlite, $time) {
         name: 'description',
         do() {
           const statusIcon = {
-            pending: '⏳',
+            pending: '👻',
             shown: '👁',
             actioned: '✓',
             dismissed: '✗'
@@ -330,8 +337,8 @@ export default await async function (_, $, $db, $sqlite, $time) {
   });
 
   $.Class.new({
-    name: 'PromptConfig',
-    doc: 'Configuration for proactive prompting system',
+    name: 'HauntConfig',
+    doc: 'Configuration for proactive haunting system',
     slots: [
       $sqlite.SQLitePersisted,
       $db.DBVar.new({
@@ -341,7 +348,7 @@ export default await async function (_, $, $db, $sqlite, $time) {
         mutable: true,
       }),
       $db.DBVar.new({
-        name: 'promptFrequencyHours',
+        name: 'hauntFrequencyHours',
         doc: 'hours between generation cycles',
         default: 8,
         mutable: true,
@@ -349,8 +356,8 @@ export default await async function (_, $, $db, $sqlite, $time) {
         fromSQL() { return Number(this); },
       }),
       $db.DBVar.new({
-        name: 'maxPromptsPerCycle',
-        doc: 'max prompts per generation',
+        name: 'maxHauntsPerCycle',
+        doc: 'max haunts per generation',
         default: 3,
         mutable: true,
         toSQL() { return String(this); },
@@ -387,7 +394,7 @@ export default await async function (_, $, $db, $sqlite, $time) {
             return true;
           }
           const hoursSince = (Date.now() - this.lastGenerationAt().getTime()) / (1000 * 60 * 60);
-          return hoursSince >= this.promptFrequencyHours();
+          return hoursSince >= this.hauntFrequencyHours();
         }
       }),
       $.Method.new({

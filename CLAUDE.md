@@ -3,6 +3,12 @@
 <InfiniteSoftware>
 Simulabra is, most simply, a metaobject system for javascript. On top of this a whole world of objects and agents is constructed.
 
+<Spirit>
+Simulabra builds on itself. Every new tool, script, or analysis should be a Simulabra module — reusable classes with slots, not throwaway code. When you need a utility, make it a class. When you need a script, give it `import.meta.main`. When you see a pattern repeating, reify it.
+
+This is kaizen: continuous improvement through small, composable steps. Each change should leave the system more capable than before. Prefer extending what exists over replacing it. Prefer building infrastructure that future work can stand on over solving only the immediate problem. The codebase is a living system — tend it.
+</Spirit>
+
 <CodingStandards>
  - be consistent with naming  - do not use overly short names in public interfaces
  - DO NOT ADD COMMENTS unless they are necessary, prefer doc strings and readable code

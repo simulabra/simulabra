@@ -59,84 +59,84 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   };
 
   $test.AsyncCase.new({
-    name: 'GetPromptById',
-    doc: 'getPrompt should return a single prompt by id',
+    name: 'GetHauntById',
+    doc: 'getHaunt should return a single haunt by id',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
-      const created = await dbService.createPrompt({
+      const created = await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-1',
-        message: 'Test prompt',
+        message: 'Test haunt',
         status: 'pending'
       });
 
-      const fetched = await dbService.getPrompt({ id: created.id });
+      const fetched = await dbService.getHaunt({ id: created.id });
 
       this.assertEq(fetched.id, created.id, 'should have matching id');
-      this.assertEq(fetched.message, 'Test prompt', 'should have message');
+      this.assertEq(fetched.message, 'Test haunt', 'should have message');
 
-      const missing = await dbService.getPrompt({ id: 'nonexistent' });
-      this.assertEq(missing, null, 'should return null for missing prompt');
-
-      database.close();
-    }
-  });
-
-  $test.AsyncCase.new({
-    name: 'GetPendingPromptsEmpty',
-    doc: 'getPendingPrompts should return empty array when no prompts exist',
-    async do() {
-      const database = createTestDb();
-      const { dbService, geistService } = createTestServices(database);
-
-      const prompts = await geistService.getPendingPrompts({ limit: 10 });
-
-      this.assertEq(prompts.length, 0, 'should return empty array');
+      const missing = await dbService.getHaunt({ id: 'nonexistent' });
+      this.assertEq(missing, null, 'should return null for missing haunt');
 
       database.close();
     }
   });
 
   $test.AsyncCase.new({
-    name: 'GetPendingPromptsWithData',
-    doc: 'getPendingPrompts should return pending prompts, excluding snoozed ones',
+    name: 'GetPendingHauntsEmpty',
+    doc: 'getPendingHaunts should return empty array when no haunts exist',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
-      await dbService.createPrompt({
+      const haunts = await geistService.getPendingHaunts({ limit: 10 });
+
+      this.assertEq(haunts.length, 0, 'should return empty array');
+
+      database.close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GetPendingHauntsWithData',
+    doc: 'getPendingHaunts should return pending haunts, excluding snoozed ones',
+    async do() {
+      const database = createTestDb();
+      const { dbService, geistService } = createTestServices(database);
+
+      await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-1',
-        message: 'Prompt 1',
+        message: 'Haunt 1',
         status: 'pending'
       });
-      await dbService.createPrompt({
+      await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-2',
-        message: 'Prompt 2',
+        message: 'Haunt 2',
         status: 'pending'
       });
-      await dbService.createPrompt({
+      await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-3',
-        message: 'Actioned prompt',
+        message: 'Actioned haunt',
         status: 'actioned'
       });
 
-      const prompts = await geistService.getPendingPrompts({ limit: 10 });
+      const haunts = await geistService.getPendingHaunts({ limit: 10 });
 
-      this.assertEq(prompts.length, 2, 'should return 2 pending prompts');
-      this.assert(prompts.every(p => p.status === 'pending'), 'all should be pending');
+      this.assertEq(haunts.length, 2, 'should return 2 pending haunts');
+      this.assert(haunts.every(h => h.status === 'pending'), 'all should be pending');
 
       database.close();
     }
   });
 
   $test.AsyncCase.new({
-    name: 'GetPendingPromptsExcludesSnoozed',
-    doc: 'getPendingPrompts should exclude prompts that are snoozed until later',
+    name: 'GetPendingHauntsExcludesSnoozed',
+    doc: 'getPendingHaunts should exclude haunts that are snoozed until later',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -144,65 +144,65 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       const futureTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const pastTime = new Date(Date.now() - 60 * 60 * 1000);
 
-      await dbService.createPrompt({
+      await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-1',
-        message: 'Active prompt',
+        message: 'Active haunt',
         status: 'pending'
       });
 
-      const snoozedPrompt = await dbService.createPrompt({
+      const snoozedHaunt = await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-2',
-        message: 'Snoozed prompt',
+        message: 'Snoozed haunt',
         status: 'pending'
       });
-      await dbService.updatePrompt({
-        id: snoozedPrompt.id,
+      await dbService.updateHaunt({
+        id: snoozedHaunt.id,
         snoozeUntil: futureTime.toISOString()
       });
 
-      const expiredSnooze = await dbService.createPrompt({
+      const expiredSnooze = await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-3',
-        message: 'Expired snooze prompt',
+        message: 'Expired snooze haunt',
         status: 'pending'
       });
-      await dbService.updatePrompt({
+      await dbService.updateHaunt({
         id: expiredSnooze.id,
         snoozeUntil: pastTime.toISOString()
       });
 
-      const prompts = await geistService.getPendingPrompts({ limit: 10 });
+      const haunts = await geistService.getPendingHaunts({ limit: 10 });
 
-      this.assertEq(prompts.length, 2, 'should return 2 prompts (active + expired snooze)');
-      const messages = prompts.map(p => p.message);
-      this.assert(messages.includes('Active prompt'), 'should include active prompt');
-      this.assert(messages.includes('Expired snooze prompt'), 'should include expired snooze');
-      this.assert(!messages.includes('Snoozed prompt'), 'should not include future snoozed');
+      this.assertEq(haunts.length, 2, 'should return 2 haunts (active + expired snooze)');
+      const messages = haunts.map(h => h.message);
+      this.assert(messages.includes('Active haunt'), 'should include active haunt');
+      this.assert(messages.includes('Expired snooze haunt'), 'should include expired snooze');
+      this.assert(!messages.includes('Snoozed haunt'), 'should not include future snoozed');
 
       database.close();
     }
   });
 
   $test.AsyncCase.new({
-    name: 'ActionPromptDone',
-    doc: 'actionPrompt with done action should complete the related task',
+    name: 'ActionHauntDone',
+    doc: 'actionHaunt with done action should complete the related task',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
       const task = await dbService.createTask({ title: 'Test task', priority: 2 });
-      const prompt = await dbService.createPrompt({
+      const haunt = await dbService.createHaunt({
         itemType: 'task',
         itemId: task.id,
         message: 'Did you finish this?',
         status: 'pending'
       });
 
-      const result = await geistService.actionPrompt({ id: prompt.id, action: 'done' });
+      const result = await geistService.actionHaunt({ id: haunt.id, action: 'done' });
 
-      this.assertEq(result.status, 'actioned', 'prompt should be actioned');
+      this.assertEq(result.status, 'actioned', 'haunt should be actioned');
       this.assertEq(result.action, 'done', 'action should be done');
       this.assert(result.actionedAt, 'should have actionedAt');
 
@@ -214,23 +214,23 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'ActionPromptBacklog',
-    doc: 'actionPrompt with backlog action should set task priority to 5',
+    name: 'ActionHauntBacklog',
+    doc: 'actionHaunt with backlog action should set task priority to 5',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
       const task = await dbService.createTask({ title: 'Test task', priority: 2 });
-      const prompt = await dbService.createPrompt({
+      const haunt = await dbService.createHaunt({
         itemType: 'task',
         itemId: task.id,
         message: 'Is this still important?',
         status: 'pending'
       });
 
-      const result = await geistService.actionPrompt({ id: prompt.id, action: 'backlog' });
+      const result = await geistService.actionHaunt({ id: haunt.id, action: 'backlog' });
 
-      this.assertEq(result.status, 'actioned', 'prompt should be actioned');
+      this.assertEq(result.status, 'actioned', 'haunt should be actioned');
       this.assertEq(result.action, 'backlog', 'action should be backlog');
 
       const updatedTask = await dbService.getTask({ id: task.id });
@@ -241,13 +241,13 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'ActionPromptSnooze',
-    doc: 'actionPrompt with snooze action should set snoozeUntil to +24 hours',
+    name: 'ActionHauntSnooze',
+    doc: 'actionHaunt with snooze action should set snoozeUntil to +24 hours',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
-      const prompt = await dbService.createPrompt({
+      const haunt = await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-1',
         message: 'Check on this later',
@@ -255,10 +255,10 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       });
 
       const beforeAction = Date.now();
-      const result = await geistService.actionPrompt({ id: prompt.id, action: 'snooze' });
+      const result = await geistService.actionHaunt({ id: haunt.id, action: 'snooze' });
       const afterAction = Date.now();
 
-      this.assertEq(result.status, 'pending', 'prompt should stay pending when snoozed');
+      this.assertEq(result.status, 'pending', 'haunt should stay pending when snoozed');
       this.assertEq(result.action, 'snooze', 'action should be snooze');
       this.assert(result.snoozeUntil, 'should have snoozeUntil');
 
@@ -272,22 +272,22 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'ActionPromptDismiss',
-    doc: 'actionPrompt with dismiss action should mark as dismissed',
+    name: 'ActionHauntDismiss',
+    doc: 'actionHaunt with dismiss action should mark as dismissed',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
-      const prompt = await dbService.createPrompt({
+      const haunt = await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-1',
-        message: 'Dismissable prompt',
+        message: 'Dismissable haunt',
         status: 'pending'
       });
 
-      const result = await geistService.actionPrompt({ id: prompt.id, action: 'dismiss' });
+      const result = await geistService.actionHaunt({ id: haunt.id, action: 'dismiss' });
 
-      this.assertEq(result.status, 'dismissed', 'prompt should be dismissed');
+      this.assertEq(result.status, 'dismissed', 'haunt should be dismissed');
       this.assertEq(result.action, 'dismiss', 'action should be dismiss');
       this.assert(result.actionedAt, 'should have actionedAt');
 
@@ -296,24 +296,24 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'ActionPromptRecordsHistory',
-    doc: 'actionPrompt should record response in PromptConfig.responseHistory',
+    name: 'ActionHauntRecordsHistory',
+    doc: 'actionHaunt should record response in HauntConfig.responseHistory',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
-      const prompt = await dbService.createPrompt({
+      const haunt = await dbService.createHaunt({
         itemType: 'task',
         itemId: 'task-1',
-        message: 'Test prompt',
+        message: 'Test haunt',
         status: 'pending'
       });
 
-      await geistService.actionPrompt({ id: prompt.id, action: 'done' });
+      await geistService.actionHaunt({ id: haunt.id, action: 'done' });
 
-      const config = await dbService.getPromptConfig({});
+      const config = await dbService.getHauntConfig({});
       this.assert(config.responseHistory.length > 0, 'should have response history');
-      this.assertEq(config.responseHistory[0].promptId, prompt.id, 'should record prompt id');
+      this.assertEq(config.responseHistory[0].hauntId, haunt.id, 'should record haunt id');
       this.assertEq(config.responseHistory[0].action, 'done', 'should record action');
       this.assertEq(config.responseHistory[0].itemType, 'task', 'should record item type');
 
@@ -421,8 +421,8 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsGroupsByProject',
-    doc: 'generatePrompts should format tasks grouped by project in the user message',
+    name: 'GenerateHauntsGroupsByProject',
+    doc: 'generateHaunts should format tasks grouped by project in the user message',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -436,7 +436,7 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
         stop_reason: 'end_turn'
       });
 
-      await geistService.generatePrompts();
+      await geistService.generateHaunts();
 
       const userMsg = geistService.client().lastRequest.messages[0].content;
       this.assert(userMsg.includes('Coins:'), 'should include project name as header');
@@ -451,8 +451,8 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsProjectId',
-    doc: 'generatePrompts should store projectId in prompt context when Claude includes it',
+    name: 'GenerateHauntsProjectId',
+    doc: 'generateHaunts should store projectId in haunt context when Claude includes it',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -477,13 +477,13 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
         stop_reason: 'end_turn'
       });
 
-      const result = await geistService.generatePrompts();
+      const result = await geistService.generateHaunts();
 
       this.assert(result.success, 'should succeed');
-      this.assertEq(result.promptsCreated, 1, 'should create 1 prompt');
+      this.assertEq(result.hauntsCreated, 1, 'should create 1 haunt');
 
-      const prompts = await dbService.listPrompts({ status: 'pending', limit: 10 });
-      const created = prompts[0];
+      const haunts = await dbService.listHaunts({ status: 'pending', limit: 10 });
+      const created = haunts[0];
       this.assert(created.context, 'should have context');
       const ctx = typeof created.context === 'string' ? JSON.parse(created.context) : created.context;
       this.assertEq(ctx.projectId, project.id, 'context should carry projectId');
@@ -493,8 +493,8 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsCallsClaude',
-    doc: 'generatePrompts should call Claude API with context',
+    name: 'GenerateHauntsCallsClaude',
+    doc: 'generateHaunts should call Claude API with context',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -517,13 +517,13 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
         stop_reason: 'end_turn'
       });
 
-      const result = await geistService.generatePrompts();
+      const result = await geistService.generateHaunts();
 
       this.assert(result.success, 'should succeed');
       this.assert(geistService.client().lastRequest, 'should have made API call');
       this.assert(
         geistService.client().lastRequest.system.includes('productivity'),
-        'should include prompt generation system prompt'
+        'should include haunt generation system prompt'
       );
 
       database.close();
@@ -531,8 +531,8 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.Case.new({
-    name: 'PromptSystemPromptIncludesFreshTasks',
-    doc: 'prompt generation system prompt should mention recently added tasks',
+    name: 'HauntSystemPromptIncludesFreshTasks',
+    doc: 'haunt generation system prompt should mention recently added tasks',
     do() {
       const database = createTestDb();
       const { geistService } = createTestServices(database);
@@ -552,8 +552,8 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsCreatesRecords',
-    doc: 'generatePrompts should create Prompt records from Claude response',
+    name: 'GenerateHauntsCreatesRecords',
+    doc: 'generateHaunts should create Haunt records from Claude response',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -576,24 +576,24 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
         stop_reason: 'end_turn'
       });
 
-      const result = await geistService.generatePrompts();
+      const result = await geistService.generateHaunts();
 
       this.assert(result.success, 'should succeed');
-      this.assertEq(result.promptsCreated, 1, 'should create 1 prompt');
+      this.assertEq(result.hauntsCreated, 1, 'should create 1 haunt');
 
-      const prompts = await dbService.listPrompts({ status: 'pending', limit: 10 });
-      this.assertEq(prompts.length, 1, 'should have 1 prompt in database');
-      this.assertEq(prompts[0].itemType, 'task', 'should be task type');
-      this.assertEq(prompts[0].itemId, task.id, 'should reference correct task');
-      this.assertEq(prompts[0].message, 'Have you finished the test task?', 'should have message');
+      const haunts = await dbService.listHaunts({ status: 'pending', limit: 10 });
+      this.assertEq(haunts.length, 1, 'should have 1 haunt in database');
+      this.assertEq(haunts[0].itemType, 'task', 'should be task type');
+      this.assertEq(haunts[0].itemId, task.id, 'should reference correct task');
+      this.assertEq(haunts[0].message, 'Have you finished the test task?', 'should have message');
 
       database.close();
     }
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsUpdatesConfig',
-    doc: 'generatePrompts should update lastGenerationAt in PromptConfig',
+    name: 'GenerateHauntsUpdatesConfig',
+    doc: 'generateHaunts should update lastGenerationAt in HauntConfig',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -604,10 +604,10 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       });
 
       const beforeGen = Date.now();
-      await geistService.generatePrompts();
+      await geistService.generateHaunts();
       const afterGen = Date.now();
 
-      const config = await dbService.getPromptConfig({});
+      const config = await dbService.getHauntConfig({});
       this.assert(config.lastGenerationAt, 'should have lastGenerationAt');
       const genTime = new Date(config.lastGenerationAt).getTime();
       this.assert(genTime >= beforeGen && genTime <= afterGen, 'lastGenerationAt should be recent');
@@ -617,15 +617,15 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsNoClient',
-    doc: 'generatePrompts should fail gracefully when no Claude client',
+    name: 'GenerateHauntsNoClient',
+    doc: 'generateHaunts should fail gracefully when no Claude client',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
       geistService.client(null);
 
-      const result = await geistService.generatePrompts();
+      const result = await geistService.generateHaunts();
 
       this.assertEq(result.success, false, 'should not succeed');
       this.assert(result.error.includes('not configured'), 'should have configuration error');
@@ -635,21 +635,21 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'PromptConfigLastGenerationTracking',
-    doc: 'PromptConfig tracks lastGenerationAt through the database service',
+    name: 'HauntConfigLastGenerationTracking',
+    doc: 'HauntConfig tracks lastGenerationAt through the database service',
     async do() {
       const database = createTestDb();
       const { dbService } = createTestServices(database);
 
-      const config1 = await dbService.getPromptConfig({});
+      const config1 = await dbService.getHauntConfig({});
       this.assert(!config1.lastGenerationAt,
         'should have no lastGenerationAt when freshly created');
 
-      await dbService.updatePromptConfig({
+      await dbService.updateHauntConfig({
         lastGenerationAt: new Date().toISOString()
       });
 
-      const config2 = await dbService.getPromptConfig({});
+      const config2 = await dbService.getHauntConfig({});
       this.assert(config2.lastGenerationAt, 'should have lastGenerationAt after update');
 
       database.close();
@@ -657,8 +657,8 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsResultStructure',
-    doc: 'generatePrompts returns result with success, promptsCreated, and promptsSkipped fields',
+    name: 'GenerateHauntsResultStructure',
+    doc: 'generateHaunts returns result with success, hauntsCreated, and hauntsSkipped fields',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
@@ -681,29 +681,29 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
         stop_reason: 'end_turn'
       });
 
-      const result = await geistService.generatePrompts();
+      const result = await geistService.generateHaunts();
 
       this.assertEq(result.success, true, 'result should have success: true');
-      this.assertEq(result.promptsCreated, 1, 'result should report promptsCreated');
-      this.assertEq(result.promptsSkipped, 0, 'result should report promptsSkipped');
+      this.assertEq(result.hauntsCreated, 1, 'result should report hauntsCreated');
+      this.assertEq(result.hauntsSkipped, 0, 'result should report hauntsSkipped');
 
       database.close();
     }
   });
 
   $test.AsyncCase.new({
-    name: 'GeneratePromptsDuplicatesSkipped',
-    doc: 'generatePrompts skips duplicate prompts and reports them in promptsSkipped',
+    name: 'GenerateHauntsDuplicatesSkipped',
+    doc: 'generateHaunts skips duplicate haunts and reports them in hauntsSkipped',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
       const task = await dbService.createTask({ title: 'Duplicate test task', priority: 2 });
 
-      await dbService.createPrompt({
+      await dbService.createHaunt({
         itemType: 'task',
         itemId: task.id,
-        message: 'Existing prompt for this task',
+        message: 'Existing haunt for this task',
         status: 'pending'
       });
 
@@ -715,7 +715,7 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
               {
                 itemType: 'task',
                 itemId: task.id,
-                message: 'Duplicate prompt for same task'
+                message: 'Duplicate haunt for same task'
               }
             ])
           }
@@ -723,11 +723,11 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
         stop_reason: 'end_turn'
       });
 
-      const result = await geistService.generatePrompts();
+      const result = await geistService.generateHaunts();
 
       this.assertEq(result.success, true, 'should succeed');
-      this.assertEq(result.promptsCreated, 0, 'should create 0 prompts (all duplicates)');
-      this.assertEq(result.promptsSkipped, 1, 'should skip 1 duplicate');
+      this.assertEq(result.hauntsCreated, 0, 'should create 0 haunts (all duplicates)');
+      this.assertEq(result.hauntsSkipped, 1, 'should skip 1 duplicate');
 
       database.close();
     }
@@ -927,7 +927,7 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
 
   $test.Case.new({
     name: 'SystemPromptIncludesProjectToolMappings',
-    doc: 'base system prompt should include project tool mappings',
+    doc: 'base system prompt should include project and task tool mappings',
     do() {
       const database = createTestDb();
       const { geistService } = createTestServices(database);
@@ -938,6 +938,7 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       this.assert(prompt.includes('list_projects'), 'should mention list_projects');
       this.assert(prompt.includes('move_to_project'), 'should mention move_to_project');
       this.assert(prompt.includes('update_project'), 'should mention update_project');
+      this.assert(prompt.includes('update_task'), 'should mention update_task');
 
       database.close();
     }

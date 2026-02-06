@@ -329,94 +329,142 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     }
   });
 
-  // Prompt service tests
+  // Haunt service tests
   $test.Case.new({
-    name: 'DatabaseServiceCreatePrompt',
-    doc: 'DatabaseService should create prompts',
+    name: 'DatabaseServiceCreateHaunt',
+    doc: 'DatabaseService should create haunts',
     do() {
       const service = createTestService();
 
-      const prompt = service.createPrompt({
+      const haunt = service.createHaunt({
         itemType: 'task',
         itemId: 'task-123',
         message: 'Did you finish this task?'
       });
-      this.assert(prompt.$class === 'Prompt', 'should return Prompt');
-      this.assertEq(prompt.itemType, 'task');
-      this.assertEq(prompt.itemId, 'task-123');
-      this.assertEq(prompt.message, 'Did you finish this task?');
-      this.assertEq(prompt.status, 'pending');
+      this.assert(haunt.$class === 'Haunt', 'should return Haunt');
+      this.assertEq(haunt.itemType, 'task');
+      this.assertEq(haunt.itemId, 'task-123');
+      this.assertEq(haunt.message, 'Did you finish this task?');
+      this.assertEq(haunt.status, 'pending');
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceCreatePromptWithContext',
-    doc: 'DatabaseService should create prompts with context',
+    name: 'DatabaseServiceCreateHauntWithContext',
+    doc: 'DatabaseService should create haunts with context',
     do() {
       const service = createTestService();
 
-      const prompt = service.createPrompt({
+      const haunt = service.createHaunt({
         itemType: 'task',
         itemId: 'task-123',
         message: 'Check on this',
         context: { daysSinceUpdate: 7, taskTitle: 'Important task' }
       });
-      this.assertEq(prompt.context.daysSinceUpdate, 7);
-      this.assertEq(prompt.context.taskTitle, 'Important task');
+      this.assertEq(haunt.context.daysSinceUpdate, 7);
+      this.assertEq(haunt.context.taskTitle, 'Important task');
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceListPrompts',
-    doc: 'DatabaseService should list prompts',
+    name: 'DatabaseServiceCreateHauntWithActions',
+    doc: 'DatabaseService should create haunts with actions array',
     do() {
       const service = createTestService();
 
-      service.createPrompt({ itemType: 'task', itemId: '1', message: 'Prompt 1' });
-      service.createPrompt({ itemType: 'task', itemId: '2', message: 'Prompt 2' });
+      const actions = [
+        { label: 'Mark done', message: 'complete task task-123' },
+        { label: 'Snooze 1 day', message: 'remind me about task-123 tomorrow' },
+      ];
+      const haunt = service.createHaunt({
+        itemType: 'task',
+        itemId: 'task-123',
+        message: 'Still working on this?',
+        actions
+      });
+      this.assertEq(haunt.actions.length, 2);
+      this.assertEq(haunt.actions[0].label, 'Mark done');
+      this.assertEq(haunt.actions[1].message, 'remind me about task-123 tomorrow');
 
-      const prompts = service.listPrompts({});
-      this.assertEq(prompts.length, 2);
+      const fetched = service.getHaunt({ id: haunt.id });
+      this.assertEq(fetched.actions.length, 2, 'actions should round-trip through DB');
+      this.assertEq(fetched.actions[0].label, 'Mark done');
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceListPromptsWithStatusFilter',
-    doc: 'DatabaseService should filter prompts by status',
+    name: 'DatabaseServiceCreateHauntWithoutActions',
+    doc: 'DatabaseService should handle haunts with null actions',
     do() {
       const service = createTestService();
 
-      const prompt1 = service.createPrompt({ itemType: 'task', itemId: '1', message: 'Pending 1' });
-      service.createPrompt({ itemType: 'task', itemId: '2', message: 'Pending 2' });
-      service.updatePrompt({ id: prompt1.id, status: 'shown' });
+      const haunt = service.createHaunt({
+        itemType: 'task',
+        itemId: 'task-456',
+        message: 'Legacy haunt without actions'
+      });
+      this.assert(!haunt.actions, 'actions should not be present by default');
 
-      const pendingPrompts = service.listPrompts({ status: 'pending' });
-      this.assertEq(pendingPrompts.length, 1);
-      this.assertEq(pendingPrompts[0].message, 'Pending 2');
-
-      const shownPrompts = service.listPrompts({ status: 'shown' });
-      this.assertEq(shownPrompts.length, 1);
-      this.assertEq(shownPrompts[0].message, 'Pending 1');
+      const fetched = service.getHaunt({ id: haunt.id });
+      this.assert(!fetched.actions, 'null actions should not be present after round-trip');
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceUpdatePrompt',
-    doc: 'DatabaseService should update prompts',
+    name: 'DatabaseServiceListHaunts',
+    doc: 'DatabaseService should list haunts',
     do() {
       const service = createTestService();
 
-      const prompt = service.createPrompt({ itemType: 'task', itemId: '1', message: 'Test' });
-      const updated = service.updatePrompt({
-        id: prompt.id,
+      service.createHaunt({ itemType: 'task', itemId: '1', message: 'Haunt 1' });
+      service.createHaunt({ itemType: 'task', itemId: '2', message: 'Haunt 2' });
+
+      const haunts = service.listHaunts({});
+      this.assertEq(haunts.length, 2);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceListHauntsWithStatusFilter',
+    doc: 'DatabaseService should filter haunts by status',
+    do() {
+      const service = createTestService();
+
+      const haunt1 = service.createHaunt({ itemType: 'task', itemId: '1', message: 'Pending 1' });
+      service.createHaunt({ itemType: 'task', itemId: '2', message: 'Pending 2' });
+      service.updateHaunt({ id: haunt1.id, status: 'shown' });
+
+      const pendingHaunts = service.listHaunts({ status: 'pending' });
+      this.assertEq(pendingHaunts.length, 1);
+      this.assertEq(pendingHaunts[0].message, 'Pending 2');
+
+      const shownHaunts = service.listHaunts({ status: 'shown' });
+      this.assertEq(shownHaunts.length, 1);
+      this.assertEq(shownHaunts[0].message, 'Pending 1');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceUpdateHaunt',
+    doc: 'DatabaseService should update haunts',
+    do() {
+      const service = createTestService();
+
+      const haunt = service.createHaunt({ itemType: 'task', itemId: '1', message: 'Test' });
+      const updated = service.updateHaunt({
+        id: haunt.id,
         status: 'actioned',
         action: 'done',
         actionedAt: new Date().toISOString()
@@ -431,15 +479,15 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceUpdatePromptSnooze',
-    doc: 'DatabaseService should update prompt with snooze',
+    name: 'DatabaseServiceUpdateHauntSnooze',
+    doc: 'DatabaseService should update haunt with snooze',
     do() {
       const service = createTestService();
 
-      const prompt = service.createPrompt({ itemType: 'task', itemId: '1', message: 'Test' });
+      const haunt = service.createHaunt({ itemType: 'task', itemId: '1', message: 'Test' });
       const snoozeTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const updated = service.updatePrompt({
-        id: prompt.id,
+      const updated = service.updateHaunt({
+        id: haunt.id,
         action: 'snooze',
         snoozeUntil: snoozeTime
       });
@@ -452,15 +500,15 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceUpdatePromptNotFound',
-    doc: 'DatabaseService should throw when updating non-existent prompt',
+    name: 'DatabaseServiceUpdateHauntNotFound',
+    doc: 'DatabaseService should throw when updating non-existent haunt',
     do() {
       const service = createTestService();
 
       this.assertThrows(
-        () => service.updatePrompt({ id: 'nonexistent', status: 'shown' }),
-        'Prompt not found',
-        'should throw for non-existent prompt'
+        () => service.updateHaunt({ id: 'nonexistent', status: 'shown' }),
+        'Haunt not found',
+        'should throw for non-existent haunt'
       );
 
       service.db().close();
@@ -468,16 +516,16 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceGetPromptConfig',
-    doc: 'DatabaseService should get or create prompt config',
+    name: 'DatabaseServiceGetHauntConfig',
+    doc: 'DatabaseService should get or create haunt config',
     do() {
       const service = createTestService();
 
-      const config = service.getPromptConfig({});
-      this.assert(config.$class === 'PromptConfig', 'should return PromptConfig');
+      const config = service.getHauntConfig({});
+      this.assert(config.$class === 'HauntConfig', 'should return HauntConfig');
       this.assertEq(config.key, 'main');
-      this.assertEq(config.promptFrequencyHours, 8);
-      this.assertEq(config.maxPromptsPerCycle, 3);
+      this.assertEq(config.hauntFrequencyHours, 8);
+      this.assertEq(config.maxHauntsPerCycle, 3);
       this.assertEq(config.taskStalenessDays, 7);
 
       service.db().close();
@@ -485,13 +533,13 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceGetPromptConfigIdempotent',
-    doc: 'DatabaseService getPromptConfig should return same config on multiple calls',
+    name: 'DatabaseServiceGetHauntConfigIdempotent',
+    doc: 'DatabaseService getHauntConfig should return same config on multiple calls',
     do() {
       const service = createTestService();
 
-      const config1 = service.getPromptConfig({});
-      const config2 = service.getPromptConfig({});
+      const config1 = service.getHauntConfig({});
+      const config2 = service.getHauntConfig({});
 
       this.assertEq(config1.id, config2.id);
 
@@ -500,37 +548,37 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceUpdatePromptConfig',
-    doc: 'DatabaseService should update prompt config',
+    name: 'DatabaseServiceUpdateHauntConfig',
+    doc: 'DatabaseService should update haunt config',
     do() {
       const service = createTestService();
 
-      service.getPromptConfig({});
-      const updated = service.updatePromptConfig({
-        promptFrequencyHours: 12,
-        maxPromptsPerCycle: 5,
+      service.getHauntConfig({});
+      const updated = service.updateHauntConfig({
+        hauntFrequencyHours: 12,
+        maxHauntsPerCycle: 5,
         taskStalenessDays: 14
       });
 
-      this.assertEq(updated.promptFrequencyHours, 12);
-      this.assertEq(updated.maxPromptsPerCycle, 5);
+      this.assertEq(updated.hauntFrequencyHours, 12);
+      this.assertEq(updated.maxHauntsPerCycle, 5);
       this.assertEq(updated.taskStalenessDays, 14);
 
-      const fetched = service.getPromptConfig({});
-      this.assertEq(fetched.promptFrequencyHours, 12);
+      const fetched = service.getHauntConfig({});
+      this.assertEq(fetched.hauntFrequencyHours, 12);
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceUpdatePromptConfigLastGeneration',
+    name: 'DatabaseServiceUpdateHauntConfigLastGeneration',
     doc: 'DatabaseService should update lastGenerationAt',
     do() {
       const service = createTestService();
 
       const now = new Date().toISOString();
-      const updated = service.updatePromptConfig({ lastGenerationAt: now });
+      const updated = service.updateHauntConfig({ lastGenerationAt: now });
 
       this.assert(updated.lastGenerationAt, 'should have lastGenerationAt');
 
@@ -539,16 +587,16 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceUpdatePromptConfigResponseHistory',
+    name: 'DatabaseServiceUpdateHauntConfigResponseHistory',
     doc: 'DatabaseService should update response history',
     do() {
       const service = createTestService();
 
       const history = [
-        { promptId: '1', action: 'done', timestamp: new Date().toISOString() },
-        { promptId: '2', action: 'dismiss', timestamp: new Date().toISOString() }
+        { hauntId: '1', action: 'done', timestamp: new Date().toISOString() },
+        { hauntId: '2', action: 'dismiss', timestamp: new Date().toISOString() }
       ];
-      const updated = service.updatePromptConfig({ responseHistory: history });
+      const updated = service.updateHauntConfig({ responseHistory: history });
 
       this.assertEq(updated.responseHistory.length, 2);
       this.assertEq(updated.responseHistory[0].action, 'done');
@@ -558,84 +606,84 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceHasActivePendingPromptTrue',
-    doc: 'hasActivePendingPrompt should return true when pending prompt exists',
+    name: 'DatabaseServiceHasActivePendingHauntTrue',
+    doc: 'hasActivePendingHaunt should return true when pending haunt exists',
     do() {
       const service = createTestService();
 
-      service.createPrompt({
+      service.createHaunt({
         itemType: 'task',
         itemId: 'task-xyz',
         message: 'Check on this task',
         status: 'pending'
       });
 
-      const hasPending = service.hasActivePendingPrompt({
+      const hasPending = service.hasActivePendingHaunt({
         itemType: 'task',
         itemId: 'task-xyz'
       });
-      this.assertEq(hasPending, true, 'should have pending prompt');
+      this.assertEq(hasPending, true, 'should have pending haunt');
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceHasActivePendingPromptFalse',
-    doc: 'hasActivePendingPrompt should return false when no pending prompt exists',
+    name: 'DatabaseServiceHasActivePendingHauntFalse',
+    doc: 'hasActivePendingHaunt should return false when no pending haunt exists',
     do() {
       const service = createTestService();
 
-      const hasPending = service.hasActivePendingPrompt({
+      const hasPending = service.hasActivePendingHaunt({
         itemType: 'task',
         itemId: 'nonexistent'
       });
-      this.assertEq(hasPending, false, 'should not have pending prompt');
+      this.assertEq(hasPending, false, 'should not have pending haunt');
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceHasActivePendingPromptIgnoresNonPending',
-    doc: 'hasActivePendingPrompt should ignore non-pending prompts',
+    name: 'DatabaseServiceHasActivePendingHauntIgnoresNonPending',
+    doc: 'hasActivePendingHaunt should ignore non-pending haunts',
     do() {
       const service = createTestService();
 
-      const prompt = service.createPrompt({
+      const haunt = service.createHaunt({
         itemType: 'task',
         itemId: 'task-abc',
         message: 'Already actioned',
         status: 'pending'
       });
-      service.updatePrompt({ id: prompt.id, status: 'actioned' });
+      service.updateHaunt({ id: haunt.id, status: 'actioned' });
 
-      const hasPending = service.hasActivePendingPrompt({
+      const hasPending = service.hasActivePendingHaunt({
         itemType: 'task',
         itemId: 'task-abc'
       });
-      this.assertEq(hasPending, false, 'should not count actioned prompts');
+      this.assertEq(hasPending, false, 'should not count actioned haunts');
 
       service.db().close();
     }
   });
 
   $test.Case.new({
-    name: 'DatabaseServiceHasActivePendingPromptDifferentItem',
-    doc: 'hasActivePendingPrompt should distinguish between different items',
+    name: 'DatabaseServiceHasActivePendingHauntDifferentItem',
+    doc: 'hasActivePendingHaunt should distinguish between different items',
     do() {
       const service = createTestService();
 
-      service.createPrompt({
+      service.createHaunt({
         itemType: 'task',
         itemId: 'task-1',
-        message: 'Prompt for task 1',
+        message: 'Haunt for task 1',
         status: 'pending'
       });
 
-      const hasPendingTask1 = service.hasActivePendingPrompt({ itemType: 'task', itemId: 'task-1' });
-      const hasPendingTask2 = service.hasActivePendingPrompt({ itemType: 'task', itemId: 'task-2' });
-      const hasPendingLog1 = service.hasActivePendingPrompt({ itemType: 'log', itemId: 'task-1' });
+      const hasPendingTask1 = service.hasActivePendingHaunt({ itemType: 'task', itemId: 'task-1' });
+      const hasPendingTask2 = service.hasActivePendingHaunt({ itemType: 'task', itemId: 'task-2' });
+      const hasPendingLog1 = service.hasActivePendingHaunt({ itemType: 'log', itemId: 'task-1' });
 
       this.assertEq(hasPendingTask1, true, 'should have pending for task-1');
       this.assertEq(hasPendingTask2, false, 'should not have pending for task-2');

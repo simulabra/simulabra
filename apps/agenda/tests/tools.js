@@ -57,7 +57,7 @@ export default await async function (_, $, $test, $coreTools, $tools) {
     do() {
       const registry = $tools.AgendaToolRegistry.new();
 
-      this.assertEq(registry.tools().length, 13, 'should have 13 tools');
+      this.assertEq(registry.tools().length, 14, 'should have 14 tools');
 
       const toolNames = registry.tools().map(t => t.toolName());
       this.assert(toolNames.includes('create_log'), 'should have create_log');
@@ -69,6 +69,7 @@ export default await async function (_, $, $test, $coreTools, $tools) {
       this.assert(toolNames.includes('list_logs'), 'should have list_logs');
       this.assert(toolNames.includes('list_reminders'), 'should have list_reminders');
       this.assert(toolNames.includes('trigger_webhook'), 'should have trigger_webhook');
+      this.assert(toolNames.includes('update_task'), 'should have update_task');
     }
   });
 
@@ -169,16 +170,17 @@ export default await async function (_, $, $test, $coreTools, $tools) {
 
   $test.Case.new({
     name: 'ToolRegistryCount',
-    doc: 'AgendaToolRegistry should have 13 tools after project tools added',
+    doc: 'AgendaToolRegistry should have 14 tools after UpdateTaskTool added',
     do() {
       const registry = $tools.AgendaToolRegistry.new();
-      this.assertEq(registry.tools().length, 13, 'should have 13 tools');
+      this.assertEq(registry.tools().length, 14, 'should have 14 tools');
 
       const toolNames = registry.tools().map(t => t.toolName());
       this.assert(toolNames.includes('create_project'), 'should have create_project');
       this.assert(toolNames.includes('list_projects'), 'should have list_projects');
       this.assert(toolNames.includes('update_project'), 'should have update_project');
       this.assert(toolNames.includes('move_to_project'), 'should have move_to_project');
+      this.assert(toolNames.includes('update_task'), 'should have update_task');
     }
   });
 
@@ -269,6 +271,50 @@ export default await async function (_, $, $test, $coreTools, $tools) {
       this.assertEq(calledWith.title, 'Coins', 'should pass title');
       this.assertEq(calledWith.slug, 'coins', 'should pass slug');
       this.assertEq(calledWith.context, 'Ancient coin cleaning', 'should pass context');
+    }
+  });
+
+  $test.Case.new({
+    name: 'UpdateTaskToolSchema',
+    doc: 'update_task should require id, with title/priority/dueDate/tags/projectId optional',
+    do() {
+      const registry = $tools.AgendaToolRegistry.new();
+      const tool = registry.get('update_task');
+      const schema = tool.inputSchema();
+
+      this.assert(schema.properties.id, 'should have id property');
+      this.assert(schema.properties.title, 'should have title property');
+      this.assert(schema.properties.priority, 'should have priority property');
+      this.assert(schema.properties.dueDate, 'should have dueDate property');
+      this.assert(schema.properties.tags, 'should have tags property');
+      this.assert(schema.properties.projectId, 'should have projectId property');
+      this.assert(schema.required.includes('id'), 'id should be required');
+      this.assert(!schema.required.includes('title'), 'title should not be required');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ToolExecuteUpdateTask',
+    doc: 'update_task tool should call db.updateTask with correct args',
+    async do() {
+      const registry = $tools.AgendaToolRegistry.new();
+
+      let calledWith = null;
+      const mockServices = {
+        db: {
+          updateTask: (args) => {
+            calledWith = args;
+            return { id: args.id, ...args };
+          }
+        }
+      };
+
+      const result = await registry.execute('update_task', { id: 'task-1', title: 'Updated title', priority: 1 }, mockServices);
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(calledWith.id, 'task-1', 'should pass id');
+      this.assertEq(calledWith.title, 'Updated title', 'should pass title');
+      this.assertEq(calledWith.priority, 1, 'should pass priority');
     }
   });
 

@@ -137,7 +137,7 @@ export default await async function (_, $, $supervisor) {
   apiHandler('POST', '/api/v1/prompts/pending', async (ctx) => {
     const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 10 });
     const body = ctx.body() || {};
-    return await geist.getPendingPrompts(body);
+    return await geist.getPendingHaunts(body);
   });
 
   apiHandler('POST', '/api/v1/prompts/action', async (ctx) => {
@@ -165,12 +165,12 @@ export default await async function (_, $, $supervisor) {
         code: 'INVALID_ACTION'
       });
     }
-    return await geist.actionPrompt(body);
+    return await geist.actionHaunt(body);
   });
 
   apiHandler('POST', '/api/v1/prompts/generate', async (ctx) => {
     const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 120 });
-    return await geist.generatePrompts();
+    return await geist.generateHaunts();
   });
 
   // Project endpoints

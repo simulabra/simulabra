@@ -423,91 +423,93 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
         }
       }),
 
-      // Prompt operations
+      // Haunt operations
       $live.RpcMethod.new({
-        name: 'createPrompt',
-        doc: 'create a new prompt for surfacing actionable items',
-        do({ itemType, itemId, message, context = null, status = 'pending' }) {
-          const prompt = $models.Prompt.new({
+        name: 'createHaunt',
+        doc: 'create a new haunt for surfacing actionable items',
+        do({ itemType, itemId, message, context = null, actions = null, status = 'pending' }) {
+          const haunt = $models.Haunt.new({
             itemType,
             itemId,
             message,
             context,
+            actions,
             status
           });
-          prompt.save(this.db());
-          this.publishEvent('prompt.created', { id: prompt.sid() });
-          return prompt.jsonify();
+          haunt.save(this.db());
+          this.publishEvent('haunt.created', { id: haunt.sid() });
+          return haunt.jsonify();
         }
       }),
 
       $live.RpcMethod.new({
-        name: 'getPrompt',
-        doc: 'get a single prompt by id',
+        name: 'getHaunt',
+        doc: 'get a single haunt by id',
         do({ id }) {
-          const prompt = $models.Prompt.findById(this.db(), id);
-          return prompt?.jsonify() ?? null;
+          const haunt = $models.Haunt.findById(this.db(), id);
+          return haunt?.jsonify() ?? null;
         }
       }),
 
       $live.RpcMethod.new({
-        name: 'listPrompts',
-        doc: 'list prompts with optional status filter',
+        name: 'listHaunts',
+        doc: 'list haunts with optional status filter',
         do({ status, limit = 50 } = {}) {
-          let prompts = $models.Prompt.findAll(this.db());
+          let haunts = $models.Haunt.findAll(this.db());
 
           if (status !== undefined) {
-            prompts = prompts.filter(p => p.status() === status);
+            haunts = haunts.filter(h => h.status() === status);
           }
 
-          return prompts
+          return haunts
             .sort((a, b) => b.generatedAt() - a.generatedAt())
             .slice(0, limit)
-            .map(p => p.jsonify());
+            .map(h => h.jsonify());
         }
       }),
 
       $live.RpcMethod.new({
-        name: 'updatePrompt',
-        doc: 'update a prompt by id',
-        do({ id, status, action, shownAt, actionedAt, snoozeUntil }) {
-          const prompt = $models.Prompt.findById(this.db(), id);
-          if (!prompt) {
-            throw new Error(`Prompt not found: ${id}`);
+        name: 'updateHaunt',
+        doc: 'update a haunt by id',
+        do({ id, status, action, actions, shownAt, actionedAt, snoozeUntil }) {
+          const haunt = $models.Haunt.findById(this.db(), id);
+          if (!haunt) {
+            throw new Error(`Haunt not found: ${id}`);
           }
 
-          if (status !== undefined) prompt.status(status);
-          if (action !== undefined) prompt.action(action);
-          if (shownAt !== undefined) prompt.shownAt(shownAt ? new Date(shownAt) : null);
-          if (actionedAt !== undefined) prompt.actionedAt(actionedAt ? new Date(actionedAt) : null);
-          if (snoozeUntil !== undefined) prompt.snoozeUntil(snoozeUntil ? new Date(snoozeUntil) : null);
+          if (status !== undefined) haunt.status(status);
+          if (action !== undefined) haunt.action(action);
+          if (actions !== undefined) haunt.actions(actions);
+          if (shownAt !== undefined) haunt.shownAt(shownAt ? new Date(shownAt) : null);
+          if (actionedAt !== undefined) haunt.actionedAt(actionedAt ? new Date(actionedAt) : null);
+          if (snoozeUntil !== undefined) haunt.snoozeUntil(snoozeUntil ? new Date(snoozeUntil) : null);
 
-          prompt.save(this.db());
-          this.publishEvent('prompt.updated', { id: prompt.sid(), status: prompt.status() });
-          return prompt.jsonify();
+          haunt.save(this.db());
+          this.publishEvent('haunt.updated', { id: haunt.sid(), status: haunt.status() });
+          return haunt.jsonify();
         }
       }),
 
       $live.RpcMethod.new({
-        name: 'getPromptConfig',
-        doc: 'get the prompt configuration (creates default if not exists)',
+        name: 'getHauntConfig',
+        doc: 'get the haunt configuration (creates default if not exists)',
         do({ key = 'main' } = {}) {
-          const rows = this.db().query('SELECT * FROM agenda_PromptConfig WHERE key = $key').all({ $key: key });
+          const rows = this.db().query('SELECT * FROM agenda_HauntConfig WHERE key = $key').all({ $key: key });
           if (rows.length > 0) {
-            return $models.PromptConfig.fromSQLRow(rows[0]).jsonify();
+            return $models.HauntConfig.fromSQLRow(rows[0]).jsonify();
           }
-          const config = $models.PromptConfig.new({ key });
+          const config = $models.HauntConfig.new({ key });
           config.save(this.db());
           return config.jsonify();
         }
       }),
 
       $live.RpcMethod.new({
-        name: 'hasActivePendingPrompt',
-        doc: 'check if a pending prompt exists for the given itemType/itemId pair',
+        name: 'hasActivePendingHaunt',
+        doc: 'check if a pending haunt exists for the given itemType/itemId pair',
         do({ itemType, itemId }) {
           const stmt = this.db().query(
-            'SELECT 1 FROM agenda_Prompt WHERE itemType = $itemType AND itemId = $itemId AND status = $status LIMIT 1'
+            'SELECT 1 FROM agenda_Haunt WHERE itemType = $itemType AND itemId = $itemId AND status = $status LIMIT 1'
           );
           const row = stmt.get({ $itemType: itemType, $itemId: itemId, $status: 'pending' });
           return row !== null;
@@ -515,19 +517,19 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
 
       $live.RpcMethod.new({
-        name: 'updatePromptConfig',
-        doc: 'update the prompt configuration',
-        do({ key = 'main', promptFrequencyHours, maxPromptsPerCycle, taskStalenessDays, lastGenerationAt, responseHistory }) {
-          const rows = this.db().query('SELECT * FROM agenda_PromptConfig WHERE key = $key').all({ $key: key });
+        name: 'updateHauntConfig',
+        doc: 'update the haunt configuration',
+        do({ key = 'main', hauntFrequencyHours, maxHauntsPerCycle, taskStalenessDays, lastGenerationAt, responseHistory }) {
+          const rows = this.db().query('SELECT * FROM agenda_HauntConfig WHERE key = $key').all({ $key: key });
           let config;
           if (rows.length > 0) {
-            config = $models.PromptConfig.fromSQLRow(rows[0]);
+            config = $models.HauntConfig.fromSQLRow(rows[0]);
           } else {
-            config = $models.PromptConfig.new({ key });
+            config = $models.HauntConfig.new({ key });
           }
 
-          if (promptFrequencyHours !== undefined) config.promptFrequencyHours(promptFrequencyHours);
-          if (maxPromptsPerCycle !== undefined) config.maxPromptsPerCycle(maxPromptsPerCycle);
+          if (hauntFrequencyHours !== undefined) config.hauntFrequencyHours(hauntFrequencyHours);
+          if (maxHauntsPerCycle !== undefined) config.maxHauntsPerCycle(maxHauntsPerCycle);
           if (taskStalenessDays !== undefined) config.taskStalenessDays(taskStalenessDays);
           if (lastGenerationAt !== undefined) config.lastGenerationAt(lastGenerationAt ? new Date(lastGenerationAt) : null);
           if (responseHistory !== undefined) config.responseHistory(responseHistory);

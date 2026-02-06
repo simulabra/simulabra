@@ -10,26 +10,16 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'create_log' }),
       $.Var.new({
         name: 'doc',
-        default: 'Create a journal/log entry to record thoughts, notes, or events',
+        default: 'Record a thought, note, or journal entry',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            content: {
-              type: 'string',
-              description: 'The content of the log entry'
-            },
-            tags: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'Optional tags for categorization'
-            },
-            projectId: {
-              type: 'string',
-              description: 'Optional project ID to associate the log with'
-            }
+            content: { type: 'string' },
+            tags: { type: 'array', items: { type: 'string' } },
+            projectId: { type: 'string' }
           },
           required: ['content']
         }),
@@ -51,36 +41,18 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'create_task' }),
       $.Var.new({
         name: 'doc',
-        default: 'Create a new task/todo item',
+        default: 'Create a task/todo item',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            title: {
-              type: 'string',
-              description: 'The task description'
-            },
-            priority: {
-              type: 'integer',
-              minimum: 1,
-              maximum: 5,
-              description: 'Priority level (1=highest, 5=lowest). Default is 3'
-            },
-            dueDate: {
-              type: 'string',
-              description: 'Optional due date in ISO 8601 format'
-            },
-            tags: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'Optional tags for categorization'
-            },
-            projectId: {
-              type: 'string',
-              description: 'Optional project ID to associate the task with'
-            }
+            title: { type: 'string' },
+            priority: { type: 'integer', minimum: 1, maximum: 5, description: '1=urgent, 5=low, default 3' },
+            dueDate: { type: 'string', description: 'ISO 8601' },
+            tags: { type: 'array', items: { type: 'string' } },
+            projectId: { type: 'string' }
           },
           required: ['title']
         }),
@@ -108,17 +80,14 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'complete_task' }),
       $.Var.new({
         name: 'doc',
-        default: 'Mark a task as completed',
+        default: 'Mark a task as done',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            id: {
-              type: 'string',
-              description: 'The task ID to complete'
-            }
+            id: { type: 'string' }
           },
           required: ['id']
         }),
@@ -140,39 +109,23 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'create_reminder' }),
       $.Var.new({
         name: 'doc',
-        default: 'Create a reminder for a specific time',
+        default: 'Create a timed reminder',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            message: {
-              type: 'string',
-              description: 'What to remind about'
-            },
-            when: {
-              type: 'string',
-              description: 'When to trigger the reminder (ISO 8601 format)'
-            },
+            message: { type: 'string' },
+            when: { type: 'string', description: 'ISO 8601 trigger time' },
             recurrence: {
               type: 'object',
-              description: 'Optional recurrence rule',
               properties: {
-                pattern: {
-                  type: 'string',
-                  enum: ['daily', 'weekly', 'monthly']
-                },
-                interval: {
-                  type: 'integer',
-                  description: 'Repeat every N units'
-                }
+                pattern: { type: 'string', enum: ['daily', 'weekly', 'monthly'] },
+                interval: { type: 'integer' }
               }
             },
-            projectId: {
-              type: 'string',
-              description: 'Optional project ID to associate the reminder with'
-            }
+            projectId: { type: 'string' }
           },
           required: ['message', 'when']
         }),
@@ -199,17 +152,14 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'search' }),
       $.Var.new({
         name: 'doc',
-        default: 'Search across all logs, tasks, and reminders',
+        default: 'Full-text search across logs, tasks, and reminders',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            query: {
-              type: 'string',
-              description: 'Search query'
-            }
+            query: { type: 'string' }
           },
           required: ['query']
         }),
@@ -231,29 +181,17 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'list_tasks' }),
       $.Var.new({
         name: 'doc',
-        default: 'List tasks with optional filtering',
+        default: 'List tasks, optionally filtered',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            done: {
-              type: 'boolean',
-              description: 'Filter by completion status'
-            },
-            priority: {
-              type: 'integer',
-              description: 'Filter by priority level'
-            },
-            tag: {
-              type: 'string',
-              description: 'Filter by tag'
-            },
-            projectId: {
-              type: 'string',
-              description: 'Filter by project ID (null for Inbox items)'
-            }
+            done: { type: 'boolean' },
+            priority: { type: 'integer' },
+            tag: { type: 'string' },
+            projectId: { type: 'string' }
           }
         }),
       }),
@@ -274,21 +212,15 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'list_logs' }),
       $.Var.new({
         name: 'doc',
-        default: 'List recent log/journal entries',
+        default: 'List recent log entries',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            limit: {
-              type: 'integer',
-              description: 'Maximum number of entries to return (default 50)'
-            },
-            projectId: {
-              type: 'string',
-              description: 'Filter by project ID (null for Inbox items)'
-            }
+            limit: { type: 'integer', description: 'default 50' },
+            projectId: { type: 'string' }
           }
         }),
       }),
@@ -309,21 +241,15 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'list_reminders' }),
       $.Var.new({
         name: 'doc',
-        default: 'List upcoming and past reminders',
+        default: 'List reminders',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            sent: {
-              type: 'boolean',
-              description: 'Filter by sent status (true=sent, false=pending)'
-            },
-            projectId: {
-              type: 'string',
-              description: 'Filter by project ID (null for Inbox items)'
-            }
+            sent: { type: 'boolean', description: 'true=sent, false=pending' },
+            projectId: { type: 'string' }
           }
         }),
       }),
@@ -344,21 +270,15 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'trigger_webhook' }),
       $.Var.new({
         name: 'doc',
-        default: 'Trigger an external webhook with custom payload',
+        default: 'POST to a webhook URL',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            url: {
-              type: 'string',
-              description: 'The webhook URL to call'
-            },
-            payload: {
-              type: 'object',
-              description: 'The JSON payload to send'
-            }
+            url: { type: 'string' },
+            payload: { type: 'object' }
           },
           required: ['url']
         }),
@@ -389,25 +309,16 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'create_project' }),
       $.Var.new({
         name: 'doc',
-        default: 'Create a new project for organizing tasks, logs, and reminders',
+        default: 'Create a new project',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            title: {
-              type: 'string',
-              description: 'The project title'
-            },
-            slug: {
-              type: 'string',
-              description: 'Optional URL-friendly identifier (auto-generated from title if omitted)'
-            },
-            context: {
-              type: 'string',
-              description: 'Optional project context for Geist to use when scoping responses'
-            }
+            title: { type: 'string' },
+            slug: { type: 'string', description: 'URL-friendly ID, auto-generated if omitted' },
+            context: { type: 'string', description: 'Project context for scoping responses' }
           },
           required: ['title']
         }),
@@ -433,17 +344,14 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'list_projects' }),
       $.Var.new({
         name: 'doc',
-        default: 'List all projects, optionally filtering by archived status',
+        default: 'List projects',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            archived: {
-              type: 'boolean',
-              description: 'Filter by archived status (true=archived, false=active)'
-            }
+            archived: { type: 'boolean' }
           }
         }),
       }),
@@ -464,33 +372,18 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'update_project' }),
       $.Var.new({
         name: 'doc',
-        default: 'Update a project title, slug, context, or archived status',
+        default: 'Update a project',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            id: {
-              type: 'string',
-              description: 'The project ID to update'
-            },
-            title: {
-              type: 'string',
-              description: 'New project title'
-            },
-            slug: {
-              type: 'string',
-              description: 'New URL-friendly identifier'
-            },
-            context: {
-              type: 'string',
-              description: 'New project context for Geist'
-            },
-            archived: {
-              type: 'boolean',
-              description: 'Set archived status'
-            }
+            id: { type: 'string' },
+            title: { type: 'string' },
+            slug: { type: 'string' },
+            context: { type: 'string' },
+            archived: { type: 'boolean' }
           },
           required: ['id']
         }),
@@ -512,30 +405,17 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'move_to_project' }),
       $.Var.new({
         name: 'doc',
-        default: 'Move a task, log, or reminder to a project (or to Inbox by passing null projectId)',
+        default: 'Move an item to a project or Inbox',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            itemType: {
-              type: 'string',
-              enum: ['task', 'log', 'reminder'],
-              description: 'The type of item to move'
-            },
-            itemId: {
-              type: 'string',
-              description: 'The ID of the item to move'
-            },
-            projectId: {
-              type: 'string',
-              description: 'Target project ID (null or omit to move to Inbox)'
-            },
-            projectSlug: {
-              type: 'string',
-              description: 'Target project slug (alternative to projectId)'
-            }
+            itemType: { type: 'string', enum: ['task', 'log', 'reminder'] },
+            itemId: { type: 'string' },
+            projectId: { type: 'string', description: 'null to move to Inbox' },
+            projectSlug: { type: 'string', description: 'Alternative to projectId' }
           },
           required: ['itemType', 'itemId']
         }),
@@ -564,6 +444,40 @@ export default await async function (_, $, $tools) {
   });
 
   $.Class.new({
+    name: 'UpdateTaskTool',
+    doc: 'Tool for updating an existing task',
+    slots: [
+      $tools.Tool,
+      $.Var.new({ name: 'toolName', default: 'update_task' }),
+      $.Var.new({
+        name: 'doc',
+        default: 'Update a task',
+      }),
+      $.Var.new({
+        name: 'inputSchema',
+        default: () => ({
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            title: { type: 'string' },
+            priority: { type: 'integer', minimum: 1, maximum: 5, description: '1=highest, 5=lowest' },
+            dueDate: { type: 'string', description: 'ISO 8601, null to clear' },
+            tags: { type: 'array', items: { type: 'string' } },
+            projectId: { type: 'string' }
+          },
+          required: ['id']
+        }),
+      }),
+      $.Method.new({
+        name: 'execute',
+        async do(args, services) {
+          return await services.db.updateTask(args);
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
     name: 'AgendaToolRegistry',
     doc: 'Pre-configured registry with all Agenda tools',
     slots: [
@@ -584,6 +498,7 @@ export default await async function (_, $, $tools) {
           this.register(_.ListProjectsTool.new());
           this.register(_.UpdateProjectTool.new());
           this.register(_.MoveToProjectTool.new());
+          this.register(_.UpdateTaskTool.new());
         }
       }),
     ]

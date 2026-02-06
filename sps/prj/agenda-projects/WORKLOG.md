@@ -223,3 +223,28 @@ Interesting architectural note: the current filtering in DatabaseService is all 
 **Struggles:** None. Clean implementation with clear scope.
 
 **Test results:** 50 database service tests pass (49 + 1 new). 34 geist-prompts tests pass (33 + 1 new). 23 agenda UI tests pass (22 + 1 new). All core tests pass. No regressions.
+
+---
+
+## Phase 11: Haunts — Model, Migration & Rename — 2026-02-05
+
+**Files changed:**
+- `apps/agenda/src/models.js` — Renamed `Prompt` → `Haunt` (doc: "Proactive suggestion with context-specific action choices"). Renamed `PromptConfig` → `HauntConfig`. Added `actions` DBVar with JSON toSQL/fromSQL. Changed pending icon from ⏳ to 👻. Renamed config fields: `promptFrequencyHours` → `hauntFrequencyHours`, `maxPromptsPerCycle` → `maxHauntsPerCycle`.
+- `apps/agenda/src/sqlite.js` — Added `migration007`: creates `agenda_Haunt` table with `actions TEXT` column, copies data from `agenda_Prompt`, drops old FTS triggers/table/indexes/source table, rebuilds indexes and FTS5 for Haunt, renames `agenda_PromptConfig` → `agenda_HauntConfig`, renames config columns.
+- `apps/agenda/src/services/database.js` — Renamed all 7 prompt RPCs to haunt equivalents (createHaunt, getHaunt, listHaunts, updateHaunt, getHauntConfig, hasActivePendingHaunt, updateHauntConfig). Added `actions` parameter to createHaunt and updateHaunt. Updated all internal model/table references.
+- `apps/agenda/src/tools.js` — Added `UpdateTaskTool` class (id required, title/priority/dueDate/tags/projectId optional). Registered in AgendaToolRegistry (14 tools total).
+- `apps/agenda/src/services/geist.js` — Added `update_task` to system prompt tool mappings. Renamed all prompt RPC calls to haunt equivalents (generateHaunts, getPendingHaunts, actionHaunt, recordHauntResponse). Updated internal variable names and result fields (hauntsCreated, hauntsSkipped). Updated scheduler job name.
+- `apps/agenda/run.js` — Updated 3 API handler calls to use renamed RPC methods (getPendingHaunts, actionHaunt, generateHaunts). API paths still use `/api/v1/prompts/*` (path rename deferred to phase 12).
+- `apps/agenda/tests/models.js` — Renamed all Prompt/PromptConfig tests to Haunt/HauntConfig. Added 3 new tests: HauntWithActions, HauntActionsPersistence, HauntNullActionsPersistence. Updated icon assertion.
+- `apps/agenda/tests/services/database.js` — Renamed all prompt test cases to haunt equivalents. Added 2 new tests: DatabaseServiceCreateHauntWithActions, DatabaseServiceCreateHauntWithoutActions.
+- `apps/agenda/tests/tools.js` — Updated registry count from 13 → 14. Added UpdateTaskToolSchema and ToolExecuteUpdateTask tests. Added update_task to tool name assertions.
+- `apps/agenda/tests/geist-prompts.js` — Renamed all test cases and internal references from prompt to haunt. Updated SystemPromptIncludesProjectToolMappings to check for update_task.
+
+**Scope notes:**
+- `apps/agenda/tests/models.js` was not listed in the plan's "Files to Modify" table but contained Prompt/PromptConfig model tests that needed renaming.
+- `apps/agenda/run.js` API handler calls needed updating (plan mentioned only API path rename in phase 12, but the RPC method names called by the handlers changed in this phase).
+
+**Struggles:**
+- **Null actions assertion mismatch**: The `fromSQLRow` method in `src/db.js:257` skips NULL column values entirely — it doesn't call `fromSQL` and doesn't set the property on the data object. So `haunt.actions()` returns `undefined` (not `null`) for haunts with no actions. The `fromSQL` function `return this ? JSON.parse(this) : null` is never reached for NULL columns. Fixed by changing null-actions test assertions from `assertEq(x, null)` to `assert(!x)` in both models and database tests. This is a framework-level behavior worth documenting: NULL DB columns become `undefined` slots, not `null`.
+
+**Test results:** 60 model tests pass (57 + 3 new). 52 database service tests pass (50 + 2 new). 34 geist-prompts tests pass (all renamed). 17 tools tests pass (15 + 2 new). All core tests pass. No regressions.

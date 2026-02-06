@@ -29,6 +29,7 @@ tools:
 - thought/note/journal → create_log
 - todo/task → create_task
 - done → complete_task
+- edit/change task → update_task
 - reminder → create_reminder
 - find → search
 - tasks → list_tasks
@@ -449,7 +450,7 @@ when the user mentions a project by name or slug, use the project's id in tool c
             db.listTasks({ done: false }),
             db.listLogs({ limit: 20 }),
             db.listReminders({ sent: false }),
-            db.getPromptConfig({}),
+            db.getHauntConfig({}),
             db.listProjects({ archived: false }),
           ]);
 
@@ -479,8 +480,8 @@ when the user mentions a project by name or slug, use the project's id in tool c
       }),
 
       $live.RpcMethod.new({
-        name: 'generatePrompts',
-        doc: 'generate prompts by analyzing context and calling Claude',
+        name: 'generateHaunts',
+        doc: 'generate haunts by analyzing context and calling Claude',
         async do() {
           if (!this.client()) {
             return { success: false, error: 'Claude API not configured' };
@@ -495,8 +496,8 @@ when the user mentions a project by name or slug, use the project's id in tool c
             const context = await this.analyzeContext();
 
             if (context.tasks.length === 0) {
-              await db.updatePromptConfig({ lastGenerationAt: new Date().toISOString() });
-              return { success: true, promptsCreated: 0, message: 'No tasks to analyze' };
+              await db.updateHauntConfig({ lastGenerationAt: new Date().toISOString() });
+              return { success: true, hauntsCreated: 0, message: 'No tasks to analyze' };
             }
 
             const formatTask = t => `- [${t.id}] ${t.title} (P${t.priority}${t.dueDate ? ', due: ' + t.dueDate : ''})`;
@@ -532,7 +533,7 @@ ${context.reminders.map(r => `- [${r.id}] ${r.message}`).join('\n')}
 Response history (last ${Math.min(context.config.responseHistory.length, 10)} actions):
 ${context.config.responseHistory.slice(-10).map(r => `- ${r.action} on ${r.itemType}`).join('\n') || 'None'}
 
-Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need attention.`;
+Generate up to ${context.config.maxHauntsPerCycle} haunts for items that need attention.`;
 
             const response = await this.client().messages.create({
               model: this.model(),
@@ -541,85 +542,85 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
               messages: [{ role: 'user', content: userMessage }],
             });
 
-            let promptsData = [];
+            let hauntsData = [];
             for (const block of response.content) {
               if (block.type === 'text') {
                 try {
-                  promptsData = JSON.parse(block.text);
+                  hauntsData = JSON.parse(block.text);
                 } catch (e) {
-                  this.tlog('Failed to parse prompt response:', e.message);
+                  this.tlog('Failed to parse haunt response:', e.message);
                   return { success: false, error: 'Failed to parse Claude response as JSON' };
                 }
               }
             }
 
-            let promptsCreated = 0;
-            let promptsSkipped = 0;
-            for (const promptData of promptsData) {
-              if (promptData.itemType && promptData.itemId && promptData.message) {
-                const hasPending = await db.hasActivePendingPrompt({
-                  itemType: promptData.itemType,
-                  itemId: promptData.itemId,
+            let hauntsCreated = 0;
+            let hauntsSkipped = 0;
+            for (const hauntData of hauntsData) {
+              if (hauntData.itemType && hauntData.itemId && hauntData.message) {
+                const hasPending = await db.hasActivePendingHaunt({
+                  itemType: hauntData.itemType,
+                  itemId: hauntData.itemId,
                 });
                 if (hasPending) {
-                  promptsSkipped++;
+                  hauntsSkipped++;
                   continue;
                 }
-                await db.createPrompt({
-                  itemType: promptData.itemType,
-                  itemId: promptData.itemId,
-                  message: promptData.message,
-                  context: { generatedFrom: context, projectId: promptData.projectId || null },
+                await db.createHaunt({
+                  itemType: hauntData.itemType,
+                  itemId: hauntData.itemId,
+                  message: hauntData.message,
+                  context: { generatedFrom: context, projectId: hauntData.projectId || null },
                   status: 'pending',
                 });
-                promptsCreated++;
+                hauntsCreated++;
               }
             }
 
-            await db.updatePromptConfig({ lastGenerationAt: new Date().toISOString() });
+            await db.updateHauntConfig({ lastGenerationAt: new Date().toISOString() });
 
-            this.tlog(`Generated ${promptsCreated} prompts (skipped ${promptsSkipped} duplicates)`);
-            return { success: true, promptsCreated, promptsSkipped };
+            this.tlog(`Generated ${hauntsCreated} haunts (skipped ${hauntsSkipped} duplicates)`);
+            return { success: true, hauntsCreated, hauntsSkipped };
           } catch (e) {
-            this.tlog('generatePrompts error:', e.message);
+            this.tlog('generateHaunts error:', e.message);
             return { success: false, error: e.message };
           }
         }
       }),
 
       $live.RpcMethod.new({
-        name: 'getPendingPrompts',
-        doc: 'get pending prompts that are not snoozed',
+        name: 'getPendingHaunts',
+        doc: 'get pending haunts that are not snoozed',
         async do({ limit = 10 } = {}) {
           const db = this.dbService();
           if (!db) {
             throw new Error('No database service connected');
           }
 
-          const prompts = await db.listPrompts({ status: 'pending', limit: limit * 2 });
+          const haunts = await db.listHaunts({ status: 'pending', limit: limit * 2 });
           const now = Date.now();
 
-          return prompts
-            .filter(p => {
-              if (!p.snoozeUntil) return true;
-              return new Date(p.snoozeUntil).getTime() <= now;
+          return haunts
+            .filter(h => {
+              if (!h.snoozeUntil) return true;
+              return new Date(h.snoozeUntil).getTime() <= now;
             })
             .slice(0, limit);
         }
       }),
 
       $live.RpcMethod.new({
-        name: 'actionPrompt',
-        doc: 'process user action on a prompt and update related items accordingly',
+        name: 'actionHaunt',
+        doc: 'process user action on a haunt and update related items accordingly',
         async do({ id, action }) {
           const db = this.dbService();
           if (!db) {
             throw new Error('No database service connected');
           }
 
-          const prompt = await db.getPrompt({ id });
-          if (!prompt) {
-            throw new Error(`Prompt not found: ${id}`);
+          const haunt = await db.getHaunt({ id });
+          if (!haunt) {
+            throw new Error(`Haunt not found: ${id}`);
           }
 
           const updateFields = {
@@ -631,22 +632,22 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
           switch (action) {
             case 'done':
               updateFields.status = 'actioned';
-              if (prompt.itemType === 'task' && prompt.itemId) {
+              if (haunt.itemType === 'task' && haunt.itemId) {
                 try {
-                  await db.completeTask({ id: prompt.itemId });
+                  await db.completeTask({ id: haunt.itemId });
                 } catch (e) {
-                  this.tlog(`Failed to complete task ${prompt.itemId}:`, e.message);
+                  this.tlog(`Failed to complete task ${haunt.itemId}:`, e.message);
                 }
               }
               break;
 
             case 'backlog':
               updateFields.status = 'actioned';
-              if (prompt.itemType === 'task' && prompt.itemId) {
+              if (haunt.itemType === 'task' && haunt.itemId) {
                 try {
-                  await db.updateTask({ id: prompt.itemId, priority: 5 });
+                  await db.updateTask({ id: haunt.itemId, priority: 5 });
                 } catch (e) {
-                  this.tlog(`Failed to backlog task ${prompt.itemId}:`, e.message);
+                  this.tlog(`Failed to backlog task ${haunt.itemId}:`, e.message);
                 }
               }
               break;
@@ -664,13 +665,13 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
               throw new Error(`Unknown action: ${action}`);
           }
 
-          const result = await db.updatePrompt(updateFields);
+          const result = await db.updateHaunt(updateFields);
 
-          await this.recordPromptResponse({
-            promptId: id,
+          await this.recordHauntResponse({
+            hauntId: id,
             action,
-            itemType: prompt.itemType,
-            itemId: prompt.itemId,
+            itemType: haunt.itemType,
+            itemId: haunt.itemId,
           });
 
           return result;
@@ -678,14 +679,14 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
       }),
 
       $.Method.new({
-        name: 'recordPromptResponse',
-        doc: 'record a prompt response to the config history for learning',
-        async do({ promptId, action, itemType, itemId }) {
+        name: 'recordHauntResponse',
+        doc: 'record a haunt response to the config history for learning',
+        async do({ hauntId, action, itemType, itemId }) {
           const db = this.dbService();
-          const config = await db.getPromptConfig({});
+          const config = await db.getHauntConfig({});
           const history = config.responseHistory || [];
           history.push({
-            promptId,
+            hauntId,
             action,
             itemType,
             itemId,
@@ -694,13 +695,13 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
           if (history.length > 100) {
             history.shift();
           }
-          await db.updatePromptConfig({ responseHistory: history });
+          await db.updateHauntConfig({ responseHistory: history });
         }
       }),
 
       $.Method.new({
         name: 'initScheduler',
-        doc: 'initialize the scheduler with prompt generation job',
+        doc: 'initialize the scheduler with haunt generation job',
         do() {
           const sched = $time.Scheduler.new({
             timezone: this.timezone(),
@@ -713,13 +714,13 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
           });
 
           const job = $time.ScheduledJob.new({
-            jobName: 'generatePrompts',
+            jobName: 'generateHaunts',
             schedule,
             action: async () => {
               try {
-                await this.generatePrompts();
+                await this.generateHaunts();
               } catch (e) {
-                this.tlog('generatePrompts error:', e.message);
+                this.tlog('generateHaunts error:', e.message);
               }
             },
           });
@@ -732,7 +733,7 @@ Generate up to ${context.config.maxPromptsPerCycle} prompts for items that need 
 
       $.Method.new({
         name: 'startScheduler',
-        doc: 'start the scheduler for time-based prompt generation',
+        doc: 'start the scheduler for time-based haunt generation',
         do() {
           if (!this.scheduler()) {
             this.initScheduler();

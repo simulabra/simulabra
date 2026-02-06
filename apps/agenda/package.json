@@ -16,6 +16,8 @@
     "build": "bun build src/ui/app.js --outdir dist",
     "dev": "bun build src/ui/app.js --outdir dist --watch",
     "cli": "bun run bin/agenda.js",
-    "logs": "bun run bin/logs.js"
+    "logs": "bun run bin/logs.js",
+    "evals": "bun run evals/run.js",
+    "evals:analyze": "bun run evals/analysis.js"
   }
 }

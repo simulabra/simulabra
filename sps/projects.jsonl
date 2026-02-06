@@ -1,3 +1,4 @@
 {"name":"watch-mode","brief":"Add file-watching functionality to simulabractl and build.sh so they can automatically re-run on source changes.","startedAt":"2026-01-31","status":"NOT STARTED"}
 {"name":"tree-tool","brief":"Create bin/tree.js CLI tool and Claude Code agent skill that prints a recursive listing of files and their Simulabra classes, ignoring node_modules/out/tmp/misc.","startedAt":"2026-01-31","status":"NOT STARTED"}
 {"name":"agenda-projects","brief":"Add projects as first-class entities to the Agenda app with context-driven Geist integration, project-scoped items, and prompting support.","startedAt":"2026-02-01","status":"IN PROGRESS"}
+{"name":"geist-evals","brief":"Minimal extensible evals system for the agenda geist — prepopulated test DB, eval scenarios, inspection of LLM outputs and tool calls.","startedAt":"2026-02-05","status":"IN PROGRESS"}
