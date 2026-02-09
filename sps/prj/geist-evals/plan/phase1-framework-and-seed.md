@@ -168,10 +168,40 @@ Keep assertions loose — verify tool selection, not exact args (LLM is nondeter
 
 ## Acceptance Criteria
 
-- [ ] `seedDatabase` creates 3 projects, 10+ tasks, 5+ logs, 3 reminders
-- [ ] `TraceCapture` records all API calls with request/response/timing
-- [ ] `EvalCase.run()` creates isolated DB, seeds, runs scenario, captures result
-- [ ] Runner prints per-case summaries, writes JSON report
-- [ ] All 3 basic scenarios run successfully with real Claude API calls
-- [ ] `bun run evals` works from `apps/agenda/`
-- [ ] Results directory contains timestamped JSON report
+- [x] `seedDatabase` creates 3 projects, 10+ tasks, 5+ logs, 3 reminders
+- [x] `TraceCapture` records all API calls with request/response/timing
+- [x] `EvalCase.run()` creates isolated DB, seeds, runs scenario, captures result
+- [x] Runner prints per-case summaries, writes JSON report
+- [x] All 3 basic scenarios run successfully with real Claude API calls
+- [x] `bun run evals` works from `apps/agenda/`
+- [x] Results directory contains timestamped JSON report
+
+## Review
+
+**Verdict: APPROVED**
+
+Phase 1 meets all acceptance criteria. The implementation also exceeds the original scope with cost tracking, 5 additional realistic scenarios, a cross-run analysis module, an evals skill, and tool schema compression (~17% token reduction).
+
+### Code Quality
+
+**Good:**
+- Consistent Simulabra idioms throughout. Module structure, `$.Class.new`, `$.Var`, `$.Method`, `$.Static`, `$.After` all used appropriately.
+- `TraceCapture` as a plain JS class matches the `MockAnthropicClient` pattern from `geist-prompts.js` — correct duck-typing decision given Simulabra lacks `$.Getter`.
+- `TraceCaptureFactory` bridges the plain class into the Simulabra module system cleanly.
+- Seed data is rich and realistic: 3 projects, 12 tasks (2 completed, 1 overdue), 5 logs, 3 reminders (1 sent, 1 recurring). Good coverage of edge cases.
+- Loose assertions in scenarios (tool selection, not args) correctly account for LLM nondeterminism.
+- The `realistic.js` scenarios are well-designed — they test input *forms* (bare keyword, question, ambiguous verb) rather than content specifics.
+- `EvalAnalyzer` follows Simulabra patterns well with `fromFile` static constructor and clean method decomposition.
+
+**Noted — not blocking:**
+- `createTestDb()` is duplicated between `evals/framework.js` and `tests/geist-prompts.js`. These serve different test contexts (evals vs unit tests), so the duplication is acceptable for now. A future phase could extract it into a shared test helper, but this is low priority.
+- The `run.js` helper functions (`extractUserInput`, `extractAssistantOutput`, `formatCost`) are plain functions at module scope rather than Simulabra methods. This is appropriate — they're presentation helpers private to the runner, not reusable domain objects.
+- The `MODEL_PRICING` table in `trace.js` hardcodes pricing. This is fine for eval-only code, but would need maintenance if Anthropic changes pricing.
+
+### Refactors Made During Review
+- Added doc strings to all methods in `analysis.js` (EvalRun, ScenarioStats, EvalAnalyzer)
+- Improved `TraceCaptureFactory` doc string
+- Added `realistic.js` to the evals skill `<ScenarioFiles>` section
+
+### Tool Schema Compression
+The compression of `tools.js` is clean. Descriptions were only removed where the property name + type already convey the intent. Critical descriptions retained: priority scale, ISO 8601 format, enum semantics, default values. 17 unit tests pass, 8/8 evals pass with the compressed schemas.

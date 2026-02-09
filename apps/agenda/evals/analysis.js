@@ -15,26 +15,31 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'scenarioCount',
+        doc: 'number of scenarios in this run',
         do() { return this.results().length; }
       }),
 
       $.Method.new({
         name: 'passed',
+        doc: 'number of passing scenarios',
         do() { return this.results().filter(r => r.success).length; }
       }),
 
       $.Method.new({
         name: 'failed',
+        doc: 'number of failing scenarios',
         do() { return this.results().filter(r => !r.success).length; }
       }),
 
       $.Method.new({
         name: 'isFullSuite',
+        doc: 'true if this run has the expected number of scenarios',
         do(suiteSize) { return this.results().length === suiteSize; }
       }),
 
       $.Method.new({
         name: 'totalTokens',
+        doc: 'aggregate input and output token counts across all scenarios',
         do() {
           let input = 0, output = 0;
           for (const r of this.results()) {
@@ -54,6 +59,7 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'totalCost',
+        doc: 'total dollar cost from the run summary',
         do() {
           return this.summary()?.totalCost || 0;
         }
@@ -61,6 +67,7 @@ export default await async function (_, $) {
 
       $.Static.new({
         name: 'fromFile',
+        doc: 'parse a JSON report file into an EvalRun instance',
         async do(filePath) {
           const raw = JSON.parse(await readFile(filePath, 'utf8'));
           return _.EvalRun.new({
@@ -83,6 +90,7 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'passRate',
+        doc: 'fraction of executions that passed (0-1)',
         do() {
           const execs = this.executions();
           if (execs.length === 0) return 0;
@@ -92,6 +100,7 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'avgDuration',
+        doc: 'mean duration in milliseconds across executions',
         do() {
           const execs = this.executions();
           if (execs.length === 0) return 0;
@@ -101,6 +110,7 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'avgTokens',
+        doc: 'mean input and output token counts across executions',
         do() {
           const execs = this.executions();
           if (execs.length === 0) return { input: 0, output: 0 };
@@ -138,6 +148,7 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'isToolStable',
+        doc: 'true if the same tool combination was used every time',
         do() { return this.toolSets().length <= 1; }
       }),
 
@@ -204,6 +215,7 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'totalCost',
+        doc: 'sum of costs across all loaded runs',
         do() {
           return this.runs().reduce((s, r) => s + r.totalCost(), 0);
         }
@@ -211,6 +223,7 @@ export default await async function (_, $) {
 
       $.Method.new({
         name: 'totalExecutions',
+        doc: 'total scenario executions across all loaded runs',
         do() {
           return this.runs().reduce((s, r) => s + r.scenarioCount(), 0);
         }

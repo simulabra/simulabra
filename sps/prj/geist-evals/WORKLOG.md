@@ -27,3 +27,21 @@ Struggles:
 - Initially used `$.Getter` for TraceCapture.messages, but Simulabra has no Getter slot type. Solved by making TraceCapture a plain JS class with a `get messages` getter (matching MockAnthropicClient pattern) and wrapping it in a TraceCaptureFactory Simulabra class.
 
 All 3 evals pass with real Claude API calls (~4s each, ~12s total). JSON reports written to evals/results/.
+
+### Post-Phase-1 Additions (before review)
+
+- Added cost tracking to TraceCapture (MODEL_PRICING lookup, costSummary())
+- Added cost/token display to runner (per-case and total)
+- Created `.claude/skills/evals/SKILL.md` for running evals via skill
+- Created `apps/agenda/evals/analysis.js` — EvalRun, ScenarioStats, EvalAnalyzer (reusable Simulabra module)
+- Created `apps/agenda/evals/scenarios/realistic.js` — 5 scenarios testing input forms (bare keyword, question, ambiguous verb, casual project)
+- Compressed all 14 tool schemas in `apps/agenda/src/tools.js` — ~950 tokens saved per call (~17%), total eval cost $0.148 → $0.125
+
+### Phase 1 Review
+
+Reviewed by inspector. All acceptance criteria met. Refactors during review:
+- Added doc strings to all methods in analysis.js (EvalRun, ScenarioStats, EvalAnalyzer)
+- Improved TraceCaptureFactory doc string
+- Added realistic.js to evals skill ScenarioFiles section
+
+Noted (not blocking): createTestDb() duplicated between framework.js and geist-prompts.js — acceptable for now, could be extracted to a shared helper later.

@@ -53,6 +53,7 @@ Show the eval output directly. After the run:
 <ScenarioFiles>
 Eval scenarios live in `apps/agenda/evals/scenarios/`. Each file exports EvalCase instances.
 - `basic.js` — create task, search items, create project
+- `realistic.js` — bare keyword input, ambiguous verbs, questions, casual project creation
 
 The framework files:
 - `apps/agenda/evals/framework.js` — EvalCase class

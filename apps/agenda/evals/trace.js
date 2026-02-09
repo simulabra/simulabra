@@ -22,61 +22,59 @@ function computeCost(usage, model) {
 }
 
 export default await async function (_, $) {
-  class TraceCapture {
-    constructor(client) {
-      this._client = client;
-      this.traces = [];
-      this.totalInputTokens = 0;
-      this.totalOutputTokens = 0;
-      this.totalCost = 0;
-    }
-
-    get messages() {
-      const self = this;
-      return {
-        async create(params) {
-          const start = Date.now();
-          const response = await self._client.messages.create(params);
-          const usage = response.usage || {};
-          const cost = computeCost(usage, response.model || '');
-
-          self.totalInputTokens += usage.input_tokens || 0;
-          self.totalOutputTokens += usage.output_tokens || 0;
-          if (cost) self.totalCost += cost.totalCost;
-
-          self.traces.push({
-            timestamp: new Date().toISOString(),
-            request: params,
-            response,
-            durationMs: Date.now() - start,
-            usage: {
-              inputTokens: usage.input_tokens || 0,
-              outputTokens: usage.output_tokens || 0,
-            },
-            cost,
-          });
-          return response;
-        }
-      };
-    }
-
-    costSummary() {
-      return {
-        totalInputTokens: this.totalInputTokens,
-        totalOutputTokens: this.totalOutputTokens,
-        totalCost: this.totalCost,
-      };
-    }
-  }
-
   $.Class.new({
-    name: 'TraceCaptureFactory',
-    doc: 'Factory for creating TraceCapture instances that wrap real Anthropic clients',
+    name: 'TraceCapture',
+    doc: 'Anthropic client wrapper that delegates all calls while recording interactions with cost tracking',
     slots: [
-      $.Static.new({
-        name: 'create',
-        do(client) {
-          return new TraceCapture(client);
+      $.Var.new({ name: 'client', doc: 'the real Anthropic SDK instance' }),
+      $.Var.new({ name: 'traces', default: () => [] }),
+      $.Var.new({ name: 'totalInputTokens', default: 0 }),
+      $.Var.new({ name: 'totalOutputTokens', default: 0 }),
+      $.Var.new({ name: 'totalCost', default: 0 }),
+      $.After.new({
+        name: 'init',
+        doc: 'wire up the Anthropic-compatible messages interface',
+        do() {
+          const self = this;
+          Object.defineProperty(this, 'messages', {
+            value: {
+              async create(params) {
+                const start = Date.now();
+                const response = await self.client().messages.create(params);
+                const usage = response.usage || {};
+                const cost = computeCost(usage, response.model || '');
+
+                self.totalInputTokens(self.totalInputTokens() + (usage.input_tokens || 0));
+                self.totalOutputTokens(self.totalOutputTokens() + (usage.output_tokens || 0));
+                if (cost) self.totalCost(self.totalCost() + cost.totalCost);
+
+                self.traces().push({
+                  timestamp: new Date().toISOString(),
+                  request: params,
+                  response,
+                  durationMs: Date.now() - start,
+                  usage: {
+                    inputTokens: usage.input_tokens || 0,
+                    outputTokens: usage.output_tokens || 0,
+                  },
+                  cost,
+                });
+                return response;
+              }
+            },
+            enumerable: true,
+          });
+        }
+      }),
+      $.Method.new({
+        name: 'costSummary',
+        doc: 'aggregate cost and token counts across all recorded traces',
+        do() {
+          return {
+            totalInputTokens: this.totalInputTokens(),
+            totalOutputTokens: this.totalOutputTokens(),
+            totalCost: this.totalCost(),
+          };
         }
       }),
     ]

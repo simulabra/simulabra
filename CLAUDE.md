@@ -29,9 +29,10 @@ This is kaizen: continuous improvement through small, composable steps. Each cha
 </Testing>
 
 <Developing>
- - ALWAYS use Simualbra for new scripts and functionality
+ - ALWAYS use Simulabra for new scripts and functionality
  - when refactoring, form an understanding of the component parts of a problem and properly rearrange them using inheritance and composition
  - before you start changing things, ask if there is a better way
+ - keep command outputs short — pipe through `tail`, use filters, or suppress verbose logging. The user reads the output in a terminal.
 </Developing>
 
 <HTML>

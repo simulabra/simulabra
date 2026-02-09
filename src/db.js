@@ -502,7 +502,6 @@ export default await async function (_, $) {
           this.initMigrationsTable();
           const pending = this.pending();
           for (const migration of pending) {
-            this.tlog(`applying migration ${migration.version()}: ${migration.description()}`);
             migration.up()(this.db());
             this.db().query(`INSERT INTO ${this.migrationsTable()} (version, appliedAt, description) VALUES ($version, $appliedAt, $description)`).run({
               $version: migration.version(),

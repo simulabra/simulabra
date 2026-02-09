@@ -45,9 +45,9 @@ export default await async function (_, $, $db, $sqlite, $models, $database, $ge
               throw new Error('ANTHROPIC_API_KEY not set');
             }
 
-            const traceCapture = $trace.TraceCaptureFactory.create(
-              new Anthropic({ apiKey }),
-            );
+            const traceCapture = $trace.TraceCapture.new({
+              client: new Anthropic({ apiKey }),
+            });
 
             const geistService = $geist.GeistService.new({ uid: 'EvalGeistService' });
             geistService.dbService(dbService);
@@ -78,8 +78,8 @@ export default await async function (_, $, $db, $sqlite, $models, $database, $ge
             this.result({
               title: this.title(),
               success: true,
-              traces: traceCapture.traces,
-              toolsExecuted: traceCapture.traces.flatMap(t => {
+              traces: traceCapture.traces(),
+              toolsExecuted: traceCapture.traces().flatMap(t => {
                 const content = t.response?.content || [];
                 return content
                   .filter(b => b.type === 'tool_use')
