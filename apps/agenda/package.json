@@ -18,6 +18,8 @@
     "cli": "bun run bin/agenda.js",
     "logs": "bun run bin/logs.js",
     "evals": "bun run evals/run.js",
-    "evals:analyze": "bun run evals/analysis.js"
+    "evals:analyze": "bun run evals/analysis.js",
+    "evals:report": "bun run evals/report.js",
+    "evals:compare": "bun run evals/compare.js"
   }
 }

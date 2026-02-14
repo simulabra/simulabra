@@ -350,6 +350,18 @@ export default await async function (_, $, $db) {
     }
   });
 
+  const migration008 = $db.Migration.new({
+    name: '008_stream_hidden',
+    version: '008',
+    description: 'Add hidden column to _streams for soft-deleting messages',
+    up(db) {
+      db.query(`ALTER TABLE _streams ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`).run();
+    },
+    down(db) {
+      db.query(`ALTER TABLE _streams DROP COLUMN hidden`).run();
+    }
+  });
+
   $.Class.new({
     name: 'AgendaMigrations',
     doc: 'Helper class to get agenda migrations',
@@ -358,7 +370,7 @@ export default await async function (_, $, $db) {
         name: 'all',
         doc: 'get all agenda migrations in order',
         do() {
-          return [migration001, migration002, migration003, migration004, migration005, migration006, migration007];
+          return [migration001, migration002, migration003, migration004, migration005, migration006, migration007, migration008];
         }
       }),
     ]

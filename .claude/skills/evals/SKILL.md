@@ -54,6 +54,11 @@ Show the eval output directly. After the run:
 Eval scenarios live in `apps/agenda/evals/scenarios/`. Each file exports EvalCase instances.
 - `basic.js` — create task, search items, create project
 - `realistic.js` — bare keyword input, ambiguous verbs, questions, casual project creation
+- `tasks.js` — create with priority/due, complete, update priority, list with filter
+- `projects.js` — create with context, list, move item to project
+- `logs.js` — create log entry, search logs
+- `reminders.js` — create reminder, create recurring reminder
+- `multiturn.js` — multi-turn conversation via interpretMessage
 
 The framework files:
 - `apps/agenda/evals/framework.js` — EvalCase class

@@ -3,9 +3,9 @@ import live from 'simulabra/live';
 import supervisor from '../supervisor.js';
 import tools from '../tools.js';
 import time from '../time.js';
-import Anthropic from '@anthropic-ai/sdk';
+import providerMod from '../provider.js';
 
-export default await async function (_, $, $live, $supervisor, $tools, $time) {
+export default await async function (_, $, $live, $supervisor, $tools, $time, $provider) {
   $.Class.new({
     name: 'GeistService',
     doc: 'Claude API integration for natural language understanding',
@@ -25,11 +25,13 @@ export default await async function (_, $, $live, $supervisor, $tools, $time) {
 sprinkle in a bit of wit when appropriate.
 the user communicates through lazily typed messages. your job is to figure out what they're asking for and do it.
 
+IMPORTANT: always call a tool to create, update, complete, or delete items. the user's data only changes through tool calls — a text reply alone does nothing.
+
 tools:
 - thought/note/journal → create_log
 - todo/task → create_task
 - done → complete_task
-- edit/change task → update_task
+- edit/change/update task → update_task (requires the task id)
 - reminder → create_reminder
 - find → search
 - tasks → list_tasks
@@ -44,7 +46,7 @@ projects: organizational containers that group related tasks, logs, and reminder
 do NOT use create_task when the user asks to create a project. projects and tasks are different things.
 a project is a container; a task is an actionable item inside a container.
 
-reminders: parse natural time ("tomorrow 3pm", "in 2 hours") → iso 8601. recurrence: pattern + interval.
+reminders: parse natural time ("tomorrow 3pm", "in 2 hours") → iso 8601. for recurring reminders ("every morning", "every week"), set both when (first occurrence) and recurrence (pattern + interval).
 
 tasks: priority 1 (urgent) to 5 (low), default 3. parse due dates.`
       }),
@@ -107,9 +109,10 @@ nothing needs attention → respond with []`
       $.After.new({
         name: 'init',
         do() {
-          const apiKey = process.env.AGENDA_CLAUDE_KEY || process.env.ANTHROPIC_API_KEY;
-          if (apiKey) {
-            this.client(new Anthropic({ apiKey }));
+          const adapter = $provider.ProviderConfig.new().fromEnv();
+          if (adapter.apiKey()) {
+            this.client(adapter);
+            this.model(adapter.model());
           }
         }
       }),
@@ -779,5 +782,5 @@ Generate up to ${context.config.maxHauntsPerCycle} haunts for items that need at
   }
 }.module({
   name: 'services.geist',
-  imports: [base, live, supervisor, tools, time],
+  imports: [base, live, supervisor, tools, time, providerMod],
 }).load();

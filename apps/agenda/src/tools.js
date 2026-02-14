@@ -109,20 +109,21 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'create_reminder' }),
       $.Var.new({
         name: 'doc',
-        default: 'Create a timed reminder',
+        default: 'Create a timed reminder. For recurring reminders, set recurrence with pattern and interval.',
       }),
       $.Var.new({
         name: 'inputSchema',
         default: () => ({
           type: 'object',
           properties: {
-            message: { type: 'string' },
-            when: { type: 'string', description: 'ISO 8601 trigger time' },
+            message: { type: 'string', description: 'what to remind about' },
+            when: { type: 'string', description: 'ISO 8601 datetime for the first trigger, e.g. 2025-01-15T08:00:00' },
             recurrence: {
               type: 'object',
+              description: 'set for repeating reminders (e.g. every day, every 2 weeks)',
               properties: {
-                pattern: { type: 'string', enum: ['daily', 'weekly', 'monthly'] },
-                interval: { type: 'integer' }
+                pattern: { type: 'string', enum: ['daily', 'weekly', 'monthly'], description: 'repeat frequency' },
+                interval: { type: 'integer', description: 'repeat every N periods, default 1' }
               }
             },
             projectId: { type: 'string' }
@@ -451,7 +452,7 @@ export default await async function (_, $, $tools) {
       $.Var.new({ name: 'toolName', default: 'update_task' }),
       $.Var.new({
         name: 'doc',
-        default: 'Update a task',
+        default: 'Update an existing task by id. Use to change priority, title, due date, tags, or project.',
       }),
       $.Var.new({
         name: 'inputSchema',

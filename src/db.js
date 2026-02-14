@@ -366,7 +366,8 @@ export default await async function (_, $) {
             streamName TEXT NOT NULL,
             entryId TEXT NOT NULL,
             data TEXT NOT NULL,
-            createdAt TEXT NOT NULL
+            createdAt TEXT NOT NULL,
+            hidden INTEGER NOT NULL DEFAULT 0
           )`).run();
           this.db().query(`CREATE INDEX IF NOT EXISTS idx_streams_name_id ON ${this.tableName()} (streamName, id)`).run();
         }
@@ -388,10 +389,31 @@ export default await async function (_, $) {
         }
       }),
       $.Method.new({
+        name: 'hideEntries',
+        doc: 'hide stream entries by internal ids',
+        do(internalIds) {
+          if (!internalIds || internalIds.length === 0) return 0;
+          const placeholders = internalIds.map(() => '?').join(',');
+          const result = this.db().query(`UPDATE ${this.tableName()} SET hidden = 1 WHERE streamName = ? AND id IN (${placeholders})`).run(this.streamName(), ...internalIds);
+          return result.changes;
+        }
+      }),
+      $.Method.new({
+        name: 'hideEntriesSince',
+        doc: 'hide stream entries created after a given ISO timestamp',
+        do(sinceIso) {
+          const result = this.db().query(`UPDATE ${this.tableName()} SET hidden = 1 WHERE streamName = $streamName AND createdAt >= $since`).run({
+            $streamName: this.streamName(),
+            $since: sinceIso,
+          });
+          return result.changes;
+        }
+      }),
+      $.Method.new({
         name: 'readAfter',
         doc: 'read entries after a given internal id (for polling)',
         do(afterId = 0, limit = 100) {
-          const rows = this.db().query(`SELECT id, entryId, data, createdAt FROM ${this.tableName()} WHERE streamName = $streamName AND id > $afterId ORDER BY id ASC LIMIT $limit`).all({
+          const rows = this.db().query(`SELECT id, entryId, data, createdAt FROM ${this.tableName()} WHERE streamName = $streamName AND id > $afterId AND hidden = 0 ORDER BY id ASC LIMIT $limit`).all({
             $streamName: this.streamName(),
             $afterId: afterId,
             $limit: limit,
@@ -408,7 +430,7 @@ export default await async function (_, $) {
         name: 'readLatest',
         doc: 'read latest entries (newest first)',
         do(limit = 100) {
-          const rows = this.db().query(`SELECT id, entryId, data, createdAt FROM ${this.tableName()} WHERE streamName = $streamName ORDER BY id DESC LIMIT $limit`).all({
+          const rows = this.db().query(`SELECT id, entryId, data, createdAt FROM ${this.tableName()} WHERE streamName = $streamName AND hidden = 0 ORDER BY id DESC LIMIT $limit`).all({
             $streamName: this.streamName(),
             $limit: limit,
           });

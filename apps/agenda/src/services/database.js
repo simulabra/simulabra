@@ -415,6 +415,24 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       }),
 
       $live.RpcMethod.new({
+        name: 'hideChatMessages',
+        doc: 'hide chat messages by internal ids or by time window',
+        do({ conversationId = 'main', internalIds, sinceMinutes } = {}) {
+          const stream = this.getChatStream(conversationId);
+          if (internalIds && internalIds.length > 0) {
+            const count = stream.hideEntries(internalIds);
+            return { hidden: count };
+          }
+          if (sinceMinutes) {
+            const since = new Date(Date.now() - sinceMinutes * 60 * 1000).toISOString();
+            const count = stream.hideEntriesSince(since);
+            return { hidden: count };
+          }
+          return { hidden: 0 };
+        }
+      }),
+
+      $live.RpcMethod.new({
         name: 'getLastChatInternalId',
         doc: 'get the last internal id for a conversation (for polling)',
         do({ conversationId = 'main' } = {}) {

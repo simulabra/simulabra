@@ -80,8 +80,28 @@ Eval assertions should be loose:
 
 ## Acceptance Criteria
 
-- [ ] Snapshot diff correctly identifies created/modified records
-- [ ] 12-15 total eval scenarios across all files
-- [ ] JSON report includes DB diffs per scenario
-- [ ] Multi-turn eval demonstrates conversation context via interpretMessage
-- [ ] All scenarios pass (allowing for LLM nondeterminism)
+- [x] Snapshot diff correctly identifies created/modified records
+- [x] 12-15 total eval scenarios across all files (20 total: 8 Phase 1 + 12 new)
+- [x] JSON report includes DB diffs per scenario
+- [x] Multi-turn eval demonstrates conversation context via interpretMessage
+- [x] All scenarios pass (allowing for LLM nondeterminism)
+
+## Review
+
+Reviewed 2026-02-09. Phase approved with refactors applied during review.
+
+### Issues found and fixed
+
+1. **`snapshot()` was needlessly `async`** — DatabaseService list methods are synchronous SQLite queries. Removed `async` keyword and unnecessary `await` calls.
+
+2. **`allToolCalls()` had a multi-turn false-positive bug** — It unioned `result.toolsExecuted` with ALL traces accumulated across the entire eval case. For multi-turn scenarios, `assertToolCalled(turn2, 'create_task')` would pass falsely because `create_task` from turn 1 was in the shared traces. Replaced with `toolsCalled()` that only checks the result's own `toolsExecuted`. This is safe because the ID-based prompts mean the geist gets the right tool in the first API round.
+
+3. **Duplicate scenario input** — `logs.js` "Search logs by keyword" used the same input (`'find my notes about countertops'`) as `basic.js` "Search for existing items". Changed to `'search for anything about the bun release'` which references a different seeded log entry.
+
+### Design note
+
+The plan specified natural-language references for mutation scenarios (e.g. "mark 'get plumber quote' as done"). The carpenter discovered that `interpret()` only supports one tool-call round, so the geist's search-then-act pattern couldn't complete in a single call. The solution — passing entity IDs directly — is a reasonable deviation that cleanly separates "correct tool selection" from "entity resolution", which is a separate concern worth its own eval category in the future.
+
+### Assessment
+
+Code quality is good. Scenarios are well-structured, consistent with Phase 1 patterns, and cover the planned capability areas. The snapshot/diff utility is clean and correctly placed as module-scoped helpers. All 20 evals pass.

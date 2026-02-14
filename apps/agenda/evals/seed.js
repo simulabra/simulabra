@@ -1,5 +1,7 @@
 import { __, base } from 'simulabra';
 
+export const SEED_VERSION = 2;
+
 export default await async function (_, $) {
   $.Class.new({
     name: 'EvalSeed',

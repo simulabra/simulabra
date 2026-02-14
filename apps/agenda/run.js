@@ -121,6 +121,19 @@ export default await async function (_, $, $supervisor) {
     return await db.waitForChatMessages(body);
   });
 
+  apiHandler('POST', '/api/v1/chat/hide', async (ctx) => {
+    const db = await sup.serviceProxy({ name: 'DatabaseService', timeout: 10 });
+    const body = ctx.body() || {};
+    if (!body.internalIds && !body.sinceMinutes) {
+      throw $supervisor.HttpError.new({
+        status: 400,
+        message: 'Provide internalIds (array) or sinceMinutes (number)',
+        code: 'MISSING_FIELD'
+      });
+    }
+    return await db.hideChatMessages(body);
+  });
+
   apiHandler('POST', '/api/v1/chat/send', async (ctx) => {
     const geist = await sup.serviceProxy({ name: 'GeistService', timeout: 120 });
     const body = ctx.body() || {};

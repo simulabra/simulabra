@@ -42,7 +42,9 @@ export default await async function (_, $) {
                 const start = Date.now();
                 const response = await self.client().messages.create(params);
                 const usage = response.usage || {};
-                const cost = computeCost(usage, response.model || '');
+                const cost = usage.cost != null
+                  ? { totalCost: usage.cost, inputCost: null, outputCost: null }
+                  : computeCost(usage, response.model || '');
 
                 self.totalInputTokens(self.totalInputTokens() + (usage.input_tokens || 0));
                 self.totalOutputTokens(self.totalOutputTokens() + (usage.output_tokens || 0));

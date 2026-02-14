@@ -2,14 +2,23 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 import { mkdirSync, existsSync, writeFileSync } from 'fs';
+import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 
 config({ path: resolve(import.meta.dir, '../../../.env') });
 
 import { __, base } from 'simulabra';
 import framework from './framework.js';
+import reportMod from './report.js';
+import { SEED_VERSION } from './seed.js';
 
 import './scenarios/basic.js';
 import './scenarios/realistic.js';
+import './scenarios/tasks.js';
+import './scenarios/projects.js';
+import './scenarios/logs.js';
+import './scenarios/reminders.js';
+import './scenarios/multiturn.js';
 
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
@@ -49,7 +58,34 @@ function extractAssistantOutput(traces) {
   }).filter(Boolean);
 }
 
-await async function (_, $, $framework) {
+function formatDbDiff(dbDiff) {
+  if (!dbDiff) return [];
+  const parts = [];
+  for (const [table, diff] of Object.entries(dbDiff)) {
+    const segments = [];
+    if (diff.created.length) segments.push(`+${diff.created.length}`);
+    if (diff.modified.length) segments.push(`~${diff.modified.length}`);
+    if (diff.deleted.length) segments.push(`-${diff.deleted.length}`);
+    if (segments.length) parts.push(`${table}: ${segments.join(' ')}`);
+  }
+  return parts;
+}
+
+function collectMetadata(results) {
+  const firstTrace = results.flatMap(r => r.traces || []).find(t => t.request);
+  const model = firstTrace?.request?.model || 'unknown';
+  const systemPrompt = firstTrace?.request?.system || '';
+  const systemPromptHash = createHash('sha256').update(systemPrompt).digest('hex').slice(0, 12);
+
+  let gitCommit = 'unknown';
+  try {
+    gitCommit = execSync('git rev-parse HEAD', { cwd: resolve(import.meta.dir, '../../..'), encoding: 'utf8' }).trim();
+  } catch {}
+
+  return { model, systemPromptHash, seedVersion: SEED_VERSION, gitCommit };
+}
+
+await async function (_, $, $framework, $report) {
   const filter = process.argv[2] || null;
 
   const allCases = $framework.EvalCase.instances();
@@ -90,6 +126,10 @@ await async function (_, $, $framework) {
     if (result.success && result.toolsExecuted.length > 0) {
       console.log(`  ${YELLOW}tools: ${result.toolsExecuted.map(t => t.tool).join(', ')}${RESET}`);
     }
+    const diffParts = formatDbDiff(result.dbDiff);
+    if (diffParts.length > 0) {
+      console.log(`  ${DIM}db: ${diffParts.join(', ')}${RESET}`);
+    }
     if (result.cost) {
       const c = result.cost;
       console.log(`  ${DIM}tokens: ${c.totalInputTokens} in / ${c.totalOutputTokens} out${RESET}`);
@@ -116,18 +156,25 @@ await async function (_, $, $framework) {
     mkdirSync(resultsDir, { recursive: true });
   }
 
+  const metadata = collectMetadata(results);
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const reportPath = resolve(resultsDir, `eval-${timestamp}.json`);
   const report = {
     timestamp: new Date().toISOString(),
+    metadata,
     results,
     summary: { passed, failed, totalDurationMs, totalCost: runCost },
   };
   writeFileSync(reportPath, JSON.stringify(report, null, 2));
-  console.log(`Report: ${reportPath}\n`);
+  console.log(`Report: ${reportPath}`);
+
+  const formatter = $report.ReportFormatter.new();
+  const mdPath = reportPath.replace(/\.json$/, '.md');
+  writeFileSync(mdPath, formatter.format(report));
+  console.log(`Markdown: ${mdPath}\n`);
 
   process.exit(failed > 0 ? 1 : 0);
 }.module({
   name: 'eval.runner',
-  imports: [base, framework],
+  imports: [base, framework, reportMod],
 }).load();
