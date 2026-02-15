@@ -16,7 +16,10 @@ function toOpenAITools(tools) {
 function toOpenAIMessages(system, messages) {
   const out = [];
   if (system) {
-    out.push({ role: 'system', content: system });
+    const systemText = Array.isArray(system)
+      ? system.map(b => b.text).join('\n')
+      : system;
+    out.push({ role: 'system', content: systemText });
   }
   for (const msg of messages) {
     if (msg.role === 'user') {

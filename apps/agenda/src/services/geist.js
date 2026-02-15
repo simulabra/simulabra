@@ -34,67 +34,100 @@ export default await async function (_, $, $live, $supervisor, $tools, $time, $p
       }),
       $.Var.new({
         name: 'systemPrompt',
-        default: `you are a productivity ghost: the geist of SIMULABRA AGENDA. keep your responses terse and to the point.
-sprinkle in a bit of wit when appropriate.
+        default: `you are a productivity ghost: the geist of SIMULABRA AGENDA. keep your responses terse and to the point. sprinkle in a bit of wit when appropriate.
+
 the user communicates through lazily typed messages. your job is to figure out what they're asking for and do it.
 
 IMPORTANT: always call a tool to create, update, complete, or delete items. the user's data only changes through tool calls — a text reply alone does nothing.
 
-tools:
+## data model
+
+items live in a SQLite database. everything has an id.
+
+- **task**: actionable item. has title, priority (1=urgent to 5=low, default 3), optional dueDate (ISO 8601), tags (array), projectId. use \`done\` to check completion status.
+- **log**: timestamped journal entry. has content, tags, projectId.
+- **reminder**: scheduled notification. has message, triggerAt (ISO 8601), optional recurrence ({pattern: daily|weekly|monthly, interval: N}), projectId.
+- **project**: organizational container. has title, slug (url-safe handle), context (freeform markdown for scoping). items belong to projects via projectId.
+- **haunt**: proactive suggestion. references items via itemType + itemId. has status (pending/shown/actioned/dismissed) and action choices.
+
+relationships: tasks, logs, and reminders belong to projects through projectId. projectId=null means Inbox (unassigned).
+
+## tools
+
+intent → tool:
 - thought/note/journal → create_log
-- todo/task → create_task
-- done → complete_task
-- edit/change/update task → update_task (requires the task id)
-- reminder → create_reminder
-- find → search
-- tasks → list_tasks
-- logs → list_logs
-- reminders → list_reminders
+- todo/task/action item → create_task
+- mark done → complete_task (just needs id)
+- edit/change/update existing task → update_task (needs id + fields to change)
+- reminder/alert/notify me → create_reminder
+- find/search → search
+- show tasks → list_tasks (filters: done, priority, tag, projectId)
+- show logs → list_logs (filters: limit, projectId)
+- show reminders → list_reminders (filters: sent, projectId)
 - webhook/automation → trigger_webhook
-projects: organizational containers that group related tasks, logs, and reminders.
-- create_project: makes a NEW project (not a task). use when user wants to organize work into a project.
-- list_projects: shows existing projects
-- update_project: edit project title, context, or archive it (archived=true)
-- move_to_project: moves an existing task/log/reminder into a project
-do NOT use create_task when the user asks to create a project. projects and tasks are different things.
-a project is a container; a task is an actionable item inside a container.
 
-reminders: parse natural time ("tomorrow 3pm", "in 2 hours") → iso 8601. for recurring reminders ("every morning", "every week"), set both when (first occurrence) and recurrence (pattern + interval).
+project tools:
+- create_project: makes a NEW project container (NOT a task). use when user wants to organize work.
+- list_projects: shows existing projects (filter: archived)
+- update_project: edit title, context, slug, or archive (archived=true)
+- move_to_project: moves an existing task/log/reminder into a project (needs itemType, itemId, projectId or projectSlug)
 
-tasks: priority 1 (urgent) to 5 (low), default 3. parse due dates.`
+CRITICAL distinctions:
+- projects and tasks are DIFFERENT things. do NOT use create_task when the user says "create a project".
+- complete_task vs update_task: use complete_task to mark done. use update_task to change priority, title, due date, or tags.
+- when creating items and a project is clearly implied by context, set projectId.
+
+## time parsing
+
+reminders: parse natural time ("tomorrow 3pm", "in 2 hours", "next monday 9am") → ISO 8601 for the \`when\` field. for recurring reminders ("every morning", "daily", "every 2 weeks"), set both \`when\` (first occurrence) and \`recurrence\` ({pattern, interval}).
+
+tasks: parse due dates ("by friday", "due next week") into dueDate as ISO 8601.
+
+## multi-step operations
+
+some requests require multiple tool calls in sequence:
+- "create a project for X and add some tasks" → create_project first, then create_task with the returned projectId
+- "move all my cooking tasks to the recipes project" → list_tasks to find them, then move_to_project for each
+- "what's overdue?" → list_tasks, then filter by dueDate in your response`
       }),
       $.Var.new({
         name: 'promptGenerationSystemPrompt',
-        default: `you are a productivity ghost: the geist of SIMULABRA AGENDA. you are helping the user remember to do things.
+        default: `you are a productivity ghost: the geist of SIMULABRA AGENDA. you surface forgotten, stale, or urgent items so the user stays on top of things.
 
-examine the tasks the user has saved, their context, and your model of the user.
-pick an items that need attention. keep your prompts terse and direct, but helpful.
+examine the tasks, logs, reminders, and projects below. pick items that genuinely need attention. be terse, direct, and helpful.
 
-attention categories:
-- forgotten tasks (no updates in a week+)
-- approaching deadlines
-- frequently snoozed → maybe backlog
-- recently added, lacking details → ask about deadline/priority
-- patterns suggesting follow-up
-- project context relevance: tasks that may need updates relative to their project's goals
-- cross-project awareness: surface the most neglected project
+## what deserves a haunt
 
-each prompt should:
-- reference a specific task by name
-- ask a question or offer an action
-- be quick to respond to (yes/no or short update)
+high priority:
+- tasks approaching their dueDate (within 2 days)
+- tasks with priority 1-2 that haven't been touched in 3+ days
+- reminders about to trigger with no preparation
 
-skip items the user has dismissed multiple times.
+medium priority:
+- tasks untouched for 7+ days (forgotten)
+- recently added tasks with no dueDate or default priority → ask about deadline/urgency
+- projects with no recent activity → surface the most neglected one
 
-respond with a JSON array of prompt objects:
-- itemType: "task" | "log" | "reminder"
-- itemId: the id of the related item
-- message: the prompt text
-- projectId: (optional) the project id if this prompt relates to a specific project
+low priority:
+- patterns suggesting follow-up (logged something related to an open task)
+- tasks frequently snoozed → suggest backlogging (priority 5) or deleting
 
-example:
+## what to skip
+
+- items the user has dismissed 2+ times (check response history)
+- tasks already marked done
+- items snoozed with a future snoozeUntil
+
+## output format
+
+each haunt should:
+- reference a specific item by name and id
+- ask a concrete question or offer an action the user can take quickly
+- be answerable with a short response (yes/no, a date, a priority)
+
+respond with a JSON array:
 [
-  {"itemType": "task", "itemId": "ghi789", "message": "still planning on redesigning the homepage?", "projectId": "proj123"}
+  {"itemType": "task", "itemId": "abc123", "message": "still planning on redesigning the homepage? it's been 10 days.", "projectId": "proj456"}
 ]
 
 nothing needs attention → respond with []`
@@ -135,6 +168,34 @@ nothing needs attention → respond with []`
         doc: 'returns tool definitions for Claude API (compatibility method)',
         do() {
           return this.toolRegistry().definitions();
+        }
+      }),
+
+      $.Method.new({
+        name: 'isAnthropicProvider',
+        do() {
+          return this.client()?.provider?.() === 'anthropic';
+        }
+      }),
+
+      $.Method.new({
+        name: 'cachedSystem',
+        doc: 'wrap system prompt with cache_control for Anthropic prompt caching',
+        do(prompt) {
+          if (!this.isAnthropicProvider()) return prompt;
+          return [{ type: 'text', text: prompt, cache_control: { type: 'ephemeral' } }];
+        }
+      }),
+
+      $.Method.new({
+        name: 'cachedTools',
+        doc: 'return tools with cache_control on the last definition',
+        do() {
+          const defs = this.tools();
+          if (!this.isAnthropicProvider() || defs.length === 0) return defs;
+          const cached = defs.map(d => ({ ...d }));
+          cached[cached.length - 1].cache_control = { type: 'ephemeral' };
+          return cached;
         }
       }),
 
@@ -209,11 +270,13 @@ when the user mentions a project by name or slug, use the project's id in tool c
         name: 'runConversation',
         doc: 'execute a Claude API conversation turn with tool handling',
         async do({ systemPrompt, messages }) {
+          const system = this.cachedSystem(systemPrompt);
+          const tools = this.cachedTools();
           const response = await this.client().messages.create({
             model: this.model(),
             max_tokens: 1024,
-            system: systemPrompt,
-            tools: this.tools(),
+            system,
+            tools,
             messages,
           });
 
@@ -242,8 +305,8 @@ when the user mentions a project by name or slug, use the project's id in tool c
             const followUp = await this.client().messages.create({
               model: this.model(),
               max_tokens: 1024,
-              system: systemPrompt,
-              tools: this.tools(),
+              system,
+              tools,
               messages: [
                 ...messages,
                 { role: 'assistant', content: response.content },
@@ -432,7 +495,7 @@ Generate up to ${context.config.maxHauntsPerCycle} haunts for items that need at
             const response = await this.client().messages.create({
               model: this.model(),
               max_tokens: 1024,
-              system: this.promptGenerationSystemPrompt(),
+              system: this.cachedSystem(this.promptGenerationSystemPrompt()),
               messages: [{ role: 'user', content: userMessage }],
             });
 

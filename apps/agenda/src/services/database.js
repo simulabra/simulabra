@@ -275,30 +275,18 @@ export default await async function (_, $, $live, $db, $supervisor, $sqlite, $mo
       $live.RpcMethod.new({
         name: 'search',
         do({ query }) {
-          const q = query.toLowerCase();
-          const matchAll = q === '*' || q === '';
-
-          const logs = $models.Log.findAll(this.db());
-          const matchingLogs = matchAll ? logs : logs.filter(l =>
-            l.content().toLowerCase().includes(q) ||
-            l.tags().some(t => t.toLowerCase().includes(q))
-          );
-
-          const tasks = $models.Task.findAll(this.db());
-          const matchingTasks = matchAll ? tasks : tasks.filter(t =>
-            t.title().toLowerCase().includes(q) ||
-            t.tags().some(tag => tag.toLowerCase().includes(q))
-          );
-
-          const reminders = $models.Reminder.findAll(this.db());
-          const matchingReminders = matchAll ? reminders : reminders.filter(r =>
-            r.message().toLowerCase().includes(q)
-          );
-
+          const q = (query || '').trim();
+          if (q === '*' || q === '') {
+            return {
+              logs: $models.Log.findAll(this.db()).map(l => l.jsonify()),
+              tasks: $models.Task.findAll(this.db()).map(t => t.jsonify()),
+              reminders: $models.Reminder.findAll(this.db()).map(r => r.jsonify()),
+            };
+          }
           return {
-            logs: matchingLogs.map(l => l.jsonify()),
-            tasks: matchingTasks.map(t => t.jsonify()),
-            reminders: matchingReminders.map(r => r.jsonify())
+            logs: $models.Log.search(this.db(), q).map(l => l.jsonify()),
+            tasks: $models.Task.search(this.db(), q).map(t => t.jsonify()),
+            reminders: $models.Reminder.search(this.db(), q).map(r => r.jsonify()),
           };
         }
       }),

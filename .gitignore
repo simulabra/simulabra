@@ -13,3 +13,4 @@ jsconfig.json
 tmp/
 bun.lockb
 devlog.txt
+apps/agenda/evals/results/
