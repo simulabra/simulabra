@@ -18,6 +18,7 @@ This is kaizen: continuous improvement through small, composable steps. Each cha
  - always read the whole file a change is in and all the modules it depends on
  - start with the interface, think like the caller
  - NEVER use `name` as a Var or DBVar slot — it is a reserved built-in property on all Simulabra objects (holds the identity string). Use `title` or a more specific alternative instead.
+ - fail fast: never silently degrade on missing dependencies. Crash and let the supervisor restart. Do not return soft errors when the real problem is a missing connection or prerequisite.
 </CodingStandards>
  
 <Testing>

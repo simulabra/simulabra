@@ -38,13 +38,7 @@ export default await async function (_, $, $live, $supervisor) {
         name: 'collectNotifications',
         doc: 'get due reminders without processing',
         async do() {
-          const db = this.dbService();
-          if (!db) {
-            this.tlog('no database service connected');
-            return [];
-          }
-          const dueReminders = await db.getDueReminders();
-          return dueReminders;
+          return await this.dbService().getDueReminders();
         }
       }),
 
@@ -52,13 +46,7 @@ export default await async function (_, $, $live, $supervisor) {
         name: 'checkDueReminders',
         doc: 'check for due reminders and process them',
         async do() {
-          const db = this.dbService();
-          if (!db) {
-            this.tlog('no database service connected');
-            return [];
-          }
-
-          const dueReminders = await db.getDueReminders();
+          const dueReminders = await this.dbService().getDueReminders();
           if (dueReminders.length === 0) {
             return [];
           }

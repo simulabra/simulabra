@@ -4,3 +4,4 @@
 {"name":"geist-evals","brief":"Minimal extensible evals system for the agenda geist — prepopulated test DB, eval scenarios, inspection of LLM outputs and tool calls.","startedAt":"2026-02-05","status":"IN PROGRESS"}
 {"name":"eval-providers","brief":"Add OpenRouter/OpenAI-compatible provider support to the geist and eval system, enabling model comparison across providers.","startedAt":"2026-02-08","status":"IN PROGRESS"}
 {"name":"agenda-compost","brief":"Review the agenda app's Simulabra usage patterns and produce a prompt alignment document for follow-on agent work.","startedAt":"2026-02-13","status":"IN PROGRESS"}
+{"name":"agenda-review","brief":"Review agenda code patterns and produce framework feedback with analysis.","startedAt":"2026-02-14","status":"IN PROGRESS"}

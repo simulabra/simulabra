@@ -618,17 +618,18 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
 
   $test.AsyncCase.new({
     name: 'GenerateHauntsNoClient',
-    doc: 'generateHaunts should fail gracefully when no Claude client',
+    doc: 'generateHaunts should fail when no Claude client and tasks exist',
     async do() {
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
+      await dbService.createTask({ title: 'Needs attention', priority: 2 });
       geistService.client(null);
 
       const result = await geistService.generateHaunts();
 
       this.assertEq(result.success, false, 'should not succeed');
-      this.assert(result.error.includes('not configured'), 'should have configuration error');
+      this.assert(result.error, 'should have error message');
 
       database.close();
     }

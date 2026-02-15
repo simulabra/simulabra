@@ -140,12 +140,10 @@ nothing needs attention → respond with []`
         name: 'resolveProjectContext',
         doc: 'load active projects from DatabaseService for system prompt injection',
         async do() {
-          const db = this.dbService();
-          if (!db) return null;
-          const projects = await db.listProjects({ archived: false });
+          const projects = await this.dbService().listProjects({ archived: false });
           if (projects.length === 0) return null;
           const projectList = projects.map(p => {
-            const snippet = p.context ? p.context.substring(0, 200) : '';
+            const snippet = p.context ? p.context.substring(0, 800) : '';
             return `- [${p.id}] ${p.title} (${p.slug})${snippet ? ': ' + snippet : ''}`;
           }).join('\n');
           return { projects, projectList };
@@ -204,10 +202,6 @@ when the user mentions a project by name or slug, use the project's id in tool c
         name: 'executeTool',
         doc: 'execute a tool by name with given arguments',
         async do(toolName, args) {
-          const db = this.dbService();
-          if (!db) {
-            return { success: false, error: 'No database service connected' };
-          }
           return await this.toolRegistry().execute(toolName, args, this.services());
         }
       }),
@@ -235,19 +229,6 @@ when the user mentions a project by name or slug, use the project's id in tool c
         doc: 'interpret natural language input and execute actions',
         async do(input) {
           this.tlog(`[conversation] user: ${input}`);
-
-          if (!this.client()) {
-            const error = 'Claude API not configured. Set AGENDA_CLAUDE_KEY or ANTHROPIC_API_KEY';
-            this.tlog(`[conversation] error: ${error}`);
-            return { success: false, error };
-          }
-
-          const db = this.dbService();
-          if (!db) {
-            const error = 'No database service connected';
-            this.tlog(`[conversation] error: ${error}`);
-            return { success: false, error };
-          }
 
           try {
             const projectContext = await this.resolveProjectContext();
@@ -326,19 +307,7 @@ when the user mentions a project by name or slug, use the project's id in tool c
         doc: 'interpret input and persist both user and assistant messages',
         async do({ conversationId = 'main', text, source, clientUid, clientMessageId, useHistory = true }) {
           this.tlog(`[conversation] user (${source}): ${text}`);
-
-          if (!this.client()) {
-            const error = 'Claude API not configured. Set AGENDA_CLAUDE_KEY or ANTHROPIC_API_KEY';
-            this.tlog(`[conversation] error: ${error}`);
-            return { success: false, error };
-          }
-
           const db = this.dbService();
-          if (!db) {
-            const error = 'No database service connected';
-            this.tlog(`[conversation] error: ${error}`);
-            return { success: false, error };
-          }
 
           try {
             const projectContext = await this.resolveProjectContext();
@@ -445,10 +414,6 @@ when the user mentions a project by name or slug, use the project's id in tool c
         doc: 'gather tasks, logs, reminders, projects and config for prompt generation',
         async do() {
           const db = this.dbService();
-          if (!db) {
-            throw new Error('No database service connected');
-          }
-
           const [tasks, logs, reminders, config, projects] = await Promise.all([
             db.listTasks({ done: false }),
             db.listLogs({ limit: 20 }),
@@ -486,14 +451,7 @@ when the user mentions a project by name or slug, use the project's id in tool c
         name: 'generateHaunts',
         doc: 'generate haunts by analyzing context and calling Claude',
         async do() {
-          if (!this.client()) {
-            return { success: false, error: 'Claude API not configured' };
-          }
-
           const db = this.dbService();
-          if (!db) {
-            return { success: false, error: 'No database service connected' };
-          }
 
           try {
             const context = await this.analyzeContext();
@@ -595,12 +553,7 @@ Generate up to ${context.config.maxHauntsPerCycle} haunts for items that need at
         name: 'getPendingHaunts',
         doc: 'get pending haunts that are not snoozed',
         async do({ limit = 10 } = {}) {
-          const db = this.dbService();
-          if (!db) {
-            throw new Error('No database service connected');
-          }
-
-          const haunts = await db.listHaunts({ status: 'pending', limit: limit * 2 });
+          const haunts = await this.dbService().listHaunts({ status: 'pending', limit: limit * 2 });
           const now = Date.now();
 
           return haunts
@@ -617,10 +570,6 @@ Generate up to ${context.config.maxHauntsPerCycle} haunts for items that need at
         doc: 'process user action on a haunt and update related items accordingly',
         async do({ id, action }) {
           const db = this.dbService();
-          if (!db) {
-            throw new Error('No database service connected');
-          }
-
           const haunt = await db.getHaunt({ id });
           if (!haunt) {
             throw new Error(`Haunt not found: ${id}`);
@@ -774,6 +723,9 @@ Generate up to ${context.config.maxHauntsPerCycle} haunts for items that need at
 
   if (import.meta.main) {
     const service = _.GeistService.new();
+    if (!service.client()) {
+      throw new Error('Claude API not configured. Set AGENDA_CLAUDE_KEY or ANTHROPIC_API_KEY');
+    }
     await service.connect();
     await service.waitForService({ name: 'DatabaseService' });
     await service.connectToDatabase();
