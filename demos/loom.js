@@ -3,12 +3,12 @@
 import html from '../src/html.js';
 import { __, base } from '../src/base.js';
 
-export default await function (_, $) {
+export default await function (_, $, $html) {
   $.Class.new({ // declarative class definitions
     name: 'OpenAIAPIClient',
     doc: "consume and configure an openai-compatible api",
     slots: [ // slot-based system like CLOS
-      $.Component, // slot-based inheritance
+      $html.Component, // slot-based inheritance
       $.Signal.new({ // reactive signal slot
         name: 'showSettings',
         doc: 'show api settings',
@@ -97,7 +97,7 @@ export default await function (_, $) {
         name: 'renderInput',
         do(id, placeholder, label) {
           const htmlId = id + 'input';
-          return $.HTML.t`<div>${label} <input 
+          return $html.HTML.t`<div>${label} <input 
             id=${htmlId}
             type="text"
             placeholder=${placeholder}
@@ -108,7 +108,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'render',
         do() {
-          return $.HTML.t`<span>
+          return $html.HTML.t`<span>
             <button onclick=${() => this.toggleSettings()}>${() => !this.showSettings() ? 'show' : 'hide'} client settings</button>
               <div class="loom-col" hidden=${() => !this.showSettings()}> // effects update dom
                 <div>${this.display()}</div>
@@ -160,7 +160,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'ThreadConfig',
     slots: [
-      $.Component,
+      $html.Component,
       $.Clone,
       $.Signal.new({
         name: 'max_tokens',
@@ -185,7 +185,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'configline',
         do(c, step=1) {
-          return $.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min="0" value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
+          return $html.HTML.t`<div>${c}: <input class="config-number" step=${step} type="number" min="0" value=${() => this[c]()} onchange=${e => this[c](+e.target.value)} /></div>`;
         }
       }),
       $.Method.new({
@@ -202,7 +202,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'TextCompletion',
     slots: [
-      $.Component,
+      $html.Component,
       $.Clone,
       $.Signal.new({ name: 'text', default: ' ' }),
       $.Method.new({
@@ -212,7 +212,7 @@ export default await function (_, $) {
           const parts = processed.split('|||');
           return parts.map(p => {
             if (p === '\\n') {
-              return $.HTML.t`<span class="escape-char">${p}</span>`;
+              return $html.HTML.t`<span class="escape-char">${p}</span>`;
             } else {
               return p;
             }
@@ -224,7 +224,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'Thread',
     slots: [
-      $.TextCompletion,
+      _.TextCompletion,
       $.Signal.new({ name: 'showConfig', default: false }),
       $.Var.new({ name: 'config' }),
       $.Var.new({ name: 'loom' }),
@@ -263,7 +263,7 @@ export default await function (_, $) {
           for (const lp of logprobs) {
             lp.logprob = lp.logprob / lptot;
           }
-          logprobs = logprobs.map(l => $.Logprob.new({
+          logprobs = logprobs.map(l => _.Logprob.new({
             text: l.token.replace(/Ġ/g, ' '),
             logprob: l.logprob,
             loom: this.loom(),
@@ -285,12 +285,12 @@ export default await function (_, $) {
             if (logprobs) {
               this.loom().logprobs(this.normaliseLogprobs(logprobs));
             } else {
-              this.loom().logprobs($.HTML.t`<span class="logprobs-err">(not implemented for api type)</span>`);
+              this.loom().logprobs($html.HTML.t`<span class="logprobs-err">(not implemented for api type)</span>`);
             }
           } catch (e) {
             console.log(e);
             if (!this.loom().logprobs()) {
-              this.loom().logprobs($.HTML.t`<span class="logprobs-err">(error: ${e.toString()})</span>`);
+              this.loom().logprobs($html.HTML.t`<span class="logprobs-err">(error: ${e.toString()})</span>`);
             }
           }
         }
@@ -322,7 +322,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'render',
         do() {
-          return $.HTML.t`
+          return $html.HTML.t`
           <div class="thread">
             <button class="thread-handle" onclick=${() => this.showConfig(!this.showConfig())}>☰</button>
             <div class="loom-col">
@@ -347,7 +347,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'Logprob',
     slots: [
-      $.TextCompletion,
+      _.TextCompletion,
       $.Var.new({ name: 'logprob' }),
       $.Var.new({ name: 'loom' }),
       $.Method.new({
@@ -362,7 +362,7 @@ export default await function (_, $) {
           // const opacity = Math.tanh(this.logprob()) + 0.5;
           let p = this.logprob().toPrecision(2);
           if (p.length > 5) p = '<0.01';
-          return $.HTML.t`
+          return $html.HTML.t`
             <button class="logprob-button" onclick=${() => this.weave()}>
               <span class="logprob-token">${() => this.spanify()}</span><span class="logprob">${p}</span>
             </button>
@@ -374,7 +374,7 @@ export default await function (_, $) {
   $.Class.new({
     name: 'Loom',
     slots: [
-      $.Component,
+      $html.Component,
       $.Signal.new({ name: 'text' }),
       $.Signal.new({ name: 'savedText', default: '' }),
       $.Signal.new({ name: 'history' }),
@@ -388,18 +388,18 @@ export default await function (_, $) {
       $.After.new({
         name: 'init',
         do() {
-          this.client($.OpenAIAPIClient.new());
+          this.client(_.OpenAIAPIClient.new());
           this.text(localStorage.getItem(this.localStorageKey()) || 'Once upon a time');
           this.savedText(this.text());
           const storedThreads = localStorage.getItem('LOOM_THREADS');
           if (storedThreads) {
-            this.threads(JSON.parse(storedThreads).map(t => $.Thread.new({ loom: this, ...t })));
+            this.threads(JSON.parse(storedThreads).map(t => _.Thread.new({ loom: this, ...t })));
           } else {
             let threads = [];
             for (let i = 0; i < 8; i++) {
-              threads.push($.Thread.new({
+              threads.push(_.Thread.new({
                 loom: this, 
-                config: $.ThreadConfig.new()
+                config: _.ThreadConfig.new()
               }));
             }
             this.threads(threads);
@@ -479,7 +479,7 @@ export default await function (_, $) {
       $.Method.new({
         name: 'render',
         do() {
-          return $.HTML.t`
+          return $html.HTML.t`
             <div class="loom">
               <div class="loom-col">
                 <textarea class="loom-textarea" onload=${e => e.target.scrollTop = e.target.scrollHeight}>${() => this.text()}</textarea>
@@ -513,5 +513,5 @@ export default await function (_, $) {
     ]
   });
 
-  $.Loom.new().mount();
+  _.Loom.new().mount();
 }.module({ name: 'demo.loom', imports: [base, html] }).load();
