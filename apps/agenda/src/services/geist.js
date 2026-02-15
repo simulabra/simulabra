@@ -7,6 +7,19 @@ import providerMod from '../provider.js';
 
 export default await async function (_, $, $live, $supervisor, $tools, $time, $provider) {
   $.Class.new({
+    name: 'GeistMessage',
+    doc: 'reified input to the geist interpreter',
+    slots: [
+      $.Var.new({ name: 'text' }),
+      $.Var.new({ name: 'conversationId', default: 'main' }),
+      $.Var.new({ name: 'source' }),
+      $.Var.new({ name: 'clientUid' }),
+      $.Var.new({ name: 'clientMessageId' }),
+      $.Var.new({ name: 'useHistory', default: false }),
+    ]
+  });
+
+  $.Class.new({
     name: 'GeistService',
     doc: 'Claude API integration for natural language understanding',
     slots: [
@@ -166,25 +179,11 @@ when the user mentions a project by name or slug, use the project's id in tool c
       }),
 
       $.Method.new({
-        name: 'buildMessages',
-        doc: 'build messages array for Claude API',
-        do(input) {
-          return [{ role: 'user', content: input }];
-        }
-      }),
-
-      $.Method.new({
-        name: 'buildMessagesFromHistory',
-        doc: 'build messages array from recent chat history',
-        do(chatMessages, currentInput) {
-          const messages = [];
-          for (const msg of chatMessages) {
-            if (msg.role === 'user' || msg.role === 'assistant') {
-              messages.push({ role: msg.role, content: msg.content });
-            }
-          }
-          messages.push({ role: 'user', content: currentInput });
-          return messages;
+        name: 'buildSystemContext',
+        doc: 'resolve project context and build the full system prompt',
+        async do() {
+          const projectContext = await this.resolveProjectContext();
+          return this.buildSystemPrompt(projectContext);
         }
       }),
 
@@ -203,6 +202,63 @@ when the user mentions a project by name or slug, use the project's id in tool c
         doc: 'execute a tool by name with given arguments',
         async do(toolName, args) {
           return await this.toolRegistry().execute(toolName, args, this.services());
+        }
+      }),
+
+      $.Method.new({
+        name: 'runConversation',
+        doc: 'execute a Claude API conversation turn with tool handling',
+        async do({ systemPrompt, messages }) {
+          const response = await this.client().messages.create({
+            model: this.model(),
+            max_tokens: 1024,
+            system: systemPrompt,
+            tools: this.tools(),
+            messages,
+          });
+
+          const results = [];
+          let textResponse = '';
+          for (const block of response.content) {
+            if (block.type === 'text') {
+              textResponse += block.text;
+            } else if (block.type === 'tool_use') {
+              this.tlog(`[conversation] tool: ${block.name}(${JSON.stringify(block.input)})`);
+              const toolResult = await this.executeTool(block.name, block.input);
+              results.push({ tool: block.name, input: block.input, result: toolResult });
+              if (!toolResult.success) {
+                this.tlog(`[conversation] tool error: ${toolResult.error}`);
+              }
+            }
+          }
+
+          if (response.stop_reason === 'tool_use' && results.length > 0) {
+            const toolResults = results.map((r, i) => ({
+              type: 'tool_result',
+              tool_use_id: response.content.filter(b => b.type === 'tool_use')[i].id,
+              content: JSON.stringify(r.result)
+            }));
+
+            const followUp = await this.client().messages.create({
+              model: this.model(),
+              max_tokens: 1024,
+              system: systemPrompt,
+              tools: this.tools(),
+              messages: [
+                ...messages,
+                { role: 'assistant', content: response.content },
+                { role: 'user', content: toolResults }
+              ],
+            });
+
+            for (const block of followUp.content) {
+              if (block.type === 'text') {
+                textResponse += block.text;
+              }
+            }
+          }
+
+          return { response: textResponse, toolsExecuted: results };
         }
       }),
 
@@ -228,73 +284,14 @@ when the user mentions a project by name or slug, use the project's id in tool c
         name: 'interpret',
         doc: 'interpret natural language input and execute actions',
         async do(input) {
-          this.tlog(`[conversation] user: ${input}`);
-
+          const message = _.GeistMessage.new(typeof input === 'string' ? { text: input } : input);
+          this.tlog(`[conversation] user: ${message.text()}`);
           try {
-            const projectContext = await this.resolveProjectContext();
-            const systemPrompt = this.buildSystemPrompt(projectContext);
-            const messages = this.buildMessages(input);
-
-            const response = await this.client().messages.create({
-              model: this.model(),
-              max_tokens: 1024,
-              system: systemPrompt,
-              tools: this.tools(),
-              messages,
-            });
-
-            const results = [];
-            let textResponse = '';
-
-            for (const block of response.content) {
-              if (block.type === 'text') {
-                textResponse += block.text;
-              } else if (block.type === 'tool_use') {
-                this.tlog(`[conversation] tool: ${block.name}(${JSON.stringify(block.input)})`);
-                const toolResult = await this.executeTool(block.name, block.input);
-                results.push({
-                  tool: block.name,
-                  input: block.input,
-                  result: toolResult
-                });
-                if (!toolResult.success) {
-                  this.tlog(`[conversation] tool error: ${toolResult.error}`);
-                }
-              }
-            }
-
-            if (response.stop_reason === 'tool_use' && results.length > 0) {
-              const toolResults = results.map((r, i) => ({
-                type: 'tool_result',
-                tool_use_id: response.content.filter(b => b.type === 'tool_use')[i].id,
-                content: JSON.stringify(r.result)
-              }));
-
-              const followUp = await this.client().messages.create({
-                model: this.model(),
-                max_tokens: 1024,
-                system: systemPrompt,
-                tools: this.tools(),
-                messages: [
-                  ...messages,
-                  { role: 'assistant', content: response.content },
-                  { role: 'user', content: toolResults }
-                ],
-              });
-
-              for (const block of followUp.content) {
-                if (block.type === 'text') {
-                  textResponse += block.text;
-                }
-              }
-            }
-
-            this.tlog(`[conversation] assistant: ${textResponse}`);
-            return {
-              success: true,
-              response: textResponse,
-              toolsExecuted: results
-            };
+            const systemPrompt = await this.buildSystemContext();
+            const messages = [{ role: 'user', content: message.text() }];
+            const { response, toolsExecuted } = await this.runConversation({ systemPrompt, messages });
+            this.tlog(`[conversation] assistant: ${response}`);
+            return { success: true, response, toolsExecuted };
           } catch (e) {
             this.tlog(`[conversation] error: ${e.message}`);
             return { success: false, error: e.message };
@@ -306,102 +303,38 @@ when the user mentions a project by name or slug, use the project's id in tool c
         name: 'interpretMessage',
         doc: 'interpret input and persist both user and assistant messages',
         async do({ conversationId = 'main', text, source, clientUid, clientMessageId, useHistory = true }) {
+          const message = _.GeistMessage.new({ text, conversationId, source, clientUid, clientMessageId, useHistory });
           this.tlog(`[conversation] user (${source}): ${text}`);
           const db = this.dbService();
-
           try {
-            const projectContext = await this.resolveProjectContext();
-            const systemPrompt = this.buildSystemPrompt(projectContext);
-
+            const systemPrompt = await this.buildSystemContext();
             const userMessage = await db.appendChatMessage({
-              conversationId,
-              role: 'user',
-              content: text,
-              source,
-              clientUid,
-              clientMessageId,
+              conversationId, role: 'user', content: text,
+              source, clientUid, clientMessageId,
             });
 
             let messages;
             if (useHistory) {
               const history = await db.listChatMessages({ conversationId, limit: 20 });
-              const historyWithoutCurrent = history.filter(m => m.id !== userMessage.id);
-              messages = this.buildMessagesFromHistory(historyWithoutCurrent, text);
+              messages = history
+                .filter(m => m.id !== userMessage.id && (m.role === 'user' || m.role === 'assistant'))
+                .map(m => ({ role: m.role, content: m.content }));
+              messages.push({ role: 'user', content: text });
             } else {
-              messages = this.buildMessages(text);
+              messages = [{ role: 'user', content: text }];
             }
 
-            const response = await this.client().messages.create({
-              model: this.model(),
-              max_tokens: 1024,
-              system: systemPrompt,
-              tools: this.tools(),
-              messages,
-            });
+            const { response, toolsExecuted } = await this.runConversation({ systemPrompt, messages });
 
-            const results = [];
-            let textResponse = '';
-
-            for (const block of response.content) {
-              if (block.type === 'text') {
-                textResponse += block.text;
-              } else if (block.type === 'tool_use') {
-                this.tlog(`[conversation] tool: ${block.name}(${JSON.stringify(block.input)})`);
-                const toolResult = await this.executeTool(block.name, block.input);
-                results.push({
-                  tool: block.name,
-                  input: block.input,
-                  result: toolResult
-                });
-                if (!toolResult.success) {
-                  this.tlog(`[conversation] tool error: ${toolResult.error}`);
-                }
-              }
-            }
-
-            if (response.stop_reason === 'tool_use' && results.length > 0) {
-              const toolResults = results.map((r, i) => ({
-                type: 'tool_result',
-                tool_use_id: response.content.filter(b => b.type === 'tool_use')[i].id,
-                content: JSON.stringify(r.result)
-              }));
-
-              const followUp = await this.client().messages.create({
-                model: this.model(),
-                max_tokens: 1024,
-                system: systemPrompt,
-                tools: this.tools(),
-                messages: [
-                  ...messages,
-                  { role: 'assistant', content: response.content },
-                  { role: 'user', content: toolResults }
-                ],
-              });
-
-              for (const block of followUp.content) {
-                if (block.type === 'text') {
-                  textResponse += block.text;
-                }
-              }
-            }
-
-            const toolNames = results.map(r => r.tool);
+            const toolNames = toolsExecuted.map(r => r.tool);
             const assistantMessage = await db.appendChatMessage({
-              conversationId,
-              role: 'assistant',
-              content: textResponse || 'Done.',
-              source: 'geist',
+              conversationId, role: 'assistant',
+              content: response || 'Done.', source: 'geist',
               meta: toolNames.length > 0 ? { toolsExecuted: toolNames } : null,
             });
 
-            this.tlog(`[conversation] assistant (geist): ${textResponse}`);
-            return {
-              success: true,
-              response: textResponse,
-              toolsExecuted: results,
-              userMessage,
-              assistantMessage,
-            };
+            this.tlog(`[conversation] assistant (geist): ${response}`);
+            return { success: true, response, toolsExecuted, userMessage, assistantMessage };
           } catch (e) {
             this.tlog(`[conversation] error: ${e.message}`);
             return { success: false, error: e.message };

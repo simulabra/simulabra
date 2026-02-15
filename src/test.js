@@ -66,6 +66,8 @@ export default await async function (_, $) {
       }),
     ]
   });
+  const testTimeoutMs = parseInt(process.env.TIMEOUT || '10', 10) * 1000;
+
   $.Class.new({
     name: 'AsyncCase',
     slots: [
@@ -74,13 +76,18 @@ export default await async function (_, $) {
         name: 'run',
         override: true,
         async do() {
+          const timer = setTimeout(() => {
+            console.error(`TIMEOUT: ${this.title()} exceeded ${testTimeoutMs}ms`);
+            process.exit(1);
+          }, testTimeoutMs);
+          timer.unref?.();
           try {
-            return this.do().apply(this);
-            // this.log('passed');
+            return await this.do().apply(this);
           } catch (e) {
-            // demands a native error class?
             this.log('failed');
             throw e;
+          } finally {
+            clearTimeout(timer);
           }
         }
       }),
