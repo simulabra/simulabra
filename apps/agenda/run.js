@@ -170,14 +170,6 @@ export default await async function (_, $, $supervisor) {
         code: 'MISSING_FIELD'
       });
     }
-    const validActions = ['done', 'backlog', 'snooze', 'dismiss'];
-    if (!validActions.includes(body.action)) {
-      throw $supervisor.HttpError.new({
-        status: 400,
-        message: `Invalid action: ${body.action}. Must be one of: ${validActions.join(', ')}`,
-        code: 'INVALID_ACTION'
-      });
-    }
     return await geist.actionHaunt(body);
   });
 

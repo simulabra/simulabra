@@ -103,6 +103,12 @@ await async function (_, $, $test) {
   });
 
   if (require.main === module) {
+    const timeoutSec = parseInt(process.env.TIMEOUT || '10', 10);
+    setTimeout(() => {
+      console.error(`TIMEOUT: test runner exceeded ${timeoutSec}s`);
+      process.exit(1);
+    }, timeoutSec * 1000);
+
     const runner = _.TestRunner.new();
     const arg = process.argv[2];
     let path;

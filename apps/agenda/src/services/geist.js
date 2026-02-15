@@ -20,6 +20,124 @@ export default await async function (_, $, $live, $supervisor, $tools, $time, $p
   });
 
   $.Class.new({
+    name: 'HauntItem',
+    doc: 'base class for the item a haunt references — marshalls itemType string into dispatch',
+    slots: [
+      $.Var.new({ name: 'itemId' }),
+      $.Method.new({ name: 'onDone', async do(_db) {} }),
+      $.Method.new({ name: 'onBacklog', async do(_db) {} }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'TaskHauntItem',
+    slots: [
+      _.HauntItem,
+      $.Method.new({
+        name: 'onDone',
+        override: true,
+        async do(db) {
+          await db.completeTask({ id: this.itemId() });
+        }
+      }),
+      $.Method.new({
+        name: 'onBacklog',
+        override: true,
+        async do(db) {
+          await db.updateTask({ id: this.itemId(), priority: 5 });
+        }
+      }),
+    ]
+  });
+
+  const hauntItemTypes = {
+    task: _.TaskHauntItem,
+    log: _.HauntItem,
+    reminder: _.HauntItem,
+  };
+
+  function resolveHauntItem(haunt) {
+    const ItemClass = hauntItemTypes[haunt.itemType] || _.HauntItem;
+    return ItemClass.new({ itemId: haunt.itemId });
+  }
+
+  $.Class.new({
+    name: 'HauntAction',
+    doc: 'base class for haunt actions — each subclass handles one user response type',
+    slots: [
+      $.Var.new({ name: 'actionName' }),
+      $.Virtual.new({ name: 'execute', doc: 'apply the action, return updateFields' }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'DoneAction',
+    slots: [
+      _.HauntAction,
+      $.Var.new({ name: 'actionName', default: 'done' }),
+      $.Method.new({
+        name: 'execute',
+        async do(item, db) {
+          await item.onDone(db);
+          return { status: 'actioned' };
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'BacklogAction',
+    slots: [
+      _.HauntAction,
+      $.Var.new({ name: 'actionName', default: 'backlog' }),
+      $.Method.new({
+        name: 'execute',
+        async do(item, db) {
+          await item.onBacklog(db);
+          return { status: 'actioned' };
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'SnoozeAction',
+    slots: [
+      _.HauntAction,
+      $.Var.new({ name: 'actionName', default: 'snooze' }),
+      $.Method.new({
+        name: 'execute',
+        async do(_item, _db) {
+          return {
+            status: 'pending',
+            snoozeUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          };
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'DismissAction',
+    slots: [
+      _.HauntAction,
+      $.Var.new({ name: 'actionName', default: 'dismiss' }),
+      $.Method.new({
+        name: 'execute',
+        async do(_item, _db) {
+          return { status: 'dismissed' };
+        }
+      }),
+    ]
+  });
+
+  const hauntActions = {};
+  for (const Action of [_.DoneAction, _.BacklogAction, _.SnoozeAction, _.DismissAction]) {
+    const action = Action.new();
+    hauntActions[action.actionName()] = action;
+  }
+
+  $.Class.new({
     name: 'GeistService',
     doc: 'Claude API integration for natural language understanding',
     slots: [
@@ -563,57 +681,26 @@ Generate up to ${context.config.maxHauntsPerCycle} haunts for items that need at
 
       $live.RpcMethod.new({
         name: 'actionHaunt',
-        doc: 'process user action on a haunt and update related items accordingly',
+        doc: 'process user action on a haunt via dispatch to HauntAction and HauntItem objects',
         async do({ id, action }) {
+          const handler = hauntActions[action];
+          if (!handler) {
+            throw new Error(`Unknown action: ${action}`);
+          }
           const db = this.dbService();
           const haunt = await db.getHaunt({ id });
           if (!haunt) {
             throw new Error(`Haunt not found: ${id}`);
           }
 
-          const updateFields = {
+          const item = resolveHauntItem(haunt);
+          const actionFields = await handler.execute(item, db);
+          const result = await db.updateHaunt({
             id,
             action,
             actionedAt: new Date().toISOString(),
-          };
-
-          switch (action) {
-            case 'done':
-              updateFields.status = 'actioned';
-              if (haunt.itemType === 'task' && haunt.itemId) {
-                try {
-                  await db.completeTask({ id: haunt.itemId });
-                } catch (e) {
-                  this.tlog(`Failed to complete task ${haunt.itemId}:`, e.message);
-                }
-              }
-              break;
-
-            case 'backlog':
-              updateFields.status = 'actioned';
-              if (haunt.itemType === 'task' && haunt.itemId) {
-                try {
-                  await db.updateTask({ id: haunt.itemId, priority: 5 });
-                } catch (e) {
-                  this.tlog(`Failed to backlog task ${haunt.itemId}:`, e.message);
-                }
-              }
-              break;
-
-            case 'snooze':
-              updateFields.status = 'pending';
-              updateFields.snoozeUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-              break;
-
-            case 'dismiss':
-              updateFields.status = 'dismissed';
-              break;
-
-            default:
-              throw new Error(`Unknown action: ${action}`);
-          }
-
-          const result = await db.updateHaunt(updateFields);
+            ...actionFields,
+          });
 
           await this.recordHauntResponse({
             hauntId: id,

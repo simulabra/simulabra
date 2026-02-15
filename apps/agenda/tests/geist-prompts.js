@@ -302,9 +302,10 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
       const database = createTestDb();
       const { dbService, geistService } = createTestServices(database);
 
+      const task = await dbService.createTask({ title: 'History test task', priority: 2 });
       const haunt = await dbService.createHaunt({
         itemType: 'task',
-        itemId: 'task-1',
+        itemId: task.id,
         message: 'Test haunt',
         status: 'pending'
       });
@@ -954,9 +955,9 @@ export default await async function (_, $, $test, $db, $sqlite, $models, $databa
 
       const prompt = geistService.systemPrompt();
 
-      this.assert(prompt.includes('organizational containers'), 'should describe projects as organizational containers');
+      this.assert(prompt.includes('project container'), 'should describe projects as containers');
       this.assert(prompt.includes('do NOT use create_task'), 'should warn against using create_task for projects');
-      this.assert(prompt.includes('projects and tasks are different'), 'should state projects and tasks are different');
+      this.assert(prompt.includes('projects and tasks are DIFFERENT'), 'should state projects and tasks are different');
 
       database.close();
     }
