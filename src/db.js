@@ -39,13 +39,85 @@ export default await async function (_, $) {
         name: 'createText',
         default: 'TEXT',
       }),
-      $.Var.new({
+      $.Method.new({
         name: 'toSQL',
-        default: () => function() { return this; },
+        do(value) { return value; },
       }),
-      $.Var.new({
+      $.Method.new({
         name: 'fromSQL',
-        default: () => function() { return this; },
+        do(value) { return value; },
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'DateVar',
+    doc: 'DBVar for nullable Date fields — stores as ISO 8601 string in SQLite',
+    slots: [
+      _.DBVar,
+      $.Method.new({
+        name: 'toSQL',
+        override: true,
+        do(value) { return value ? value.toISOString() : null; },
+      }),
+      $.Method.new({
+        name: 'fromSQL',
+        override: true,
+        do(value) { return value ? new Date(value) : null; },
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'BoolVar',
+    doc: 'DBVar for boolean fields — stores as "true"/"false" string in SQLite',
+    slots: [
+      _.DBVar,
+      $.Method.new({
+        name: 'toSQL',
+        override: true,
+        do(value) { return value ? 'true' : 'false'; },
+      }),
+      $.Method.new({
+        name: 'fromSQL',
+        override: true,
+        do(value) { return value === 'true'; },
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'JSONVar',
+    doc: 'DBVar for JSON-serializable fields — stores as JSON string in SQLite',
+    slots: [
+      _.DBVar,
+      $.Method.new({
+        name: 'toSQL',
+        override: true,
+        do(value) { return value != null ? JSON.stringify(value) : null; },
+      }),
+      $.Method.new({
+        name: 'fromSQL',
+        override: true,
+        do(value) { return value != null ? JSON.parse(value) : null; },
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'NumberVar',
+    doc: 'DBVar for numeric fields — stores as string in SQLite, parses back to Number',
+    slots: [
+      _.DBVar,
+      $.Method.new({
+        name: 'toSQL',
+        override: true,
+        do(value) { return String(value); },
+      }),
+      $.Method.new({
+        name: 'fromSQL',
+        override: true,
+        do(value) { return Number(value); },
       }),
     ]
   });
@@ -59,14 +131,8 @@ export default await async function (_, $) {
         primary: true,
         createText: 'INTEGER PRIMARY KEY AUTOINCREMENT',
       }),
-      _.DBVar.new({
+      _.DateVar.new({
         name: 'created',
-        toSQL() {
-          return this ? this.toISOString() : null;
-        },
-        fromSQL() {
-          return this ? new Date(this) : null;
-        },
       }),
       $.Static.new({
         name: 'columns',
@@ -77,7 +143,7 @@ export default await async function (_, $) {
       $.Method.new({
         name: 'columnReplacements',
         do: function columnReplacements(columns) {
-            return Object.fromEntries(columns.map(col => (['$' + col.name, col.toSQL().apply(this[col.name]())])));
+            return Object.fromEntries(columns.map(col => (['$' + col.name, col.toSQL(this[col.name]())])));
         }
       }),
       $.Static.new({
@@ -120,7 +186,7 @@ export default await async function (_, $) {
           const elems = db.query(`SELECT * FROM ${this.name}`).all();
           return elems.map(elem => {
             for (const col of Object.keys(elem)) {
-              elem[col] = this.getslot(col).fromSQL().apply(elem[col]);
+              elem[col] = this.getslot(col).fromSQL(elem[col]);
             }
             return this.new(elem);
           });
@@ -139,18 +205,14 @@ export default await async function (_, $) {
         primary: true,
         createText: 'TEXT PRIMARY KEY',
       }),
-      _.DBVar.new({
+      _.DateVar.new({
         name: 'createdAt',
         doc: 'creation timestamp',
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      _.DBVar.new({
+      _.DateVar.new({
         name: 'updatedAt',
         doc: 'last update timestamp',
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
       $.Static.new({
         name: 'tableName',
@@ -239,7 +301,7 @@ export default await async function (_, $) {
           for (const varSlot of this.class().dbVars()) {
             const value = this[varSlot.name]();
             if (value !== undefined && value !== null) {
-              hash['$' + varSlot.name] = varSlot.toSQL().apply(value);
+              hash['$' + varSlot.name] = varSlot.toSQL(value);
             } else {
               hash['$' + varSlot.name] = null;
             }
@@ -255,7 +317,7 @@ export default await async function (_, $) {
           for (const varSlot of this.dbVars()) {
             const rawValue = row[varSlot.name];
             if (rawValue !== undefined && rawValue !== null) {
-              data[varSlot.name] = varSlot.fromSQL().apply(rawValue);
+              data[varSlot.name] = varSlot.fromSQL(rawValue);
             }
           }
           return this.new(data);
@@ -309,7 +371,7 @@ export default await async function (_, $) {
         do(db, fieldName, value) {
           const varSlot = this.dbVars().find(v => v.name === fieldName);
           if (!varSlot) throw new Error(`Unknown field: ${fieldName}`);
-          const sqlValue = varSlot.toSQL().apply(value);
+          const sqlValue = varSlot.toSQL(value);
           const rows = db.query(`SELECT * FROM ${this.tableName()} WHERE ${fieldName} = $value`).all({ $value: sqlValue });
           return rows.map(row => this.fromSQLRow(row));
         }

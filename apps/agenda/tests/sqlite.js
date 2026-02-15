@@ -25,19 +25,15 @@ export default await async function (_, $, $test, $db, $sqlite) {
         searchable: true,
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.NumberVar.new({
         name: 'count',
         indexed: true,
         mutable: true,
-        toSQL() { return String(this); },
-        fromSQL() { return Number(this); },
       }),
-      $db.DBVar.new({
+      $db.JSONVar.new({
         name: 'tags',
         default: () => [],
         mutable: true,
-        toSQL() { return JSON.stringify(this); },
-        fromSQL() { return JSON.parse(this); },
       }),
     ]
   });

@@ -5,6 +5,24 @@ import time from './time.js';
 
 export default await async function (_, $, $db, $sqlite, $time) {
   $.Class.new({
+    name: 'RecurrenceVar',
+    doc: 'DBVar for RecurrenceRule fields — serializes via toJSON/fromJSON',
+    slots: [
+      $db.DBVar,
+      $.Method.new({
+        name: 'toSQL',
+        override: true,
+        do(value) { return value ? JSON.stringify(value.toJSON()) : null; },
+      }),
+      $.Method.new({
+        name: 'fromSQL',
+        override: true,
+        do(value) { return value ? $time.RecurrenceRule.fromJSON(JSON.parse(value)) : null; },
+      }),
+    ]
+  });
+
+  $.Class.new({
     name: 'Log',
     doc: 'Journal entry with timestamp and optional tags',
     slots: [
@@ -15,22 +33,18 @@ export default await async function (_, $, $db, $sqlite, $time) {
         searchable: true,
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'timestamp',
         doc: 'when the entry was created',
         indexed: true,
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.JSONVar.new({
         name: 'tags',
         doc: 'extracted or explicit tags',
         default: () => [],
         indexed: true,
         mutable: true,
-        toSQL() { return JSON.stringify(this); },
-        fromSQL() { return JSON.parse(this); },
       }),
       $db.DBVar.new({
         name: 'projectId',
@@ -67,47 +81,37 @@ export default await async function (_, $, $db, $sqlite, $time) {
         searchable: true,
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.BoolVar.new({
         name: 'done',
         doc: 'whether the task is completed',
         default: false,
         indexed: true,
         mutable: true,
-        toSQL() { return this ? 'true' : 'false'; },
-        fromSQL() { return this === 'true'; },
       }),
-      $db.DBVar.new({
+      $db.NumberVar.new({
         name: 'priority',
         doc: 'priority level (1=highest, 5=lowest)',
         default: 3,
         indexed: true,
         mutable: true,
-        toSQL() { return String(this); },
-        fromSQL() { return Number(this); },
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'dueDate',
         doc: 'optional deadline',
         indexed: true,
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'completedAt',
         doc: 'when the task was completed',
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.JSONVar.new({
         name: 'tags',
         doc: 'optional tags for categorization',
         default: () => [],
         indexed: true,
         mutable: true,
-        toSQL() { return JSON.stringify(this); },
-        fromSQL() { return JSON.parse(this); },
       }),
       $db.DBVar.new({
         name: 'projectId',
@@ -162,29 +166,23 @@ export default await async function (_, $, $db, $sqlite, $time) {
         searchable: true,
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'triggerAt',
         doc: 'when to trigger the reminder',
         indexed: true,
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      _.RecurrenceVar.new({
         name: 'recurrence',
-        doc: 'optional recurrence rule (JSON)',
+        doc: 'optional recurrence rule',
         mutable: true,
-        toSQL() { return this ? JSON.stringify(this.toJSON()) : null; },
-        fromSQL() { return this ? $time.RecurrenceRule.fromJSON(JSON.parse(this)) : null; },
       }),
-      $db.DBVar.new({
+      $db.BoolVar.new({
         name: 'sent',
         doc: 'whether the reminder has been sent',
         default: false,
         indexed: true,
         mutable: true,
-        toSQL() { return this ? 'true' : 'false'; },
-        fromSQL() { return this === 'true'; },
       }),
       $db.DBVar.new({
         name: 'projectId',
@@ -258,12 +256,10 @@ export default await async function (_, $, $db, $sqlite, $time) {
         searchable: true,
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.JSONVar.new({
         name: 'context',
         doc: 'context used for generation',
         mutable: true,
-        toSQL() { return this ? JSON.stringify(this) : null; },
-        fromSQL() { return this ? JSON.parse(this) : null; },
       }),
       $db.DBVar.new({
         name: 'status',
@@ -277,41 +273,31 @@ export default await async function (_, $, $db, $sqlite, $time) {
         doc: 'user action taken on this haunt',
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.JSONVar.new({
         name: 'actions',
         doc: 'LLM-generated action choices [{label, message}]',
         mutable: true,
-        toSQL() { return this ? JSON.stringify(this) : null; },
-        fromSQL() { return this ? JSON.parse(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'generatedAt',
         doc: 'when the haunt was generated',
         indexed: true,
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'shownAt',
         doc: 'when the haunt was shown to user',
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'actionedAt',
         doc: 'when the user responded',
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'snoozeUntil',
         doc: 'for snoozed haunts, when to show again',
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
       $.After.new({
         name: 'init',
@@ -347,44 +333,34 @@ export default await async function (_, $, $db, $sqlite, $time) {
         default: 'main',
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.NumberVar.new({
         name: 'hauntFrequencyHours',
         doc: 'hours between generation cycles',
         default: 8,
         mutable: true,
-        toSQL() { return String(this); },
-        fromSQL() { return Number(this); },
       }),
-      $db.DBVar.new({
+      $db.NumberVar.new({
         name: 'maxHauntsPerCycle',
         doc: 'max haunts per generation',
         default: 3,
         mutable: true,
-        toSQL() { return String(this); },
-        fromSQL() { return Number(this); },
       }),
-      $db.DBVar.new({
+      $db.NumberVar.new({
         name: 'taskStalenessDays',
         doc: 'days before a task is considered stale',
         default: 7,
         mutable: true,
-        toSQL() { return String(this); },
-        fromSQL() { return Number(this); },
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'lastGenerationAt',
         doc: 'last generation time',
         mutable: true,
-        toSQL() { return this ? this.toISOString() : null; },
-        fromSQL() { return this ? new Date(this) : null; },
       }),
-      $db.DBVar.new({
+      $db.JSONVar.new({
         name: 'responseHistory',
         doc: 'recent responses for learning',
         default: () => [],
         mutable: true,
-        toSQL() { return JSON.stringify(this); },
-        fromSQL() { return JSON.parse(this); },
       }),
       $.Method.new({
         name: 'shouldGenerate',
@@ -433,14 +409,12 @@ export default await async function (_, $, $db, $sqlite, $time) {
         indexed: true,
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.BoolVar.new({
         name: 'archived',
         doc: 'whether the project is archived',
         default: false,
         indexed: true,
         mutable: true,
-        toSQL() { return this ? 'true' : 'false'; },
-        fromSQL() { return this === 'true'; },
       }),
       $db.DBVar.new({
         name: 'context',

@@ -23,15 +23,9 @@ export default await async function (_, $, $db) {
         name: 'content',
         mutable: true,
       }),
-      $db.DBVar.new({
+      $db.DateVar.new({
         name: 'finished',
         mutable: true,
-        toSQL() {
-          return this ? this.toISOString() : null;
-        },
-        fromSQL() {
-          return this ? new Date(this) : null;
-        },
       }),
       $.Method.new({
         name: 'description',
