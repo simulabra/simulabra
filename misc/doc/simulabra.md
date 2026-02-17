@@ -15,7 +15,7 @@ Simulabra reads like an attempt to take the “everything is an object” mindse
   - a template + component library (`src/html.js`) used by the Loom demos
   - live WebSocket RPC (`src/live.js`) for multi-process/service graphs
   - bin tools (`bin/lister.js`, `bin/finder.js`, `bin/gen-exports.js`) for introspection and maintenance
-- **Multiple “Agenda”s.** There is an older `demos/agenda.js` (SQLite + Commands) and a newer `apps/agenda/` (Redis + live services). That split is useful for understanding the system’s direction: from in-process OO scripting toward supervised distributed objects.
+- **Agenda app.** The `apps/agenda/` directory contains the full personal productivity system (SQLite + live services). An older demo (`demos/agenda.js`) was retired to `yard/`.
 
 Simulabra is opinionated: it expects you to gradually shed procedural “script style” and instead reify concepts as objects that can be inherited, composed, inspected, and tested.
 
@@ -193,7 +193,7 @@ Two useful higher-level mixins build on this:
 
 `$.Command` is a slot that installs a method on the prototype that returns a `$.CommandContext`, and a convenience method that immediately runs it.
 
-In practice (see `demos/agenda.js`), this supports an OO style where:
+In practice, this supports an OO style where:
 
 - “pure verbs” exist as command objects that can be queued, logged, replayed, or inspected
 - the receiving object (`runcommand`) decides how and when commands execute
@@ -287,7 +287,7 @@ Provides:
 - `DBVar`: a persisted field slot with SQL type metadata and transforms
 - `Persisted` mixin: table creation, save/update, and `loadAll()`
 
-The older `demos/agenda.js` demonstrates how `Persisted` and `Command` combine into an “OO app” without services.
+The `Persisted` and `Command` systems combine naturally into "OO apps" without services.
 
 ## Included Tooling (`bin/`)
 

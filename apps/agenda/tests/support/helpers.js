@@ -7,7 +7,6 @@ export default await async function (_, $) {
   const SILENCED_PREFIXES = [
     '$services.',
     '$supervisor.',
-    '$redis.',
   ];
 
   $.Class.new({

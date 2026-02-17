@@ -149,6 +149,7 @@ Configurable mixin — for classes with many environment-driven settings, consid
  - when refactoring, form an understanding of the component parts of a problem and properly rearrange them using inheritance and composition
  - before you start changing things, ask if there is a better way
  - keep command outputs short — pipe through `tail`, use filters, or suppress verbose logging. The user reads the output in a terminal.
+ - NEVER use `git -C <path>` — it breaks permission caching. Always run git commands from the repo root.
 </Developing>
 
 <HTML>

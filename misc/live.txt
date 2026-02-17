@@ -1,6 +1,0 @@
-live objects can talk through a network
-simulabra://palace.simulabra.com/home/agent
-so a host registers objects in a given location, to a context
-a running process has to know what kind of node it is, and who is the leader
-
-q: can multiple nodes with the same name/id connect? how else do we do horizontal scaling?

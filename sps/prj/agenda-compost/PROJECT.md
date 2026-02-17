@@ -6,7 +6,7 @@ Review the agenda app's Simulabra usage patterns and produce a prompt alignment 
 review, agenda, simulabra, prompts, architecture
 
 ## Status
-DONE
+IN PROGRESS
 
 ## Overview
 Deep review of apps/agenda/ to assess how well it leverages the Simulabra object system. Identify anti-patterns, missed abstractions, and shortcuts. Produce a document that aligns future agent prompts with Simulabra idioms so the agent thinks in terms of classes, slots, and composition rather than ad-hoc code.
@@ -18,6 +18,7 @@ Deep review of apps/agenda/ to assess how well it leverages the Simulabra object
 - [x] Phase 4: Update geist system prompts with improved versions
 - [x] Phase 5: Extract shared interpret/interpretMessage logic (~-80 lines)
 - [x] Phase 6: Replace brute-force search with FTS5 Model.search()
+- [x] Phase 7: Dead code audit and yard migration
 
 ## History
 - 2026-02-13: Project initialized. Beginning codebase exploration.
@@ -27,3 +28,6 @@ Deep review of apps/agenda/ to assess how well it leverages the Simulabra object
 - 2026-02-14: Phase 4 complete. Both geist system prompts replaced in src/services/geist.js. Main prompt now has data model, intent→tool mapping, time parsing, and multi-step operation sections. Haunt prompt now has priority tiers, explicit skip criteria, and structured output format.
 - 2026-02-14: Phase 5 complete. Extracted _processWithTools $.Method from shared interpret/interpretMessage logic. geist.js: 820→767 lines (-53). Both methods are now thin wrappers around the shared core.
 - 2026-02-14: Phase 6 complete. DatabaseService.search now uses Model.search(db, query) via FTS5 indexes. Brute-force findAll().filter() eliminated. Search method: 30→16 lines. Wildcard/empty queries fall back to findAll() without filtering.
+- 2026-02-16: Phase 7 started. Dead code audit — traced import graph from all entry points, identified 17 files (sections 1 & 2) for yard migration. Document at docs/dead-code.md.
+- 2026-02-16: Phase 7 complete. Moved 16 files to yard/ (excluded bin/pm-runner.js — still active via PMController.start). Removed dead "agent"/"serve" scripts from package.json. Updated 5 agenda test files to remove redis.js dependency. Cleaned up stale doc references. All tests pass.
+- 2026-02-16: Phase 7 extended — Redis test cleanup. Yarded 3 broken Redis-only test files (integration.js, chat.js, redis.js). Ported geist.js and reminder.js tests from Redis to SQLite in-memory. Fixed production bug in reminder.js:62 (undefined `db` reference). 314 agenda test cases passing across 12 modules.
