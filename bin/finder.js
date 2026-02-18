@@ -6,7 +6,7 @@ if (!slotName) {
   process.exit(1);
 }
 
-const files = await $`rg -l "name:\\s*['\"]${slotName}['\"]" src/ demos/ tests/ bin/`.nothrow().text();
+const files = await $`rg -l "name:\\s*['\"]${slotName}['\"]" src/ tests/ bin/`.nothrow().text();
 
 if (!files.trim()) {
   console.log(`No implementations of '${slotName}' found`);
