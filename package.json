@@ -17,6 +17,9 @@
     "./runner": "./src/runner.js"
   },
   "module": "./src/base.js",
+  "bin": {
+    "sgit": "./bin/sgit.js"
+  },
   "scripts": {
     "watchtest": "watchexec -w . -e js -r -- bun run src/runner.js",
     "test": "bun run src/runner.js",
