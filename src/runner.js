@@ -1,5 +1,5 @@
 import { readdir } from 'fs/promises';
-import { join, dirname, relative } from 'path';
+import { join } from 'path';
 import { __, base } from './base.js';
 import test from './test.js';
 
@@ -80,7 +80,7 @@ await async function (_, $, $test) {
           }
 
           for (const file of files) {
-            const filePath = join(dirname(__dirname), join(basePath, file));
+            const filePath = join(process.cwd(), join(basePath, file));
             try {
               const mod = await this.loadFile(filePath);
               await this.runMod(mod);
@@ -110,16 +110,17 @@ await async function (_, $, $test) {
     }, timeoutSec * 1000);
 
     const runner = _.TestRunner.new();
-    const arg = process.argv[2];
-    let path;
-    if (!arg) {
-      path = 'tests';
-    } else if (arg.endsWith('.js') || arg.includes('/')) {
-      path = arg;
-    } else {
-      path = `tests/${arg}.js`;
+    const args = process.argv.slice(2);
+    if (args.length === 0) args.push('tests/');
+    for (const arg of args) {
+      let path;
+      if (arg.endsWith('.js') || arg.includes('/')) {
+        path = arg;
+      } else {
+        path = `tests/${arg}.js`;
+      }
+      await runner.run(path);
     }
-    await runner.run(path);
     process.exit(0);
   }
 }.module({
