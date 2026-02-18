@@ -106,6 +106,34 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
   });
 
   $test.Case.new({
+    name: 'TaskToggleDoneToUndone',
+    doc: 'Task.toggle should flip a done task back to not-done',
+    do() {
+      const task = $models.Task.new({ title: 'toggle me' });
+      task.complete();
+      this.assertEq(task.done(), true);
+      this.assert(task.completedAt() instanceof Date, 'should have completedAt after complete');
+
+      task.toggle();
+      this.assertEq(task.done(), false);
+      this.assertEq(task.completedAt(), null, 'completedAt should be cleared');
+    }
+  });
+
+  $test.Case.new({
+    name: 'TaskToggleUndoneToDone',
+    doc: 'Task.toggle should flip a not-done task to done',
+    do() {
+      const task = $models.Task.new({ title: 'toggle me' });
+      this.assertEq(task.done(), false);
+
+      task.toggle();
+      this.assertEq(task.done(), true);
+      this.assert(task.completedAt() instanceof Date, 'should have completedAt after toggle');
+    }
+  });
+
+  $test.Case.new({
     name: 'TaskWithPriority',
     doc: 'Task should support priority levels',
     do() {
@@ -1128,6 +1156,71 @@ export default await async function (_, $, $test, $db, $sqlite, $time, $models) 
       database.close();
     }
   });
+  $test.Case.new({
+    name: 'ModelSearchFTS5Tasks',
+    doc: 'Task.search should find tasks via FTS5 index',
+    do() {
+      const database = createTestDb();
+
+      const t1 = $models.Task.new({ title: 'buy groceries for dinner' });
+      const t2 = $models.Task.new({ title: 'fix the leaky faucet' });
+      const t3 = $models.Task.new({ title: 'grocery list for weekend' });
+      t1.save(database);
+      t2.save(database);
+      t3.save(database);
+
+      const results = $models.Task.search(database, 'groceries OR grocery');
+      this.assertEq(results.length, 2);
+      const titles = results.map(t => t.title());
+      this.assert(titles.includes('buy groceries for dinner'), 'should find groceries task');
+      this.assert(titles.includes('grocery list for weekend'), 'should find grocery task');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'ModelSearchFTS5Logs',
+    doc: 'Log.search should find logs via FTS5 index',
+    do() {
+      const database = createTestDb();
+
+      const l1 = $models.Log.new({ content: 'met with Alice about the project' });
+      const l2 = $models.Log.new({ content: 'dentist appointment at 3pm' });
+      const l3 = $models.Log.new({ content: 'Alice sent the final report' });
+      l1.save(database);
+      l2.save(database);
+      l3.save(database);
+
+      const results = $models.Log.search(database, 'Alice');
+      this.assertEq(results.length, 2);
+      const contents = results.map(l => l.content());
+      this.assert(contents.some(c => c.includes('met with Alice')), 'should find first Alice log');
+      this.assert(contents.some(c => c.includes('Alice sent')), 'should find second Alice log');
+
+      database.close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'ModelSearchFTS5NoResults',
+    doc: 'Model.search should return empty array for non-matching query',
+    do() {
+      const database = createTestDb();
+
+      $models.Task.new({ title: 'normal task' }).save(database);
+      $models.Log.new({ content: 'normal log entry' }).save(database);
+
+      const taskResults = $models.Task.search(database, 'xyznonexistent');
+      this.assertEq(taskResults.length, 0);
+
+      const logResults = $models.Log.search(database, 'xyznonexistent');
+      this.assertEq(logResults.length, 0);
+
+      database.close();
+    }
+  });
+
 }.module({
   name: 'test.models',
   imports: [base, test, db, sqlite, time, models],

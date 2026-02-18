@@ -174,3 +174,123 @@
 - [x] Error cases covered (unknown item type in move_to_project)
 - [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/geist.js` passes
 - [x] `bun run test` clean
+
+### Phase 10: DatabaseService Gaps + Model-Level Tests
+
+#### Files Modified
+- `apps/agenda/tests/services/database.js`
+- `apps/agenda/tests/models.js`
+
+#### Tests Added (10)
+
+**hideChatMessages (3 tests in database.js)**
+1. **DatabaseServiceHideChatByIds**: Appends 3 chat messages, hides 2 by internalIds. Asserts `{ hidden: 2 }` and that `listChatMessages` returns only the unhidden message.
+2. **DatabaseServiceHideChatBySinceMinutes**: Appends 2 messages, hides with `sinceMinutes: 5`. Asserts all recent messages hidden and list returns empty.
+3. **DatabaseServiceHideChatNoArgs**: Appends a message, calls `hideChatMessages({})` with no ids/sinceMinutes. Asserts `{ hidden: 0 }` and message still visible.
+
+**publishEvent (2 tests in database.js)**
+4. **DatabaseServicePublishEventOnCreate**: Creates a task, reads from `service.eventStream().readLatest(10)`. Finds event with `type: 'task.created'` and matching task id.
+5. **DatabaseServicePublishEventOnReminder**: Creates a reminder, reads event stream. Finds event with `type: 'reminder.created'` and matching reminder id.
+
+**Task.toggle (2 tests in models.js)**
+6. **TaskToggleDoneToUndone**: Creates task, calls `complete()`, then `toggle()`. Asserts `done()` is false and `completedAt()` is null.
+7. **TaskToggleUndoneToDone**: Creates task (not done), calls `toggle()`. Asserts `done()` is true and `completedAt()` is a Date.
+
+**FTS5 Model.search (3 tests in models.js)**
+8. **ModelSearchFTS5Tasks**: Creates 3 tasks, searches for "groceries OR grocery". Asserts 2 matching tasks returned via FTS5 index.
+9. **ModelSearchFTS5Logs**: Creates 3 logs, searches for "Alice". Asserts 2 matching logs returned via FTS5 index.
+10. **ModelSearchFTS5NoResults**: Creates tasks and logs, searches for "xyznonexistent". Asserts empty arrays from both Task.search and Log.search.
+
+#### Verification
+- `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/database.js` — 57 test cases passed (was 52)
+- `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/models.js` — 65 test cases passed (was 60)
+- `bun run test` (core) — 186 cases across 12 modules, all pass
+- Agenda tests — 260 non-service + 92 service = 352 total, all pass
+
+#### Acceptance Criteria
+- [x] `hideChatMessages` covered for both modes (by ids, by sinceMinutes) plus edge case
+- [x] `publishEvent` verified for 2 event types (task.created, reminder.created)
+- [x] `Task.toggle()` tested directly at model level (both directions)
+- [x] FTS5 `Model.search` tested directly (not just through DatabaseService.search)
+- [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/database.js` passes
+- [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/models.js` passes
+- [x] `bun run test` clean
+
+### Phase 11: Scheduler and Time System Coverage
+
+#### Files Modified
+- `apps/agenda/tests/time.js`
+- `apps/agenda/tests/services/geist.js`
+
+#### Tests Added (11)
+
+**ScheduledJob (3 tests in time.js)**
+1. **ScheduledJobRun**: Creates job with mock action counter, calls `run()`. Asserts action called once and `lastRunAt()` is a Date.
+2. **ScheduledJobRunDisabled**: Creates job with `enabled: false`, calls `run()`. Asserts action NOT called and `lastRunAt()` remains undefined.
+3. **ScheduledJobCalculateNextRun**: Creates job with TimeOfDaySchedule, calls `calculateNextRun('UTC')`. Asserts returns a future Date and stores it in `nextRunAt()`.
+
+**Scheduler (5 tests in time.js)**
+4. **SchedulerRegister**: Registers a job, asserts `jobs()` Map contains it by jobName key.
+5. **SchedulerUnregister**: Registers then unregisters a job, asserts `jobs()` no longer has it.
+6. **SchedulerStartSchedulesJobs**: Registers job, starts scheduler, asserts `timers()` has entry for jobName. Stops in finally block.
+7. **SchedulerStopClearsTimers**: Starts scheduler with job, asserts timers exist, stops scheduler, asserts `timers().size` is 0.
+8. **SchedulerRegisterWhileRunning**: Starts scheduler with one job, registers second job while running. Asserts second job gets a timer immediately. Stops in finally block.
+
+**GeistService scheduler (3 tests in services/geist.js)**
+9. **GeistServiceInitScheduler**: Sets `promptTimes(['08:00'])`, calls `initScheduler()`. Asserts `scheduler()` exists and has a 'generateHaunts' job.
+10. **GeistServiceStartStopScheduler**: Calls `startScheduler()`, asserts `scheduler().running()` is true. Calls `stopScheduler()`, asserts false. Uses finally block for cleanup.
+11. **GeistServiceStopSchedulerNoInit**: Calls `stopScheduler()` without prior init. Asserts no error thrown and `scheduler()` remains undefined.
+
+#### Verification
+- `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/time.js` — 30 test cases passed (was 22)
+- `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/geist.js` — 25 test cases passed (was 22)
+- `bun run test` (core) — all modules pass
+- All agenda tests pass
+
+#### Acceptance Criteria
+- [x] `ScheduledJob.run()` and `calculateNextRun()` directly tested
+- [x] `Scheduler.register()` and `unregister()` tested with job tracking verification
+- [x] `Scheduler.start()` creates timers, `stop()` clears them
+- [x] GeistService scheduler lifecycle tested (init/start/stop)
+- [x] All timers properly cleaned up (no leaked timers causing test hangs)
+- [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/time.js` passes
+- [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/geist.js` passes
+- [x] `bun run test` clean
+
+### Phase 12: GeistService Caching Helpers + HauntAction Isolation Tests
+
+#### Files Modified
+- `apps/agenda/tests/services/geist.js`
+
+#### Tests Added (13)
+
+**Caching helpers (7 tests)**
+1. **GeistServiceIsAnthropicProviderTrue**: Sets mock client with `provider: () => 'anthropic'`. Asserts `isAnthropicProvider()` returns true.
+2. **GeistServiceIsAnthropicProviderFalse**: Sets mock client with `provider: () => 'openrouter'`. Asserts false.
+3. **GeistServiceIsAnthropicProviderNoClient**: Sets `client(undefined)`. Asserts false without crash.
+4. **GeistServiceCachedSystemAnthropicWraps**: Anthropic provider — asserts `cachedSystem('prompt')` returns array with `{ type: 'text', text: 'prompt', cache_control: { type: 'ephemeral' } }`.
+5. **GeistServiceCachedSystemNonAnthropicPassthrough**: Non-Anthropic — asserts `cachedSystem('prompt')` returns raw string `'prompt'`.
+6. **GeistServiceCachedToolsAnthropicAddsCache**: Anthropic — asserts last tool has `cache_control.type === 'ephemeral'`, first tool does not.
+7. **GeistServiceCachedToolsNonAnthropicClean**: Non-Anthropic — asserts no tools have `cache_control`.
+
+**HauntAction isolation (4 tests)**
+8. **DoneActionExecute**: Creates `DoneAction`, calls `execute(mockItem, null)`. Asserts `{ status: 'actioned' }` and `onDone` was called.
+9. **BacklogActionExecute**: Same pattern for `BacklogAction` and `onBacklog`.
+10. **SnoozeActionExecute**: Asserts returns `{ status: 'pending', snoozeUntil }` with `snoozeUntil` approximately 24h in the future (within 5s tolerance).
+11. **DismissActionExecute**: Asserts returns `{ status: 'dismissed' }`.
+
+**TaskHauntItem with real DB (2 tests)**
+12. **TaskHauntItemOnDone**: Creates task via real DatabaseService, calls `TaskHauntItem.new({ itemId }).onDone(dbService)`. Asserts task is now `done: true`.
+13. **TaskHauntItemOnBacklog**: Same setup, calls `onBacklog(dbService)`. Asserts task `priority` changed to 5.
+
+#### Verification
+- `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/geist.js` — 38 test cases passed (was 25)
+- `bun run test` (core) — all modules pass
+
+#### Acceptance Criteria
+- [x] All caching methods tested for both Anthropic and non-Anthropic providers
+- [x] Null client edge case does not crash `isAnthropicProvider`
+- [x] Each HauntAction subclass has an isolated unit test for `execute()`
+- [x] `TaskHauntItem.onDone()` and `onBacklog()` tested with real DB
+- [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/geist.js` passes
+- [x] `bun run test` clean

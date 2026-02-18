@@ -21,9 +21,9 @@ Deep review of apps/agenda/ to assess how well it leverages the Simulabra object
 - [x] Phase 7: Dead code audit and yard migration
 - [x] Phase 8: Fix logs.js test bugs + AgendaLog coverage
 - [x] Phase 9: GeistService executeTool coverage for remaining 6 tools
-- [ ] Phase 10: DatabaseService gaps + model-level tests (hideChatMessages, FTS5, Task.toggle)
-- [ ] Phase 11: Scheduler and time system coverage
-- [ ] Phase 12: GeistService caching helpers + HauntAction isolation tests
+- [x] Phase 10: DatabaseService gaps + model-level tests (hideChatMessages, FTS5, Task.toggle)
+- [x] Phase 11: Scheduler and time system coverage
+- [x] Phase 12: GeistService caching helpers + HauntAction isolation tests
 
 ## History
 - 2026-02-13: Project initialized. Beginning codebase exploration.
@@ -39,3 +39,6 @@ Deep review of apps/agenda/ to assess how well it leverages the Simulabra object
 - 2026-02-16: Phases 8-12 planned. Test coverage audit identified: 2 bugs in logs.js, 6 untested tools in GeistService, untested hideChatMessages/publishEvent/Task.toggle/FTS5 search, scheduler gaps, caching helpers, HauntAction isolation. ~60 new tests planned across 5 phases.
 - 2026-02-17: Phase 8 complete. Fixed 2 bugs in logs.js tests (wrong class, wrong method name), fixed latent color assertion in LogFormatterFormat, added 3 new tests for AgendaLogFormatter/AgendaLogStreamer. 19 logs tests passing.
 - 2026-02-17: Phase 9 complete. Added 9 executeTool integration tests for 6 remaining tools (update_task, create_project, list_projects, update_project, move_to_project, trigger_webhook). All 14 tools now have executeTool coverage. 22 geist service tests passing.
+- 2026-02-18: Phase 10 complete. Added 10 tests: hideChatMessages (3 modes), publishEvent (2 event types), Task.toggle (2 directions), FTS5 Model.search (3 scenarios). 57 database tests, 65 model tests passing.
+- 2026-02-18: Phase 11 complete. Added 11 tests: ScheduledJob (run, disabled, calculateNextRun), Scheduler (register, unregister, start/timers, stop/clear, register-while-running), GeistService scheduler (init, start/stop, stop-no-init). 30 time tests, 25 geist service tests passing.
+- 2026-02-18: Phase 12 complete. Added 13 tests: caching helpers (isAnthropicProvider 3 cases, cachedSystem 2 cases, cachedTools 2 cases), HauntAction isolation (DoneAction, BacklogAction, SnoozeAction, DismissAction), TaskHauntItem (onDone, onBacklog with real DB). 38 geist service tests passing. All 12 phases complete.

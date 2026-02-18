@@ -438,6 +438,51 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     }
   });
 
+  $test.Case.new({
+    name: 'GeistServiceInitScheduler',
+    doc: 'initScheduler should create scheduler with generateHaunts job',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.promptTimes(['08:00']);
+      service.initScheduler();
+
+      const sched = service.scheduler();
+      this.assert(sched !== null && sched !== undefined, 'scheduler should be set');
+      this.assert(sched.jobs().has('generateHaunts'), 'should have generateHaunts job');
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceStartStopScheduler',
+    doc: 'startScheduler/stopScheduler should control scheduler running state',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.promptTimes(['08:00']);
+
+      try {
+        service.startScheduler();
+        this.assert(service.scheduler().running(), 'scheduler should be running after start');
+
+        service.stopScheduler();
+        this.assertEq(service.scheduler().running(), false);
+      } finally {
+        if (service.scheduler()) {
+          service.scheduler().stop();
+        }
+      }
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceStopSchedulerNoInit',
+    doc: 'stopScheduler without init should be a no-op',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.stopScheduler();
+      this.assertEq(service.scheduler(), undefined);
+    }
+  });
+
   $test.AsyncCase.new({
     name: 'GeistServiceExecuteTriggerWebhook',
     doc: 'GeistService should execute trigger_webhook with real HTTP server',
@@ -472,6 +517,188 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
       } finally {
         server.stop();
       }
+    }
+  });
+
+  // --- Caching helpers ---
+
+  $test.Case.new({
+    name: 'GeistServiceIsAnthropicProviderTrue',
+    doc: 'isAnthropicProvider should return true when provider is anthropic',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.client({ provider: () => 'anthropic' });
+      this.assertEq(service.isAnthropicProvider(), true);
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceIsAnthropicProviderFalse',
+    doc: 'isAnthropicProvider should return false for non-anthropic providers',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.client({ provider: () => 'openrouter' });
+      this.assertEq(service.isAnthropicProvider(), false);
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceIsAnthropicProviderNoClient',
+    doc: 'isAnthropicProvider should return false when no client is set',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.client(undefined);
+      this.assertEq(service.isAnthropicProvider(), false);
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceCachedSystemAnthropicWraps',
+    doc: 'cachedSystem should wrap prompt with cache_control for Anthropic',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.client({ provider: () => 'anthropic' });
+
+      const result = service.cachedSystem('test prompt');
+      this.assert(Array.isArray(result), 'should return an array');
+      this.assertEq(result.length, 1);
+      this.assertEq(result[0].type, 'text');
+      this.assertEq(result[0].text, 'test prompt');
+      this.assertEq(result[0].cache_control.type, 'ephemeral');
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceCachedSystemNonAnthropicPassthrough',
+    doc: 'cachedSystem should return raw string for non-Anthropic providers',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.client({ provider: () => 'openrouter' });
+
+      const result = service.cachedSystem('test prompt');
+      this.assertEq(result, 'test prompt');
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceCachedToolsAnthropicAddsCache',
+    doc: 'cachedTools should add cache_control to last tool only for Anthropic',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.client({ provider: () => 'anthropic' });
+
+      const result = service.cachedTools();
+      this.assert(result.length > 0, 'should have tools');
+      const last = result[result.length - 1];
+      this.assertEq(last.cache_control.type, 'ephemeral');
+      if (result.length > 1) {
+        this.assertEq(result[0].cache_control, undefined);
+      }
+    }
+  });
+
+  $test.Case.new({
+    name: 'GeistServiceCachedToolsNonAnthropicClean',
+    doc: 'cachedTools should return tools without cache_control for non-Anthropic',
+    do() {
+      const service = $geist.GeistService.new({ uid: 'TestGeistService' });
+      service.client({ provider: () => 'openrouter' });
+
+      const result = service.cachedTools();
+      this.assert(result.length > 0, 'should have tools');
+      for (const tool of result) {
+        this.assertEq(tool.cache_control, undefined);
+      }
+    }
+  });
+
+  // --- HauntAction isolation ---
+
+  $test.AsyncCase.new({
+    name: 'DoneActionExecute',
+    doc: 'DoneAction should call item.onDone and return actioned status',
+    async do() {
+      let doneCalled = false;
+      const mockItem = { onDone: async (_db) => { doneCalled = true; } };
+      const action = $geist.DoneAction.new();
+
+      const result = await action.execute(mockItem, null);
+      this.assertEq(result.status, 'actioned');
+      this.assert(doneCalled, 'onDone should have been called');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'BacklogActionExecute',
+    doc: 'BacklogAction should call item.onBacklog and return actioned status',
+    async do() {
+      let backlogCalled = false;
+      const mockItem = { onBacklog: async (_db) => { backlogCalled = true; } };
+      const action = $geist.BacklogAction.new();
+
+      const result = await action.execute(mockItem, null);
+      this.assertEq(result.status, 'actioned');
+      this.assert(backlogCalled, 'onBacklog should have been called');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'SnoozeActionExecute',
+    doc: 'SnoozeAction should return pending status with snoozeUntil ~24h from now',
+    async do() {
+      const action = $geist.SnoozeAction.new();
+      const before = Date.now();
+      const result = await action.execute(null, null);
+
+      this.assertEq(result.status, 'pending');
+      this.assert(typeof result.snoozeUntil === 'string', 'snoozeUntil should be ISO string');
+      const snoozeTime = new Date(result.snoozeUntil).getTime();
+      const expected24h = before + 24 * 60 * 60 * 1000;
+      this.assert(Math.abs(snoozeTime - expected24h) < 5000, 'snoozeUntil should be ~24h from now');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'DismissActionExecute',
+    doc: 'DismissAction should return dismissed status',
+    async do() {
+      const action = $geist.DismissAction.new();
+      const result = await action.execute(null, null);
+      this.assertEq(result.status, 'dismissed');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'TaskHauntItemOnDone',
+    doc: 'TaskHauntItem.onDone should complete the task via database service',
+    async do() {
+      const dbService = createDbService();
+      const task = dbService.createTask({ title: 'haunt done task' });
+
+      const item = $geist.TaskHauntItem.new({ itemId: task.id });
+      await item.onDone(dbService);
+
+      const updated = dbService.getTask({ id: task.id });
+      this.assertEq(updated.done, true);
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'TaskHauntItemOnBacklog',
+    doc: 'TaskHauntItem.onBacklog should set task priority to 5',
+    async do() {
+      const dbService = createDbService();
+      const task = dbService.createTask({ title: 'haunt backlog task', priority: 2 });
+
+      const item = $geist.TaskHauntItem.new({ itemId: task.id });
+      await item.onBacklog(dbService);
+
+      const updated = dbService.getTask({ id: task.id });
+      this.assertEq(updated.priority, 5);
+
+      dbService.db().close();
     }
   });
 

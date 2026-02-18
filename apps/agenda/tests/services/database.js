@@ -329,6 +329,105 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
     }
   });
 
+  $test.Case.new({
+    name: 'DatabaseServiceHideChatByIds',
+    doc: 'hideChatMessages should hide specific messages by internalIds',
+    do() {
+      const service = createTestService();
+
+      const msg1 = service.appendChatMessage({ role: 'user', content: 'Keep me', source: 'test' });
+      const msg2 = service.appendChatMessage({ role: 'user', content: 'Hide me', source: 'test' });
+      const msg3 = service.appendChatMessage({ role: 'user', content: 'Hide me too', source: 'test' });
+
+      const all = service.listChatMessages({ limit: 10 });
+      const idsToHide = [all[1].internalId, all[2].internalId];
+
+      const result = service.hideChatMessages({ internalIds: idsToHide });
+      this.assertEq(result.hidden, 2);
+
+      const remaining = service.listChatMessages({ limit: 10 });
+      this.assertEq(remaining.length, 1);
+      this.assertEq(remaining[0].content, 'Keep me');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceHideChatBySinceMinutes',
+    doc: 'hideChatMessages should hide messages within a time window',
+    do() {
+      const service = createTestService();
+
+      service.appendChatMessage({ role: 'user', content: 'Recent msg 1', source: 'test' });
+      service.appendChatMessage({ role: 'user', content: 'Recent msg 2', source: 'test' });
+
+      const result = service.hideChatMessages({ sinceMinutes: 5 });
+      this.assert(result.hidden >= 2, 'should hide recent messages');
+
+      const remaining = service.listChatMessages({ limit: 10 });
+      this.assertEq(remaining.length, 0);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServiceHideChatNoArgs',
+    doc: 'hideChatMessages with no args should hide nothing',
+    do() {
+      const service = createTestService();
+
+      service.appendChatMessage({ role: 'user', content: 'Untouched', source: 'test' });
+
+      const result = service.hideChatMessages({});
+      this.assertEq(result.hidden, 0);
+
+      const remaining = service.listChatMessages({ limit: 10 });
+      this.assertEq(remaining.length, 1);
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServicePublishEventOnCreate',
+    doc: 'creating a task should publish a task.created event',
+    do() {
+      const service = createTestService();
+
+      const task = service.createTask({ title: 'event test task' });
+      const events = service.eventStream().readLatest(10);
+      const taskEvent = events.find(e => e.message.type === 'task.created');
+
+      this.assert(taskEvent, 'should have task.created event');
+      this.assertEq(taskEvent.message.id, task.id);
+      this.assert(taskEvent.message.timestamp, 'should have timestamp');
+
+      service.db().close();
+    }
+  });
+
+  $test.Case.new({
+    name: 'DatabaseServicePublishEventOnReminder',
+    doc: 'creating a reminder should publish a reminder.created event',
+    do() {
+      const service = createTestService();
+
+      const reminder = service.createReminder({
+        message: 'event test reminder',
+        triggerAt: '2025-12-31T12:00:00Z'
+      });
+      const events = service.eventStream().readLatest(10);
+      const reminderEvent = events.find(e => e.message.type === 'reminder.created');
+
+      this.assert(reminderEvent, 'should have reminder.created event');
+      this.assertEq(reminderEvent.message.id, reminder.id);
+
+      service.db().close();
+    }
+  });
+
   // Haunt service tests
   $test.Case.new({
     name: 'DatabaseServiceCreateHaunt',

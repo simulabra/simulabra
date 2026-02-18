@@ -287,6 +287,164 @@ export default await async function (_, $, $test, $time) {
       this.assertEq(scheduler.running(), false);
     }
   });
+
+  $test.AsyncCase.new({
+    name: 'ScheduledJobRun',
+    doc: 'run() should execute action and set lastRunAt',
+    async do() {
+      let called = 0;
+      const job = $time.ScheduledJob.new({
+        jobName: 'testJob',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00'] }),
+        action: async () => { called++; },
+      });
+
+      this.assertEq(job.lastRunAt(), undefined);
+      await job.run();
+      this.assertEq(called, 1);
+      this.assert(job.lastRunAt() instanceof Date, 'lastRunAt should be a Date');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ScheduledJobRunDisabled',
+    doc: 'run() should be a no-op when enabled is false',
+    async do() {
+      let called = 0;
+      const job = $time.ScheduledJob.new({
+        jobName: 'disabledJob',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00'] }),
+        action: async () => { called++; },
+        enabled: false,
+      });
+
+      await job.run();
+      this.assertEq(called, 0);
+      this.assertEq(job.lastRunAt(), undefined);
+    }
+  });
+
+  $test.Case.new({
+    name: 'ScheduledJobCalculateNextRun',
+    doc: 'calculateNextRun should set nextRunAt to a future Date',
+    do() {
+      const job = $time.ScheduledJob.new({
+        jobName: 'calcJob',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00', '18:00'] }),
+      });
+
+      this.assertEq(job.nextRunAt(), undefined);
+      const next = job.calculateNextRun('UTC');
+      this.assert(next instanceof Date, 'should return a Date');
+      this.assert(next > new Date(), 'should be in the future');
+      this.assertEq(job.nextRunAt(), next);
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerRegister',
+    doc: 'register should add job to jobs map',
+    do() {
+      const scheduler = $time.Scheduler.new();
+      const job = $time.ScheduledJob.new({
+        jobName: 'regJob',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00'] }),
+        action: async () => {},
+      });
+
+      scheduler.register(job);
+      this.assert(scheduler.jobs().has('regJob'), 'jobs should contain regJob');
+      this.assertEq(scheduler.jobs().get('regJob'), job);
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerUnregister',
+    doc: 'unregister should remove job from jobs map',
+    do() {
+      const scheduler = $time.Scheduler.new();
+      const job = $time.ScheduledJob.new({
+        jobName: 'unregJob',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00'] }),
+        action: async () => {},
+      });
+
+      scheduler.register(job);
+      this.assert(scheduler.jobs().has('unregJob'), 'job should be registered');
+      scheduler.unregister('unregJob');
+      this.assert(!scheduler.jobs().has('unregJob'), 'job should be removed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerStartSchedulesJobs',
+    doc: 'start should create timers for registered jobs',
+    do() {
+      const scheduler = $time.Scheduler.new({ timezone: 'UTC' });
+      const job = $time.ScheduledJob.new({
+        jobName: 'timerJob',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00', '18:00'] }),
+        action: async () => {},
+      });
+
+      scheduler.register(job);
+      try {
+        scheduler.start();
+        this.assert(scheduler.timers().has('timerJob'), 'should have timer for timerJob');
+      } finally {
+        scheduler.stop();
+      }
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerStopClearsTimers',
+    doc: 'stop should clear all timers',
+    do() {
+      const scheduler = $time.Scheduler.new({ timezone: 'UTC' });
+      const job = $time.ScheduledJob.new({
+        jobName: 'clearJob',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00', '18:00'] }),
+        action: async () => {},
+      });
+
+      scheduler.register(job);
+      scheduler.start();
+      this.assert(scheduler.timers().size > 0, 'should have timers after start');
+      scheduler.stop();
+      this.assertEq(scheduler.timers().size, 0);
+    }
+  });
+
+  $test.Case.new({
+    name: 'SchedulerRegisterWhileRunning',
+    doc: 'registering a job while running should create a timer immediately',
+    do() {
+      const scheduler = $time.Scheduler.new({ timezone: 'UTC' });
+      const job1 = $time.ScheduledJob.new({
+        jobName: 'liveJob1',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00', '18:00'] }),
+        action: async () => {},
+      });
+      const job2 = $time.ScheduledJob.new({
+        jobName: 'liveJob2',
+        schedule: $time.TimeOfDaySchedule.new({ times: ['08:00', '18:00'] }),
+        action: async () => {},
+      });
+
+      scheduler.register(job1);
+      try {
+        scheduler.start();
+        this.assert(scheduler.timers().has('liveJob1'), 'job1 should have timer');
+        this.assert(!scheduler.timers().has('liveJob2'), 'job2 should not have timer yet');
+
+        scheduler.register(job2);
+        this.assert(scheduler.timers().has('liveJob2'), 'job2 should have timer after register');
+      } finally {
+        scheduler.stop();
+      }
+    }
+  });
 }.module({
   name: 'test.time',
   imports: [base, test, time],
