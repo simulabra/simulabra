@@ -5,3 +5,4 @@
 {"name":"eval-providers","brief":"Add OpenRouter/OpenAI-compatible provider support to the geist and eval system, enabling model comparison across providers.","startedAt":"2026-02-08","status":"IN PROGRESS"}
 {"name":"agenda-compost","brief":"Review the agenda app's Simulabra usage patterns and produce a prompt alignment document for follow-on agent work.","startedAt":"2026-02-13","status":"IN PROGRESS"}
 {"name":"agenda-review","brief":"Review agenda code patterns and produce framework feedback with analysis.","startedAt":"2026-02-14","status":"IN PROGRESS"}
+{"name":"workspace-split","brief":"Split monorepo into independent repos under bun workspace (simulabra-world). Extract agenda, swyperloom, demos, sps. Build sgit for multi-repo git.","startedAt":"2026-02-17","status":"NOT STARTED"}
