@@ -19,6 +19,11 @@ Deep review of apps/agenda/ to assess how well it leverages the Simulabra object
 - [x] Phase 5: Extract shared interpret/interpretMessage logic (~-80 lines)
 - [x] Phase 6: Replace brute-force search with FTS5 Model.search()
 - [x] Phase 7: Dead code audit and yard migration
+- [x] Phase 8: Fix logs.js test bugs + AgendaLog coverage
+- [x] Phase 9: GeistService executeTool coverage for remaining 6 tools
+- [ ] Phase 10: DatabaseService gaps + model-level tests (hideChatMessages, FTS5, Task.toggle)
+- [ ] Phase 11: Scheduler and time system coverage
+- [ ] Phase 12: GeistService caching helpers + HauntAction isolation tests
 
 ## History
 - 2026-02-13: Project initialized. Beginning codebase exploration.
@@ -31,3 +36,6 @@ Deep review of apps/agenda/ to assess how well it leverages the Simulabra object
 - 2026-02-16: Phase 7 started. Dead code audit — traced import graph from all entry points, identified 17 files (sections 1 & 2) for yard migration. Document at docs/dead-code.md.
 - 2026-02-16: Phase 7 complete. Moved 16 files to yard/ (excluded bin/pm-runner.js — still active via PMController.start). Removed dead "agent"/"serve" scripts from package.json. Updated 5 agenda test files to remove redis.js dependency. Cleaned up stale doc references. All tests pass.
 - 2026-02-16: Phase 7 extended — Redis test cleanup. Yarded 3 broken Redis-only test files (integration.js, chat.js, redis.js). Ported geist.js and reminder.js tests from Redis to SQLite in-memory. Fixed production bug in reminder.js:62 (undefined `db` reference). 314 agenda test cases passing across 12 modules.
+- 2026-02-16: Phases 8-12 planned. Test coverage audit identified: 2 bugs in logs.js, 6 untested tools in GeistService, untested hideChatMessages/publishEvent/Task.toggle/FTS5 search, scheduler gaps, caching helpers, HauntAction isolation. ~60 new tests planned across 5 phases.
+- 2026-02-17: Phase 8 complete. Fixed 2 bugs in logs.js tests (wrong class, wrong method name), fixed latent color assertion in LogFormatterFormat, added 3 new tests for AgendaLogFormatter/AgendaLogStreamer. 19 logs tests passing.
+- 2026-02-17: Phase 9 complete. Added 9 executeTool integration tests for 6 remaining tools (update_task, create_project, list_projects, update_project, move_to_project, trigger_webhook). All 14 tools now have executeTool coverage. 22 geist service tests passing.

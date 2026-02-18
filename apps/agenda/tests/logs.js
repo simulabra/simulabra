@@ -131,25 +131,24 @@ export default await async function (_, $, $test, $logs) {
   });
 
   $test.Case.new({
-    name: 'LogFormatterColorFor',
-    doc: 'LogFormatter returns correct colors for known services',
+    name: 'BaseLogFormatterDefaultColor',
+    doc: 'Base LogFormatter returns white default for any source name',
     do() {
       const formatter = $logs.LogFormatter.new();
 
-      this.assertEq(formatter.colorFor('supervisor'), '\x1b[36m', 'supervisor is cyan');
-      this.assertEq(formatter.colorFor('DatabaseService'), '\x1b[32m', 'db is green');
-      this.assertEq(formatter.colorFor('unknown'), '\x1b[37m', 'unknown is white');
+      this.assertEq(formatter.colorFor('supervisor'), '\x1b[37m', 'base returns white for supervisor');
+      this.assertEq(formatter.colorFor('anything'), '\x1b[37m', 'base returns white for anything');
     }
   });
 
   $test.Case.new({
     name: 'LogFormatterFormat',
-    doc: 'LogFormatter formats lines with colored prefix',
+    doc: 'Base LogFormatter formats lines with white default prefix',
     do() {
       const formatter = $logs.LogFormatter.new();
       const line = formatter.format('supervisor', 'test message');
 
-      this.assert(line.includes('\x1b[36m'), 'should include cyan color');
+      this.assert(line.includes('\x1b[37m'), 'should include white default color');
       this.assert(line.includes('[supervisor]'), 'should include service name');
       this.assert(line.includes('test message'), 'should include message');
       this.assert(line.includes('\x1b[0m'), 'should include reset');
@@ -169,13 +168,13 @@ export default await async function (_, $, $test, $logs) {
   });
 
   $test.Case.new({
-    name: 'LogStreamerServiceNameFromFile',
-    doc: 'LogStreamer extracts service name from filename',
+    name: 'LogStreamerSourceNameFromFile',
+    doc: 'LogStreamer extracts source name from filename',
     do() {
       const streamer = $logs.LogStreamer.new({ logsDir: testDir });
 
-      this.assertEq(streamer.serviceNameFromFile('supervisor.log'), 'supervisor');
-      this.assertEq(streamer.serviceNameFromFile('DatabaseService.log'), 'DatabaseService');
+      this.assertEq(streamer.sourceNameFromFile('supervisor.log'), 'supervisor');
+      this.assertEq(streamer.sourceNameFromFile('DatabaseService.log'), 'DatabaseService');
     }
   });
 
@@ -322,6 +321,51 @@ export default await async function (_, $, $test, $logs) {
       }
     }
   });
+
+  $test.Case.new({
+    name: 'AgendaLogFormatterColors',
+    doc: 'AgendaLogFormatter maps agenda services to specific ANSI colors',
+    do() {
+      const formatter = $logs.AgendaLogFormatter.new();
+
+      this.assertEq(formatter.colorFor('supervisor'), '\x1b[36m', 'supervisor is cyan');
+      this.assertEq(formatter.colorFor('DatabaseService'), '\x1b[32m', 'DatabaseService is green');
+      this.assertEq(formatter.colorFor('ReminderService'), '\x1b[33m', 'ReminderService is yellow');
+      this.assertEq(formatter.colorFor('GeistService'), '\x1b[35m', 'GeistService is magenta');
+      this.assertEq(formatter.colorFor('unknown'), '\x1b[37m', 'unknown falls back to white');
+    }
+  });
+
+  $test.Case.new({
+    name: 'AgendaLogFormatterFormat',
+    doc: 'AgendaLogFormatter.format includes the correct color for agenda services',
+    do() {
+      const formatter = $logs.AgendaLogFormatter.new();
+      const line = formatter.format('GeistService', 'processing request');
+
+      this.assert(line.includes('\x1b[35m'), 'should include magenta for GeistService');
+      this.assert(line.includes('[GeistService]'), 'should include service name');
+      this.assert(line.includes('processing request'), 'should include message');
+    }
+  });
+
+  $test.Case.new({
+    name: 'AgendaLogStreamerDefaultFormatter',
+    doc: 'AgendaLogStreamer uses AgendaLogFormatter as its default formatter',
+    do() {
+      setup();
+      try {
+        const streamer = $logs.AgendaLogStreamer.new({ logsDir: testDir });
+        const formatter = streamer.formatter();
+
+        this.assertEq(formatter.class(), $logs.AgendaLogFormatter, 'default formatter should be AgendaLogFormatter');
+        this.assertEq(formatter.colorFor('supervisor'), '\x1b[36m', 'formatter should have agenda colors');
+      } finally {
+        teardown();
+      }
+    }
+  });
+
 }.module({
   name: 'test.logs',
   imports: [base, test, logs],

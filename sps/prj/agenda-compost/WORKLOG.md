@@ -91,3 +91,86 @@
 - Core tests: 186 cases across 12 modules — all pass
 - Agenda service tests: geist (13), reminder (13), database (52), models (60), tools (17), sqlite (13), supervisor (45), time (22), task-filtering (13), evals-report (12), provider (20), geist-prompts (34) — all pass
 - Pre-existing failure in `tests/logs.js` (ANSI color mismatch, unrelated to our changes)
+
+### Phases 8-12: Test Coverage Planning
+
+#### Coverage Audit
+- Listed all source classes/slots via `bin/lister.js` for all 11 source files
+- Cross-referenced against all 12 test modules (314 tests total)
+- Well covered: models (60), supervisor (45), database (52), provider (20), time (22)
+- Moderate coverage: geist-prompts (34), geist service (13), tools (17), reminder (13)
+- Bugs found: logs.js has 2 (ANSI color test uses wrong class, method name typo)
+
+#### Gaps Identified
+- logs.js: 2 bugs (LogFormatter vs AgendaLogFormatter, serviceNameFromFile vs sourceNameFromFile)
+- GeistService.executeTool: 6 of 14 tools untested (update_task, create/list/update_project, move_to_project, trigger_webhook)
+- DatabaseService: hideChatMessages, publishEvent untested
+- Models: Task.toggle(), Model.search (FTS5) not tested at model level
+- Scheduler: ScheduledJob.run/calculateNextRun, Scheduler.register/unregister untested
+- GeistService: cachedSystem/cachedTools/isAnthropicProvider, scheduler lifecycle untested
+- HauntAction: DoneAction, BacklogAction, SnoozeAction, DismissAction only tested end-to-end
+
+#### Plans Written
+- `plan/phase8-fix-logs-tests.md` — fix 2 bugs, add AgendaLog tests (~8 new tests)
+- `plan/phase9-geist-tool-coverage.md` — 6 missing tools + webhook (~12 new tests)
+- `plan/phase10-database-model-gaps.md` — hideChatMessages, publishEvent, Task.toggle, FTS5 (~12 new tests)
+- `plan/phase11-scheduler-coverage.md` — ScheduledJob, Scheduler, GeistService scheduler (~14 new tests)
+- `plan/phase12-caching-hauntaction.md` — caching helpers, HauntAction isolation (~14 new tests)
+- Total: ~60 new tests planned, bringing suite from 314 to ~374
+
+## 2026-02-17
+
+### Phase 8: Fix logs.js Test Bugs + AgendaLog Coverage
+
+#### Files Modified
+- `apps/agenda/tests/logs.js`
+
+#### Bug Fixes
+1. **LogFormatterColorFor** (was line 134): Test created base `LogFormatter` but asserted agenda-specific colors. Renamed to `BaseLogFormatterDefaultColor`, now correctly asserts white (`\x1b[37m`) for all source names.
+2. **LogFormatterFormat** (was line 146): Same root cause — asserted cyan for supervisor via base formatter. Fixed assertion to check for white default color.
+3. **LogStreamerServiceNameFromFile** (was line 174): Called nonexistent `serviceNameFromFile()`. Fixed to `sourceNameFromFile()` matching source definition at `src/logs.js:117`. Renamed test to `LogStreamerSourceNameFromFile`.
+
+#### New Tests Added (3)
+- `AgendaLogFormatterColors`: Verifies all 4 agenda color mappings (supervisor→cyan, DatabaseService→green, ReminderService→yellow, GeistService→magenta) plus unknown→white fallback.
+- `AgendaLogFormatterFormat`: Verifies `format('GeistService', msg)` includes magenta ANSI code.
+- `AgendaLogStreamerDefaultFormatter`: Verifies `AgendaLogStreamer.new()` creates an `AgendaLogFormatter` as its default formatter via `.class()` identity check.
+
+#### Verification
+- `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/logs.js` — 19 test cases passed
+- `bun run test` (core) — 186 cases across 12 modules, all pass
+- Agenda tests — 255 non-service + 78 service = 333 total, all pass
+
+#### Acceptance Criteria
+- [x] All existing log tests pass (2 bugs fixed + 1 latent color assertion)
+- [x] Base LogFormatter color behavior tested separately from AgendaLogFormatter
+- [x] AgendaLogFormatter and AgendaLogStreamer have direct tests
+- [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/logs.js` passes
+- [x] `bun run test` clean
+
+### Phase 9: GeistService executeTool Coverage for Remaining Tools
+
+#### Files Modified
+- `apps/agenda/tests/services/geist.js`
+
+#### Tests Added (9)
+1. **GeistServiceExecuteUpdateTask**: Creates task, updates title and priority via `update_task`. Asserts modified fields in result.
+2. **GeistServiceExecuteCreateProject**: Creates project with title, slug, context via `create_project`. Asserts `$class: 'Project'` and fields.
+3. **GeistServiceExecuteListProjects**: Creates 2 projects, lists via `list_projects`. Asserts length >= 2.
+4. **GeistServiceExecuteUpdateProject**: Creates project, updates title and context via `update_project`. Asserts updated fields.
+5. **GeistServiceExecuteMoveToProject**: Creates task + project, moves task via `move_to_project` with `projectId`. Asserts `projectId` on result.
+6. **GeistServiceExecuteMoveToProjectBySlug**: Same but resolves project via `projectSlug` instead of `projectId`. Tests the slug resolution code path in MoveToProjectTool.
+7. **GeistServiceExecuteMoveLogToProject**: Moves a log entry to a project. Tests the `log` branch of the MoveToProjectTool switch.
+8. **GeistServiceExecuteMoveToProjectUnknownType**: Passes `itemType: 'invalid'`. Asserts `success: false` with "Unknown item type" error.
+9. **GeistServiceExecuteTriggerWebhook**: Spins up a real `Bun.serve({ port: 0 })` HTTP server, fires `trigger_webhook` with a payload, asserts the server received the correct POST body. Server is torn down in finally block.
+
+#### Verification
+- `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/geist.js` — 22 test cases passed (was 13)
+- `bun run test` (core) — 186 cases, all pass
+- Agenda tests — 255 non-service + 87 service = 342 total, all pass
+
+#### Acceptance Criteria
+- [x] All 14 tools have at least one `executeTool` integration test through GeistService
+- [x] `trigger_webhook` test uses a real HTTP server (not mocked fetch)
+- [x] Error cases covered (unknown item type in move_to_project)
+- [x] `TIMEOUT=30 bun run src/runner.js apps/agenda/tests/services/geist.js` passes
+- [x] `bun run test` clean

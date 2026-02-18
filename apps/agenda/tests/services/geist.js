@@ -260,6 +260,221 @@ export default await async function (_, $, $test, $db, $helpers, $sqlite, $model
       dbService.db().close();
     }
   });
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteUpdateTask',
+    doc: 'GeistService should execute update_task tool',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      const task = dbService.createTask({ title: 'original title', priority: 3 });
+
+      const result = await geistService.executeTool('update_task', {
+        id: task.id,
+        title: 'updated title',
+        priority: 1
+      });
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(result.data.title, 'updated title');
+      this.assertEq(result.data.priority, 1);
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteCreateProject',
+    doc: 'GeistService should execute create_project tool',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      const result = await geistService.executeTool('create_project', {
+        title: 'My Project',
+        slug: 'my-project',
+        context: 'test context'
+      });
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(result.data.$class, 'Project');
+      this.assertEq(result.data.title, 'My Project');
+      this.assertEq(result.data.slug, 'my-project');
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteListProjects',
+    doc: 'GeistService should execute list_projects tool',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      dbService.createProject({ title: 'Project A', slug: 'project-a' });
+      dbService.createProject({ title: 'Project B', slug: 'project-b' });
+
+      const result = await geistService.executeTool('list_projects', {});
+
+      this.assert(result.success, 'should succeed');
+      this.assert(result.data.length >= 2, 'should have at least 2 projects');
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteUpdateProject',
+    doc: 'GeistService should execute update_project tool',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      const project = dbService.createProject({ title: 'Old Title', slug: 'old-slug' });
+
+      const result = await geistService.executeTool('update_project', {
+        id: project.id,
+        title: 'New Title',
+        context: 'updated context'
+      });
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(result.data.title, 'New Title');
+      this.assertEq(result.data.context, 'updated context');
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteMoveToProject',
+    doc: 'GeistService should move a task to a project via move_to_project',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      const project = dbService.createProject({ title: 'Target Project', slug: 'target' });
+      const task = dbService.createTask({ title: 'moveable task' });
+
+      const result = await geistService.executeTool('move_to_project', {
+        itemType: 'task',
+        itemId: task.id,
+        projectId: project.id
+      });
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(result.data.projectId, project.id);
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteMoveToProjectBySlug',
+    doc: 'GeistService should resolve projectSlug when moving items',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      const project = dbService.createProject({ title: 'Slug Project', slug: 'slug-proj' });
+      const task = dbService.createTask({ title: 'slug moveable task' });
+
+      const result = await geistService.executeTool('move_to_project', {
+        itemType: 'task',
+        itemId: task.id,
+        projectSlug: 'slug-proj'
+      });
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(result.data.projectId, project.id);
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteMoveLogToProject',
+    doc: 'GeistService should move a log to a project',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      const project = dbService.createProject({ title: 'Log Project', slug: 'log-proj' });
+      const log = dbService.createLog({ content: 'moveable log' });
+
+      const result = await geistService.executeTool('move_to_project', {
+        itemType: 'log',
+        itemId: log.id,
+        projectId: project.id
+      });
+
+      this.assert(result.success, 'should succeed');
+      this.assertEq(result.data.projectId, project.id);
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteMoveToProjectUnknownType',
+    doc: 'GeistService should fail when moving unknown item type',
+    async do() {
+      const dbService = createDbService();
+      const geistService = createGeistService(dbService);
+
+      const project = dbService.createProject({ title: 'Error Project', slug: 'err-proj' });
+
+      const result = await geistService.executeTool('move_to_project', {
+        itemType: 'invalid',
+        itemId: 'fake-id',
+        projectId: project.id
+      });
+
+      this.assertEq(result.success, false);
+      this.assert(result.error.includes('Unknown item type'), 'should have error about unknown type');
+
+      dbService.db().close();
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'GeistServiceExecuteTriggerWebhook',
+    doc: 'GeistService should execute trigger_webhook with real HTTP server',
+    async do() {
+      let receivedBody = null;
+      const server = Bun.serve({
+        port: 0,
+        fetch(req) {
+          return req.json().then(body => {
+            receivedBody = body;
+            return new Response('ok');
+          });
+        }
+      });
+
+      try {
+        const dbService = createDbService();
+        const geistService = createGeistService(dbService);
+
+        const result = await geistService.executeTool('trigger_webhook', {
+          url: `http://localhost:${server.port}/hook`,
+          payload: { event: 'test', data: 42 }
+        });
+
+        this.assert(result.success, 'should succeed');
+        this.assertEq(result.data.ok, true);
+        this.assertEq(result.data.status, 200);
+        this.assertEq(receivedBody.event, 'test');
+        this.assertEq(receivedBody.data, 42);
+
+        dbService.db().close();
+      } finally {
+        server.stop();
+      }
+    }
+  });
+
 }.module({
   name: 'test.services.geist',
   imports: [base, test, db, helpers, sqlite, models, database, geist],

@@ -23,10 +23,10 @@ Determine which phase the project is in, and delegate accordingly:
 
 1. **No project exists** - The user is describing new work.
    - Confirm the project name and brief with AskUserQuestion.
-   - Delegate to the **architect** to initialize the project directory and gather information.
+   - Delegate to the **architect** skill to initialize the project directory and gather information.
 
 2. **NOT STARTED / early IN PROGRESS, no plan yet** - Information gathering and planning phase.
-   - Delegate to the **architect** to explore, gather requirements, and write phase plans in `sps/prj/{name}/plan/`.
+   - Delegate to the **architect** skill to explore, gather requirements, and write phase plans in `sps/prj/{name}/plan/`.
    - The architect handles plan mode internally — do NOT use EnterPlanMode yourself.
 
 3. **IN PROGRESS, plan exists with unfinished phases** - Execution phase.
