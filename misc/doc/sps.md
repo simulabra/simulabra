@@ -41,6 +41,29 @@ name: string (no spaces, used as directory)
 brief: string
 startedAt: ISO timestamp
 status: "NOT STARTED" | "IN PROGRESS" | "COMPLETE" | "ON HOLD" | "CANCELED"
+tags: string[] (lowercase, hyphenated; optional, defaults to [])
+
+The `sps` CLI (`bin/sps.js`) is the canonical way to manage tags. It keeps the catalog and PROJECT.md frontmatter in sync.
+
+## Tag Registry
+`sps/TAGS.md` is a human-readable markdown table that documents the tag vocabulary:
+
+```markdown
+| Tag | Description |
+|-----|-------------|
+| agenda | Agenda productivity app |
+| cli | Command-line tooling |
+```
+
+The registry is **advisory, not restrictive** — unknown tags produce a warning but still apply. This keeps the system flexible while encouraging a shared vocabulary.
+
+Management commands:
+- `sps tags` — list tags with counts and descriptions from the registry
+- `sps tags --seed` — populate TAGS.md from all tags currently in use across projects
+- `sps tag-define <tag> [description]` — register a tag or update its description
+- `sps tag-remove <tag>` — remove a tag from the registry (doesn't untag projects)
+
+The architect skill consults TAGS.md during project creation to suggest tags from the existing vocabulary.
 
 ## Project directory
 All files for a project are stored in `sps/prj/{project.name}/`.
@@ -70,6 +93,27 @@ Contains plan files - 1 for each phase, broken down into amounts that can be rea
 
 ### WORKLOG.md
 More granular log of work done, separated into sections by day. Include interpreted requests from the user, files created, scope changes, thoughts about out-of-scope work, musings, accomplishments, etc. 
+
+## CLI
+
+`bin/sps.js` is a Simulabra module CLI for querying and managing the project catalog. It lives at the workspace root, next to `sgit.js`.
+
+```
+sps list                            # all projects (default command)
+sps list --status "IN PROGRESS"     # filter by status
+sps list --tag agenda               # filter by tag
+sps list --tag agenda --tag review  # multiple tags (AND logic)
+sps show <name>                     # project detail view
+sps tag <name> <tag1> [tag2...]     # add tags (updates JSONL + PROJECT.md)
+sps untag <name> <tag1> [tag2...]   # remove tags (updates JSONL + PROJECT.md)
+sps tags                            # list all tags with project counts and descriptions
+sps tags --seed                     # populate TAGS.md from project tags in use
+sps tag-define <tag> [description]  # register a tag or update its description
+sps tag-remove <tag>                # remove a tag from the registry
+sps help                            # usage information
+```
+
+The CLI discovers `sps/projects.jsonl` by walking up from the current directory (same pattern as sgit). Tag mutations keep the catalog and PROJECT.md frontmatter in sync.
 
 ## The system
 

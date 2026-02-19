@@ -157,8 +157,8 @@ Configurable mixin — for classes with many environment-driven settings, consid
  - WRONG: class=${"base " + (this.active() ? "active" : "")} - concatenates string with function object
  - RIGHT: class=${() => "base " + (this.active() ? "active" : "")} - function returns computed string
  - the template system calls functions to get reactive values; non-functions are treated as static
- - run `bash bin/build` to bundle HTML apps for production (outputs to out/)
  - HTML entry points should use relative paths to source files (e.g. ./src/app.js), not dist/
+ - consumers (demos, swyperloom) bundle with `bun build` in their own repos
 </HTML>
 
 <Navigating>
@@ -169,20 +169,10 @@ Configurable mixin — for classes with many environment-driven settings, consid
 <LaunchPoints>
  - src/base.js: the core implementation
  - tests/core.js: core framework tests
- - demos/loom.js: reactive html prototype of a branching interface for llms
- - src/live.js and demos/dummy/: rpc system prototype
- - apps/agenda/ - personal productivity system with html/sms/cli clients
- - app/swyperloom/ - loom variant tailored for mobile
+ - src/html.js: reactive HTML templating system
+ - src/live.js: RPC system prototype
+ - src/llm.js: LLM provider adapter and tool framework
+ - src/db.js: SQLite persistence with FTS5 search
+ - bin/finder.js: cross-file slot implementation search
+ - bin/lister.js: module class listing
 </LaunchPoints>
-
-<DoYourJob>
-THIS IS THE MOST IMPORTANT SECTION. Do not skip it.
-
-- For ANY non-trivial task, your FIRST action MUST be to invoke the foreman skill.
-- Do NOT start writing code, reading files, or making plans on your own. The foreman delegates.
-- Plans are written to `sps/prj/{name}/plan/` by the architect during plan mode, BEFORE calling ExitPlanMode.
-- If a project already exists in `sps/prj/`, the foreman will pick up where it left off.
-- If the user pastes a plan inline, the foreman writes it to the project directory first, then delegates.
-- The workflow is: foreman → architect (plan to disk) → carpenter (build from disk) → inspector → operator.
-- Be very attentive to the triggering conditions in skill descriptions.
-</DoYourJob>
