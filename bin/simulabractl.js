@@ -50,7 +50,7 @@ await async function (_, $, $pm) {
         do() {
           const opts = this.options();
           return $pm.PMController.new({
-            configPath: opts.config || 'misc/pm/services.js',
+            configPath: opts.config || 'services.js',
             paths: $pm.PMPaths.new({
               stateDir: opts['pm-dir'] || 'tmp/pm',
               logDir: opts['log-dir'] || 'logs/pm',
@@ -225,7 +225,7 @@ Commands:
   help                        Show this help message
 
 Options:
-  --config <path>             Service registry path (default: misc/pm/services.js)
+  --config <path>             Service registry path (default: services.js)
   --pm-dir <path>             State directory (default: tmp/pm)
   --log-dir <path>            Log directory (default: logs/pm)
   --json                      Output in JSON format (list command)
