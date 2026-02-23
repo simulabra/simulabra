@@ -720,7 +720,7 @@ function bootstrap() {
   // a missing middle
   var $Var = $Class.new({
     name: 'Var',
-    doc: 'variable slot with accessor hooks (validate, didSet, didGet), defaults, and required checks',
+    doc: 'variable slot with accessor hooks (validate, didSet, didGet), optional type spec, defaults, and required checks',
     fullSlot: true,
     slots: [
       BProperty.new({ name: 'name', }),
@@ -730,6 +730,7 @@ function bootstrap() {
       BVar.new({ name: 'default', }),
       BVar.new({ name: 'default_init', }),
       BVar.new({ name: 'required', }),
+      BVar.new({ name: 'spec', doc: 'optional Type instance for runtime validation on set, default access, and init' }),
       function defval(ctx) {
         if (this.default() instanceof Function) {
           return this.default().apply(ctx);
@@ -740,12 +741,21 @@ function bootstrap() {
       function should_debug() {
         return this.debug() || $Debug.debug();
       },
-      function validate(v) {},
+      function validate(v) {
+        const spec = this.spec();
+        if (spec) {
+          spec.validate(v, this.name);
+        }
+      },
       function didSet(inst, pk, v) {},
       function didGet(inst, pk) {},
       function combine(impl) {
         const pk = '__' + this.name;
         const self = this;
+
+        if (self.spec() && typeof self.spec().validate !== 'function') {
+          throw new Error(`Var '${self.name}': spec must be a Type with a validate method`);
+        }
 
         impl.__primary = function varAccess(v, notify = true) {
           if (v !== undefined) {
@@ -756,7 +766,11 @@ function bootstrap() {
             }
           } else {
             if (!(pk in this)) {
-              this[pk] = self.defval(this);
+              const dv = self.defval(this);
+              if (dv !== undefined) {
+                self.validate(dv);
+              }
+              this[pk] = dv;
             }
             self.didGet(this, pk);
             return this[pk];
@@ -766,11 +780,14 @@ function bootstrap() {
         impl.__properties = [{ name: this.name }];
       },
       function initInstance(inst) {
+        const key = '__' + this.name;
         if (this.required()) {
-          const key = '__' + this.name;
           if (!(key in inst) || inst[key] === undefined) {
             throw new Error(`Required var '${this.name}' not provided for ${inst.class().name}`);
           }
+        }
+        if (this.spec() && key in inst && inst[key] !== undefined) {
+          this.spec().validate(inst[key], this.name);
         }
       }
     ]
@@ -1706,6 +1723,119 @@ function bootstrap() {
       }
     ]
   })
+
+  // --- Type system ---
+
+  $.Class.new({
+    name: 'Type',
+    doc: 'runtime type with predicate check and validate method',
+    slots: [
+      $.Var.new({ name: 'check', required: true, doc: 'predicate function (value) => boolean' }),
+      function proxied() { return this; },
+      $.Method.new({
+        name: 'validate',
+        doc: 'check value against type predicate, throw on failure, return value on success',
+        do(value, slot) {
+          if (!this.check()(value)) {
+            throw new Error(`${this.name}: validation failed for '${slot}'`);
+          }
+          return value;
+        }
+      }),
+      $.Method.new({
+        name: 'nullable',
+        doc: 'return a new Type that also accepts null and undefined',
+        do() {
+          const inner = this;
+          return $.Type.new({
+            name: `${this.name}?`,
+            check: (v) => v === null || v === undefined || inner.check()(v),
+          });
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'ArrayType',
+    doc: 'type for arrays with element type validation via of()',
+    slots: [
+      $.Type,
+      $.Method.new({
+        name: 'of',
+        doc: 'create an array type checking element type',
+        do(inner) {
+          if (!inner?.isa?.($.Type)) {
+            throw new Error('ArrayType.of: argument must be a Type');
+          }
+          return $.Type.new({
+            name: `$ArrayOf${inner.name}`,
+            check: (v) => Array.isArray(v) && v.every(el => inner.check()(el)),
+          });
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'EnumType',
+    doc: 'type for values from a fixed set of choices via of()',
+    slots: [
+      $.Type,
+      $.Method.new({
+        name: 'of',
+        doc: 'create an enum type with specific choices',
+        do(...choices) {
+          if (choices.length === 0) {
+            throw new Error('EnumType.of: must provide at least one choice');
+          }
+          for (const c of choices) {
+            if (typeof c !== 'string' && typeof c !== 'number') {
+              throw new Error('EnumType.of: each choice must be a string or number');
+            }
+          }
+          return $.Type.new({
+            name: `$EnumOf(${choices.join('|')})`,
+            check: (v) => choices.includes(v),
+          });
+        }
+      }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'InstanceType',
+    doc: 'type for instances of a specific Simulabra class via of()',
+    slots: [
+      $.Type,
+      $.Method.new({
+        name: 'of',
+        doc: 'create a type for instances of a specific class',
+        do(cls) {
+          if (!cls?.class?.()?.descended?.($.Class)) {
+            throw new Error('InstanceType.of: argument must be a Class');
+          }
+          return $.Type.new({
+            name: `$InstanceOf${cls.name}`,
+            check: (v) => v?.isa?.(cls) ?? false,
+          });
+        }
+      }),
+    ]
+  });
+
+  const typeInstances = [
+    $.Type.new({ name: '$Number', check: v => typeof v === 'number' }),
+    $.Type.new({ name: '$String', check: v => typeof v === 'string' }),
+    $.Type.new({ name: '$Integer', check: v => typeof v === 'number' && Number.isInteger(v) }),
+    $.Type.new({ name: '$Boolean', check: v => typeof v === 'boolean' }),
+    $.ArrayType.new({ name: '$Array', check: () => false }),
+    $.EnumType.new({ name: '$Enum', check: () => false }),
+    $.InstanceType.new({ name: '$Instance', check: () => false }),
+  ];
+  for (const t of typeInstances) {
+    _.repos()['Class'][t.name] = t;
+  }
 
   Function.prototype.module = function(params) {
     return $.Module.new({

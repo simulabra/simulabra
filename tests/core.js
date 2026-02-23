@@ -969,6 +969,616 @@ export default await async function (_, $, $test) {
     }
   });
 
+  // --- Type system tests ---
+
+  $test.Case.new({
+    name: 'TypeCreation',
+    doc: 'Create a Type with a check, verify it is a Simulabra object with isa($.Type).',
+    do() {
+      const t = $.Type.new({ name: 'TestType', check: v => typeof v === 'number' });
+      this.assert(t, 'Type instance should be created');
+      this.assert(t.isa($.Type), 'Type instance should isa Type');
+    }
+  });
+
+  $test.Case.new({
+    name: 'TypeValidatePass',
+    doc: '$Number.validate passes for a number value.',
+    do() {
+      const result = $.$Number.validate(42, 'x');
+      this.assertEq(result, 42, 'validate should return the value on success');
+    }
+  });
+
+  $test.Case.new({
+    name: 'TypeValidateFail',
+    doc: '$Number.validate throws for a non-number value.',
+    do() {
+      const msg = this.assertThrows(
+        () => { $.$Number.validate('hello', 'x'); },
+        '$Number',
+        'validate should throw for wrong type'
+      );
+      this.assertErrorMessageIncludes(msg, 'x');
+    }
+  });
+
+  $test.Case.new({
+    name: 'TypeNullable',
+    doc: 'Nullable type accepts null, original type value, and rejects wrong type.',
+    do() {
+      const t = $.$Number.nullable();
+      this.assertEq(t.validate(null, 'x'), null, 'nullable should accept null');
+      this.assertEq(t.validate(42, 'x'), 42, 'nullable should accept valid value');
+      this.assertThrows(
+        () => { t.validate('hello', 'x'); },
+        '$Number?',
+        'nullable should reject wrong type'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'TypeNullableName',
+    doc: 'Nullable type name appends ?',
+    do() {
+      this.assertEq($.$Number.nullable().name, '$Number?', 'nullable name should append ?');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ArrayOfPass',
+    doc: '$Array.of($String).validate passes for valid string array.',
+    do() {
+      const t = $.$Array.of($.$String);
+      const result = t.validate(['a', 'b'], 'tags');
+      this.assertEq(result.length, 2, 'validate should return the array');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ArrayOfFailNotArray',
+    doc: '$Array.of($String) rejects non-array value.',
+    do() {
+      const t = $.$Array.of($.$String);
+      this.assertThrows(
+        () => { t.validate('not an array', 'x'); },
+        '$ArrayOf$String',
+        'should reject non-array'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'ArrayOfFailElement',
+    doc: '$Array.of($String) rejects array with wrong element type.',
+    do() {
+      const t = $.$Array.of($.$String);
+      this.assertThrows(
+        () => { t.validate(['a', 42], 'x'); },
+        '$ArrayOf$String',
+        'should reject array with wrong element'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'ArrayOfName',
+    doc: 'Array type name includes inner type name.',
+    do() {
+      this.assertEq($.$Array.of($.$String).name, '$ArrayOf$String', 'array type name');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ArrayOfValidation',
+    doc: '$Array.of rejects non-Type argument.',
+    do() {
+      this.assertThrows(
+        () => { $.$Array.of('not a type'); },
+        'must be a Type',
+        'should reject non-Type argument'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'EnumOfPass',
+    doc: '$Enum.of passes for valid choice.',
+    do() {
+      const t = $.$Enum.of('a', 'b');
+      this.assertEq(t.validate('a', 'x'), 'a', 'should accept valid choice');
+    }
+  });
+
+  $test.Case.new({
+    name: 'EnumOfFail',
+    doc: '$Enum.of rejects invalid choice.',
+    do() {
+      const t = $.$Enum.of('a', 'b');
+      this.assertThrows(
+        () => { t.validate('c', 'x'); },
+        '$EnumOf(a|b)',
+        'should reject invalid choice'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'EnumOfName',
+    doc: 'Enum type name includes choices.',
+    do() {
+      this.assertEq($.$Enum.of('a', 'b').name, '$EnumOf(a|b)', 'enum type name');
+    }
+  });
+
+  $test.Case.new({
+    name: 'EnumOfEmpty',
+    doc: '$Enum.of() with no arguments throws.',
+    do() {
+      this.assertThrows(
+        () => { $.$Enum.of(); },
+        'at least one choice',
+        'should reject empty choices'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'EnumOfBadChoice',
+    doc: '$Enum.of({}) rejects non-string/number choice.',
+    do() {
+      this.assertThrows(
+        () => { $.$Enum.of({}); },
+        'string or number',
+        'should reject non-string/number choice'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'InstanceOfPass',
+    doc: '$Instance.of(Point) accepts Point instance.',
+    do() {
+      const point = _.Point.new({ x: 1, y: 2 });
+      const t = $.$Instance.of(_.Point);
+      this.assertEq(t.validate(point, 'p'), point, 'should accept matching instance');
+    }
+  });
+
+  $test.Case.new({
+    name: 'InstanceOfFail',
+    doc: '$Instance.of(Point) rejects plain string.',
+    do() {
+      const t = $.$Instance.of(_.Point);
+      this.assertThrows(
+        () => { t.validate('not a point', 'p'); },
+        '$InstanceOfPoint',
+        'should reject non-instance'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'InstanceOfName',
+    doc: 'Instance type name includes class name.',
+    do() {
+      this.assertEq($.$Instance.of(_.Point).name, '$InstanceOfPoint', 'instance type name');
+    }
+  });
+
+  $test.Case.new({
+    name: 'InstanceOfValidation',
+    doc: '$Instance.of rejects non-class argument.',
+    do() {
+      this.assertThrows(
+        () => { $.$Instance.of('not a class'); },
+        'must be a Class',
+        'should reject non-class argument'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'ArrayOfNullable',
+    doc: 'Chaining: $Array.of($String).nullable() accepts null, arrays, rejects numbers.',
+    do() {
+      const t = $.$Array.of($.$String).nullable();
+      this.assertEq(t.validate(null, 'x'), null, 'should accept null');
+      this.assertEq(t.validate(['a'], 'x').length, 1, 'should accept valid array');
+      this.assertThrows(
+        () => { t.validate(42, 'x'); },
+        '$ArrayOf$String?',
+        'should reject number'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'NestedArrayOf',
+    doc: 'Nested $Array.of($Array.of($Number)) validates nested arrays.',
+    do() {
+      const t = $.$Array.of($.$Array.of($.$Number));
+      t.validate([[1, 2], [3]], 'matrix');
+      this.assertThrows(
+        () => { t.validate([['a']], 'matrix'); },
+        '$ArrayOf$ArrayOf$Number',
+        'should reject nested array with wrong elements'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'EnumBaseRejects',
+    doc: 'Base $Enum rejects everything (check is () => false).',
+    do() {
+      this.assertThrows(
+        () => { $.$Enum.validate('anything', 'x'); },
+        '$Enum',
+        'base Enum should reject all values'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'InstanceBaseRejects',
+    doc: 'Base $Instance rejects everything (check is () => false).',
+    do() {
+      this.assertThrows(
+        () => { $.$Instance.validate('anything', 'x'); },
+        '$Instance',
+        'base Instance should reject all values'
+      );
+    }
+  });
+
+  // --- Spec integration tests ---
+
+  $test.Case.new({
+    name: 'SpecAcceptsValid',
+    doc: 'Var with spec accepts values that pass the type check.',
+    do() {
+      $.Class.new({
+        name: 'SpecAcceptTest',
+        slots: [
+          $.Var.new({ name: 'x', spec: $.$Number }),
+        ]
+      });
+      const p = _.SpecAcceptTest.new();
+      p.x(42);
+      this.assertEq(p.x(), 42, 'Valid value should be accepted');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecRejectsInvalid',
+    doc: 'Var with spec rejects values that fail the type check.',
+    do() {
+      $.Class.new({
+        name: 'SpecRejectTest',
+        slots: [
+          $.Var.new({ name: 'x', spec: $.$Number }),
+        ]
+      });
+      const p = _.SpecRejectTest.new();
+      const msg = this.assertThrows(
+        () => { p.x('hello'); },
+        '$Number',
+        'Invalid value should be rejected'
+      );
+      this.assertErrorMessageIncludes(msg, 'x');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecNoSpecUnchanged',
+    doc: 'Var without spec still accepts any value (regression).',
+    do() {
+      $.Class.new({
+        name: 'NoSpecTest',
+        slots: [
+          $.Var.new({ name: 'x' }),
+        ]
+      });
+      const p = _.NoSpecTest.new();
+      p.x(42);
+      this.assertEq(p.x(), 42, 'Number should be accepted');
+      p.x('hello');
+      this.assertEq(p.x(), 'hello', 'String should be accepted');
+      p.x(null);
+      this.assertEq(p.x(), null, 'Null should be accepted');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecDefaultValid',
+    doc: 'Var with spec and valid default returns the default on first access.',
+    do() {
+      $.Class.new({
+        name: 'SpecDefaultValidTest',
+        slots: [
+          $.Var.new({ name: 'x', spec: $.$Number, default: 0 }),
+        ]
+      });
+      const p = _.SpecDefaultValidTest.new();
+      this.assertEq(p.x(), 0, 'Valid default should be returned');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecDefaultInvalid',
+    doc: 'Var with spec and invalid default throws on first access.',
+    do() {
+      $.Class.new({
+        name: 'SpecDefaultInvalidTest',
+        slots: [
+          $.Var.new({ name: 'x', spec: $.$Number, default: 'bad' }),
+        ]
+      });
+      const p = _.SpecDefaultInvalidTest.new();
+      this.assertThrows(
+        () => { p.x(); },
+        '$Number',
+        'Invalid default should throw on first access'
+      );
+    }
+  });
+
+  $.Class.new({
+    name: 'TypedPoint',
+    slots: [
+      $.Var.new({ name: 'x', spec: $.$Number }),
+      $.Var.new({ name: 'y', spec: $.$Number }),
+    ]
+  });
+
+  $test.Case.new({
+    name: 'SpecInitValid',
+    doc: 'Construction with valid spec values succeeds.',
+    do() {
+      const p = _.TypedPoint.new({ x: 5, y: 10 });
+      this.assertEq(p.x(), 5, 'x should be set');
+      this.assertEq(p.y(), 10, 'y should be set');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecInitInvalid',
+    doc: 'Construction with invalid spec values throws.',
+    do() {
+      this.assertThrows(
+        () => { _.TypedPoint.new({ x: 'bad', y: 10 }); },
+        '$Number',
+        'Invalid init value should throw'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecRequiredValid',
+    doc: 'Required var with spec accepts valid value.',
+    do() {
+      $.Class.new({
+        name: 'SpecRequiredValidTest',
+        slots: [
+          $.Var.new({ name: 'x', required: true, spec: $.$String }),
+        ]
+      });
+      const p = _.SpecRequiredValidTest.new({ x: 'hello' });
+      this.assertEq(p.x(), 'hello', 'Valid required value should be accepted');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecRequiredMissing',
+    doc: 'Required var with spec still throws required error when missing.',
+    do() {
+      $.Class.new({
+        name: 'SpecRequiredMissingTest',
+        slots: [
+          $.Var.new({ name: 'x', required: true, spec: $.$String }),
+        ]
+      });
+      this.assertThrows(
+        () => { _.SpecRequiredMissingTest.new({}); },
+        'Required var',
+        'Missing required var should throw required error'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecRequiredInvalid',
+    doc: 'Required var with spec throws spec error for wrong type.',
+    do() {
+      $.Class.new({
+        name: 'SpecRequiredInvalidTest',
+        slots: [
+          $.Var.new({ name: 'x', required: true, spec: $.$String }),
+        ]
+      });
+      this.assertThrows(
+        () => { _.SpecRequiredInvalidTest.new({ x: 42 }); },
+        '$String',
+        'Wrong type for required var should throw spec error'
+      );
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'SignalSpecValid',
+    doc: 'Signal with spec accepts valid values and reactivity fires.',
+    async do() {
+      $.Class.new({
+        name: 'SignalSpecValidTest',
+        slots: [
+          $.Signal.new({ name: 'temp', spec: $.$Number }),
+        ]
+      });
+      const obj = _.SignalSpecValidTest.new();
+      let effectRan = 0;
+      $.Effect.create(() => {
+        obj.temp();
+        effectRan++;
+      });
+      obj.temp(42);
+      await __.reactor().flush();
+      this.assertEq(effectRan, 2, 'Effect should fire on init + update');
+      this.assertEq(obj.temp(), 42, 'Valid value should be accepted');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'SignalSpecInvalid',
+    doc: 'Signal with spec rejects invalid values.',
+    async do() {
+      $.Class.new({
+        name: 'SignalSpecInvalidTest',
+        slots: [
+          $.Signal.new({ name: 'temp', spec: $.$Number }),
+        ]
+      });
+      const obj = _.SignalSpecInvalidTest.new();
+      this.assertThrows(
+        () => { obj.temp('not a number'); },
+        '$Number',
+        'Invalid value should be rejected on Signal'
+      );
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'SignalSpecReactivity',
+    doc: 'Spec does not break reactive dependency tracking on Signal.',
+    async do() {
+      $.Class.new({
+        name: 'SignalSpecReactiveTest',
+        slots: [
+          $.Signal.new({ name: 'width', spec: $.$Number, default: 100 }),
+          $.Signal.new({ name: 'height', spec: $.$Number, default: 50 }),
+        ]
+      });
+      const w = _.SignalSpecReactiveTest.new();
+      let area = 0;
+      $.Effect.create(() => {
+        area = w.width() * w.height();
+      });
+      this.assertEq(area, 5000, 'Initial area should be computed');
+      w.width(200);
+      await __.reactor().flush();
+      this.assertEq(area, 10000, 'Area should update when width changes');
+      w.height(75);
+      await __.reactor().flush();
+      this.assertEq(area, 15000, 'Area should update when height changes');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecEnum',
+    doc: 'Spec with $Enum.of accepts valid choices, rejects invalid.',
+    do() {
+      $.Class.new({
+        name: 'SpecEnumTest',
+        slots: [
+          $.Var.new({ name: 'x', spec: $.$Enum.of('a', 'b') }),
+        ]
+      });
+      const p = _.SpecEnumTest.new();
+      p.x('a');
+      this.assertEq(p.x(), 'a', 'Valid enum value should be accepted');
+      this.assertThrows(
+        () => { p.x('c'); },
+        '$EnumOf(a|b)',
+        'Invalid enum value should be rejected'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecArrayOf',
+    doc: 'Spec with $Array.of($String) accepts valid arrays, rejects invalid.',
+    do() {
+      $.Class.new({
+        name: 'SpecArrayOfTest',
+        slots: [
+          $.Var.new({ name: 'tags', spec: $.$Array.of($.$String) }),
+        ]
+      });
+      const p = _.SpecArrayOfTest.new();
+      p.tags(['a', 'b']);
+      this.assertEq(p.tags().length, 2, 'Valid array should be accepted');
+      this.assertThrows(
+        () => { p.tags([1]); },
+        '$ArrayOf$String',
+        'Array with wrong element type should be rejected'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecInstanceOf',
+    doc: 'Spec with $Instance.of(Point) accepts instances, rejects others.',
+    do() {
+      $.Class.new({
+        name: 'SpecInstanceOfTest',
+        slots: [
+          $.Var.new({ name: 'pt', spec: $.$Instance.of(_.Point) }),
+        ]
+      });
+      const p = _.SpecInstanceOfTest.new();
+      const point = _.Point.new({ x: 1, y: 2 });
+      p.pt(point);
+      this.assertEq(p.pt(), point, 'Valid instance should be accepted');
+      this.assertThrows(
+        () => { p.pt('not a point'); },
+        '$InstanceOfPoint',
+        'Non-instance should be rejected'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecNullable',
+    doc: 'Spec with $Number.nullable() accepts null, numbers, rejects strings.',
+    do() {
+      $.Class.new({
+        name: 'SpecNullableTest',
+        slots: [
+          $.Var.new({ name: 'x', spec: $.$Number.nullable() }),
+        ]
+      });
+      const p = _.SpecNullableTest.new();
+      p.x(null);
+      this.assertEq(p.x(), null, 'Null should be accepted');
+      p.x(5);
+      this.assertEq(p.x(), 5, 'Number should be accepted');
+      this.assertThrows(
+        () => { p.x('x'); },
+        '$Number?',
+        'String should be rejected'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecBadType',
+    doc: 'Var with non-Type spec throws at class definition time.',
+    do() {
+      this.assertThrows(
+        () => {
+          $.Class.new({
+            name: 'SpecBadTypeTest',
+            slots: [
+              $.Var.new({ name: 'x', spec: 'not a type' }),
+            ]
+          });
+        },
+        'spec',
+        'Non-Type spec should throw at definition time'
+      );
+    }
+  });
+
 }.module({
   name: 'test.core',
   imports: [base, test],
