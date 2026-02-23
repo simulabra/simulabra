@@ -115,6 +115,28 @@ sps help                            # usage information
 
 The CLI discovers `sps/projects.jsonl` by walking up from the current directory (same pattern as sgit). Tag mutations keep the catalog and PROJECT.md frontmatter in sync.
 
+## Doc review
+
+Design docs and plan files support inline review comments. A comment is any line starting with an ALL-CAPS word followed by a colon:
+
+```
+NOTE: why not REST here?
+QUESTION: does this handle the offline case?
+TODO: add error codes
+GOOD: this section is solid
+```
+
+There is no fixed vocabulary — any `CAPS:` line is a comment. The word conveys intent, the text after the colon is the substance.
+
+### Process
+
+1. Claude generates a doc (in `docs/` or `plan/`)
+2. The user reads it and adds comments anywhere in the file
+3. Claude re-reads the doc, finds all comment lines, and incorporates the feedback — revising the doc and removing each comment
+4. Each comment gets a bullet in `WORKLOG.md` under a `### Review Round N` heading
+5. If Claude needs to respond rather than just act, it leaves its own comment in the same format for the next round
+6. Repeat until the doc is clean
+
 ## The system
 
 ### Initializing a project

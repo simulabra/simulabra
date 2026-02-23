@@ -720,7 +720,7 @@ function bootstrap() {
   // a missing middle
   var $Var = $Class.new({
     name: 'Var',
-    doc: 'variable slot with defaults, required checks, and debug/trace controls',
+    doc: 'variable slot with accessor hooks (validate, didSet, didGet), defaults, and required checks',
     fullSlot: true,
     slots: [
       BProperty.new({ name: 'name', }),
@@ -740,17 +740,25 @@ function bootstrap() {
       function should_debug() {
         return this.debug() || $Debug.debug();
       },
+      function validate(v) {},
+      function didSet(inst, pk, v) {},
+      function didGet(inst, pk) {},
       function combine(impl) {
         const pk = '__' + this.name;
         const self = this;
 
         impl.__primary = function varAccess(v, notify = true) {
           if (v !== undefined) {
+            self.validate(v);
             this[pk] = v;
+            if (notify) {
+              self.didSet(this, pk, v);
+            }
           } else {
             if (!(pk in this)) {
               this[pk] = self.defval(this);
             }
+            self.didGet(this, pk);
             return this[pk];
           }
         };
@@ -1493,41 +1501,30 @@ function bootstrap() {
 
   globalThis.SUBMAP = new WeakMap();      // inst  -> Map<pk, Set<fn>>
 
+  function getSubs(inst, pk) {
+    let map = SUBMAP.get(inst);
+    if (!map) {
+      map = new Map();
+      SUBMAP.set(inst, map);
+    }
+    let subs = map.get(pk);
+    if (!subs) {
+      subs = new Set();
+      map.set(pk, subs);
+    }
+    return subs;
+  }
+
   $.Class.new({
     name: 'Signal',
     doc: 'reactive Var that tracks dependencies and schedules subscribers',
     slots: [
       $.Var,
-      function combine(impl) {
-        const pk = '__' + this.name;
-        const self = this;
-
-        impl.__primary = function varAccess(v, notify = true) {
-          let map = SUBMAP.get(this);
-          if (!map) {
-            map = new Map();
-            SUBMAP.set(this, map);
-          }
-          let subs = map.get(pk);
-          if (!subs) {
-            subs = new Set();
-            map.set(pk, subs);
-          }
-          if (v !== undefined) {
-            this[pk] = v;
-            if (notify) {
-              SIMULABRA.reactor().schedule(subs);
-            }
-          } else {
-            if (!(pk in this)) {
-              this[pk] = self.defval(this);
-            }
-            SIMULABRA.reactor().push(subs);
-            return this[pk];
-          }
-        };
-        impl.__direct = true;
-        impl.__properties = [{ name: this.name }];
+      function didSet(inst, pk, v) {
+        SIMULABRA.reactor().schedule(getSubs(inst, pk));
+      },
+      function didGet(inst, pk) {
+        SIMULABRA.reactor().push(getSubs(inst, pk));
       },
     ]
   });

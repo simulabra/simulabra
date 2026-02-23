@@ -35,7 +35,7 @@ export default await async function (_, $, $test) {
     name: 'ListerCounterTest',
     doc: 'runs bin/lister.js on demos/counter.js and validates browser module loading',
     async do() {
-      const output = await bun.$`bun run bin/lister.js demos/counter.js`.text();
+      const output = await bun.$`bun run bin/lister.js ../demos/counter.js`.text();
       this.assert(output.includes('Counter'), 'output should contain Counter class');
       this.assert(output.includes('$.Signal#count'), 'output should contain count signal');
       this.assert(output.includes('$.Method#inc'), 'output should contain inc method');

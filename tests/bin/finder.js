@@ -11,7 +11,7 @@ export default await async function (_, $sim, $test) {
       const result = await $`bun run bin/finder.js render`.nothrow().text();
       this.assert(result.includes('Component'), 'should find Component');
       this.assert(result.includes('#render'), 'should find render slot');
-      this.assert(result.includes('demos/loom.js'), 'should find loom renders');
+      this.assert(result.includes('src/html.js'), 'should find html.js renders');
     }
   });
 

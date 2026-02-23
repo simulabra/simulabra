@@ -810,6 +810,165 @@ export default await async function (_, $, $test) {
       this.assert(!doc.canRedo(), 'Redo should be cleared');
     }
   });
+  // --- Var accessor hook tests ---
+
+  $.Class.new({
+    name: 'StringOnlyVar',
+    doc: 'Var subclass that validates values are strings',
+    slots: [
+      $.Var,
+      function validate(v) {
+        if (v !== undefined && typeof v !== 'string') {
+          throw new Error(`expected string, got ${typeof v}`);
+        }
+      },
+    ]
+  });
+
+  $test.Case.new({
+    name: 'HookValidate',
+    doc: 'Verify validate is called on set, rejecting invalid values.',
+    do() {
+      $.Class.new({
+        name: 'ValidateTest',
+        slots: [
+          _.StringOnlyVar.new({ name: 'label', default: 'hello' }),
+        ]
+      });
+      const obj = _.ValidateTest.new();
+      this.assertEq(obj.label(), 'hello', 'Default string value should pass validate');
+      obj.label('world');
+      this.assertEq(obj.label(), 'world', 'Valid string assignment should pass validate');
+      this.assertThrows(
+        () => { obj.label(42); },
+        'expected string',
+        'Non-string value should be rejected by validate'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'HookDidSet',
+    doc: 'Verify didSet fires on accessor set.',
+    do() {
+      const log = [];
+      $.Class.new({
+        name: 'DidSetVar',
+        slots: [
+          $.Var,
+          function didSet(inst, pk, v) {
+            log.push({ pk, v });
+          },
+        ]
+      });
+      $.Class.new({
+        name: 'DidSetTest',
+        slots: [
+          _.DidSetVar.new({ name: 'x', default: 0 }),
+        ]
+      });
+      const obj = _.DidSetTest.new();
+      obj.x(1);
+      this.assertEq(log.length, 1, 'didSet should fire on set');
+      this.assertEq(log[0].v, 1, 'didSet should receive the set value');
+      obj.x(2);
+      this.assertEq(log.length, 2, 'didSet should fire on subsequent set');
+      this.assertEq(log[1].v, 2, 'didSet should receive the new value');
+    }
+  });
+
+  $test.Case.new({
+    name: 'HookDidGet',
+    doc: 'Verify didGet fires on get.',
+    do() {
+      const log = [];
+      $.Class.new({
+        name: 'DidGetVar',
+        slots: [
+          $.Var,
+          function didGet(inst, pk) {
+            log.push(pk);
+          },
+        ]
+      });
+      $.Class.new({
+        name: 'DidGetTest',
+        slots: [
+          _.DidGetVar.new({ name: 'x', default: 42 }),
+        ]
+      });
+      const obj = _.DidGetTest.new();
+      const val = obj.x();
+      this.assertEq(val, 42, 'Should return the value');
+      this.assertEq(log.length, 1, 'didGet should fire on get');
+      this.assertEq(log[0], '__x', 'didGet should receive the private key');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'HookInheritance',
+    doc: 'Verify a class inheriting from Signal gets both Signal hooks and can add its own.',
+    async do() {
+      const log = [];
+      $.Class.new({
+        name: 'LoggingSignal',
+        doc: 'Signal subclass that also logs didSet',
+        slots: [
+          $.Signal,
+          $.After.new({
+            name: 'didSet',
+            do(inst, pk, v) {
+              log.push({ pk, v });
+            }
+          }),
+        ]
+      });
+      $.Class.new({
+        name: 'HookInheritanceTest',
+        slots: [
+          _.LoggingSignal.new({ name: 'x', default: 0 }),
+        ]
+      });
+      const obj = _.HookInheritanceTest.new();
+      let effectRan = 0;
+      $.Effect.create(() => {
+        obj.x();
+        effectRan++;
+      });
+      obj.x(5);
+      await __.reactor().flush();
+      this.assertEq(effectRan, 2, 'Signal reactivity should work (init + update)');
+      this.assert(log.length > 0, 'Custom didSet After should have fired');
+      this.assertEq(log[0].v, 5, 'Custom didSet should receive the value');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'SignalReactivityPreserved',
+    doc: 'Explicit verification that Signal reactive updates and dependency tracking still work after refactor.',
+    async do() {
+      $.Class.new({
+        name: 'ReactiveWidget',
+        slots: [
+          $.Signal.new({ name: 'width', default: 100 }),
+          $.Signal.new({ name: 'height', default: 50 }),
+        ]
+      });
+      const w = _.ReactiveWidget.new();
+      let area = 0;
+      $.Effect.create(() => {
+        area = w.width() * w.height();
+      });
+      this.assertEq(area, 5000, 'Initial effect should compute area');
+      w.width(200);
+      await __.reactor().flush();
+      this.assertEq(area, 10000, 'Area should update when width changes');
+      w.height(75);
+      await __.reactor().flush();
+      this.assertEq(area, 15000, 'Area should update when height changes');
+    }
+  });
+
 }.module({
   name: 'test.core',
   imports: [base, test],
