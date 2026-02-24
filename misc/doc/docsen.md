@@ -1654,45 +1654,13 @@ Methods:
 
 ---
 
-### Slot specialization: `EnumVar`
-
-Purpose:
-- Restrict a var accessor to a fixed set of allowed values.
-
-Suggested class docstring:
-- `A Var that participates in reactivity: reads subscribe, writes wake effects.`
 
 
 
 
 
 
-Slots (accessors):
-- `choices` — list of allowed values.
-  - Suggested docstring: `Allowed values for this enum var.`
 
-
-
-
-
-
-Methods:
-- `combine(impl)` — enforce choices on set.
-  - Suggested docstring: `Install an accessor that validates assigned values against choices.`
-
-
-
-
-
-- `defval(ctx)` — validate default value.
-  - Suggested docstring: `The default value, validating it is one of the allowed choices.`
-
-
-
-
-
-- `After('init')` — validate `default` at slot init time.
-  - Suggested docstring: `Validate the configured default is included in choices.`
 
 
 
@@ -3173,7 +3141,7 @@ Suggested class docstring:
 
 
 Slots (accessors):
-- `pattern` (EnumVar) — `'daily'|'weekly'|'monthly'`.
+- `pattern` (Var, spec: $Enum.of) — `'daily'|'weekly'|'monthly'`.
   - Suggested docstring: `Recurrence pattern: daily, weekly, or monthly.`
 
 

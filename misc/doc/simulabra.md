@@ -146,7 +146,6 @@ These are the main building blocks you use constantly:
 - `$.AsyncBefore` / `$.AsyncAfter`: async method modifiers
 - `$.Virtual`: declares a selector that must be implemented (throws if called)
 - `$.Constant`: a selector that always returns a constant value
-- `$.EnumVar`: a `Var` restricted to a choice set (validated at write and default init)
 
 The common OO pattern is: define a small base class for a “role”, then extend by adding more slots and modifiers rather than rewriting logic.
 

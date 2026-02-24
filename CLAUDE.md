@@ -50,21 +50,53 @@ $.Class.new({
 })
 ```
 
-EnumVar — use when a slot has a fixed set of valid values. Inherits from Var, adds `choices` (required array). The setter throws if the value isn't in the list.
+Type specs — use when a slot has a known value type. The `spec` option on `$.Var` validates values at set time, init time, and on first default access. Types are Simulabra objects accessed via `$.$TypeName`. Zero overhead on slots without specs.
+
+```js
+// Primitive types
+$.Var.new({ name: 'count', spec: $.$Number })
+$.Var.new({ name: 'label', spec: $.$String })
+$.Var.new({ name: 'active', spec: $.$Boolean })
+$.Var.new({ name: 'index', spec: $.$Integer })
+
+// Composed types
+$.Var.new({ name: 'status', spec: $.$Enum.of('pending', 'active', 'done'), default: 'pending' })
+$.Var.new({ name: 'tags', spec: $.$Array.of($.$String), default: () => [] })
+$.Var.new({ name: 'handler', spec: $.$Instance.of(_.RequestHandler) })
+
+// Nullable: accepts null/undefined in addition to the base type
+$.Var.new({ name: 'parent', spec: $.$Instance.of(_.TreeNode).nullable() })
+```
 
 ```js
 // WRONG: plain Var accepts any string — typos silently succeed
 $.Var.new({ name: 'status', default: 'pending' })
 
-// RIGHT: EnumVar validates at runtime and documents the contract
-$.EnumVar.new({
-  name: 'status',
-  choices: ['pending', 'active', 'done', 'cancelled'],
-  default: 'pending',
+// RIGHT: spec validates at runtime and documents the contract
+$.Var.new({ name: 'status', spec: $.$Enum.of('pending', 'active', 'done'), default: 'pending' })
+```
+
+Use for: status fields, numeric values, instance references, typed arrays — any slot with a known type.
+
+Var hooks — extend Var behavior without overriding `combine`. Subclasses override `validate`, `didSet`, or `didGet` hooks. This is how Signal adds reactivity — it overrides `didSet` to schedule subscribers and `didGet` to track dependencies.
+
+```js
+// Signal's hook overrides (from base.js) — no combine override needed
+$.Class.new({
+  name: 'Signal',
+  slots: [
+    $.Var,
+    function didSet(inst, pk, v) {
+      SIMULABRA.reactor().schedule(getSubs(inst, pk));
+    },
+    function didGet(inst, pk) {
+      SIMULABRA.reactor().push(getSubs(inst, pk));
+    },
+  ]
 })
 ```
 
-Use for: status fields, type discriminators, mode selectors — any slot with a closed set of values. Already used by ServiceSpec.restartPolicy and RecurrenceRule.pattern.
+Use for: logging on set, reactivity, caching, computed values. Override hooks instead of `combine` — hooks compose across the inheritance chain while `combine` is monolithic.
 
 Virtual — declare methods that subclasses MUST implement. Throws "not implemented" if called without an override.
 

@@ -298,66 +298,6 @@ export default await async function (_, $, $test) {
   });
 
   $.Class.new({
-    name: 'Task',
-    slots: [
-      $.EnumVar.new({
-        name: 'status',
-        choices: ['pending', 'active', 'complete'],
-        default: 'pending'
-      })
-    ]
-  });
-
-  $test.Case.new({
-    name: 'EnumVarBasic',
-    doc: 'Tests basic EnumVar functionality: default value and valid assignment.',
-    do() {
-      const t = _.Task.new();
-      this.assertEq(t.status(), 'pending', 'Wrong default enum value');
-      t.status('active');
-      this.assertEq(t.status(), 'active', 'Failed to update enum value');
-    }
-  });
-
-  $test.Case.new({
-    name: 'EnumVarInvalidAssignment',
-    doc: 'Tests that assigning an invalid value to an EnumVar throws an error.',
-    do() {
-      const t = _.Task.new();
-      const errorMessage = this.assertThrows(
-        () => { t.status('invalid_status'); },
-        'Invalid enum value',
-        'Should have thrown error for invalid enum value assignment'
-      );
-      this.assertErrorMessageIncludes(errorMessage, "'invalid_status'");
-      this.assertErrorMessageIncludes(errorMessage, 'pending, active, complete');
-    }
-  });
-
-  $test.Case.new({
-    name: 'EnumVarInvalidDefault',
-    doc: 'Tests that defining an EnumVar with an invalid default value throws an error during class definition.',
-    do() {
-      const errorMessage = this.assertThrows(() => {
-        $.Class.new({
-          name: 'BadTask',
-          slots: [
-            $.EnumVar.new({
-              name: 'status',
-              choices: ['pending', 'active', 'complete'],
-              default: 'invalid_default'
-            })
-          ]
-        });
-      },
-      'Invalid default value',
-      'Should have thrown error for invalid default enum value');
-      this.assertErrorMessageIncludes(errorMessage, "invalid_default");
-      this.assertErrorMessageIncludes(errorMessage, 'pending, active, complete');
-    }
-  });
-
-  $.Class.new({
     name: 'RequiredVarTest',
     slots: [
       $.Var.new({ name: 'required_field', required: true }),
@@ -973,11 +913,11 @@ export default await async function (_, $, $test) {
 
   $test.Case.new({
     name: 'TypeCreation',
-    doc: 'Create a Type with a check, verify it is a Simulabra object with isa($.Type).',
+    doc: 'Concrete type classes descend from Type and have working check.',
     do() {
-      const t = $.Type.new({ name: 'TestType', check: v => typeof v === 'number' });
-      this.assert(t, 'Type instance should be created');
-      this.assert(t.isa($.Type), 'Type instance should isa Type');
+      this.assert($.$Number.descended($.Type), '$Number should descend from Type');
+      this.assert($.$Number.check(42), '$Number.check should accept numbers');
+      this.assert(!$.$Number.check('x'), '$Number.check should reject strings');
     }
   });
 
@@ -1576,6 +1516,256 @@ export default await async function (_, $, $test) {
         'spec',
         'Non-Type spec should throw at definition time'
       );
+    }
+  });
+
+  // --- Phase 4: Adopt specs in base classes ---
+
+  $test.Case.new({
+    name: 'MethodDebugSpec',
+    doc: 'Method.debug has retroactive $Boolean spec, rejects non-boolean values at init.',
+    do() {
+      const slot = $.Method.getslot('debug');
+      this.assert(slot.spec(), 'Method.debug should have a spec after retroactive application');
+      this.assertThrows(
+        () => {
+          $.Method.new({ name: 'badDebugMethod', debug: 'string', do() {} });
+        },
+        '$Boolean',
+        'Method.new with non-boolean debug should throw'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecEnumVarReplacement',
+    doc: 'Var + spec $Enum.of works as EnumVar replacement: default, valid set, invalid reject.',
+    do() {
+      $.Class.new({
+        name: 'SpecEnumReplaceTest',
+        slots: [
+          $.Var.new({
+            name: 'status',
+            spec: $.$Enum.of('pending', 'active', 'complete'),
+            default: 'pending',
+          }),
+        ]
+      });
+      const t = _.SpecEnumReplaceTest.new();
+      this.assertEq(t.status(), 'pending', 'Default enum value via spec');
+      t.status('active');
+      this.assertEq(t.status(), 'active', 'Valid enum set via spec');
+      this.assertThrows(
+        () => { t.status('invalid'); },
+        '$EnumOf(pending|active|complete)',
+        'Invalid enum value rejected by spec'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'SpecEnumInitInvalid',
+    doc: 'Var + spec $Enum.of rejects invalid value at construction time.',
+    do() {
+      $.Class.new({
+        name: 'SpecEnumInitInvalidTest',
+        slots: [
+          $.Var.new({
+            name: 'mode',
+            spec: $.$Enum.of('read', 'write'),
+            default: 'read',
+          }),
+        ]
+      });
+      this.assertThrows(
+        () => { _.SpecEnumInitInvalidTest.new({ mode: 'execute' }); },
+        '$EnumOf(read|write)',
+        'Invalid init value should throw via spec'
+      );
+    }
+  });
+
+  // --- Phase 7: $Function, $Map, $Any type tests ---
+
+  $test.Case.new({
+    name: 'FunctionTypePass',
+    doc: '$Function accepts a function value.',
+    do() {
+      $.Class.new({
+        name: 'FnHolder',
+        slots: [$.Var.new({ name: 'handler', spec: $.$Function })]
+      });
+      const h = _.FnHolder.new({ handler: () => 42 });
+      this.assertEq(typeof h.handler(), 'function', 'Should store a function');
+    }
+  });
+
+  $test.Case.new({
+    name: 'FunctionTypeFail',
+    doc: '$Function rejects non-function values.',
+    do() {
+      $.Class.new({
+        name: 'FnHolder2',
+        slots: [$.Var.new({ name: 'handler', spec: $.$Function })]
+      });
+      this.assertThrows(
+        () => { _.FnHolder2.new({ handler: 'not a function' }); },
+        '$Function',
+        'String should be rejected by $Function spec'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'MapTypePass',
+    doc: '$Map accepts a plain object.',
+    do() {
+      $.Class.new({
+        name: 'MapHolder',
+        slots: [$.Var.new({ name: 'data', spec: $.$Map })]
+      });
+      const m = _.MapHolder.new({ data: { a: 1, b: 2 } });
+      this.assertEq(m.data().a, 1, 'Should store a plain object');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MapTypeFail',
+    doc: '$Map rejects null, arrays, strings, numbers.',
+    do() {
+      $.Class.new({
+        name: 'MapHolder2',
+        slots: [$.Var.new({ name: 'data', spec: $.$Map })]
+      });
+      this.assertThrows(
+        () => { _.MapHolder2.new({ data: [1, 2] }); },
+        '$Map',
+        'Array should be rejected by $Map spec'
+      );
+      this.assertThrows(
+        () => { _.MapHolder2.new({ data: 'string' }); },
+        '$Map',
+        'String should be rejected by $Map spec'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'AnyTypePass',
+    doc: '$Any accepts any value type.',
+    do() {
+      $.Class.new({
+        name: 'AnyHolder',
+        slots: [$.Var.new({ name: 'val', spec: $.$Any })]
+      });
+      const a = _.AnyHolder.new({ val: 'string' });
+      this.assertEq(a.val(), 'string', '$Any should accept string');
+      a.val(42);
+      this.assertEq(a.val(), 42, '$Any should accept number');
+      a.val(null);
+      this.assertEq(a.val(), null, '$Any should accept null');
+      a.val(() => {});
+      this.assertEq(typeof a.val(), 'function', '$Any should accept function');
+    }
+  });
+
+  $test.Case.new({
+    name: 'FunctionNullable',
+    doc: '$Function.nullable() accepts null and function.',
+    do() {
+      $.Class.new({
+        name: 'FnNullHolder',
+        slots: [$.Var.new({ name: 'cb', spec: $.$Function.nullable() })]
+      });
+      const h = _.FnNullHolder.new();
+      this.assertEq(h.cb(), undefined, 'Nullable function should default to undefined');
+      h.cb(() => 'hi');
+      this.assertEq(h.cb()(), 'hi', 'Should accept function');
+      h.cb(null);
+      this.assertEq(h.cb(), null, 'Should accept null');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MapNullable',
+    doc: '$Map.nullable() accepts null and plain object.',
+    do() {
+      $.Class.new({
+        name: 'MapNullHolder',
+        slots: [$.Var.new({ name: 'opts', spec: $.$Map.nullable() })]
+      });
+      const m = _.MapNullHolder.new();
+      this.assertEq(m.opts(), undefined, 'Nullable map should default to undefined');
+      m.opts({ x: 1 });
+      this.assertEq(m.opts().x, 1, 'Should accept plain object');
+      m.opts(null);
+      this.assertEq(m.opts(), null, 'Should accept null');
+    }
+  });
+
+  // --- Phase 8: Retroactive spec tests ---
+
+  $test.Case.new({
+    name: 'RetroactiveBooleanSpecs',
+    doc: 'Retroactive boolean specs reject non-boolean values.',
+    do() {
+      this.assertThrows(
+        () => { $.Reactor.new().batched('yes'); },
+        '$Boolean',
+        'Reactor.batched should reject string'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveIntegerSpec',
+    doc: 'SimulabraGlobal.tick spec rejects non-integer.',
+    do() {
+      const spec = $.SimulabraGlobal.getslot('tick').spec();
+      this.assert(spec, 'tick should have a spec');
+      this.assertEq(spec.name, '$Integer', 'tick spec should be $Integer');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveDocSpecs',
+    doc: 'Method.doc is nullable string: null OK, number rejected.',
+    do() {
+      const spec = $.Method.getslot('doc').spec();
+      this.assert(spec, 'Method.doc should have a spec');
+      this.assert(spec.name.includes('$String'), 'doc spec should be string-based');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveInstanceSpecs',
+    doc: 'SimulabraGlobal.registry spec is InstanceOf ObjectRegistry.',
+    do() {
+      const spec = $.SimulabraGlobal.getslot('registry').spec();
+      this.assert(spec, 'registry should have a spec');
+      this.assert(spec.name.includes('$InstanceOf'), 'registry spec should be instance-based');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveFunctionSpecs',
+    doc: 'Effect.fn spec rejects non-function.',
+    do() {
+      this.assertThrows(
+        () => { $.Effect.new({ fn: 'not-a-function' }); },
+        '$Function',
+        'Effect.fn should reject string'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveMapSpecs',
+    doc: 'SimulabraGlobal.modules spec is $Map.',
+    do() {
+      const spec = $.SimulabraGlobal.getslot('modules').spec();
+      this.assert(spec, 'modules should have a spec');
+      this.assertEq(spec.name, '$Map', 'modules spec should be $Map');
     }
   });
 

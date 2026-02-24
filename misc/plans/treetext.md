@@ -290,7 +290,7 @@ The `apply` method walks `ops`:
 Role: a single operation in a patch.
 
 Slots:
-- `kind` (EnumVar: 'retain' | 'insert' | 'delete')
+- `kind` (Var, spec: $Enum.of('retain', 'insert', 'delete'))
 - `count` (Var<number>) – for `retain` and `delete`
 - `text` (Var<string | null>) – for `insert`
 

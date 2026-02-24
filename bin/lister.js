@@ -100,6 +100,8 @@ export default await async function (_, $) {
             signature += this.extractParams(slot.do?.());
           }
           if (doc) signature += ` ${doc}`;
+          const spec = slot.spec?.();
+          if (spec) signature += ` [${spec.name}]`;
           return signature;
         }
       }),

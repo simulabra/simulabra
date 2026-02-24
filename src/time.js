@@ -354,10 +354,10 @@ export default await async function (_, $) {
     name: 'RecurrenceRule',
     doc: 'Rule for recurring events with daily, weekly, or monthly patterns',
     slots: [
-      $.EnumVar.new({
+      $.Var.new({
         name: 'pattern',
         doc: 'recurrence pattern',
-        choices: ['daily', 'weekly', 'monthly'],
+        spec: $.$Enum.of('daily', 'weekly', 'monthly'),
         required: true,
       }),
       $.Var.new({

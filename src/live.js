@@ -465,10 +465,10 @@ export default await async function (_, $) {
         doc: 'command array to spawn the service',
         required: true,
       }),
-      $.EnumVar.new({
+      $.Var.new({
         name: 'restartPolicy',
         doc: 'when to restart the service',
-        choices: ['always', 'on_failure', 'never'],
+        spec: $.$Enum.of('always', 'on_failure', 'never'),
         default: 'on_failure',
       }),
       $.Var.new({

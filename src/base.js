@@ -742,10 +742,7 @@ function bootstrap() {
         return this.debug() || $Debug.debug();
       },
       function validate(v) {
-        const spec = this.spec();
-        if (spec) {
-          spec.validate(v, this.name);
-        }
+        this.spec()?.validate(v, this.name);
       },
       function didSet(inst, pk, v) {},
       function didGet(inst, pk) {},
@@ -769,8 +766,8 @@ function bootstrap() {
               const dv = self.defval(this);
               if (dv !== undefined) {
                 self.validate(dv);
+                this[pk] = dv;
               }
-              this[pk] = dv;
             }
             self.didGet(this, pk);
             return this[pk];
@@ -781,13 +778,11 @@ function bootstrap() {
       },
       function initInstance(inst) {
         const key = '__' + this.name;
-        if (this.required()) {
-          if (!(key in inst) || inst[key] === undefined) {
-            throw new Error(`Required var '${this.name}' not provided for ${inst.class().name}`);
-          }
+        if (this.required() && inst[key] === undefined) {
+          throw new Error(`Required var '${this.name}' not provided for ${inst.class().name}`);
         }
-        if (this.spec() && key in inst && inst[key] !== undefined) {
-          this.spec().validate(inst[key], this.name);
+        if (inst[key] !== undefined) {
+          this.spec()?.validate(inst[key], this.name);
         }
       }
     ]
@@ -1455,67 +1450,6 @@ function bootstrap() {
     $.SimulabraGlobal,
   ].forEach(it => __.register(it));
 
-  $.Class.new({
-    name: 'EnumVar',
-    doc: 'variable slot restricted to a fixed set of choices',
-    slots: [
-      $.Var,
-      $.Var.new({
-        name: 'choices',
-        required: true
-      }),
-      $.After.new({
-        name: 'init',
-        doc: 'validate default against choices',
-        do: function after__init() {
-          const def = this.default();
-          if (def !== undefined && !this.choices().includes(def)) {
-            throw new Error(`Invalid default value ${def} for choices ${this.choices().join(', ')}`);
-          }
-        }
-      }),
-
-      $.Method.new({
-        name: 'combine',
-        doc: 'enforce enum choices on access and assignment',
-        do: function combine(impl) {
-          const pk = '__' + this.name;
-          const self = this;
-
-          impl.__primary = function enumAccess(assign, update = true) {
-            if (assign !== undefined) {
-              if (!self.choices().includes(assign)) {
-                throw new Error(`Invalid enum value '${assign}' for ${self.name}. Valid choices are: ${self.choices().join(', ')}`);
-              }
-              this[pk] = assign;
-            } else if (!(pk in this)) {
-              this[pk] = self.defval(this);
-            }
-            return this[pk];
-          };
-
-          impl.__direct = true;
-        }
-      }),
-
-      $.Method.new({
-        name: 'defval',
-        doc: 'validate default enum value',
-        do: function defval(ctx) {
-          const def = this.default();
-          if (def !== undefined) {
-            if (!this.choices().includes(def)) {
-              throw new Error(
-                `Invalid default enum value '${def}' for ${this.name}. Valid choices are: ${this.choices().join(', ')}`
-              );
-            }
-          }
-          return def;
-        }
-      })
-    ]
-  });
-
   globalThis.SUBMAP = new WeakMap();      // inst  -> Map<pk, Set<fn>>
 
   function getSubs(inst, pk) {
@@ -1728,15 +1662,17 @@ function bootstrap() {
 
   $.Class.new({
     name: 'Type',
-    doc: 'runtime type with predicate check and validate method',
+    doc: 'abstract base for runtime types',
     slots: [
-      $.Var.new({ name: 'check', required: true, doc: 'predicate function (value) => boolean' }),
+      $.Virtual.new({ name: 'check', doc: 'return true if value matches type' }),
+      $.Var.new({ name: 'isNullable', default: false }),
       function proxied() { return this; },
       $.Method.new({
         name: 'validate',
         doc: 'check value against type predicate, throw on failure, return value on success',
         do(value, slot) {
-          if (!this.check()(value)) {
+          if (this.isNullable() && (value === null || value === undefined)) return value;
+          if (!this.check(value)) {
             throw new Error(`${this.name}: validation failed for '${slot}'`);
           }
           return value;
@@ -1744,98 +1680,208 @@ function bootstrap() {
       }),
       $.Method.new({
         name: 'nullable',
-        doc: 'return a new Type that also accepts null and undefined',
+        doc: 'return a new instance of same type class with isNullable=true',
         do() {
-          const inner = this;
-          return $.Type.new({
-            name: `${this.name}?`,
-            check: (v) => v === null || v === undefined || inner.check()(v),
-          });
+          return this.class().new({ name: `${this.name}?`, isNullable: true });
+        }
+      }),
+      $.Static.new({
+        name: 'check',
+        do(v) {
+          if (!this.__singleton) this.__singleton = this.new({ name: this.name });
+          return this.__singleton.check(v);
+        }
+      }),
+      $.Static.new({
+        name: 'validate',
+        do(value, slot) {
+          if (!this.__singleton) this.__singleton = this.new({ name: this.name });
+          return this.__singleton.validate(value, slot);
+        }
+      }),
+      $.Static.new({
+        name: 'nullable',
+        do() {
+          if (!this.__singleton) this.__singleton = this.new({ name: this.name });
+          return this.__singleton.nullable();
         }
       }),
     ]
   });
 
   $.Class.new({
-    name: 'ArrayType',
-    doc: 'type for arrays with element type validation via of()',
+    name: '$Number',
+    doc: 'type for numeric values',
     slots: [
       $.Type,
+      $.Method.new({ name: 'check', do(v) { return typeof v === 'number'; } }),
+    ]
+  });
+
+  $.Class.new({
+    name: '$String',
+    doc: 'type for string values',
+    slots: [
+      $.Type,
+      $.Method.new({ name: 'check', do(v) { return typeof v === 'string'; } }),
+    ]
+  });
+
+  $.Class.new({
+    name: '$Integer',
+    doc: 'type for integer values',
+    slots: [
+      $.Type,
+      $.Method.new({ name: 'check', do(v) { return typeof v === 'number' && Number.isInteger(v); } }),
+    ]
+  });
+
+  $.Class.new({
+    name: '$Boolean',
+    doc: 'type for boolean values',
+    slots: [
+      $.Type,
+      $.Method.new({ name: 'check', do(v) { return typeof v === 'boolean'; } }),
+    ]
+  });
+
+  $.Class.new({
+    name: '$Function',
+    doc: 'type for function values',
+    slots: [
+      $.Type,
+      $.Method.new({ name: 'check', do(v) { return typeof v === 'function'; } }),
+    ]
+  });
+
+  $.Class.new({
+    name: '$Map',
+    doc: 'type for plain object values',
+    slots: [
+      $.Type,
+      $.Method.new({ name: 'check', do(v) { return typeof v === 'object' && v !== null && !Array.isArray(v); } }),
+    ]
+  });
+
+  $.Class.new({
+    name: '$Any',
+    doc: 'type that accepts any value',
+    slots: [
+      $.Type,
+      $.Method.new({ name: 'check', do() { return true; } }),
+    ]
+  });
+
+  $.Class.new({
+    name: '$Array',
+    doc: 'type for arrays with optional element type validation',
+    slots: [
+      $.Type,
+      $.Var.new({ name: 'inner', doc: 'element type for validation' }),
       $.Method.new({
+        name: 'check',
+        do(v) {
+          if (!Array.isArray(v)) return false;
+          return this.inner() ? v.every(el => this.inner().check(el)) : false;
+        }
+      }),
+      $.Method.new({
+        name: 'nullable',
+        do() {
+          return this.class().new({
+            name: `${this.name}?`, isNullable: true, inner: this.inner(),
+          });
+        }
+      }),
+      $.Static.new({
         name: 'of',
-        doc: 'create an array type checking element type',
         do(inner) {
-          if (!inner?.isa?.($.Type)) {
-            throw new Error('ArrayType.of: argument must be a Type');
+          if (!(inner?.descended?.($.Type) || inner?.isa?.($.Type))) {
+            throw new Error('$Array.of: argument must be a Type');
           }
-          return $.Type.new({
-            name: `$ArrayOf${inner.name}`,
-            check: (v) => Array.isArray(v) && v.every(el => inner.check()(el)),
-          });
+          return this.new({ name: `$ArrayOf${inner.name}`, inner });
         }
       }),
     ]
   });
 
   $.Class.new({
-    name: 'EnumType',
-    doc: 'type for values from a fixed set of choices via of()',
+    name: '$Enum',
+    doc: 'type for values from a fixed set of choices',
     slots: [
       $.Type,
+      $.Var.new({ name: 'choices', doc: 'allowed values' }),
       $.Method.new({
+        name: 'check',
+        do(v) { return this.choices() ? this.choices().includes(v) : false; }
+      }),
+      $.Method.new({
+        name: 'nullable',
+        do() {
+          return this.class().new({
+            name: `${this.name}?`, isNullable: true, choices: this.choices(),
+          });
+        }
+      }),
+      $.Static.new({
         name: 'of',
-        doc: 'create an enum type with specific choices',
         do(...choices) {
           if (choices.length === 0) {
-            throw new Error('EnumType.of: must provide at least one choice');
+            throw new Error('$Enum.of: must provide at least one choice');
           }
           for (const c of choices) {
             if (typeof c !== 'string' && typeof c !== 'number') {
-              throw new Error('EnumType.of: each choice must be a string or number');
+              throw new Error('$Enum.of: each choice must be a string or number');
             }
           }
-          return $.Type.new({
-            name: `$EnumOf(${choices.join('|')})`,
-            check: (v) => choices.includes(v),
-          });
+          return this.new({ name: `$EnumOf(${choices.join('|')})`, choices });
         }
       }),
     ]
   });
 
   $.Class.new({
-    name: 'InstanceType',
-    doc: 'type for instances of a specific Simulabra class via of()',
+    name: '$Instance',
+    doc: 'type for instances of a specific Simulabra class',
     slots: [
       $.Type,
+      $.Var.new({ name: 'cls', doc: 'required class for validation' }),
       $.Method.new({
+        name: 'check',
+        do(v) { return this.cls() ? (v?.isa?.(this.cls()) ?? false) : false; }
+      }),
+      $.Method.new({
+        name: 'nullable',
+        do() {
+          return this.class().new({
+            name: `${this.name}?`, isNullable: true, cls: this.cls(),
+          });
+        }
+      }),
+      $.Static.new({
         name: 'of',
-        doc: 'create a type for instances of a specific class',
         do(cls) {
           if (!cls?.class?.()?.descended?.($.Class)) {
-            throw new Error('InstanceType.of: argument must be a Class');
+            throw new Error('$Instance.of: argument must be a Class');
           }
-          return $.Type.new({
-            name: `$InstanceOf${cls.name}`,
-            check: (v) => v?.isa?.(cls) ?? false,
-          });
+          return this.new({ name: `$InstanceOf${cls.name}`, cls });
         }
       }),
     ]
   });
 
-  const typeInstances = [
-    $.Type.new({ name: '$Number', check: v => typeof v === 'number' }),
-    $.Type.new({ name: '$String', check: v => typeof v === 'string' }),
-    $.Type.new({ name: '$Integer', check: v => typeof v === 'number' && Number.isInteger(v) }),
-    $.Type.new({ name: '$Boolean', check: v => typeof v === 'boolean' }),
-    $.ArrayType.new({ name: '$Array', check: () => false }),
-    $.EnumType.new({ name: '$Enum', check: () => false }),
-    $.InstanceType.new({ name: '$Instance', check: () => false }),
-  ];
-  for (const t of typeInstances) {
-    _.repos()['Class'][t.name] = t;
-  }
+  // Retroactive specs
+  $.Method.getslot('debug').spec($.$Boolean);
+  $.Method.getslot('doc').spec($.$String.nullable());
+  $.Reactor.getslot('batched').spec($.$Boolean);
+  $.SimulabraGlobal.getslot('tick').spec($.$Integer);
+  $.SimulabraGlobal.getslot('debug').spec($.$Boolean);
+  $.SimulabraGlobal.getslot('trace').spec($.$Boolean);
+  $.SimulabraGlobal.getslot('registry').spec($.$Instance.of($.ObjectRegistry));
+  $.SimulabraGlobal.getslot('modules').spec($.$Map);
+  $.SimulabraGlobal.getslot('handlers').spec($.$Map);
+  $.Effect.getslot('fn').spec($.$Function);
+  $.Effect.getslot('active').spec($.$Boolean);
 
   Function.prototype.module = function(params) {
     return $.Module.new({
@@ -1901,6 +1947,8 @@ function bootstrap() {
     slots: [
     ]
   });
+
+  $.Command.getslot('run').spec($.$Function);
 
   $.Class.new({
     name: 'Clone',
