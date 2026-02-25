@@ -139,10 +139,16 @@ There is no fixed vocabulary — any `CAPS:` line is a comment. The word conveys
 
 ## The system
 
-### Initializing a project
-First, when the user mentions starting a new project, confirm the name and brief using the AskUserQuestion tool. 
+### Before starting work
+Always check the project's current state before diving in:
+- Read `projects.jsonl` to see the project status and brief.
+- Read the project's `PROJECT.md` to see which phases are done, in progress, or planned.
+- Scan markdown files in `docs/` and `plan/` for **review comments** — lines matching `^[A-Z]+:` (e.g. `NOTE:`, `QUESTION:`, `TODO:`). If any are found, process them before other work.
 
-After confirming, create the project directory structure, `PROJECT.md` file, and `WORKLOG.md`. Ask about first steps - requirement gathering, research, prototyping, etc. 
+### Initializing a project
+First, when the user mentions starting a new project, confirm the name and brief using the AskUserQuestion tool.
+
+After confirming, create the project directory structure, `PROJECT.md` file, and `WORKLOG.md`. Ask about first steps - requirement gathering, research, prototyping, etc.
 
 ### Information gathering
 Before starting work, it is typically prudent to refine your thoughts around the matter.
@@ -153,18 +159,22 @@ In my own testing I have found codex with gpt-5.2 to be better at pure knowledge
 $ codex e "Analyze the code base and architecture of the agenda app, looking for bad abstractions, excessive duplication, and other sources of accidental complexity. Write your report to sps/prj/agenda-refactor/docs/analysis.md. Include file locations with line numbers and suggestions for improvements, but no code. Include libraries the app is using in the scope of this report."
 ```
 
-Codex is slow, and will generate a lot of output while running. Run it in a tmux session, then do your own information gathering in parallel, focusing on building a map of the relevant code, design sketches, and requirement gathering from the user. 
+Codex is slow, and will generate a lot of output while running. Run it in a tmux session, then do your own information gathering in parallel, focusing on building a map of the relevant code, design sketches, and requirement gathering from the user.
 
 ### Planning
-Once enough information has been gathered to have a clear understanding of the goals, domain, and scope of the project, move on to planning. Using the docs, organize the work into phases in the plan/ directory. Call out any uncertainties that might come up during implementation time, references to docs or project files, and acceptance criteria. 
+Once enough information has been gathered to have a clear understanding of the goals, domain, and scope of the project, move on to planning. Using the docs, organize the work into phases in the plan/ directory. Call out any uncertainties that might come up during implementation time, references to docs or project files, and acceptance criteria.
+
+**Plans must live on disk** in `prj/{name}/plan/` as files, never only in conversation. This ensures plans survive context clears and drive the workflow from a single source of truth. If a plan is provided inline, write it to the project's `plan/` directory as phase files first.
 
 ### Executing plans
-Track the current phase of the plan in `PROJECT.md`, and add a note to the plan file when done as well. The phase is complete when the acceptance criteria in it are met and tests are working. If the phase is impossible/overly scoped, call that out to the user. Add to `WORKLOG.md` when appropriate - have fun with it, that file is yours. 
+Track the current phase of the plan in `PROJECT.md`, and add a note to the plan file when done as well. The phase is complete when the acceptance criteria in it are met and tests are working. If the phase is impossible/overly scoped, call that out to the user. Add to `WORKLOG.md` when appropriate - have fun with it, that file is yours.
+
+**One phase at a time.** When delegating to the carpenter skill, pass only a single phase file. Do not combine phases or pass multiple phase contents. Complete, review, and mark done before moving on.
 
 #### Reviewing phases
-At the end of each phase, before marking as done, review the changes with a focus on code quality, correctness, and style. Add the review to the phase file, then make the changes as requested by the review. Only after reviewing, mark the phase as done, and commit the changes.
+At the end of each phase, before marking as done, send the **inspector** skill to review the changes with a focus on code quality, correctness, and style. Add the review to the phase file, then make the changes as requested by the review. Only after reviewing, mark the phase as done, and commit the changes.
 
 ### Completing projects
-When all phases of the plan are complete, it is time to verify the project with the user. Make sure they have a way to test it, and provide a paragraph-sized description of the results of the project. If additional work comes up during this period, add an additional phase with the follow-on work and go back to execution, after finishing the verification process.
+When all phases of the plan are complete, it is time to verify the project with the user. The **operator** skill can drive the software and attempt to break it. Make sure the user has a way to test it, and provide a paragraph-sized description of the results of the project. If additional work comes up during this period, add an additional phase with the follow-on work and go back to execution, after finishing the verification process.
 
 When the project is actually complete and the user signs off on it, mark it as complete in the catalog and wherever else necessary. Congrats!
