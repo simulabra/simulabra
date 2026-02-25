@@ -39,7 +39,6 @@ await async function (_, $, $test) {
         name: 'runMod',
         async: true,
         async do(mod) {
-          this.log(`run ${mod.title()}`);
           const baseMod = __.mod();
           __.mod(mod);
           const cases = mod.instances($test.Case);

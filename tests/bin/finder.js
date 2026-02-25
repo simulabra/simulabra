@@ -35,6 +35,16 @@ export default await async function (_, $sim, $test) {
       this.assert(!result.includes('#renderCheckbox'), 'should not match renderCheckbox');
     }
   });
+
+  $test.Case.new({
+    name: 'FinderSpecAnnotationTest',
+    doc: 'spec annotations flow through finder output',
+    async: true,
+    async do() {
+      const result = await $`bun run bin/finder.js debug`.nothrow().text();
+      this.assert(result.includes('[$Boolean]'), 'should show spec annotation on debug');
+    }
+  });
 }.module({
   name: 'test.bin.finder',
   imports: [base, test],

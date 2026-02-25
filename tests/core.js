@@ -1769,6 +1769,87 @@ export default await async function (_, $, $test) {
     }
   });
 
+  // --- Phase 8b: Complete Var spec adoption ---
+
+  $test.Case.new({
+    name: 'RetroactiveDocSpecs8b',
+    doc: 'Doc specs on slot types accept null and strings, reject numbers.',
+    do() {
+      for (const cls of [$.Constant, $.Before, $.After, $.AsyncBefore, $.AsyncAfter, $.Virtual]) {
+        const slot = cls.getslot('doc');
+        this.assert(slot, `${cls.name}.doc should exist`);
+        const spec = slot.spec();
+        this.assert(spec, `${cls.name}.doc should have a spec`);
+        this.assert(spec.name.includes('$String'), `${cls.name}.doc spec should be string-based`);
+      }
+      // null accepted
+      const c = $.Constant.new({ value: 42, doc: null });
+      this.assertEq(c.doc(), null, 'Constant.doc should accept null');
+      // string accepted
+      const b = $.Before.new({ name: 'testDoc8b', doc: 'hello', do() {} });
+      this.assertEq(b.doc(), 'hello', 'Before.doc should accept string');
+      // number rejected
+      this.assertThrows(
+        () => { $.Virtual.new({ name: 'badDoc8b', doc: 123 }); },
+        '$String',
+        'Virtual.doc should reject number'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveInstanceNullable8b',
+    doc: 'Reactor and command specs accept null and correct instances, reject wrong types.',
+    do() {
+      const reactorSpec = $.SimulabraGlobal.getslot('reactor').spec();
+      this.assert(reactorSpec, 'reactor should have a spec');
+      this.assert(reactorSpec.name.includes('$InstanceOf'), 'reactor spec should be instance-based');
+      this.assert(reactorSpec.isNullable(), 'reactor spec should be nullable');
+      // registry spec should now be nullable
+      const registrySpec = $.SimulabraGlobal.getslot('registry').spec();
+      this.assert(registrySpec, 'registry should have a spec');
+      this.assert(registrySpec.isNullable(), 'registry spec should be nullable');
+      // CommandContext.command spec
+      const cmdSpec = $.CommandContext.getslot('command').spec();
+      this.assert(cmdSpec, 'command should have a spec');
+      this.assert(cmdSpec.isNullable(), 'command spec should be nullable');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveFunctionNullable8b',
+    doc: 'Function nullable specs accept null and functions, reject non-functions.',
+    do() {
+      const boundRunSpec = $.Effect.getslot('boundRun').spec();
+      this.assert(boundRunSpec, 'boundRun should have a spec');
+      this.assert(boundRunSpec.name.includes('$Function'), 'boundRun spec should be function-based');
+      this.assert(boundRunSpec.isNullable(), 'boundRun spec should be nullable');
+      // Command.run should still have a function spec (but now nullable)
+      const runSpec = $.Command.getslot('run').spec();
+      this.assert(runSpec, 'Command.run should have a spec');
+      this.assert(runSpec.name.includes('$Function'), 'Command.run spec should be function-based');
+    }
+  });
+
+  $test.Case.new({
+    name: 'RetroactiveMapAndMiscSpecs8b',
+    doc: 'Module.repos has $Map spec; Module.loaded is $Boolean; Constant.value is $Any.',
+    do() {
+      const reposSpec = $.Module.getslot('repos').spec();
+      this.assert(reposSpec, 'repos should have a spec');
+      this.assertEq(reposSpec.name, '$Map', 'repos spec should be $Map');
+      // ObjectRegistry.classInstances/refs intentionally unspecced (re-entrancy with registration)
+      // Module.loaded
+      const loadedSpec = $.Module.getslot('loaded').spec();
+      this.assert(loadedSpec, 'loaded should have a spec');
+      this.assertEq(loadedSpec.name, '$Boolean', 'loaded spec should be $Boolean');
+      // Constant.value
+      const valueSpec = $.Constant.getslot('value').spec();
+      this.assert(valueSpec, 'value should have a spec');
+      this.assertEq(valueSpec.name, '$Any', 'value spec should be $Any');
+    }
+  });
+
 }.module({
   name: 'test.core',
   imports: [base, test],

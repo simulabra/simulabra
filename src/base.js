@@ -1870,18 +1870,47 @@ function bootstrap() {
     ]
   });
 
-  // Retroactive specs
+  // Retroactive specs — applied after type instances exist
+
+  // Boolean
   $.Method.getslot('debug').spec($.$Boolean);
-  $.Method.getslot('doc').spec($.$String.nullable());
   $.Reactor.getslot('batched').spec($.$Boolean);
-  $.SimulabraGlobal.getslot('tick').spec($.$Integer);
   $.SimulabraGlobal.getslot('debug').spec($.$Boolean);
   $.SimulabraGlobal.getslot('trace').spec($.$Boolean);
-  $.SimulabraGlobal.getslot('registry').spec($.$Instance.of($.ObjectRegistry));
+  $.Effect.getslot('active').spec($.$Boolean);
+  $.Module.getslot('loaded').spec($.$Boolean);
+
+  // String nullable (doc slots)
+  const $MaybeString = $.$String.nullable();
+  $.Method.getslot('doc').spec($MaybeString);
+  $.Constant.getslot('doc').spec($MaybeString);
+  $.Before.getslot('doc').spec($MaybeString);
+  $.After.getslot('doc').spec($MaybeString);
+  $.AsyncBefore.getslot('doc').spec($MaybeString);
+  $.AsyncAfter.getslot('doc').spec($MaybeString);
+  $.Virtual.getslot('doc').spec($MaybeString);
+
+  // Integer
+  $.SimulabraGlobal.getslot('tick').spec($.$Integer);
+
+  // Instance references
+  $.SimulabraGlobal.getslot('registry').spec($.$Instance.of($.ObjectRegistry).nullable());
+  $.SimulabraGlobal.getslot('reactor').spec($.$Instance.of($.Reactor).nullable());
+
+  // Function
+  $.Effect.getslot('fn').spec($.$Function);
+  const $MaybeFunction = $.$Function.nullable();
+  $.Effect.getslot('boundRun').spec($MaybeFunction);
+
+  // Map
   $.SimulabraGlobal.getslot('modules').spec($.$Map);
   $.SimulabraGlobal.getslot('handlers').spec($.$Map);
-  $.Effect.getslot('fn').spec($.$Function);
-  $.Effect.getslot('active').spec($.$Boolean);
+  $.Module.getslot('repos').spec($.$Map);
+  // ObjectRegistry.classInstances/refs intentionally unspecced:
+  // they're accessed during addInstance(), causing re-entrancy with type singleton creation
+
+  // Intentionally polymorphic
+  $.Constant.getslot('value').spec($.$Any);
 
   Function.prototype.module = function(params) {
     return $.Module.new({
@@ -1948,7 +1977,8 @@ function bootstrap() {
     ]
   });
 
-  $.Command.getslot('run').spec($.$Function);
+  $.Command.getslot('run').spec($MaybeFunction);
+  $.CommandContext.getslot('command').spec($.$Instance.of($.Command).nullable());
 
   $.Class.new({
     name: 'Clone',

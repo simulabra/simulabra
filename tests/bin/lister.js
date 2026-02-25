@@ -19,11 +19,23 @@ export default await async function (_, $, $test) {
     ]
   });
 
+  $.Class.new({
+    name: 'SpecDisplay',
+    slots: [
+      $.Var.new({ name: 'count', spec: $.$Number }),
+      $.Var.new({ name: 'label', spec: $.$String }),
+      $.Var.new({ name: 'status', spec: $.$Enum.of('on', 'off') }),
+      $.Var.new({ name: 'items', spec: $.$Array.of($.$Number) }),
+      $.Var.new({ name: 'ref', spec: $.$Instance.of(_.ThisIsATest).nullable() }),
+      $.Var.new({ name: 'untyped' }),
+    ]
+  });
+
   $test.AsyncCase.new({
     name: 'ListerCoreTest',
     doc: 'runs bin/lister.js on tests/bin/lister.js and validates output',
     async do() {
-      const output = await bun.$`bun run bin/lister.js tests/bin/lister.js`.text();
+      const output = await bun.$`bun run bin/lister.js tests/bin/lister.js ThisIsATest`.text();
       this.assert(output === `ThisIsATest:6-20
   $.Var#frob the frob thing
   $.Method#grobnicate what it says on the tin
@@ -54,6 +66,21 @@ export default await async function (_, $, $test) {
   $.Var#y
   $.Method#dist
 `, 'should return only the Point class');
+    }
+  });
+
+  $test.AsyncCase.new({
+    name: 'ListerSpecDisplayTest',
+    doc: 'specced slots show type annotation in brackets',
+    async do() {
+      const output = await bun.$`bun run bin/lister.js tests/bin/lister.js SpecDisplay`.text();
+      this.assert(output.includes('$.Var#count [$Number]'), 'number spec');
+      this.assert(output.includes('$.Var#label [$String]'), 'string spec');
+      this.assert(output.includes('$.Var#status [$EnumOf(on|off)]'), 'enum spec');
+      this.assert(output.includes('$.Var#items [$ArrayOf$Number]'), 'array spec');
+      this.assert(output.includes('$.Var#ref [$InstanceOfThisIsATest?]'), 'instance nullable spec');
+      this.assert(output.includes('$.Var#untyped'), 'untyped slot present');
+      this.assert(!output.includes('$.Var#untyped ['), 'untyped slot has no spec annotation');
     }
   });
 }.module({
