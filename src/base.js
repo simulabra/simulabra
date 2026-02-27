@@ -119,6 +119,9 @@ function bootstrap() {
         __properties: [],
         __debug: true,
         __next: null,
+        __argSpecs: null,
+        __restSpecs: null,
+        __returnSpec: null,
       };
       Object.assign(this, defaults);
       Object.assign(this, props);
@@ -130,7 +133,8 @@ function bootstrap() {
       const self = this;
       const key = this.__name;
       const hasAsyncModifiers = this.__asyncBefores.length > 0 || this.__asyncAfters.length > 0;
-      if (!$$().__debug && this.__befores.length === 0 && this.__afters.length === 0 && !hasAsyncModifiers) {
+      const hasSpecs = this.__argSpecs || this.__restSpecs || this.__returnSpec;
+      if (!$$().__debug && this.__befores.length === 0 && this.__afters.length === 0 && !hasAsyncModifiers && !hasSpecs) {
         proto[key] = this.__primary;
       } else if (hasAsyncModifiers) {
         proto[key] = async function (...args) {
@@ -143,6 +147,21 @@ function bootstrap() {
             }
           }
           try {
+            if (self.__argSpecs) {
+              for (let i = 0; i < self.__argSpecs.length; i++) {
+                const [name, spec] = self.__argSpecs[i];
+                spec.validate(args[i], `${self.__name}:${name}`);
+              }
+            }
+            if (self.__restSpecs) {
+              const offset = self.__argSpecs?.length ?? 0;
+              for (let i = 0; i < self.__restSpecs.length; i++) {
+                if (offset + i < args.length) {
+                  const [name, spec] = self.__restSpecs[i];
+                  spec.validate(args[offset + i], `${self.__name}:${name}`);
+                }
+              }
+            }
             self.__befores.forEach(b => b.apply(this, args));
             for (const b of self.__asyncBefores) {
               await b.apply(this, args);
@@ -152,6 +171,9 @@ function bootstrap() {
               await a.apply(this, args);
             }
             self.__afters.forEach(a => a.apply(this, args));
+            if (self.__returnSpec) {
+              self.__returnSpec.validate(res, `${self.__name}:return`);
+            }
             if (self.__debug) {
               __.__stack.pop();
             }
@@ -169,15 +191,33 @@ function bootstrap() {
           const __ = $$();
           if (self.__debug) {
             const frame = new Frame(this, self, args);
-            __.stack().push(frame); // uhh
+            __.stack().push(frame);
             if (__.__trace) {
               console.log('call', frame.description());
             }
           }
           try {
+            if (self.__argSpecs) {
+              for (let i = 0; i < self.__argSpecs.length; i++) {
+                const [name, spec] = self.__argSpecs[i];
+                spec.validate(args[i], `${self.__name}:${name}`);
+              }
+            }
+            if (self.__restSpecs) {
+              const offset = self.__argSpecs?.length ?? 0;
+              for (let i = 0; i < self.__restSpecs.length; i++) {
+                if (offset + i < args.length) {
+                  const [name, spec] = self.__restSpecs[i];
+                  spec.validate(args[offset + i], `${self.__name}:${name}`);
+                }
+              }
+            }
             self.__befores.forEach(b => b.apply(this, args));
             let res = self.__primary.apply(this, args);
-            self.__afters.forEach(a => a.apply(this, args)); // res too?
+            self.__afters.forEach(a => a.apply(this, args));
+            if (self.__returnSpec) {
+              self.__returnSpec.validate(res, `${self.__name}:return`);
+            }
             if (self.__debug) {
               __.__stack.pop();
             }
@@ -186,11 +226,14 @@ function bootstrap() {
             if (!e._logged && self.__debug) {
               e._logged = true;
               debug('failed message: call', self.__name, 'on', this.__class.description());
-              //__.__stack.trace();
             }
             throw e;
           }
         };
+      }
+
+      if (this.__primary?._next) {
+        proto[key]._next = this.__primary._next;
       }
 
       for (const prop of this.__properties) {
@@ -853,6 +896,9 @@ function bootstrap() {
     slots: [
       $Fn,
       $Var.new({ name: 'doc' }),
+      $Var.new({ name: 'args', doc: 'named map of required arg specs' }),
+      $Var.new({ name: 'rest', doc: 'named map of optional arg specs' }),
+      $Var.new({ name: 'returns', doc: 'return type spec' }),
       function load(proto) {
         let fn = this.do();
         if (typeof fn !== 'function') {
@@ -860,6 +906,9 @@ function bootstrap() {
         }
         const impl = new SlotImpl({ __name: this.name });
         impl.__primary = fn;
+        if (this.args()) impl.__argSpecs = Object.entries(this.args());
+        if (this.rest()) impl.__restSpecs = Object.entries(this.rest());
+        if (this.returns()) impl.__returnSpec = this.returns();
         impl.reify(proto._proto.__class);
       }
     ]
@@ -924,6 +973,9 @@ function bootstrap() {
       $Property.new({ name: 'name', doc: 'method name' }),
       $Var.new({ name: 'doc' }),
       $Var.new({ name: 'debug', default: true, doc: 'enable debug stack tracking' }),
+      $Var.new({ name: 'args', doc: 'named map of required arg specs' }),
+      $Var.new({ name: 'rest', doc: 'named map of optional arg specs' }),
+      $Var.new({ name: 'returns', doc: 'return type spec' }),
       function combine(impl) {
         if (impl.__name !== this.name) {
           throw new Error('tried to combine Method on non-same named impl');
@@ -937,9 +989,65 @@ function bootstrap() {
         }
         impl.__primary = fn;
         impl.__debug = this.debug();
+        // Variance checks: capture prev specs before overwriting
+        const prevArgSpecs = impl.__argSpecs;
+        const prevRestSpecs = impl.__restSpecs;
+        const prevReturnSpec = impl.__returnSpec;
+        if (this.args()) impl.__argSpecs = Object.entries(this.args());
+        if (this.rest()) impl.__restSpecs = Object.entries(this.rest());
+        if (this.returns()) impl.__returnSpec = this.returns();
+        // Contravariant args: parent arg must be subtype of child arg
+        if (this.args() && prevArgSpecs) {
+          const childEntries = Object.entries(this.args());
+          for (let i = 0; i < Math.min(childEntries.length, prevArgSpecs.length); i++) {
+            const [childName, childSpec] = childEntries[i];
+            const [, parentSpec] = prevArgSpecs[i];
+            if (!parentSpec.subtypeOf(childSpec)) {
+              throw new Error(
+                `${this.name}:${childName} type ${childSpec.name} is not a supertype of inherited ${parentSpec.name} (contravariance violation)`
+              );
+            }
+          }
+        }
+        // Contravariant rest
+        if (this.rest() && prevRestSpecs) {
+          const childEntries = Object.entries(this.rest());
+          for (let i = 0; i < Math.min(childEntries.length, prevRestSpecs.length); i++) {
+            const [childName, childSpec] = childEntries[i];
+            const [, parentSpec] = prevRestSpecs[i];
+            if (!parentSpec.subtypeOf(childSpec)) {
+              throw new Error(
+                `${this.name}:${childName} type ${childSpec.name} is not a supertype of inherited ${parentSpec.name} (contravariance violation)`
+              );
+            }
+          }
+        }
+        // Covariant return: child return must be subtype of parent return
+        if (this.returns() && prevReturnSpec) {
+          if (!this.returns().subtypeOf(prevReturnSpec)) {
+            throw new Error(
+              `${this.name}: return type ${this.returns().name} is not a subtype of inherited ${prevReturnSpec.name} (covariance violation)`
+            );
+          }
+        }
       },
     ]
   });
+
+  function checkModifierArgCompatibility(kind, impl, modArgs, specField) {
+    if (modArgs && impl[specField]) {
+      const modEntries = Object.entries(modArgs);
+      for (let i = 0; i < Math.min(modEntries.length, impl[specField].length); i++) {
+        const [modName, modSpec] = modEntries[i];
+        const [, methSpec] = impl[specField][i];
+        if (!methSpec.subtypeOf(modSpec)) {
+          throw new Error(
+            `${kind} '${impl.__name}': arg '${modName}' type ${modSpec.name} is not a supertype of method's ${methSpec.name}`
+          );
+        }
+      }
+    }
+  }
 
   const $Before = $Class.new({
     name: 'Before',
@@ -948,8 +1056,12 @@ function bootstrap() {
       $Fn,
       $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
+      $Var.new({ name: 'args', doc: 'named map of required arg specs (definition-time check only)' }),
+      $Var.new({ name: 'rest', doc: 'named map of optional arg specs (definition-time check only)' }),
       function combine(impl) {
         impl.__befores.push(this.do());
+        checkModifierArgCompatibility('Before', impl, this.args(), '__argSpecs');
+        checkModifierArgCompatibility('Before', impl, this.rest(), '__restSpecs');
       }
     ]
   });
@@ -961,8 +1073,12 @@ function bootstrap() {
       $Fn,
       $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
+      $Var.new({ name: 'args', doc: 'named map of required arg specs (definition-time check only)' }),
+      $Var.new({ name: 'rest', doc: 'named map of optional arg specs (definition-time check only)' }),
       function combine(impl) {
         impl.__afters.unshift(this.do());
+        checkModifierArgCompatibility('After', impl, this.args(), '__argSpecs');
+        checkModifierArgCompatibility('After', impl, this.rest(), '__restSpecs');
       }
     ]
   });
@@ -974,8 +1090,12 @@ function bootstrap() {
       $Fn,
       $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
+      $Var.new({ name: 'args', doc: 'named map of required arg specs (definition-time check only)' }),
+      $Var.new({ name: 'rest', doc: 'named map of optional arg specs (definition-time check only)' }),
       function combine(impl) {
         impl.__asyncBefores.push(this.do());
+        checkModifierArgCompatibility('AsyncBefore', impl, this.args(), '__argSpecs');
+        checkModifierArgCompatibility('AsyncBefore', impl, this.rest(), '__restSpecs');
       }
     ]
   });
@@ -987,8 +1107,12 @@ function bootstrap() {
       $Fn,
       $Property.new({ name: 'name', doc: 'target method name' }),
       $Var.new({ name: 'doc' }),
+      $Var.new({ name: 'args', doc: 'named map of required arg specs (definition-time check only)' }),
+      $Var.new({ name: 'rest', doc: 'named map of optional arg specs (definition-time check only)' }),
       function combine(impl) {
         impl.__asyncAfters.unshift(this.do());
+        checkModifierArgCompatibility('AsyncAfter', impl, this.args(), '__argSpecs');
+        checkModifierArgCompatibility('AsyncAfter', impl, this.rest(), '__restSpecs');
       }
     ]
   });
@@ -999,10 +1123,19 @@ function bootstrap() {
     slots: [
       $Property.new({ name: 'name', doc: 'method name to implement' }),
       $Var.new({ name: 'doc' }),
+      $Var.new({ name: 'args', doc: 'named map of required arg specs' }),
+      $Var.new({ name: 'rest', doc: 'named map of optional arg specs' }),
+      $Var.new({ name: 'returns', doc: 'return type spec' }),
       function load(parent) {
-        self = this;
+        const self = this;
         parent._proto[this.name] = function () { throw new Error(`not implemented: ${self.name}`); };
         parent._proto[this.name].virtual = true;
+        if (self.args() || self.rest() || self.returns()) {
+          const impl = parent._getImpl(this.name);
+          if (self.args()) impl.__argSpecs = Object.entries(self.args());
+          if (self.rest()) impl.__restSpecs = Object.entries(self.rest());
+          if (self.returns()) impl.__returnSpec = self.returns();
+        }
       },
       function overrides() {
         return false;
@@ -1679,6 +1812,11 @@ function bootstrap() {
         }
       }),
       $.Method.new({
+        name: 'subtypeOf',
+        doc: 'return true if this type is a subtype of other',
+        do(other) { return this === other; }
+      }),
+      $.Method.new({
         name: 'nullable',
         doc: 'return a new instance of same type class with isNullable=true',
         do() {
@@ -1697,6 +1835,14 @@ function bootstrap() {
         do(value, slot) {
           if (!this.__singleton) this.__singleton = this.new({ name: this.name });
           return this.__singleton.validate(value, slot);
+        }
+      }),
+      $.Static.new({
+        name: 'subtypeOf',
+        do(other) {
+          if (this === other) return true;
+          if (!this.__singleton) this.__singleton = this.new({ name: this.name });
+          return this.__singleton.subtypeOf(other);
         }
       }),
       $.Static.new({
@@ -1849,6 +1995,14 @@ function bootstrap() {
       $.Method.new({
         name: 'check',
         do(v) { return this.cls() ? (v?.isa?.(this.cls()) ?? false) : false; }
+      }),
+      $.Method.new({
+        name: 'subtypeOf',
+        do(other) {
+          if (this === other) return true;
+          if (!other?.isa?.($.$Instance)) return false;
+          return this.cls().descended(other.cls());
+        }
       }),
       $.Method.new({
         name: 'nullable',

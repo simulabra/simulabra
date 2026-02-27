@@ -1850,6 +1850,808 @@ export default await async function (_, $, $test) {
     }
   });
 
+  // --- Method Specs (Phase 10) ---
+
+  // Test helper classes for method specs
+  $.Class.new({
+    name: 'MathHelper',
+    slots: [
+      $.Method.new({
+        name: 'add',
+        args: { x: $.$Number, y: $.$Number },
+        returns: $.$Number,
+        do(x, y) { return x + y; }
+      }),
+      $.Method.new({
+        name: 'greet',
+        args: { greeting: $.$String },
+        rest: { suffix: $.$String },
+        do(greeting, suffix) {
+          return suffix ? `${greeting} ${suffix}` : greeting;
+        }
+      }),
+      $.Method.new({
+        name: 'identity',
+        do(x) { return x; }
+      }),
+      $.Method.new({
+        name: 'badReturn',
+        returns: $.$Number,
+        do() { return 'not a number'; }
+      }),
+      $.Method.new({
+        name: 'fullSpec',
+        args: { base: $.$Number },
+        rest: { multiplier: $.$Number },
+        returns: $.$Number,
+        do(base, multiplier) {
+          return multiplier !== undefined ? base * multiplier : base;
+        }
+      }),
+    ]
+  });
+
+  // Virtual interface class
+  $.Class.new({
+    name: 'Shaped',
+    slots: [
+      $.Virtual.new({
+        name: 'area',
+        args: { scale: $.$Number },
+        returns: $.$Number,
+        doc: 'compute scaled area'
+      }),
+    ]
+  });
+
+  // Implements Virtual without redeclaring specs — should inherit
+  $.Class.new({
+    name: 'Circle',
+    slots: [
+      _.Shaped,
+      $.Var.new({ name: 'radius', default: 1 }),
+      $.Method.new({
+        name: 'area',
+        do(scale) { return Math.PI * this.radius() ** 2 * scale; }
+      }),
+    ]
+  });
+
+  // Implements Virtual with own specs — redeclares same types (variance-safe)
+  $.Class.new({
+    name: 'Square',
+    slots: [
+      _.Shaped,
+      $.Var.new({ name: 'side', default: 1 }),
+      $.Method.new({
+        name: 'area',
+        args: { scale: $.$Number },
+        returns: $.$Number,
+        do(scale) { return this.side() ** 2 * scale; }
+      }),
+    ]
+  });
+
+  // Parent class with specced method
+  $.Class.new({
+    name: 'BaseWorker',
+    slots: [
+      $.Method.new({
+        name: 'process',
+        args: { input: $.$String },
+        returns: $.$String,
+        do(input) { return input.toUpperCase(); }
+      }),
+    ]
+  });
+
+  // Child that overrides without redeclaring specs — inherits parent's
+  $.Class.new({
+    name: 'ChildWorker',
+    slots: [
+      _.BaseWorker,
+      $.Method.new({
+        name: 'process',
+        do(input) { return `[${this.next('process', input)}]`; }
+      }),
+    ]
+  });
+
+  // Child that overrides AND redeclares specs
+  $.Class.new({
+    name: 'StrictWorker',
+    slots: [
+      _.BaseWorker,
+      $.Method.new({
+        name: 'process',
+        args: { input: $.$String },
+        returns: $.$String,
+        do(input) { return `!${this.next('process', input)}!`; }
+      }),
+    ]
+  });
+
+  // Static spec test class
+  $.Class.new({
+    name: 'Formatter',
+    slots: [
+      $.Static.new({
+        name: 'formatNum',
+        args: { val: $.$Number },
+        returns: $.$String,
+        do(val) { return val.toFixed(2); }
+      }),
+      $.Static.new({
+        name: 'parseNum',
+        args: { str: $.$String },
+        do(str) { return parseFloat(str); }
+      }),
+    ]
+  });
+
+  // Instance arg spec test class
+  $.Class.new({
+    name: 'PointPrinter',
+    slots: [
+      $.Method.new({
+        name: 'print',
+        args: { pt: $.$Instance.of(_.Point) },
+        do(pt) { return `(${pt.x()}, ${pt.y()})`; }
+      }),
+      $.Method.new({
+        name: 'labels',
+        returns: $.$Array.of($.$String),
+        do() { return ['x', 'y']; }
+      }),
+    ]
+  });
+
+  // --- Test cases ---
+
+  $test.Case.new({
+    name: 'MethodArgSpecPass',
+    doc: 'Method with arg specs accepts valid arguments.',
+    do() {
+      const m = _.MathHelper.new();
+      const result = m.add(2, 3);
+      this.assertEq(result, 5, 'add(2,3) should return 5');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodArgSpecFail',
+    doc: 'Method with arg specs rejects wrong-typed argument.',
+    do() {
+      const m = _.MathHelper.new();
+      this.assertThrows(() => m.add('two', 3), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodArgSpecMissing',
+    doc: 'Method with arg specs rejects missing required argument.',
+    do() {
+      const m = _.MathHelper.new();
+      this.assertThrows(() => m.add(1), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodArgSpecMessage',
+    doc: 'Validation error includes method name and parameter name.',
+    do() {
+      const m = _.MathHelper.new();
+      let msg = '';
+      try { m.add('bad', 1); } catch (e) { msg = e.message; }
+      this.assert(msg.includes('add'), 'error should include method name');
+      this.assert(msg.includes('x'), 'error should include parameter name');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodRestSpecPass',
+    doc: 'Method with rest spec accepts valid optional argument.',
+    do() {
+      const m = _.MathHelper.new();
+      const result = m.greet('hello', 'world');
+      this.assertEq(result, 'hello world', 'greet with suffix should work');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodRestSpecFail',
+    doc: 'Method with rest spec rejects wrong-typed optional argument.',
+    do() {
+      const m = _.MathHelper.new();
+      this.assertThrows(() => m.greet('hello', 42), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodRestSpecSkipped',
+    doc: 'Method with rest spec passes when optional arg not provided.',
+    do() {
+      const m = _.MathHelper.new();
+      const result = m.greet('hello');
+      this.assertEq(result, 'hello', 'greet without suffix should work');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodReturnSpecPass',
+    doc: 'Method with return spec accepts valid return value.',
+    do() {
+      const m = _.MathHelper.new();
+      const result = m.add(1, 2);
+      this.assertEq(result, 3, 'valid return should pass');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodReturnSpecFail',
+    doc: 'Method with return spec rejects wrong-typed return.',
+    do() {
+      const m = _.MathHelper.new();
+      this.assertThrows(() => m.badReturn(), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodFullSpec',
+    doc: 'Method with args, rest, and returns validates end-to-end.',
+    do() {
+      const m = _.MathHelper.new();
+      this.assertEq(m.fullSpec(5), 5, 'base only should work');
+      this.assertEq(m.fullSpec(5, 3), 15, 'base * multiplier should work');
+      this.assertThrows(() => m.fullSpec('x'), 'validation failed');
+      this.assertThrows(() => m.fullSpec(5, 'x'), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodNoSpecUnchanged',
+    doc: 'Method without specs behaves identically to current.',
+    do() {
+      const m = _.MathHelper.new();
+      this.assertEq(m.identity(42), 42, 'identity should pass through');
+      this.assertEq(m.identity('anything'), 'anything', 'unspecced accepts any type');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VirtualSpecInherited',
+    doc: 'Virtual declares specs, Method override inherits them without redeclaring.',
+    do() {
+      const c = _.Circle.new({ radius: 5 });
+      const result = c.area(2);
+      this.assertEq(result, Math.PI * 25 * 2, 'Circle area with scale should work');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VirtualSpecOverridden',
+    doc: 'Method override redeclares same-type specs (variance-safe).',
+    do() {
+      const s = _.Square.new({ side: 4 });
+      this.assertEq(s.area(2), 32, 'Square area with number scale should work');
+      this.assertThrows(() => s.area('big'), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VirtualSpecValidates',
+    doc: 'Inherited Virtual specs actually validate at call time.',
+    do() {
+      const c = _.Circle.new({ radius: 3 });
+      this.assertThrows(() => c.area('big'), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodSpecInheritedOverride',
+    doc: 'Parent Method has specs, child overrides without specs, child inherits.',
+    do() {
+      const w = _.ChildWorker.new();
+      this.assertEq(w.process('hello'), '[HELLO]', 'child should chain to parent');
+      this.assertThrows(() => w.process(123), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodSpecOverrideRedeclare',
+    doc: 'Child redeclares specs, uses its own.',
+    do() {
+      const w = _.StrictWorker.new();
+      this.assertEq(w.process('hello'), '!HELLO!', 'strict worker should chain');
+      this.assertThrows(() => w.process(123), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'StaticArgSpec',
+    doc: 'Static method with args validates correctly.',
+    do() {
+      this.assertEq(_.Formatter.formatNum(3.14159), '3.14', 'static with valid arg works');
+      this.assertThrows(() => _.Formatter.formatNum('abc'), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'StaticReturnSpec',
+    doc: 'Static method with returns validates correctly.',
+    do() {
+      const result = _.Formatter.formatNum(42);
+      this.assertEq(result, '42.00', 'static return spec passes valid string');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodInstanceArgSpec',
+    doc: 'Method with $Instance.of arg spec validates class membership.',
+    do() {
+      const pp = _.PointPrinter.new();
+      const pt = _.Point.new({ x: 3, y: 4 });
+      this.assertEq(pp.print(pt), '(3, 4)', 'should accept Point instance');
+      this.assertThrows(() => pp.print({ x: () => 3, y: () => 4 }), 'validation failed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'MethodArrayReturnSpec',
+    doc: 'Method with $Array.of return spec validates array return.',
+    do() {
+      const pp = _.PointPrinter.new();
+      const labels = pp.labels();
+      this.assertEq(labels.length, 2, 'should return 2 labels');
+      this.assertEq(labels[0], 'x', 'first label should be x');
+    }
+  });
+
+  // --- Phase 11: Variance checking helpers ---
+
+  // Class hierarchy for subtypeOf tests: Animal > Dog, Animal > Cat (unrelated to Dog)
+  $.Class.new({
+    name: 'Animal',
+    slots: [
+      $.Var.new({ name: 'sound', spec: $.$String, default: '...' }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'Dog',
+    slots: [
+      _.Animal,
+      $.Var.new({ name: 'sound', spec: $.$String, default: 'woof' }),
+    ]
+  });
+
+  $.Class.new({
+    name: 'Cat',
+    slots: [
+      _.Animal,
+      $.Var.new({ name: 'sound', spec: $.$String, default: 'meow' }),
+    ]
+  });
+
+  // Variance test: parent method specced with $Instance.of(Animal)
+  $.Class.new({
+    name: 'AnimalHandler',
+    slots: [
+      $.Method.new({
+        name: 'handle',
+        args: { animal: $.$Instance.of(_.Animal) },
+        returns: $.$Instance.of(_.Animal),
+        do(animal) { return animal; }
+      }),
+    ]
+  });
+
+  // Covariant return OK: child returns Dog (narrower than Animal)
+  $.Class.new({
+    name: 'DogHandler',
+    slots: [
+      _.AnimalHandler,
+      $.Method.new({
+        name: 'handle',
+        returns: $.$Instance.of(_.Dog),
+        do(animal) { return _.Dog.new(); }
+      }),
+    ]
+  });
+
+  // Contravariant arg OK: child accepts Animal (same, trivially wider or equal)
+  $.Class.new({
+    name: 'WideArgHandler',
+    slots: [
+      _.AnimalHandler,
+      $.Method.new({
+        name: 'handle',
+        args: { animal: $.$Instance.of(_.Animal) },
+        do(animal) { return animal; }
+      }),
+    ]
+  });
+
+  // No-redeclare: child overrides without specs, inherits cleanly
+  $.Class.new({
+    name: 'InheritingHandler',
+    slots: [
+      _.AnimalHandler,
+      $.Method.new({
+        name: 'handle',
+        do(animal) { return animal; }
+      }),
+    ]
+  });
+
+  // Before/After compatibility test: method specced with $Instance.of(Animal)
+  $.Class.new({
+    name: 'BeforeCompatibleHandler',
+    slots: [
+      _.AnimalHandler,
+      $.Before.new({
+        name: 'handle',
+        args: { animal: $.$Instance.of(_.Animal) },
+        do(animal) { /* compatible before */ }
+      }),
+    ]
+  });
+
+  // Before with no specs on a specced method — compatible by default
+  $.Class.new({
+    name: 'BeforeNoSpecHandler',
+    slots: [
+      _.AnimalHandler,
+      $.Before.new({
+        name: 'handle',
+        do(animal) { /* no arg specs, should be fine */ }
+      }),
+    ]
+  });
+
+  // After compatible
+  $.Class.new({
+    name: 'AfterCompatibleHandler',
+    slots: [
+      _.AnimalHandler,
+      $.After.new({
+        name: 'handle',
+        args: { animal: $.$Instance.of(_.Animal) },
+        do(animal) { /* compatible after */ }
+      }),
+    ]
+  });
+
+  // Rest variance: parent with rest spec, child widens
+  $.Class.new({
+    name: 'RestParent',
+    slots: [
+      $.Method.new({
+        name: 'work',
+        args: { task: $.$String },
+        rest: { animal: $.$Instance.of(_.Dog) },
+        returns: $.$String,
+        do(task, animal) { return task; }
+      }),
+    ]
+  });
+
+  // Child widens rest arg from Dog to Animal — contravariant, OK
+  $.Class.new({
+    name: 'RestChild',
+    slots: [
+      _.RestParent,
+      $.Method.new({
+        name: 'work',
+        rest: { animal: $.$Instance.of(_.Animal) },
+        do(task, animal) { return `${task}!`; }
+      }),
+    ]
+  });
+
+  // Before with compatible rest spec
+  $.Class.new({
+    name: 'BeforeRestHandler',
+    slots: [
+      _.RestParent,
+      $.Before.new({
+        name: 'work',
+        rest: { animal: $.$Instance.of(_.Animal) },
+        do(task, animal) { /* rest-compatible before */ }
+      }),
+    ]
+  });
+
+  // --- Phase 11: Variance checking tests ---
+
+  // subtypeOf basics
+
+  $test.Case.new({
+    name: 'SubtypeOfIdentity',
+    doc: '$Number.subtypeOf($Number) returns true — same type is always a subtype of itself.',
+    do() {
+      this.assert($.$Number.subtypeOf($.$Number), 'identity should be true');
+      this.assert($.$String.subtypeOf($.$String), 'string identity too');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SubtypeOfDifferent',
+    doc: '$Number.subtypeOf($String) returns false — no known relationship.',
+    do() {
+      this.assert(!$.$Number.subtypeOf($.$String), 'number is not subtype of string');
+      this.assert(!$.$String.subtypeOf($.$Number), 'string is not subtype of number');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SubtypeOfInstance',
+    doc: '$Instance.of(Dog).subtypeOf($Instance.of(Animal)) returns true — Dog descends from Animal.',
+    do() {
+      const $Dog = $.$Instance.of(_.Dog);
+      const $Animal = $.$Instance.of(_.Animal);
+      this.assert($Dog.subtypeOf($Animal), 'Dog should be subtype of Animal');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SubtypeOfInstanceFail',
+    doc: '$Instance.of(Animal).subtypeOf($Instance.of(Dog)) returns false — parent is not subtype of child.',
+    do() {
+      const $Dog = $.$Instance.of(_.Dog);
+      const $Animal = $.$Instance.of(_.Animal);
+      this.assert(!$Animal.subtypeOf($Dog), 'Animal should not be subtype of Dog');
+    }
+  });
+
+  $test.Case.new({
+    name: 'SubtypeOfInstanceUnrelated',
+    doc: '$Instance.of(Dog).subtypeOf($Instance.of(Cat)) returns false — unrelated classes.',
+    do() {
+      const $Dog = $.$Instance.of(_.Dog);
+      const $Cat = $.$Instance.of(_.Cat);
+      this.assert(!$Dog.subtypeOf($Cat), 'Dog and Cat are unrelated');
+    }
+  });
+
+  // Method override variance
+
+  $test.Case.new({
+    name: 'VarianceSameTypeOK',
+    doc: 'Child redeclares same arg type — no variance error.',
+    do() {
+      // WideArgHandler already defined above with same $Instance.of(Animal) arg — class created without error
+      const h = _.WideArgHandler.new();
+      const a = _.Animal.new();
+      this.assertEq(h.handle(a), a, 'wide arg handler should work');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VarianceCovariantReturnOK',
+    doc: 'Child returns narrower $Instance type (Dog instead of Animal) — covariant, passes.',
+    do() {
+      // DogHandler already defined above — class created without error
+      const h = _.DogHandler.new();
+      const a = _.Animal.new();
+      const result = h.handle(a);
+      this.assert(result.isa(_.Dog), 'should return a Dog');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VarianceCovariantReturnFail',
+    doc: 'Child returns wider type (Animal instead of Dog) — covariance violation at definition time.',
+    do() {
+      // DogReturner parent returns Dog, child tries to return Animal (wider)
+      this.assertThrows(() => {
+        $.Class.new({
+          name: 'NarrowReturnParent',
+          slots: [
+            $.Method.new({
+              name: 'produce',
+              returns: $.$Instance.of(_.Dog),
+              do() { return _.Dog.new(); }
+            }),
+          ]
+        });
+        $.Class.new({
+          name: 'WideReturnChild',
+          slots: [
+            __.mod().getInstance($.Class, 'NarrowReturnParent'),
+            $.Method.new({
+              name: 'produce',
+              returns: $.$Instance.of(_.Animal),
+              do() { return _.Animal.new(); }
+            }),
+          ]
+        });
+      }, 'covariance violation');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VarianceContravariantArgOK',
+    doc: 'Child accepts wider $Instance arg type (Animal instead of Dog) — contravariant, passes.',
+    do() {
+      // Parent has Dog arg, child widens to Animal
+      $.Class.new({
+        name: 'DogArgParent',
+        slots: [
+          $.Method.new({
+            name: 'pet',
+            args: { animal: $.$Instance.of(_.Dog) },
+            do(animal) { return animal.sound(); }
+          }),
+        ]
+      });
+      $.Class.new({
+        name: 'AnimalArgChild',
+        slots: [
+          __.mod().getInstance($.Class, 'DogArgParent'),
+          $.Method.new({
+            name: 'pet',
+            args: { animal: $.$Instance.of(_.Animal) },
+            do(animal) { return animal.sound(); }
+          }),
+        ]
+      });
+      // If we got here, no error was thrown — pass
+      this.assert(true, 'contravariant arg should be allowed');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VarianceContravariantArgFail',
+    doc: 'Child accepts narrower $Instance arg type (Dog instead of Animal) — contravariance violation.',
+    do() {
+      this.assertThrows(() => {
+        $.Class.new({
+          name: 'AnimalArgParent',
+          slots: [
+            $.Method.new({
+              name: 'pet',
+              args: { animal: $.$Instance.of(_.Animal) },
+              do(animal) { return animal.sound(); }
+            }),
+          ]
+        });
+        $.Class.new({
+          name: 'DogArgChild',
+          slots: [
+            __.mod().getInstance($.Class, 'AnimalArgParent'),
+            $.Method.new({
+              name: 'pet',
+              args: { animal: $.$Instance.of(_.Dog) },
+              do(animal) { return animal.sound(); }
+            }),
+          ]
+        });
+      }, 'contravariance violation');
+    }
+  });
+
+  $test.Case.new({
+    name: 'VarianceNoRedeclareOK',
+    doc: 'Child overrides without redeclaring specs — inherits cleanly, no variance check fires.',
+    do() {
+      // InheritingHandler already defined above — class created without error
+      const h = _.InheritingHandler.new();
+      const a = _.Animal.new();
+      this.assertEq(h.handle(a), a, 'inheriting handler should work');
+    }
+  });
+
+  // Before/After compatibility
+
+  $test.Case.new({
+    name: 'BeforeCompatibleOK',
+    doc: 'Before with same arg type as method — compatible, passes.',
+    do() {
+      // BeforeCompatibleHandler already defined above without error
+      const h = _.BeforeCompatibleHandler.new();
+      const a = _.Animal.new();
+      this.assertEq(h.handle(a), a, 'before-compatible handler should work');
+    }
+  });
+
+  $test.Case.new({
+    name: 'BeforeCompatibleWiderOK',
+    doc: 'Before with supertype arg — compatible, passes.',
+    do() {
+      // Before accepts Animal on a method that guarantees Animal — same type, compatible
+      // (A wider Before would need a parent type of Animal, which we don't have,
+      //  so this tests the identity/same-type case through the compatibility check)
+      const h = _.BeforeCompatibleHandler.new();
+      const d = _.Dog.new();
+      this.assertEq(h.handle(d), d, 'should accept Dog (subtype of Animal)');
+    }
+  });
+
+  $test.Case.new({
+    name: 'BeforeIncompatibleFail',
+    doc: 'Before with narrower arg type — incompatible, throws at definition time.',
+    do() {
+      this.assertThrows(() => {
+        $.Class.new({
+          name: 'BeforeNarrowHandler',
+          slots: [
+            _.AnimalHandler,
+            $.Before.new({
+              name: 'handle',
+              args: { animal: $.$Instance.of(_.Dog) },
+              do(animal) { /* Dog is narrower than Animal — incompatible */ }
+            }),
+          ]
+        });
+      }, 'is not a supertype');
+    }
+  });
+
+  $test.Case.new({
+    name: 'AfterCompatibleOK',
+    doc: 'After with compatible arg type — passes.',
+    do() {
+      // AfterCompatibleHandler already defined above without error
+      const h = _.AfterCompatibleHandler.new();
+      const a = _.Animal.new();
+      this.assertEq(h.handle(a), a, 'after-compatible handler should work');
+    }
+  });
+
+  $test.Case.new({
+    name: 'AfterIncompatibleFail',
+    doc: 'After with incompatible arg type — throws at definition time.',
+    do() {
+      this.assertThrows(() => {
+        $.Class.new({
+          name: 'AfterNarrowHandler',
+          slots: [
+            _.AnimalHandler,
+            $.After.new({
+              name: 'handle',
+              args: { animal: $.$Instance.of(_.Dog) },
+              do(animal) { /* Dog is narrower than Animal — incompatible */ }
+            }),
+          ]
+        });
+      }, 'is not a supertype');
+    }
+  });
+
+  $test.Case.new({
+    name: 'BeforeNoSpecOK',
+    doc: 'Before without specs on a specced method — compatible by default.',
+    do() {
+      // BeforeNoSpecHandler already defined above without error
+      const h = _.BeforeNoSpecHandler.new();
+      const a = _.Animal.new();
+      this.assertEq(h.handle(a), a, 'before-no-spec handler should work');
+    }
+  });
+
+  // Rest variance and compatibility
+
+  $test.Case.new({
+    name: 'VarianceRestContravariantOK',
+    doc: 'Child widens rest arg type from Dog to Animal — contravariant, passes.',
+    do() {
+      // RestChild already defined above — class created without error
+      const w = _.RestChild.new();
+      this.assertEq(w.work('task'), 'task!', 'rest child should work');
+    }
+  });
+
+  $test.Case.new({
+    name: 'BeforeRestCompatibleOK',
+    doc: 'Before with compatible rest spec — passes.',
+    do() {
+      // BeforeRestHandler already defined above without error
+      const w = _.BeforeRestHandler.new();
+      this.assertEq(w.work('task'), 'task', 'before rest handler should work');
+    }
+  });
+
 }.module({
   name: 'test.core',
   imports: [base, test],
