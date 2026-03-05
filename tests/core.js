@@ -2652,6 +2652,93 @@ export default await async function (_, $, $test) {
     }
   });
 
+  // --- Phase 12: Method spec adoption tests ---
+
+  $test.Case.new({
+    name: 'TypeSystemBootstrapConstraint',
+    doc: 'Type.check/validate cannot have specs — they ARE the validation mechanism.',
+    do() {
+      const checkImpl = $.$Number.proto()._getImpl('check');
+      const validateImpl = $.$Number.proto()._getImpl('validate');
+      this.assert(checkImpl.__returnSpec === null, 'check must not have return spec (would cause recursion)');
+      this.assert(validateImpl.__argSpecs === null, 'validate must not have arg specs (would cause recursion)');
+    }
+  });
+
+  $test.Case.new({
+    name: 'ArrayOfStaticReturnSpec',
+    doc: '$Array.of Static has return spec and works with Type classes.',
+    do() {
+      const impl = $.$Array.of.__impl;
+      this.assert(impl.__returnSpec !== null, 'of should have return spec');
+      this.assert(impl.__argSpecs === null, 'of arg spec skipped — accepts Type classes and instances');
+      const t = $.$Array.of($.$String);
+      this.assert(t.check(['a', 'b']), 'composed type should work normally');
+      this.assertThrows(
+        () => $.$Array.of('notAType'),
+        '$Array.of: argument must be a Type'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'EnumOfStaticReturnSpec',
+    doc: '$Enum.of Static has return spec that validates output type.',
+    do() {
+      const impl = $.$Enum.of.__impl;
+      this.assert(impl.__returnSpec !== null, 'of should have return spec');
+      const t = $.$Enum.of('a', 'b', 'c');
+      this.assert(t.check('a'), 'enum type should work normally');
+    }
+  });
+
+  $test.Case.new({
+    name: 'InstanceOfStaticSpec',
+    doc: '$Instance.of Static has return spec set.',
+    do() {
+      const impl = $.$Instance.of.__impl;
+      this.assert(impl.__returnSpec !== null, 'of should have return spec');
+      const t = $.$Instance.of($.Class);
+      this.assert(t.check($.Class), 'instance type should work normally');
+      this.assertThrows(
+        () => $.$Instance.of('notAClass'),
+        '$Instance.of: argument must be a Class'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'ModuleFindArgSpec',
+    doc: 'Module.find arg spec rejects non-string ClassName.',
+    do() {
+      const mod = __.mod();
+      this.assertThrows(
+        () => mod.find(123, 'test'),
+        '$String: validation failed'
+      );
+    }
+  });
+
+  $test.Case.new({
+    name: 'ModuleFindArgSpecValid',
+    doc: 'Module.find with valid string args works normally.',
+    do() {
+      const mod = __.mod();
+      const cls = mod.find('Class', 'Class');
+      this.assert(cls !== undefined, 'find should return Class for valid string args');
+    }
+  });
+
+  $test.Case.new({
+    name: 'StaticImplAccessible',
+    doc: 'Static.__impl is stored for retroactive spec access.',
+    do() {
+      const impl = $.$Array.of.__impl;
+      this.assert(impl !== undefined, 'Static wrapper should expose __impl');
+      this.assert(impl.__returnSpec !== null, '$Array.of should have return spec');
+    }
+  });
+
 }.module({
   name: 'test.core',
   imports: [base, test],

@@ -910,6 +910,7 @@ function bootstrap() {
         if (this.rest()) impl.__restSpecs = Object.entries(this.rest());
         if (this.returns()) impl.__returnSpec = this.returns();
         impl.reify(proto._proto.__class);
+        proto._proto.__class[this.name].__impl = impl;
       }
     ]
   });
@@ -996,33 +997,8 @@ function bootstrap() {
         if (this.args()) impl.__argSpecs = Object.entries(this.args());
         if (this.rest()) impl.__restSpecs = Object.entries(this.rest());
         if (this.returns()) impl.__returnSpec = this.returns();
-        // Contravariant args: parent arg must be subtype of child arg
-        if (this.args() && prevArgSpecs) {
-          const childEntries = Object.entries(this.args());
-          for (let i = 0; i < Math.min(childEntries.length, prevArgSpecs.length); i++) {
-            const [childName, childSpec] = childEntries[i];
-            const [, parentSpec] = prevArgSpecs[i];
-            if (!parentSpec.subtypeOf(childSpec)) {
-              throw new Error(
-                `${this.name}:${childName} type ${childSpec.name} is not a supertype of inherited ${parentSpec.name} (contravariance violation)`
-              );
-            }
-          }
-        }
-        // Contravariant rest
-        if (this.rest() && prevRestSpecs) {
-          const childEntries = Object.entries(this.rest());
-          for (let i = 0; i < Math.min(childEntries.length, prevRestSpecs.length); i++) {
-            const [childName, childSpec] = childEntries[i];
-            const [, parentSpec] = prevRestSpecs[i];
-            if (!parentSpec.subtypeOf(childSpec)) {
-              throw new Error(
-                `${this.name}:${childName} type ${childSpec.name} is not a supertype of inherited ${parentSpec.name} (contravariance violation)`
-              );
-            }
-          }
-        }
-        // Covariant return: child return must be subtype of parent return
+        checkContravariance(this.name, this.args(), prevArgSpecs);
+        checkContravariance(this.name, this.rest(), prevRestSpecs);
         if (this.returns() && prevReturnSpec) {
           if (!this.returns().subtypeOf(prevReturnSpec)) {
             throw new Error(
@@ -1033,6 +1009,21 @@ function bootstrap() {
       },
     ]
   });
+
+  function checkContravariance(methodName, childArgs, prevSpecs) {
+    if (childArgs && prevSpecs) {
+      const childEntries = Object.entries(childArgs);
+      for (let i = 0; i < Math.min(childEntries.length, prevSpecs.length); i++) {
+        const [childName, childSpec] = childEntries[i];
+        const [, parentSpec] = prevSpecs[i];
+        if (!parentSpec.subtypeOf(childSpec)) {
+          throw new Error(
+            `${methodName}:${childName} type ${childSpec.name} is not a supertype of inherited ${parentSpec.name} (contravariance violation)`
+          );
+        }
+      }
+    }
+  }
 
   function checkModifierArgCompatibility(kind, impl, modArgs, specField) {
     if (modArgs && impl[specField]) {
@@ -2065,6 +2056,59 @@ function bootstrap() {
 
   // Intentionally polymorphic
   $.Constant.getslot('value').spec($.$Any);
+
+  // Retroactive method specs — applied after type instances exist
+  // NOTE: Type.check and Type.validate CANNOT have specs — they are the validation
+  // mechanism itself. Speccing them creates infinite recursion: check return spec
+  // calls $Boolean.validate → singleton.validate → this.check → return spec → loop.
+  // Same bootstrapping constraint as ObjectRegistry slots (Phase 8b).
+
+  // Force-initialize global debug so re-reify uses the wrapper path
+  $$().debug();
+
+  function specMethod(cls, name, specs) {
+    const impl = cls.proto()._getImpl(name);
+    if (specs.args) impl.__argSpecs = Object.entries(specs.args);
+    if (specs.rest) impl.__restSpecs = Object.entries(specs.rest);
+    if (specs.returns) impl.__returnSpec = specs.returns;
+    impl.reify(cls.proto()._proto);
+  }
+
+  function specStatic(cls, name, specs) {
+    const impl = cls[name].__impl;
+    if (specs.args) impl.__argSpecs = Object.entries(specs.args);
+    if (specs.rest) impl.__restSpecs = Object.entries(specs.rest);
+    if (specs.returns) impl.__returnSpec = specs.returns;
+    impl.reify(cls);
+    cls[name].__impl = impl;
+  }
+
+  // $Array.of (Static) — return only (arg accepts both Type instances and Type classes)
+  specStatic($.$Array, 'of', { returns: $.$Instance.of($.$Array) });
+
+  // $Enum.of (Static) — return only (variadic args)
+  specStatic($.$Enum, 'of', { returns: $.$Instance.of($.$Enum) });
+
+  // $Instance.of (Static) — arg and return
+  specStatic($.$Instance, 'of', {
+    args: { cls: $.$Any },
+    returns: $.$Instance.of($.$Instance),
+  });
+
+  // Module.find — args
+  specMethod($module, 'find', { args: { ClassName: $.$String, name: $.$String } });
+
+  // FakeState.listFromMap (Static) — arg and return
+  specStatic($FakeState, 'listFromMap', {
+    args: { map: $.$Map },
+    returns: $.$Array,
+  });
+
+  // Excluded from method specs (and why):
+  // - Type.check/validate: validation mechanism itself, would cause infinite recursion
+  // - Class.new: very hot path, $Any return is no-op validation
+  // - ObjectRegistry.register: hot path (every object creation), $Any arg is no-op
+  // - Reactor.schedule: hot path (every reactive update), $Any arg is no-op
 
   Function.prototype.module = function(params) {
     return $.Module.new({
